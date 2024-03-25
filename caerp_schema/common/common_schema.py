@@ -1599,7 +1599,7 @@ class StateDetail(BaseModel):
         orm_mode = True
     
     
-class QualificationSchemaForUpdate(BaseModel):
+class EducationSchema(BaseModel):
 
     qualification : str
     

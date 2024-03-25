@@ -55,12 +55,12 @@ class AppBusinessActivityMaster(caerp_base):
     business_activity        = Column(String(250))
     is_deleted               = Column(Enum('yes', 'no'), nullable=False, default='no')
 
-class AppEducationalQualificationsMaster(caerp_base):
-    __tablename__ = 'app_educational_qualifications'
+# class AppEducationalQualificationsMaster(caerp_base):
+#     __tablename__ = 'app_educational_qualifications'
 
-    id                       = Column(Integer, primary_key=True, autoincrement=True)
-    qualification            = Column(String(100),nullable=False)
-    is_deleted               = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     id                       = Column(Integer, primary_key=True, autoincrement=True)
+#     qualification            = Column(String(100),nullable=False)
+#     is_deleted               = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
 class EnquirerType(caerp_base):

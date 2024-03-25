@@ -10,13 +10,15 @@ from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBa
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
 from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
-from caerp_db.office.models import AppEducationalQualificationsMaster,EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
 from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
 from caerp_auth import oauth2
 from typing import List
 from datetime import datetime
 from caerp_constants.caerp_constants import DeletedStatus
+from caerp_db.common.models import AppEducationalQualificationsMaster
+
 
 router = APIRouter(
     tags=['Office Master']
@@ -1291,16 +1293,28 @@ def delete_hsn_sac(
     return {"message": message}
 
 
+# @router.post("/hsn_sac_master_with_file/")
+# async def upload_hsn_sac_master_with_file(
+#     file: UploadFile = File(...),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     result = await db_office_master.save_csv_to_db(file, db)
+#     return result
+ 
+
 @router.post("/hsn_sac_master_with_file/")
 async def upload_hsn_sac_master_with_file(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
-   # try:
-        result = await db_office_master.save_csv_to_db(file, db)
-        return result
-   # except Exception as e:
-     #   raise HTTPException(status_code=500, detail=f"Failed to upload CSV and save to database: {str(e)}")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-
+    result = await db_office_master.save_csv_to_db(file, db)
+    return result
 
