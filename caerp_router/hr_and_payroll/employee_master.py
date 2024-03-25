@@ -1,4 +1,4 @@
-from caerp_db.common.models import Employee
+from caerp_db.common.models import Employee, EmployeeMasterView
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeMasterSchema, EmployeeMasterSchemaForGet, EmployeePersonalDetailSchema, EmployeeAddressDetailSchema, EmployeeContactDetailSchema, EmployeeBankAccountDetailSchema
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -17,13 +17,13 @@ from jose import JWTError, jwt
 
 
 router = APIRouter(
-   prefix ='/employee',
-    tags=['EMPLOYEE']
+    prefix ='/Employee',
+    tags=['Employee']
 )
 
 
 #save employee master
-@router.post('/employeesave_employee_master', response_model= EmployeeMasterSchema)
+@router.post('/save_employee_master', response_model= EmployeeMasterSchema)
 def save_employee_master(request: EmployeeMasterSchema = Depends(), id: int = 0, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     Creation or updation of Employee Master.
@@ -53,7 +53,7 @@ def save_employee_master(request: EmployeeMasterSchema = Depends(), id: int = 0,
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------   
 
 #get employee status
-@router.get("/get_deleted_employees/" , response_model=List[EmployeeMasterSchemaForGet],)
+@router.get("/get_deleted_employees/" , response_model=List[EmployeeMasterSchemaForGet])
 async def get_deleted_employees(deleted_status: DeletedStatus = DeletedStatus.NOT_DELETED, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
     -**Retrieve employee delete status.**
@@ -77,7 +77,7 @@ def get_employee_by_id(id: int, db: Session = Depends(get_db), token: str = Depe
 #-----------------------------------------------------------------------------------------------------------------------------
 
 #delete specific employee by id
-@router.delete("/delete/employee_master/{id}",)
+@router.delete("/delete/employee_master/{id}")
 def delete_employee_master(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
     -**Delete employee details by id.**
@@ -161,7 +161,7 @@ def update_employee_contact_details(request: EmployeeContactDetailSchema, id: in
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
    
 @router.post('/update_employee_bank_acc_details', response_model=EmployeeBankAccountDetailSchema)
-def update_employee_employee_bank_acc_details(request: EmployeeBankAccountDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+def update_employee_bank_acc_details(request: EmployeeBankAccountDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     -**Update Employee Bank Account details.**
    """ 
@@ -174,14 +174,26 @@ def update_employee_employee_bank_acc_details(request: EmployeeBankAccountDetail
    except Exception as e:    
       raise HTTPException(status_code=500, detail=str(e))   
    
-   #.....................................................................
-   
-   
-   
-   
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+#get consultants
+@router.get("/get_consultants/" , response_model=List[EmployeeMasterSchemaForGet])
+def get_consultants(db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    -**Retrieve employees who are consultants.**
+   """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    return db_employee_master.get_consultants(db)      
 
+#-----------------------------------------------------------------------------------------------------------------------------
 
-
-   
-   
+#get consultant by id
+@router.get("/get_consultant_by_ID/" , response_model=EmployeeMasterSchemaForGet)
+def get_consultant_by_id(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    -**Retrieve consultant by id.**
+   """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    return db_employee_master.get_consultant_by_id(db, id)
