@@ -948,6 +948,7 @@ def get_pan_card_by_card_type(
         raise HTTPException(status_code=404, detail="Pan card not found")
     return pan_card_detail
 
+
 @router.get("/qualification", response_model=List[QualificationSchemaResponse])
 def get_qualification_details(
         db: Session = Depends(get_db),

@@ -237,6 +237,7 @@ class GenderSchema(BaseModel):
         orm_mode = True
 
 class GenderSchemaResponse(BaseModel):
+    id:int
     gender: List[GenderSchema]
     
 
@@ -1355,22 +1356,22 @@ class InstallmentDetailsForGet(BaseModel):
     
 #///
 class PancardSchemaResponse(BaseModel):
-
+    id:int
     pan_card_type_code : str
     pan_card_type : str
     
 class QualificationSchemaResponse(BaseModel):
-
+    id:int
     qualification : str
 
 
 class ConstitutionTypeSchemaResponse(BaseModel):
-
+    id:int
     constitution_type   : str
 
 
 class ProfessionSchemaResponse(BaseModel):
-
+    id:int
     profession_name : str 
     profession_code : str
 

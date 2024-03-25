@@ -48,61 +48,7 @@ class LoginAttempt(caerp_base):
     when        =  Column(DateTime, nullable=True)
 
     
-# class Employee(caerp_base):
-#     __tablename__ = "employee_master"
 
-#     employee_id            = Column(Integer, primary_key=True, autoincrement=True)
-#     employee_number = Column(String(20), nullable=True)
-#     first_name      = Column(String(100), nullable=True)
-#     middle_name     = Column(String(100), nullable=True)
-#     last_name       = Column(String(100), nullable=True)
-#     gender_id       = Column(Integer, nullable=True)
-#     date_of_birth   = Column(DateTime, default=None)
-#     nationality_id  = Column(Integer, nullable=True)
-#     marital_status_id = Column(Integer, nullable=True)
-#     designation_id    = Column(Integer, nullable=True)
-#     aadhaar_number    = Column(String(50), default=None)
-#     passport_number    = Column(String(50), default=None)
-#     pan_number          = Column(String(20), default=None)
-#     driving_licence_number= Column(String(50), default=None)
-#     other_id_doc        = Column(String(50), default=None)
-#     present_address_line_1 = Column(String(100), nullable=True)
-#     present_address_line_2 = Column(String(100), default=None)
-#     present_address_line_3 = Column(String(100), default=None)
-#     present_address_line_4 = Column(String(100), default=None)
-#     present_pin_code       = Column(String(20), default=None)
-#     present_city_id        = Column(Integer, nullable=True)
-#     present_taluk_id        = Column(Integer, nullable=True)
-#     present_district_id     = Column(Integer, nullable=True)
-#     present_state_id        = Column(Integer, nullable=True)
-#     present_country_id      = Column(Integer, nullable=True)
-#     permanent_address_line_1= Column(String(100), nullable=True)
-#     permanent_address_line_2= Column(String(100), default=None)
-#     permanent_address_line_3 = Column(String(100), default=None)
-#     permanent_address_line_4= Column(String(100), default=None)
-#     permanent_pin_code      = Column(String(20), default=None)
-#     permanent_city_id       = Column(Integer, nullable=True)
-#     permanent_taluk_id      = Column(Integer, nullable=True)
-#     permanent_district_id   = Column(Integer, nullable=True)
-#     permanent_state_id      = Column(Integer, nullable=True)
-#     permanent_country_id    = Column(Integer, nullable=True)
-#     home_phone              = Column(String(20), default=None)
-#     mobile_phone            = Column(String(20), default=None)
-#     whatsapp_number         = Column(String(20), default=None)
-#     work_phone              = Column(String(20), default=None)
-#     work_email              = Column(String(50), default=None)
-#     private_email           = Column(String(50), default=None)
-#     account_number          = Column(String(20), default=None)
-#     bank_name                = Column(String(50), default=None)
-#     bank_branch_name         = Column(String(50), default=None)
-#     ifsc_code                = Column(String(20), default=None)
-#     created_by = Column(Integer, nullable=False, default=0)
-#     created_on = Column(DateTime, nullable=False, default=func.now())
-#     modified_by = Column(Integer, default=None)
-#     modified_on = Column(DateTime, default=None)
-#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-#     deleted_by = Column(Integer, default=None)
-#     deleted_on = Column(DateTime, default=None)
 
 class Employee(caerp_base):
     __tablename__ = "employee_master"
@@ -170,6 +116,88 @@ class Employee(caerp_base):
     approved_by              = Column(Integer, default=None)
     approved_on              = Column(DateTime, default=None)
 
+
+class EmployeeMasterView(caerp_base):
+    __tablename__ = "view_employee_master"
+    employee_id              = Column(Integer, primary_key=True, autoincrement=True)
+    employee_number          = Column(String(20), nullable=False)
+    first_name               = Column(String(100), nullable=False)
+    middle_name              = Column(String(100), nullable=False)
+    last_name                = Column(String(100), nullable=False)
+    gender_id                = Column(Integer, nullable=False)
+    gender                   = Column(String(15), nullable=False)
+    date_of_birth            = Column(Date, default=None)
+    nationality_id           = Column(Integer, nullable=False)
+    nationality_name         = Column(String(50), nullable=False)
+    marital_status_id        = Column(Integer, nullable=False)
+    marital_status           = Column(String(30), nullable=False)
+    designation_id           = Column(Integer, nullable=False)
+    designation              = Column(String(50), nullable=False)
+    is_consultant            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    aadhaar_number           = Column(String(50), default=None)
+    passport_number          = Column(String(50), default=None)
+    pan_number               = Column(String(20), default=None)
+    driving_licence_number   = Column(String(50), default=None)
+    other_id_doc             = Column(String(50), default=None)
+    present_house_or_flat_name   = Column(String(100), nullable=False)
+    present_house_flat_or_door_number   = Column(String(100), default=None)
+    present_road_name   = Column(String(100), default=None)
+    present_street_name   = Column(String(100), default=None)
+    present_land_mark      = Column(String(100), default=None)
+    present_pin_code         = Column(String(20), default=None)
+    present_post_office_id   = Column(Integer, nullable=False)
+    present_post_office_name = Column(String(250), nullable=False)
+    present_city_id          = Column(Integer, nullable=False)
+    present_city_name        = Column(String(50), nullable=False)
+    present_taluk_id         = Column(Integer, nullable=False)
+    present_taluk_name       = Column(String(50), nullable=False)
+    present_district_id      = Column(Integer, nullable=False)
+    present_district_name    = Column(String(50), nullable=False)
+    present_state_id         = Column(Integer, nullable=False)
+    present_state_name       = Column(String(50), nullable=False)
+    present_country_id       = Column(Integer, nullable=False)
+    present_country_name     = Column(String(300), nullable=False)
+    permanent_house_or_flat_name = Column(String(100), nullable=False)
+    permanent_house_flat_or_door_number = Column(String(100), default=None)
+    permanent_road_name = Column(String(100), default=None)
+    permanent_street_name = Column(String(100), default=None)
+    permanent_land_mark  = Column(String(100), default=None)
+    permanent_pin_code       = Column(String(20), default=None)
+    permanent_post_office_id = Column(Integer, nullable=False)
+    permanent_post_office_name = Column(String(250), nullable=False)
+    permanent_city_id        = Column(Integer, nullable=False)
+    permanent_city_name      = Column(String(50), nullable=False)
+    permanent_taluk_id       = Column(Integer, nullable=False)
+    permanent_taluk_name     = Column(String(50), nullable=False)
+    permanent_district_id    = Column(Integer, nullable=False)
+    permanent_district_name  = Column(String(50), nullable=False)
+    permanent_state_id       = Column(Integer, nullable=False)
+    permanent_state_name     = Column(String(50), nullable=False)
+    permanent_country_id     = Column(Integer, nullable=False)
+    permanent_country_name   = Column(String(300), nullable=False)
+    home_phone               = Column(String(20), default=None)
+    mobile_phone             = Column(String(20), default=None)
+    whatsapp_number          = Column(String(20), default=None)
+    work_phone               = Column(String(20), default=None)
+    work_email               = Column(String(50), default=None)
+    private_email            = Column(String(50), default=None)
+    account_number           = Column(String(20), default=None)
+    bank_name                = Column(String(50), default=None)
+    bank_branch_name         = Column(String(50), default=None)
+    ifsc_code                = Column(String(20), default=None)
+    created_by               = Column(Integer, nullable=False, default=0)
+    created_on               = Column(DateTime, nullable=False, default=func.now())
+    modified_by              = Column(Integer, default=None)
+    modified_on              = Column(DateTime, default=None)
+    is_deleted               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by               = Column(Integer, default=None)
+    deleted_on               = Column(DateTime, default=None)
+    is_verified              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    verified_by              = Column(Integer, default=None)
+    verified_on              = Column(DateTime, default=None)
+    is_approved              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    approved_by              = Column(Integer, default=None)
+    approved_on              = Column(DateTime, default=None)
 
 class EmailCredentials(caerp_base):
     __tablename__ = "app_email_api_settings"
@@ -397,6 +425,7 @@ class Gender(caerp_base):
     id          = Column(Integer, primary_key=True, autoincrement=True)
     gender      = Column(String(20), nullable=False)
     
+    
 class PanCard(caerp_base):
     __tablename__   =   "app_pan_card_types"
 
@@ -405,11 +434,11 @@ class PanCard(caerp_base):
     pan_card_type	    = Column(String(100), nullable=False)
     
 class Qualification(caerp_base):
-    __tablename__   =   "app_qualification"
+    __tablename__   =   "app_educational_qualifications"
 
     id                  = Column(Integer, primary_key=True, autoincrement=True)
     qualification	    = Column(String(50), nullable=False)
-    
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     
 class ConstitutionTypes(caerp_base):
     __tablename__   =   "app_constitution_types"
@@ -423,4 +452,7 @@ class Profession(caerp_base):
     id                   = Column(Integer, primary_key=True, autoincrement=True)
     profession_name 	 = Column(String(100), nullable=False)
     profession_code      = Column(String(100), nullable=False)
+
+
+
 
