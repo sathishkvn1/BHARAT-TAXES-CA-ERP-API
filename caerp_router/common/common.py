@@ -1,5 +1,6 @@
 from fastapi import APIRouter,Depends,HTTPException,status
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaForUpdate, QualificationSchemaResponse, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
+from caerp_auth.authentication import authenticate_user
+from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
@@ -966,23 +967,39 @@ def get_qualification_details(
     return qualification_details
 
 
-@router.post("/qualification_update/{qualification_id}", response_model=List[QualificationSchemaForUpdate])
-def update_qualification_details(        
-        qualification_data : QualificationSchemaForUpdate ,
-        qualification_id : int ,
-        db: Session = Depends(get_db),
-        token: str = Depends(oauth2.oauth2_scheme)
-    ):
-    """
-    Parameters:
-    - `token` (required): Authentication token.
-    """
-    # Check authorization
+
+
+@router.post("/save/educational_qualifications/{id}", response_model=EducationSchema)
+def save_educational_qualifications(
+    data: EducationSchema,
+    id: int = 0,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    new_qualification = db_common.update_qualification(db, qualification_data,qualification_id)
-        
-    return [new_qualification]
+
+    return db_common.save_educational_qualifications(db, id, data)
+
+
+
+@router.delete("/delete/educational_qualifications/{id}")
+def delete_educational_qualifications(
+                    
+                     id: int,
+                     db: Session = Depends(get_db),
+                     token: str = Depends(oauth2.oauth2_scheme)):
+    
+    
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+
+    
+    return db_common.delete_educational_qualifications(db, id)
+
+
 
 
 @router.get("/constitution", response_model=List[ConstitutionTypeSchemaResponse])

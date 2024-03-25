@@ -433,7 +433,7 @@ class PanCard(caerp_base):
     pan_card_type_code	= Column(String(1), nullable=False)
     pan_card_type	    = Column(String(100), nullable=False)
     
-class Qualification(caerp_base):
+class AppEducationalQualificationsMaster(caerp_base):
     __tablename__   =   "app_educational_qualifications"
 
     id                  = Column(Integer, primary_key=True, autoincrement=True)

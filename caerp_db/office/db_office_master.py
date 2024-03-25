@@ -15,7 +15,8 @@ from sqlalchemy import and_, between
 import pandas as pd
 import io
 from sqlalchemy.exc import IntegrityError
-from caerp_db.office.models import AppEducationalQualificationsMaster,EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.common.models import AppEducationalQualificationsMaster
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EnquirerTypeBase,EnquirerStatusBase,EnquirerStatusDisplay,ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
 #-------------------------------------document master------------------------------------------------------------------
 
@@ -921,22 +922,9 @@ def delete_hsn_sac_class(db: Session, id: int):
 
 #----------------------------------------------------app_hsn_sac_master--------------------------------
     
-
-
-
 def save_hsn_sac_master(db: Session, hsn_data: HsnSacMasterDisplay, id: int):
     
-    existing_data = db.query(AppHsnSacMaster).filter(
-        AppHsnSacMaster.service_frequency == hsn_data.service_frequency
-                      ).filter(AppHsnSacMaster.is_deleted == "no").first()
     
-    if existing_data:
-        
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Service frequency with this name already exists and is active."
-        )
-
     if id == 0:
        # Create
         new_hsn_sac = AppHsnSacMaster(** hsn_data.dict())
@@ -956,6 +944,12 @@ def save_hsn_sac_master(db: Session, hsn_data: HsnSacMasterDisplay, id: int):
         db.commit()
         db.refresh(document)  
         return document  
+
+
+
+
+
+
 
 
 def get_all_hsn_sac_master(db: Session,deleted_status: DeletedStatus):
@@ -1039,6 +1033,49 @@ def delete_hsn_sac_master(db: Session, id: int):
 
 
  
+
+
+# async def save_csv_to_db(file: UploadFile, db: Session):
+#     try:
+#         # Read the uploaded file
+#         contents = await file.read()
+
+#         # Parse CSV data using pandas
+#         try:
+#             # Attempt to decode contents as UTF-8
+#             df = pd.read_csv(io.BytesIO(contents), encoding='utf-8')
+#         except UnicodeDecodeError:
+#             # If decoding as UTF-8 fails, attempt to decode with errors='replace'
+#             decoded_contents = contents.decode('utf-8', errors='replace')
+#             df = pd.read_csv(io.StringIO(decoded_contents))
+
+#         # Save DataFrame to the database table
+#         try:
+#             # Convert DataFrame to dictionary records
+#             df_dict = df.where(pd.notnull(df), None).to_dict(orient='records')
+
+#             # Insert data into the database 
+#             with db.begin():
+#                 for record in df_dict:
+#                     # Cleanse each record before inserting
+#                     record['hsn_sac_description'] = record['hsn_sac_description'].encode('latin1', 'ignore').decode('utf-8')
+#                     # Set sku_code to None if it's null in the CSV file
+#                     if pd.isnull(record['sku_code']):
+#                         record['sku_code'] = None
+#                     db.execute(AppHsnSacMaster.__table__.insert(), record)
+
+#             return {"message": "Data saved successfully"}
+#         except IntegrityError as e:
+#             # If IntegrityError occurs due to duplicate entry
+#             if 'Duplicate entry' in str(e):
+#                 raise HTTPException(status_code=400, detail="Error: This data already exists in the table.")
+#             else:
+#                 raise HTTPException(status_code=500, detail=f"Failed to save data to the database: {str(e)}")
+#         except Exception as e:
+#             raise HTTPException(status_code=500, detail=f"Failed to save data to the database: {str(e)}")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to upload CSV and save to database: {str(e)}")
+
 async def save_csv_to_db(file: UploadFile, db: Session):
     try:
         # Read the uploaded file
@@ -1056,12 +1093,15 @@ async def save_csv_to_db(file: UploadFile, db: Session):
         # Save DataFrame to the database table
         try:
             # Convert DataFrame to dictionary records
-            df_dict = df.to_dict(orient='records')
+            df_dict = df.where(pd.notnull(df), None).to_dict(orient='records')
 
             # Insert data into the database 
             with db.begin():
                 for record in df_dict:
                     # Cleanse each record before inserting
+                    for column in df.columns:
+                        if pd.isnull(record[column]):
+                            record[column] = None
                     record['hsn_sac_description'] = record['hsn_sac_description'].encode('latin1', 'ignore').decode('utf-8')
                     db.execute(AppHsnSacMaster.__table__.insert(), record)
 
@@ -1076,6 +1116,8 @@ async def save_csv_to_db(file: UploadFile, db: Session):
             raise HTTPException(status_code=500, detail=f"Failed to save data to the database: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload CSV and save to database: {str(e)}")
+
+
 
 
 
