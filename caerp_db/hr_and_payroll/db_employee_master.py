@@ -1,6 +1,6 @@
 from fastapi import HTTPException,status, Depends
 from sqlalchemy.orm import Session
-from caerp_db.common.models import Employee
+from caerp_db.common.models import Employee, EmployeeMasterView
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeMasterSchema, EmployeeMasterSchemaForGet, EmployeePersonalDetailSchema, EmployeeAddressDetailSchema, EmployeeContactDetailSchema, EmployeeBankAccountDetailSchema
 from caerp_db.hash import Hash
 from caerp_db.database import get_db
@@ -47,11 +47,11 @@ def save_employee_master(db: Session, request: EmployeeMasterSchema, id: int, us
 
 def get_deleted_employees(db: Session, deleted_status: DeletedStatus):
     if deleted_status == DeletedStatus.DELETED:
-        return db.query(Employee).filter(Employee.is_deleted == 'yes').all()
+        return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'yes').all()
     elif deleted_status == DeletedStatus.NOT_DELETED:
-        return db.query(Employee).filter(Employee.is_deleted == 'no').all()
+        return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'no').all()
     elif deleted_status == DeletedStatus.ALL:
-        return db.query(Employee).all()
+        return db.query(EmployeeMasterView).all()
          
     else:
         # Handle invalid state or raise an error
@@ -60,7 +60,7 @@ def get_deleted_employees(db: Session, deleted_status: DeletedStatus):
 #-------------------------------------------------------------------------------------------------------------------
 
 def get_employee(db: Session, id: int):
-  emp = db.query(Employee).filter(Employee.employee_id == id).first()
+  emp = db.query(EmployeeMasterView).filter(EmployeeMasterView.employee_id == id).first()
   if not emp:
     raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
     detail = f"Employee with id {id} not found" )  
@@ -88,17 +88,17 @@ def delete_employee_master(db: Session, id: int, deleted_by: int):
 
 def get_verified_employees(db: Session, verified_status: VerifiedStatus):
    if verified_status == VerifiedStatus.VERIFIED:
-      return db.query(Employee).filter(
+      return db.query(EmployeeMasterView).filter(
          and_(
-            Employee.is_verified == 'yes',
-            Employee.is_deleted  == "no"
+            EmployeeMasterView.is_verified == 'yes',
+            EmployeeMasterView.is_deleted  == "no"
         )
       ).all()
    elif verified_status == VerifiedStatus.NOT_VERIFIED:
-      return db.query(Employee).filter(
+      return db.query(EmployeeMasterView).filter(
          and_(
-            Employee.is_verified == 'no',
-            Employee.is_deleted  == "no"
+            EmployeeMasterView.is_verified == 'no',
+            EmployeeMasterView.is_deleted  == "no"
         )
       ).all() 
    else:
@@ -109,17 +109,17 @@ def get_verified_employees(db: Session, verified_status: VerifiedStatus):
 
 def get_approved_employees(db: Session, approved_status: ApprovedStatus):
    if approved_status == ApprovedStatus.APPROVED:
-      return db.query(Employee).filter(
+      return db.query(EmployeeMasterView).filter(
          and_(
-            Employee.is_approved == 'yes',
-            Employee.is_deleted  == "no"
+            EmployeeMasterView.is_approved == 'yes',
+            EmployeeMasterView.is_deleted  == "no"
         )
       ).all()
    elif approved_status == ApprovedStatus.NOT_APPROVED:
-      return db.query(Employee).filter(
+      return db.query(EmployeeMasterView).filter(
          and_(
-            Employee.is_approved == 'no',
-            Employee.is_deleted  == "no"
+            EmployeeMasterView.is_approved == 'no',
+            EmployeeMasterView.is_deleted  == "no"
         )
       ).all() 
    else:
@@ -201,8 +201,36 @@ def update_employee_bank_acc_details(db: Session, request: EmployeeBankAccountDe
    except SQLAlchemyError as e:
      error_message = f"Failed to update Employee Bank Account Details: {e}"
      raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)
-  #...........................\
+   
+#-----------------------------------------------------------------------------------------------------------------------
 
-  
-  
+def get_consultants(db: Session):
+   is_consult = db.query(EmployeeMasterView).filter(
+         and_(
+            EmployeeMasterView.is_consultant == 'yes',
+            EmployeeMasterView.is_deleted  == "no"
+        )
+      ).all()
+   
+   if is_consult is None:
+        raise HTTPException(status_code=404, detail="There are no employees who are consultants")
+   return is_consult
 
+#----------------------------------------------------------------------------------------------------------------------------
+
+def get_consultant_by_id(db: Session, id: int):
+   is_employee_found = db.query(EmployeeMasterView).filter(EmployeeMasterView.employee_id == id).first()
+   if is_employee_found is None:
+        raise HTTPException(status_code=404, detail="Employee not found")
+  
+   is_consult_id = db.query(EmployeeMasterView).filter(
+         and_(
+            EmployeeMasterView.employee_id == id,
+            EmployeeMasterView.is_consultant == 'yes',
+            EmployeeMasterView.is_deleted  == "no"
+        )
+      ).first()
+   
+   if is_consult_id is None:
+      raise HTTPException(status_code=404, detail="the particular employee is not a consultant")
+   return is_consult_id
