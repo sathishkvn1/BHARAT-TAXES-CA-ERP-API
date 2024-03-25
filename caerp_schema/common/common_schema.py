@@ -1356,22 +1356,22 @@ class InstallmentDetailsForGet(BaseModel):
     
 #///
 class PancardSchemaResponse(BaseModel):
-    id:str
+    id:int
     pan_card_type_code : str
     pan_card_type : str
     
 class QualificationSchemaResponse(BaseModel):
-    id:str
+    id:int
     qualification : str
 
 
 class ConstitutionTypeSchemaResponse(BaseModel):
-    id:str
+    id:int
     constitution_type   : str
 
 
 class ProfessionSchemaResponse(BaseModel):
-    id:str
+    id:int
     profession_name : str 
     profession_code : str
 
