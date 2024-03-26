@@ -1,11 +1,11 @@
 
 
 
-from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, StateDB, TalukDB
+from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema     
 
 def get_countries(db: Session):
     return db.query(CountryDB).all()
@@ -126,8 +126,11 @@ def get_pan_card_by_code_type(db: Session, code_type: str):
     return db.query(PanCard).filter(PanCard.pan_card_type_code == code_type).first()
 
 
+
+
 def get_all_qualification(db: Session):
-    return db.query(AppEducationalQualificationsMaster).all()
+    return db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.is_deleted == 'no').all() 
+
 
 
 def save_educational_qualifications(db: Session, id: int, data: EducationSchema):
@@ -199,3 +202,49 @@ def update_profession(db: Session, request: ProfessionSchemaForUpdate, id: int):
     db.commit()
     db.refresh(profession)
     return profession
+
+
+
+def save_query_manager_queries(db: Session, id: int, data: QueryManagerQuerySchema):
+    if id == 0:
+        # Add operation
+        new_query = QueryManagerQuery(**data.dict())
+        db.add(new_query)
+        db.commit()
+        db.refresh(new_query)
+        return {"message": "Query inserted successfully"}
+    else:
+        # Update operation
+        existing_query = db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).first()
+        if existing_query is None:
+            raise HTTPException(status_code=404, detail="Query not found")
+        
+        # Update the existing query with new data
+        db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).update(data.dict())
+        db.commit()
+        db.refresh(existing_query)
+        return {"message": "Query updated successfully"}
+    
+    
+def delete_query_manager_queries(db: Session, id: int):
+    result = db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).first()
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    result.is_deleted = 'yes'
+
+
+    db.commit()
+
+    return {
+        "message": "Deleted successfully",
+    }
+
+
+def get_query_manager_query_by_id(db: Session, id: int):
+    return db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).first()
+
+
+def get_queries_by_id(db: Session, id: int):
+    return db.query(QueryView).filter(QueryView.id == id).first()

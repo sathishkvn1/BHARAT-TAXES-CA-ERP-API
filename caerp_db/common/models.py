@@ -455,4 +455,46 @@ class Profession(caerp_base):
 
 
 
+class QueryManagerQuery(caerp_base):
+    __tablename__ = "app_query_manager_queries"
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    query = Column(String(500), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class QueryManager(caerp_base):
+    __tablename__ = "app_query_manager"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    query_id = Column(Integer, nullable=False)
+    queried_by = Column(Integer,  nullable=False)
+    query_on = Column(DateTime, nullable=False)
+    is_resolved = Column(Enum('yes', 'no'), nullable=False, default='no')
+    resolved_by = Column(Integer,nullable=True )
+    resolved_on = Column(DateTime, nullable=True)
+    
+class QueryView(caerp_base):
+    __tablename__ = 'view_user_queries'
+
+    id = Column(Integer, primary_key=True)
+    query_id = Column(Integer)
+    query = Column(String)
+    is_deleted = Column(String)
+    queried_by = Column(Integer)
+    query_on = Column(DateTime)
+    is_resolved = Column(String)
+    resolved_by = Column(Integer)
+    resolved_on = Column(DateTime)
+    user_id = Column(Integer)
+    user_name = Column(String)
+    role_id = Column(Integer)
+    role = Column(String)
+    employee_number = Column(String)
+    first_name = Column(String)
+    last_name = Column(String)
+    gender_id = Column(Integer)
+    gender = Column(String)
+    designation_id = Column(Integer)
+    designation = Column(String)
+    

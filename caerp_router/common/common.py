@@ -1,12 +1,15 @@
-from fastapi import APIRouter,Depends,HTTPException,status
+from fastapi import APIRouter,Depends,HTTPException,status,Query
 from caerp_auth.authentication import authenticate_user
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
+from caerp_db.common.models import QueryManager, QueryManagerQuery, QueryView, UserBase
+from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
-from caerp_constants.caerp_constants import ActiveStatus
+from caerp_constants.caerp_constants import ActiveStatus, DeletedStatus
 from typing import List
 from caerp_auth import oauth2
+from datetime import datetime
+
 
 router = APIRouter(
     
@@ -950,8 +953,8 @@ def get_pan_card_by_card_type(
     return pan_card_detail
 
 
-@router.get("/qualification", response_model=List[QualificationSchemaResponse])
-def get_qualification_details(
+@router.get("/educational_qualification", response_model=List[QualificationSchemaResponse])
+def get_educational_qualification_details(
         db: Session = Depends(get_db),
         token: str = Depends(oauth2.oauth2_scheme)
        
@@ -1073,3 +1076,176 @@ def update_profession_details(
     new_profession = db_common.update_profession(db, profession_data,profession_id)
         
     return [new_profession]
+
+
+@router.post("/save/query_manager_queries/{id}", response_model=dict)
+def save_query_manager_queries(
+    data: QueryManagerQuerySchema,
+    id: int = 0,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    return db_common.save_query_manager_queries(db, id, data)
+
+
+@router.delete("/delete/query_manager_queries/{id}")
+def delete_query_manager_queries(
+                    
+                     id: int,
+                     db: Session = Depends(get_db),
+                     token: str = Depends(oauth2.oauth2_scheme)):
+    
+    
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+
+    
+    return db_common.delete_query_manager_queries(db, id)
+
+
+@router.get("/query_manager_queries/{id}", response_model=QueryManagerQuerySchemaForGet)
+def get_query_manager_query_by_id(
+    id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    query = db_common.get_query_manager_query_by_id(db, id)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query not found")
+
+    return query
+
+
+@router.get("/get_all_query_manager_queries/" , response_model=List[QueryManagerQuerySchemaForGet])
+async def get_all_query_manager_queries(deleted_status: DeletedStatus = DeletedStatus.NOT_DELETED,
+                              db: Session = Depends(get_db),
+                             ):
+    return get_all_query_manager_queries(db, deleted_status)
+
+
+
+def get_all_query_manager_queries(db: Session, deleted_status: DeletedStatus):
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(QueryManagerQuery).filter(QueryManagerQuery.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(QueryManagerQuery).filter(QueryManagerQuery.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(QueryManagerQuery).all()
+    else:
+       
+        raise ValueError("Invalid deleted_status")
+    
+    
+    
+@router.post("/save/query_manager/")
+def save_query_manager(
+    data: QueryManagerSchema,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+
+
+    # Retrieve the user_id based on the provided username
+    user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Create a new QueryManager record
+    new_query_manager = QueryManager(
+        query_id=data.query_id,
+        queried_by=user.id,  # Use the retrieved user_id
+        query_on=data.query_on,
+    )
+
+    # Save the new record
+    db.add(new_query_manager)
+    db.commit()
+    db.refresh(new_query_manager)
+
+    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
+
+
+
+@router.post("/resolve/query_manager/{query_manager_id}")
+def resolve_query_manager(
+    query_manager_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    resolved_by = auth_info["user_id"]
+    
+    # Retrieve the QueryManager record
+    query_manager = db.query(QueryManager).filter(QueryManager.id == query_manager_id).first()
+    if query_manager is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query Manager not found")
+
+    # Check if the query is already resolved
+    if query_manager.is_resolved == 'yes':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Query is already resolved")
+
+    # Update the query_manager record to mark it as resolved
+    query_manager.is_resolved = 'yes'
+    query_manager.resolved_by = resolved_by
+    query_manager.resolved_on = datetime.now()
+
+    # Commit the changes to the database
+    db.commit()
+
+    return {"message": "Query resolved successfully", "query_manager": query_manager}
+
+		
+
+
+@router.get("/queries/", response_model=List[QueryViewSchema])
+def get_queries_by_status(
+    status: QueryStatus = Query(QueryStatus.ALL),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    query = db.query(QueryView)  # Query the QueryView view
+    
+    # Filter queries based on resolution status
+    if status == QueryStatus.RESOLVED:
+        query = query.filter(QueryView.is_resolved == 'yes')
+    elif status == QueryStatus.NOT_RESOLVED:
+        query = query.filter(QueryView.is_resolved == 'no')
+    
+    # Execute the query and fetch results
+    queries = query.all()
+    
+    return queries
+
+
+
+
+@router.get("/queries/{id}", response_model=QueryViewSchema)
+def get_queries_by_id(id: int,
+                      db: Session = Depends(get_db),
+                      token: str = Depends(oauth2.oauth2_scheme)):
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    query = db_common.get_queries_by_id(db, id)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return query
+
