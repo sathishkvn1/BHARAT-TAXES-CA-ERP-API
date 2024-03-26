@@ -127,7 +127,6 @@ def get_pan_card_by_code_type(db: Session, code_type: str):
 
 
 
-
 def get_all_qualification(db: Session):
     return db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.is_deleted == 'no').all() 
 

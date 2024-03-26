@@ -1632,33 +1632,13 @@ class QueryManagerQuerySchemaForGet(BaseModel):
     query: str
     is_deleted: str
 
-# class QueryManagerSchema(BaseModel):
-#     query_id: int
-#     queried_by: int
-#     query_on: datetime
-#     is_resolved: str
-#     resolved_by: Optional[int]
-#     resolved_on: Optional[datetime]
-    
-#     class Config:
-#         orm_mode = True
 
-# class QueryManagerSchema(BaseModel):
-#     query_id: int
-#     queried_by: str
-#     query_on: datetime
-#     is_resolved: str
-#     resolved_by: Optional[int]
-#     resolved_on: Optional[datetime]
-    
-#     class Config:
-#         orm_mode = True
 
 
 class QueryManagerSchema(BaseModel):
     query_id: int
     queried_by: str
-    query_on: datetime
+    # query_on: Optional[datetime]
 
     class Config:
         orm_mode = True

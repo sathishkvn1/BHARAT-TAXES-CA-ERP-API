@@ -1164,8 +1164,9 @@ def save_query_manager(
     # Create a new QueryManager record
     new_query_manager = QueryManager(
         query_id=data.query_id,
-        queried_by=user.id,  # Use the retrieved user_id
-        query_on=data.query_on,
+        queried_by=user.id, 
+        query_on=datetime.now(),
+      
     )
 
     # Save the new record
@@ -1231,7 +1232,6 @@ def get_queries_by_status(
     queries = query.all()
     
     return queries
-
 
 
 
