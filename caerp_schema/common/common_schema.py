@@ -1622,3 +1622,62 @@ class ProfessionSchemaForUpdate(BaseModel):
 
 class CAPTCHARequest(BaseModel):
     answer: int
+
+class QueryManagerQuerySchema(BaseModel):
+
+    query: str
+
+class QueryManagerQuerySchemaForGet(BaseModel):
+    id:int
+    query: str
+    is_deleted: str
+
+
+
+
+class QueryManagerSchema(BaseModel):
+    query_id: int
+    queried_by: str
+    # query_on: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+        
+        
+class QueryStatus(str, Enum):
+    ALL = "ALL"
+    RESOLVED = "RESOLVED"
+    NOT_RESOLVED = "NOT RESOLVED"
+    
+
+    
+# class QueryFilterSchema(BaseModel):
+#     id:int
+#     query_id: int
+#     queried_by: str
+#     query_on: datetime
+#     is_resolved: str
+#     resolved_by: Optional[int]
+#     resolved_on: Optional[datetime]
+    
+class QueryViewSchema(BaseModel):
+    id: int
+    query_id: int
+    query: str
+    is_deleted: str
+    queried_by: int
+    query_on: datetime
+    is_resolved: str
+    resolved_by: Optional[int]
+    resolved_on: Optional[datetime]
+    user_id: int
+    user_name: str
+    role_id: int
+    role: str
+    employee_number: str
+    first_name: str
+    last_name: str
+    gender_id: int
+    gender: str
+    designation_id: int
+    designation: str
