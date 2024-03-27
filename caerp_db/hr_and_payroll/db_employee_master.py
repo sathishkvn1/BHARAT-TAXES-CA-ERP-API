@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from pydantic import ValidationError
 
 
+
 def save_employee_master(db: Session, request: EmployeeMasterSchema, id: int, user_id: int):
    try:
       if id == 0:
@@ -45,21 +46,20 @@ def save_employee_master(db: Session, request: EmployeeMasterSchema, id: int, us
    
 #-------------------------------------------------------------------------------------------------------------------
 
-def get_deleted_employees(db: Session, deleted_status: DeletedStatus):
+def get_employee_master(db: Session, deleted_status: DeletedStatus):
     if deleted_status == DeletedStatus.DELETED:
         return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'yes').all()
     elif deleted_status == DeletedStatus.NOT_DELETED:
         return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'no').all()
     elif deleted_status == DeletedStatus.ALL:
         return db.query(EmployeeMasterView).all()
-         
     else:
         # Handle invalid state or raise an error
-        raise ValueError("Invalid deleted_status")
+        raise ValueError("No matching records found")
 
 #-------------------------------------------------------------------------------------------------------------------
 
-def get_employee(db: Session, id: int):
+def get_employee_master_by_id(db: Session, id: int):
   emp = db.query(EmployeeMasterView).filter(EmployeeMasterView.employee_id == id).first()
   if not emp:
     raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
@@ -103,7 +103,7 @@ def get_verified_employees(db: Session, verified_status: VerifiedStatus):
       ).all() 
    else:
         # Handle invalid state or raise an error
-        raise ValueError("Invalid verified_status")
+        raise ValueError("No matching records found")
    
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ def get_approved_employees(db: Session, approved_status: ApprovedStatus):
       ).all() 
    else:
         # Handle invalid state or raise an error
-        raise ValueError("Invalid approved_status")      
+        raise ValueError("No matching records found")      
    
 #-------------------------------------------------------------------------------------------------------------------
 

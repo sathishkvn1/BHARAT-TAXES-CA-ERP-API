@@ -63,6 +63,7 @@ class Employee(caerp_base):
     nationality_id           = Column(Integer, nullable=False)
     marital_status_id        = Column(Integer, nullable=False)
     designation_id           = Column(Integer, nullable=False)
+    is_consultant            = Column(Enum('yes', 'no'), nullable=False, default='no')
     aadhaar_number           = Column(String(50), default=None)
     passport_number          = Column(String(50), default=None)
     pan_number               = Column(String(20), default=None)

@@ -22,7 +22,7 @@ router = APIRouter(
 )
 
 
-#save employee master
+# #save employee master
 @router.post('/save_employee_master', response_model= EmployeeMasterSchema)
 def save_employee_master(request: EmployeeMasterSchema = Depends(), id: int = 0, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
@@ -46,39 +46,40 @@ def save_employee_master(request: EmployeeMasterSchema = Depends(), id: int = 0,
    auth_info = authenticate_user(token)
    user_id = auth_info["user_id"]
    try:
+      #validate_fields(db)
       return db_employee_master.save_employee_master(db, request, id, user_id)
    except Exception as e:    
       raise HTTPException(status_code=500, detail=str(e))
   
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------   
 
-#get employee status
-@router.get("/get_deleted_employees/" , response_model=List[EmployeeMasterSchemaForGet])
-async def get_deleted_employees(deleted_status: DeletedStatus = DeletedStatus.NOT_DELETED, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+#get employee master
+@router.get("/get_employee_master/" , response_model=List[EmployeeMasterSchemaForGet])
+async def get_employee_master(deleted_status: DeletedStatus = DeletedStatus.NOT_DELETED, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
-    -**Retrieve employee delete status.**
+    -**Retrieve employee master*
    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    return db_employee_master.get_deleted_employees(db, deleted_status)
+    return db_employee_master.get_employee_master(db, deleted_status)
 
 #----------------------------------------------------------------------------------------------------------------------------------
 
-#read specific employee by id
-@router.get("/employee{id}", response_model= EmployeeMasterSchemaForGet)
-def get_employee_by_id(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+#read specific employee master by id
+@router.get("/get_employee_master/{id}", response_model= EmployeeMasterSchemaForGet)
+def get_employee_master_by_id(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
   """
-    -**Retrieve employee details by id.**
+    -**Retrieve employee master by id.**
    """
   if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-  return  db_employee_master.get_employee(db, id)
+  return  db_employee_master.get_employee_master_by_id(db, id)
 
 #-----------------------------------------------------------------------------------------------------------------------------
 
 #delete specific employee by id
-@router.delete("/delete/employee_master/{id}")
-def delete_employee_master(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+@router.delete("/delete_employee_master/{id}")
+def delete_employee_master_by_id(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
     -**Delete employee details by id.**
    """ 
@@ -112,8 +113,8 @@ def get_approved_employees(approved_status: ApprovedStatus = ApprovedStatus.APPR
     
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-@router.post('/update_employee_personal_details', response_model=EmployeePersonalDetailSchema)
-def update_employee_personal_details(request: EmployeePersonalDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+@router.post('/update_employee_personal_details/{id}', response_model=EmployeePersonalDetailSchema)
+def update_employee_personal_details_by_id(request: EmployeePersonalDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     -**Update Employee personal details.**
    """   
@@ -128,8 +129,8 @@ def update_employee_personal_details(request: EmployeePersonalDetailSchema, id: 
    
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------   
 
-@router.post('/update_employee_address_details', response_model=EmployeeAddressDetailSchema)
-def update_employee_address_details(request: EmployeeAddressDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+@router.post('/update_employee_address_details/{id}', response_model=EmployeeAddressDetailSchema)
+def update_employee_address_details_by_id(request: EmployeeAddressDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     -**Update Employee address details.**
    """ 
@@ -144,8 +145,8 @@ def update_employee_address_details(request: EmployeeAddressDetailSchema, id: in
    
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-@router.post('/update_employee_contact_details', response_model=EmployeeContactDetailSchema)
-def update_employee_contact_details(request: EmployeeContactDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+@router.post('/update_employee_contact_details/{id}', response_model=EmployeeContactDetailSchema)
+def update_employee_contact_details_by_id(request: EmployeeContactDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     -**Update Employee contact details.**
    """ 
@@ -160,8 +161,8 @@ def update_employee_contact_details(request: EmployeeContactDetailSchema, id: in
 
 #---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
    
-@router.post('/update_employee_bank_acc_details', response_model=EmployeeBankAccountDetailSchema)
-def update_employee_bank_acc_details(request: EmployeeBankAccountDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
+@router.post('/update_employee_bank_acc_details/{id}', response_model=EmployeeBankAccountDetailSchema)
+def update_employee_bank_acc_details_by_id(request: EmployeeBankAccountDetailSchema, id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
    """
     -**Update Employee Bank Account details.**
    """ 
@@ -189,7 +190,7 @@ def get_consultants(db: Session = Depends(get_db), token: str = Depends(oauth2.o
 #-----------------------------------------------------------------------------------------------------------------------------
 
 #get consultant by id
-@router.get("/get_consultant_by_ID/" , response_model=EmployeeMasterSchemaForGet)
+@router.get("/get_consultant/{id}/" , response_model=EmployeeMasterSchemaForGet)
 def get_consultant_by_id(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
     -**Retrieve consultant by id.**
