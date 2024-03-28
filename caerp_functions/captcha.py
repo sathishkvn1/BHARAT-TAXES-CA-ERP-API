@@ -30,8 +30,7 @@ def generate_captcha():
     # Generate two random numbers between 1 and 100
     num1 = random.randint(5, 30)
     num2 = random.randint(5, 30)
-    # operation = random.choice(['+', '-'])
-    
+    # operation = random.choice(['+', '-'])    
     # Perform the operation
     # if operation == '+':
     result = num1 + num2

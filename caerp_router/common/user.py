@@ -59,6 +59,7 @@ def update_active_status(
     return db_user.update_user_active_status(db,active_status,user_name)
 
 
+
 @router.post('/forgot_password')
 def forgot_password(
     user_name: str,
@@ -66,7 +67,7 @@ def forgot_password(
 ):
     try:
         user = db_user.get_user_by_user_name(db,user_name) 
-        # print('user',user)
+        
     except Exception as e:
                 # Handle sms sending failure
                 print(f"Failed to send message: {str(e)}")

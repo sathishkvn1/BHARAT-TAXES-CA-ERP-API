@@ -56,26 +56,6 @@ def get_employee_by_id(db: Session, id: int):
 def get_user_by_user_name(db: Session,username: str):    
     return  db.query(UserBase).filter(UserBase.user_name == username).first()
     
-# def update_user_active_status(db: Session, username: str):
-    
-#     existing_user = db.query(UserBase).filter(UserBase.user_name == username).first()
-
-#     if existing_user is None:
-#         raise HTTPException(status_code=404, detail="User is not found")
-
-#     existing_user.is_active = 'no'
-   
-#     try:
-#         db.commit()  # Commit changes to the database
-#     except Exception as e:
-#         db.rollback()  # Rollback changes if an error occurs
-#         raise HTTPException(status_code=500, detail=f"Failed to update status: {str(e)}")
-
-
-#     return {
-#         "message": "Update Active Status successfully",
-
-#     }
 
 
 def update_user_locked_time(db: Session, username: str):
