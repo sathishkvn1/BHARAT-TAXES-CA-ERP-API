@@ -101,12 +101,25 @@ def update_user_active_status(db: Session, active_status: ActiveStatus, username
     }
 
 
-# def get_active_user(db: Session, active_status: ActiveStatus):
-#     if active_status == ActiveStatus.ACTIVE:
-#         return db.query(UserBase).filter(UserBase.is_active == 'yes').all()
-#     elif active_status == ActiveStatus.NOT_ACTIVE:
-#         return db.query(UserBase).filter(UserBase.is_active == 'no').all()
-#     elif active_status == ActiveStatus.ALL:
-#         return db.query(UserBase).all()
-#     else:
-#         raise ValueError("Invalid active_status")
+
+def user_password_reset(db: Session, user_id: int, password: str):
+    
+    hashed_password =Hash.bcrypt(password)
+    existing_user = db.query(UserBase).filter(UserBase.employee_id == user_id).first()
+    print("Existing user : ",existing_user)
+  
+    existing_user.password= hashed_password
+   
+    try:
+        db.commit()  # Commit changes to the database
+    except Exception as e:
+        db.rollback()  # Rollback changes if an error occurs
+        raise HTTPException(status_code=500, detail=f"Failed to reset password: {str(e)}")
+
+
+    return {
+        "message": "Password reset successful",
+
+    }
+
+
