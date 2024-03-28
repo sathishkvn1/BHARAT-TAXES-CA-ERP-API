@@ -1,5 +1,4 @@
 
-
 from caerp_schema.common.common_schema import UserCreateSchema
 from caerp_db.common.models import UserBase,Employee
 from fastapi import HTTPException , status     
@@ -21,13 +20,7 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
         db.refresh(new_user)
 
         return new_user
-        # except Exception as e:
-        #     error_detail = [{
-        #         "loc": ["server"],
-        #         "msg": "Internal server error",
-        #         "type": "internal_server_error"
-        #     }]
-        #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
+       
     
     else:
         # Update operation

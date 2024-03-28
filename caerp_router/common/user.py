@@ -6,13 +6,12 @@ from sqlalchemy.orm import Session
 from caerp_db.common import db_user,db_otp
 from caerp_db.hr_and_payroll import db_employee_master
 from caerp_constants.caerp_constants import ActiveStatus
-<<<<<<< HEAD
+
 from caerp_auth import oauth2
-=======
+
 from caerp_functions import send_message
 from caerp_auth import oauth2
 import random
->>>>>>> Sruthi
 router = APIRouter(
     prefix ='/user',
     tags = ['USER']
@@ -81,7 +80,7 @@ def forgot_password(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Please Check your user name")
     else:
         if user.role_id == 1:
-            employee_data = db_employee_master.get_employee(db, user.employee_id)
+            employee_data = db_employee_master.get_employee_master_by_id(db, user.employee_id)
             mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
             new_otp = db_otp.create_otp(db, mobile_otp_value,user.employee_id)
             
