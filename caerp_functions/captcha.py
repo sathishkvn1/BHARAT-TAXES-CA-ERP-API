@@ -28,17 +28,17 @@ router = APIRouter(
 @router.get('/generate_captcha')
 def generate_captcha():
     # Generate two random numbers between 1 and 100
-    num1 = random.randint(1, 100)
-    num2 = random.randint(1, 100)
-    operation = random.choice(['+', '-'])
+    num1 = random.randint(5, 30)
+    num2 = random.randint(5, 30)
+    # operation = random.choice(['+', '-'])
     
     # Perform the operation
-    if operation == '+':
-        result = num1 + num2
-        text = f'{num1} + {num2} = ?'
-    else:
-        result = num1 - num2
-        text = f'{num1} - {num2} = ?'
+    # if operation == '+':
+    result = num1 + num2
+    text = f'{num1} + {num2} = ?'
+    # else:
+    #     result = num1 - num2
+    #     text = f'{num1} - {num2} = ?'
    
     output_image_path = text_masked_image(text)
 

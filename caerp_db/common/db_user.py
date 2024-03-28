@@ -53,8 +53,9 @@ def get_user_by_id(db: Session, id: int):
     return db.query(UserBase).filter(UserBase.employee_id == id).first()
 def get_employee_by_id(db: Session, id: int):
     return db.query(Employee).filter(Employee.employee_id == id).first()
-
-
+def get_user_by_user_name(db: Session,username: str):    
+    return  db.query(UserBase).filter(UserBase.user_name == username).first()
+    
 # def update_user_active_status(db: Session, username: str):
     
 #     existing_user = db.query(UserBase).filter(UserBase.user_name == username).first()
