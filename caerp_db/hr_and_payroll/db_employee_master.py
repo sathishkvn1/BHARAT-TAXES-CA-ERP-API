@@ -54,7 +54,7 @@ def get_employee_master(db: Session, deleted_status: DeletedStatus):
     elif deleted_status == DeletedStatus.ALL:
         return db.query(EmployeeMasterView).all()
     else:
-        # Handle invalid state or raise an error
+        
         raise ValueError("No matching records found")
 
 #-------------------------------------------------------------------------------------------------------------------

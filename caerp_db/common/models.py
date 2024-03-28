@@ -475,6 +475,7 @@ class QueryManager(caerp_base):
     resolved_by = Column(Integer,nullable=True )
     resolved_on = Column(DateTime, nullable=False, default=func.now())
    
+   
     
 class QueryView(caerp_base):
     __tablename__ = 'view_user_queries'

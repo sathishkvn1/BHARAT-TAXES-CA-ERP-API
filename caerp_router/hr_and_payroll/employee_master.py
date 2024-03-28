@@ -41,8 +41,7 @@ def save_employee_master(request: EmployeeMasterSchema = Depends(), id: int = 0,
    """
    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-#    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#    user_id = payload.get("user_id")
+
    auth_info = authenticate_user(token)
    user_id = auth_info["user_id"]
    try:
