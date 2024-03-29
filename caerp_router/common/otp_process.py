@@ -79,11 +79,15 @@ def mobile_otp_verification(
    
      
 
+from fastapi import Request
+
 @router.post("/mobile_resend_otp")
 def mobile_resend_otp(   
+    request: Request,  # Include the Request object
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
+    print("Request headers:", request.headers)  # Print the request headers
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         print("Decoded token payload:", payload)
@@ -92,7 +96,7 @@ def mobile_resend_otp(
         print("User ID:", user_id)
         
         user_data = db_user.get_employee_by_id(db, user_id)
-        print("User data:", user_data)
+        print("User data:", user_data.dict())
         
         mobile_number = user_data.mobile_phone
         mobile_otp_value = random.randint(pow(10, 5), pow(10, 5 + 1) - 1)  
@@ -122,6 +126,7 @@ def mobile_resend_otp(
     except Exception as e:
         # Handle token decoding failure
         print(f"Failed to decode token: {str(e)}")
+
    
 
 
