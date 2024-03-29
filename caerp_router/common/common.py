@@ -17,6 +17,14 @@ router = APIRouter(
 )
 
 
+
+# @router.get("/states", response_model=List[DemoCreate], tags=['demo'])
+# def get_all_states(db: Session = Depends(get_db)):
+#     states = db_common.get_states(db)  
+#     return states
+
+
+
 @router.get("/country", response_model=List[CountryCreate])
 def get_all_countries(db: Session = Depends(get_db),
                       token: str = Depends(oauth2.oauth2_scheme)):
@@ -972,6 +980,18 @@ def get_educational_qualification_details(
 
 
 
+# @router.post("/save/educational_qualifications/{id}", response_model=EducationSchema)
+# def save_educational_qualifications(
+#     data: EducationSchema,
+#     id: int = 0,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     return db_common.save_educational_qualifications(db, id, data)
+
 @router.post("/save/educational_qualifications/{id}", response_model=EducationSchema)
 def save_educational_qualifications(
     data: EducationSchema,
@@ -982,10 +1002,44 @@ def save_educational_qualifications(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
+    # Authenticate the token
+    try:
+        payload = verify_token(token)
+    except HTTPException as e:
+        # Propagate the HTTP exception to the client
+        raise e
+
     return db_common.save_educational_qualifications(db, id, data)
 
 
 
+
+from caerp_auth.oauth2 import SECRET_KEY, ALGORITHM
+
+from fastapi import HTTPException, status
+from jose import jwt, JWTError
+
+
+def verify_token(token: str):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    try:
+        # Decode and verify the token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        # Token has expired
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
+    except JWTError:
+        # Token is invalid
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+
+
+
+    
 @router.delete("/delete/educational_qualifications/{id}")
 def delete_educational_qualifications(
                     
