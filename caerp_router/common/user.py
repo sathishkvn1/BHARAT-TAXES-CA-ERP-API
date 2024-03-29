@@ -6,11 +6,16 @@ from sqlalchemy.orm import Session
 from caerp_db.common import db_user,db_otp
 from caerp_db.hr_and_payroll import db_employee_master
 from caerp_constants.caerp_constants import ActiveStatus
+
+from caerp_auth import oauth2
+
 from caerp_functions import send_message
 from caerp_auth import oauth2
 from jose import JWTError, jwt
 from caerp_auth.oauth2 import create_access_token,SECRET_KEY, ALGORITHM
 import random
+from caerp_db.hash import Hash
+
 router = APIRouter(
     prefix ='/user',
     tags = ['USER']
@@ -120,14 +125,13 @@ def forgot_password(
                 print(f"Failed to send message: {str(e)}")
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
-            
-            
-
-
+ 
+ 
 @router.get("/password_reset")
 def password_reset(
-                    password: str,
-                    db: Session = Depends(get_db),
+                     password: str,
+
+                     db: Session = Depends(get_db),
                     token: str = Depends(oauth2.oauth2_scheme)
                     ):
     
@@ -137,3 +141,8 @@ def password_reset(
     user_id = payload.get("user_id")
    
     return db_user.user_password_reset(db, user_id, password)       
+           
+
+
+
+
