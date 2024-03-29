@@ -992,27 +992,38 @@ def get_educational_qualification_details(
 
 #     return db_common.save_educational_qualifications(db, id, data)
 
-@router.post("/save/educational_qualifications/{id}", response_model=EducationSchema)
+@router.post("/save/educational_qualifications/{id}", response_model=dict)
 def save_educational_qualifications(
     data: EducationSchema,
     id: int = 0,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-    # Authenticate the token
     try:
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+        # Authenticate the token
         payload = verify_token(token)
+
+        # Save educational qualifications
+        result = db_common.save_educational_qualifications(db, id, data)
+        
+        # If the operation fails for any reason, return failure with error message
+        if not result:
+            return {"message": "Failed to save educational qualifications", "success": False, "error": str(e)}
+        
+        # Return a response indicating success
+        return {"message": "Educational qualifications saved successfully", "success": True}
     except HTTPException as e:
-        # Propagate the HTTP exception to the client
+        # Propagate HTTPException to the client
         raise e
-
-    return db_common.save_educational_qualifications(db, id, data)
-
-
-
+    except Exception as ex:
+        # Handle other exceptions (e.g., database errors)
+        error_detail = "An error occurred while saving educational qualifications"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
+    
+    
 
 from caerp_auth.oauth2 import SECRET_KEY, ALGORITHM
 
