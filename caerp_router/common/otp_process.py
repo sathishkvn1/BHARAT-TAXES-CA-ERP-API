@@ -40,44 +40,88 @@ def mobile_otp_verification(
         return {"message": "OTP verified successfully.", "is_verified": True}
     else :
         return { "message": "Invalid  OTP.", "is_verified": False}
+    
  
-@router.post("/mobile_resend_otp")
-def mobile_resend_otp(   
-    db:Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-    ):
+# @router.post("/mobile_resend_otp")
+# def mobile_resend_otp(   
+#     db:Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+#     ):
 
-    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
    
-    user_id = payload.get("user_id")
+#     user_id = payload.get("user_id")
     
-    user_data = db_user.get_employee_by_id(db, user_id)
+#     user_data = db_user.get_employee_by_id(db, user_id)
     
-    mobile_number= user_data.mobile_phone
-    mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
-    new_otp = db_otp.create_otp(db, mobile_otp_value,user_data.employee_id)
-    mobile_otp_id = new_otp.id    
-    message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
-    temp_id= 1607100000000128308
+#     mobile_number= user_data.mobile_phone
+#     mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
+#     new_otp = db_otp.create_otp(db, mobile_otp_value,user_data.employee_id)
+#     mobile_otp_id = new_otp.id    
+#     message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
+#     temp_id= 1607100000000128308
     
     
-    try:
-        send_message.send_sms_otp(mobile_number,message,temp_id,db)
-        data={
-                    "mobile_otp_id": mobile_otp_id,                    
-                    'user_id'     : user_data.employee_id
-                }
-        access_token = oauth2.create_access_token(data=data)
-        return {'message' : 'Success',
-                'access_token': access_token
-            }
-    #  db_send_sms.send_sms(new_customer.mobile_number,message,temp_id)
-    except Exception as e:
-        # Handle sms sending failure
-        print(f"Failed to send message: {str(e)}")
+#     try:
+#         send_message.send_sms_otp(mobile_number,message,temp_id,db)
+#         data={
+#                     "mobile_otp_id": mobile_otp_id,                    
+#                     'user_id'     : user_data.employee_id
+#                 }
+#         access_token = oauth2.create_access_token(data=data)
+#         return {'message' : 'Success',
+#                 'access_token': access_token
+#             }
+#     #  db_send_sms.send_sms(new_customer.mobile_number,message,temp_id)
+#     except Exception as e:
+#         # Handle sms sending failure
+#         print(f"Failed to send message: {str(e)}")
    
      
 
+@router.post("/mobile_resend_otp")
+def mobile_resend_otp(   
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("Decoded token payload:", payload)
+        
+        user_id = payload.get("user_id")
+        print("User ID:", user_id)
+        
+        user_data = db_user.get_employee_by_id(db, user_id)
+        print("User data:", user_data)
+        
+        mobile_number = user_data.mobile_phone
+        mobile_otp_value = random.randint(pow(10, 5), pow(10, 5 + 1) - 1)  
+        print("Generated OTP:", mobile_otp_value)
+        
+        new_otp = db_otp.create_otp(db, mobile_otp_value, user_data.employee_id)
+        mobile_otp_id = new_otp.id    
+        message = f"{mobile_otp_value} is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From: BRQ GLOB TECH"
+        temp_id = 1607100000000128308
+        
+        try:
+            send_message.send_sms_otp(mobile_number, message, temp_id, db)
+            print("SMS sent successfully")
+            
+            data = {
+                "mobile_otp_id": mobile_otp_id,                    
+                'user_id': user_data.employee_id
+            }
+            access_token = oauth2.create_access_token(data=data)
+            return {
+                'message': 'Success',
+                'access_token': access_token
+            }
+        except Exception as e:
+            # Handle sms sending failure
+            print(f"Failed to send message: {str(e)}")
+    except Exception as e:
+        # Handle token decoding failure
+        print(f"Failed to decode token: {str(e)}")
    
 
 

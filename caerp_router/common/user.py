@@ -67,48 +67,96 @@ def update_active_status(
 
 
 
+# @router.post('/forgot_password')
+# def forgot_password(
+#     user_name: str,
+#     db:Session = Depends(get_db)
+# ):
+#     try:
+#         user = db_user.get_user_by_user_name(db,user_name) 
+        
+#     except Exception as e:
+#                 # Handle sms sending failure
+#                 print(f"Failed to send message: {str(e)}")
+
+#     # user = db.user.get_user_by_id(db,user_id) 
+#     if user is None:
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Please Check your user name")
+#     else:
+#         if user.role_id == 1:
+#             employee_data = db_employee_master.get_employee_master_by_id(db, user.employee_id)
+#             mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
+#             new_otp = db_otp.create_otp(db, mobile_otp_value,user.employee_id)
+            
+#             mobile_otp_id = new_otp.id    
+#             message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
+#             temp_id= 1607100000000128308
+            
+#             try:
+#                 send_message.send_sms_otp(employee_data.mobile_phone,message,temp_id,db)
+#                 data = {
+#                     'user_id': user.employee_id,
+#                     'role_id': user.role_id,
+#                     'mobile_otp_id':mobile_otp_id
+                    
+#                 }
+                
+#                 access_token = oauth2.create_access_token(data=data)
+
+#                 # Return a JSON response with the access token and additional information
+#                 return {
+#                     'access_token': access_token,
+#                     'token_type': 'bearer'
+#                 }
+
+
+#         # #  db_send_sms.send_sms(new_customer.mobile_number,message,temp_id)
+#             except Exception as e:
+#                 # Handle sms sending failure
+#                 print(f"Failed to send message: {str(e)}")
+#         else:
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
+            
+ 
 @router.post('/forgot_password')
 def forgot_password(
     user_name: str,
-    db:Session = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
     try:
-        user = db_user.get_user_by_user_name(db,user_name) 
-        
-    except Exception as e:
-                # Handle sms sending failure
-                print(f"Failed to send message: {str(e)}")
+        user = db_user.get_user_by_user_name(db, user_name) 
+        print("User found:", user)
 
-    # user = db.user.get_user_by_id(db,user_id) 
+    except Exception as e:
+        # Handle exception
+        print(f"Failed to retrieve user: {str(e)}")
+
+    # Check if user exists
     if user is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Please Check your user name")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Please check your username")
     else:
         if user.role_id == 1:
             employee_data = db_employee_master.get_employee_master_by_id(db, user.employee_id)
-            mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
-            new_otp = db_otp.create_otp(db, mobile_otp_value,user.employee_id)
-            
+            print("Employee data:", employee_data)
+
+            mobile_otp_value = random.randint(pow(10, 5), pow(10, 5 + 1) - 1)  
+            print("Generated OTP:", mobile_otp_value)
+
+            new_otp = db_otp.create_otp(db, mobile_otp_value, user.employee_id)
             mobile_otp_id = new_otp.id    
-           
-            sms_type= 'OTP'
-            template_data = db_user.get_templates_by_type(db,sms_type)
-            temp_id= template_data.template_id
-            template_message = template_data.message_template
-            replace_values = [ mobile_otp_value, 'mobile registration']
-            placeholder = "{#var#}"
-            for value in replace_values:
-                template_message = template_message.replace(placeholder, str(value),1)
-            
-           
+            message = f"{mobile_otp_value} is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From: BRQ GLOB TECH"
+            temp_id = 1607100000000128308
+
             try:
-                send_message.send_sms_otp(employee_data.mobile_phone,template_message,temp_id,db)
+                send_message.send_sms_otp(employee_data.mobile_phone, message, temp_id, db)
+                print("SMS sent successfully")
+
                 data = {
                     'user_id': user.employee_id,
                     'role_id': user.role_id,
-                    'mobile_otp_id':mobile_otp_id
-                    
+                    'mobile_otp_id': mobile_otp_id
                 }
-                
+
                 access_token = oauth2.create_access_token(data=data)
 
                 # Return a JSON response with the access token and additional information
@@ -117,16 +165,13 @@ def forgot_password(
                     'token_type': 'bearer'
                 }
 
-
-        # #  db_send_sms.send_sms(new_customer.mobile_number,message,temp_id)
             except Exception as e:
                 # Handle sms sending failure
                 print(f"Failed to send message: {str(e)}")
         else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
- 
- 
- 
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Only an ADMIN or Super Admin can change their password.")
+
+
 @router.get("/password_reset")
 def password_reset(
                      password: str,
@@ -142,8 +187,6 @@ def password_reset(
    
     return db_user.user_password_reset(db, user_id, password)       
            
-
-
 
 
 
