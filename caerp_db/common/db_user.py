@@ -1,11 +1,13 @@
 
+
 from caerp_schema.common.common_schema import UserCreateSchema
-from caerp_db.common.models import UserBase,Employee
+from caerp_db.common.models import UserBase,Employee,SmsTemplates
 from fastapi import HTTPException , status     
 from caerp_db.hash import Hash
 from datetime import datetime,timedelta
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import ActiveStatus
+
 
 def save_user(db: Session,  request: UserCreateSchema, user_id: int):
 
@@ -20,7 +22,13 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
         db.refresh(new_user)
 
         return new_user
-       
+        # except Exception as e:
+        #     error_detail = [{
+        #         "loc": ["server"],
+        #         "msg": "Internal server error",
+        #         "type": "internal_server_error"
+        #     }]
+        #     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
     
     else:
         # Update operation
@@ -36,7 +44,6 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
         db.commit()
         db.refresh(user_data)
         return user_data
-
 
 
 def get_user_by_mobile(db: Session, mobile: str):
@@ -101,7 +108,6 @@ def update_user_active_status(db: Session, active_status: ActiveStatus, username
     }
 
 
-
 def user_password_reset(db: Session, user_id: int, password: str):
     
     hashed_password =Hash.bcrypt(password)
@@ -122,4 +128,7 @@ def user_password_reset(db: Session, user_id: int, password: str):
 
     }
 
+
+def get_templates_by_type(db: Session, type: str):
+    return db.query(SmsTemplates).filter(SmsTemplates.sms_type == type).first()
 
