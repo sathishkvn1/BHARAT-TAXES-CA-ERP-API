@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Depends,HTTPException,status,Query
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import QueryManager, QueryManagerQuery, QueryView, UserBase
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
+from caerp_db.common.models import Employee, QueryManager, QueryManagerQuery, QueryView, UserBase
+from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, User
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
@@ -9,6 +9,7 @@ from caerp_constants.caerp_constants import ActiveStatus, DeletedStatus
 from typing import List
 from caerp_auth import oauth2
 from datetime import datetime
+from sqlalchemy import text
 
 
 router = APIRouter(
@@ -1261,6 +1262,7 @@ def save_query_manager(
         query_id=data.query_id,
         queried_by=user.id, 
         query_on=datetime.now(),
+        query_description=data.query_description 
       
     )
 
@@ -1344,3 +1346,30 @@ def get_queries_by_id(id: int,
 
     return query
 
+
+@router.get("/get_usernames_with_names_and_ids", response_model=List[dict])
+def get_usernames_with_names_and_ids(db: Session = Depends(get_db)):
+    try:
+        # SQL query using SQLAlchemy text() function
+        query = text(
+            "SELECT users.id, users.user_name, "
+            "CONCAT_WS(' ', "
+            "employee_master.first_name, "
+            "COALESCE(employee_master.middle_name, ''), "
+            "employee_master.last_name"
+            ") AS full_name "
+            "FROM users "
+            "LEFT JOIN employee_master ON users.employee_id = employee_master.employee_id;"
+        )
+        result = db.execute(query)
+
+        # List to store formatted data
+        formatted_data = []
+
+        # Iterate over query results and format data
+        for row in result:
+            formatted_data.append(dict(row))
+
+        return formatted_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

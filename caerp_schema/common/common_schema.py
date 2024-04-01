@@ -18,6 +18,15 @@ class CountryCreate(BaseModel):
 
     class Config:
         orm_mode = True
+        
+        
+# class DemoCreate(BaseModel):        
+#     id: int                     
+#     country_id: int            
+#     state_name: str               
+   
+#     country: int                
+#     districts: int
 
 class CountryDetail(BaseModel):
     id: int
@@ -1638,7 +1647,8 @@ class QueryManagerQuerySchemaForGet(BaseModel):
 class QueryManagerSchema(BaseModel):
     query_id: int
     queried_by: str
-    # query_on: Optional[datetime]
+    query_description: Optional[str]
+
 
     class Config:
         orm_mode = True
@@ -1663,6 +1673,7 @@ class QueryStatus(str, Enum):
 class QueryViewSchema(BaseModel):
     id: int
     query_id: int
+    query_description:str
     query: str
     is_deleted: str
     queried_by: int

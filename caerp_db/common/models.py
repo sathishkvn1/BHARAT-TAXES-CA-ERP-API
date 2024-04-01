@@ -469,11 +469,13 @@ class QueryManager(caerp_base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     query_id = Column(Integer, nullable=False)
+    query_description = Column(String(2000), default=None)
     queried_by = Column(Integer,  nullable=False)
     query_on = Column(DateTime, nullable=False)
     is_resolved = Column(Enum('yes', 'no'), nullable=False, default='no')
     resolved_by = Column(Integer,nullable=True )
     resolved_on = Column(DateTime, nullable=False, default=func.now())
+    
    
    
     
@@ -482,6 +484,7 @@ class QueryView(caerp_base):
 
     id = Column(Integer, primary_key=True)
     query_id = Column(Integer)
+    query_description=Column(String)
     query = Column(String)
     is_deleted = Column(String)
     queried_by = Column(Integer)
