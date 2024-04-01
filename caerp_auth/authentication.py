@@ -21,8 +21,6 @@ from caerp_auth.oauth2 import oauth2_scheme,custom_oauth2_scheme_client
 from sqlalchemy import text
 from sqlalchemy.sql import text
 
-
-
 import geoip2.database
 import geoip2.errors
 from caerp_db.database import get_db
@@ -31,11 +29,9 @@ from caerp_db.common.models import Employee,OtpGeneration
 
 
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
-
 from user_agents import parse
 from ua_parser import user_agent_parser
 from geoip2 import database, errors
-
 from starlette.requests import Request
 from fastapi import Header
 import geoip2.database
@@ -154,8 +150,19 @@ def get_token(no_of_attempts: int =0 , request_data: OAuth2PasswordRequestForm =
         new_otp = db_otp.create_otp(db, mobile_otp_value,user.employee_id)
         print("new otp : ",employee_data)
         mobile_otp_id = new_otp.id    
-        message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
-        temp_id= 1607100000000128308
+        # message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
+        # temp_id= 1607100000000128308
+
+        sms_type= 'OTP'
+        template_data = db_user.get_templates_by_type(db,sms_type)
+        temp_id= template_data.template_id
+        template_message = template_data.message_template
+        replace_values = [ mobile_otp_value, 'mobile registration']
+        placeholder = "{#var#}"
+        for value in replace_values:
+            template_message = template_message.replace(placeholder, str(value),1)
+        
+           
         
         try:
             send_message.send_sms_otp(employee_data.mobile_phone,message,temp_id,db)
