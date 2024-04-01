@@ -165,7 +165,7 @@ def get_token(no_of_attempts: int =0 , request_data: OAuth2PasswordRequestForm =
            
         
         try:
-            send_message.send_sms_otp(employee_data.mobile_phone,message,temp_id,db)
+            send_message.send_sms_otp(employee_data.mobile_phone,template_message,temp_id,db)
         #  db_send_sms.send_sms(new_customer.mobile_number,message,temp_id)
         except Exception as e:
             # Handle sms sending failure
