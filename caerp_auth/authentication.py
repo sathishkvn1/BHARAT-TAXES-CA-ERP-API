@@ -209,8 +209,14 @@ def get_token(
     user = db.query(models.UserBase).filter(models.UserBase.user_name == request_data.username).first()
     if not user:
         login_attempt = 3 - no_of_attempts
+        detail_message = f'{login_attempt} out of 3 attempts remaining. Username incorrect.'
+        headers = {"X-Error": "Username incorrect."}
+        return {
+            'detail': detail_message,
+            'message': 'Username incorrect'
+        }
         
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{login_attempt} out of 3 attempts remaining. Username incorrect.', headers={"X-Error": "Username incorrect."})
+        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{login_attempt} out of 3 attempts remaining. Username incorrect.', headers={"X-Error": "Username incorrect."})
     if user.locked_upto is not None and datetime.utcnow() < user.locked_upto:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Your account is locked, Please Try ain later')
 
@@ -246,8 +252,13 @@ def get_token(
         login_attempt = 3 - no_of_attempts
         detail_message = f'{login_attempt} out of 3 attempts remaining. Password incorrect.'
         headers = {"X-Error": "Password incorrect."}
+        return {
+            'detail': detail_message,
+            'message': 'Password incorrect'
+        }
+        
         # detail_message_with_custom_message = 'Incorrect password.'
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail_message, headers=headers)
+        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail_message, headers=headers)
 
     if user.is_active == 'no':        
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Your account is blocked, Please Contact the admin')
