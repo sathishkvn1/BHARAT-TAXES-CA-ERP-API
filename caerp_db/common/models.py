@@ -1,7 +1,7 @@
 
 # from sqlalchemy import Date
 from sqlalchemy import Date
-from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL
+from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
@@ -504,3 +504,190 @@ class QueryView(caerp_base):
     designation_id = Column(Integer)
     designation = Column(String)
     
+
+# class ConsultancyService(caerp_base):
+#     __tablename__ = 'off_consultancy_services'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     service_master_id = Column(Integer, nullable=False)
+#     consultant_id = Column(Integer, nullable=False, default=0)
+#     consultation_fee = Column(Float)
+#     gst_rate = Column(Float)
+#     cgst_rate = Column(Float)
+#     sgst_rate = Column(Float)
+#     cess_rate = Column(Float)
+#     discount_percentage = Column(Float)
+#     discount_amount = Column(Float)
+#     available_time_from = Column(Time, nullable=False)
+#     available_time_to = Column(Time, nullable=False)
+#     slot_duration_in_minutes = Column(Integer, nullable=False)
+#     effective_from_date = Column(Date, nullable=False)
+#     effective_to_date = Column(Date, default=None)
+#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+        
+# class AppointmentVisitDetail(caerp_base):
+#     __tablename__ = 'off_appointment_visit_details'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     visit_master_id = Column(Integer, ForeignKey('off_enquiry_visit_master.id'), nullable=False)
+#     consultancy_service_id = Column(Integer, ForeignKey('off_consultancy_services.id'), nullable=False)
+#     consultant_id = Column(Integer, ForeignKey('employee_master.empoyee_id'), nullable=False)
+#     appointment_time = Column(Time, nullable=False)
+#     service_charge = Column(Float, default=None)
+#     gst_percentage = Column(Float, default=None)
+#     sgst_percentage = Column(Float, default=None)
+#     cgst_percentage = Column(Float, default=None)
+#     discount_percentage = Column(Float, default=None)
+#     discount_amount = Column(Float, default=None)
+#     net_amount = Column(Float, default=None)
+#     remarks = Column(String(1000), default=None)
+    
+ #--------------------------------------------------------
+ 
+# class OffAppointmentDetails(caerp_base):
+#     __tablename__ = 'view_off_appointment_details'
+
+#     appointment_visit_details_id = Column(Integer, primary_key=True)
+#     appointment_visit_master_id = Column(Integer)
+#     appointment_date = Column(Date)
+#     appointment_time = Column(Time)
+#     consultancy_service_id = Column(Integer)
+#     service_name = Column(String)
+#     consultant_id = Column(Integer)
+#     employee_number = Column(String)
+#     first_name = Column(String)
+#     middle_name = Column(String)
+#     last_name = Column(String)
+#     appointment_visit_details_service_charge = Column(Integer)
+#     appointment_visit_details_gst_percentage = Column(Integer)
+#     appointment_visit_details_sgst_percentage = Column(Integer)
+#     appointment_visit_details_cgst_percentage = Column(Integer)
+#     appointment_visit_details_discount_percentage = Column(Integer)
+#     appointment_visit_details_discount_amount = Column(Integer)
+#     appointment_visit_details_net_amount = Column(Integer)
+#     appointment_visit_details_remarks = Column(String)
+#     appointment_visit_details_created_by = Column(Integer)
+#     appointment_visit_details_created_on = Column(DateTime)
+#     appointment_visit_details_modified_by = Column(Integer)
+#     appointment_visit_details_modified_on = Column(DateTime)
+#     appointment_visit_details_is_deleted = Column(String)
+#     appointment_visit_details_is_deleted_directly = Column(String)
+#     appointment_visit_details_is_deleted_with_master = Column(String)
+#     appointment_visit_details_deleted_by = Column(Integer)
+#     appointment_visit_details_deleted_on = Column(DateTime)
+    
+    
+# class OffAppointmentMaster(caerp_base):
+#     __tablename__ = 'off_appointment_master'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     full_name = Column(String(200), nullable=False)
+#     appointment_number = Column(String(100), default=None)
+#     enquiry_number = Column(String(100), default=None)
+#     customer_number = Column(String(100), default=None)
+#     mobile_number = Column(String(20), default=None)
+#     email_id = Column(String(50), default=None)
+#     created_by = Column(Integer, default=None)
+#     created_on = Column(Date, default=None)
+#     modified_by = Column(Integer, default=None)
+#     modified_on = Column(Date, default=None)
+#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by = Column(Integer, default=None)
+#     deleted_on = Column(Date, default=None)
+    
+
+
+# class ViewOffAppointmentMaster(caerp_base):
+#     __tablename__ = 'view_off_appointment_master'
+
+#     id = Column(Integer, primary_key=True)
+#     full_name = Column(String)
+#     appointment_number = Column(String)
+#     enquiry_number = Column(String)
+#     customer_number = Column(String)
+#     mobile_number = Column(String)
+#     email_id = Column(String)
+#     appointment_master_created_by = Column(Integer)
+#     appointment_master_created_on = Column(DateTime)
+#     appointment_master_modified_by = Column(Integer)
+#     appointment_master_modified_on = Column(DateTime)
+#     appointment_master_is_deleted = Column(String)
+#     appointment_master_deleted_by = Column(Integer)
+#     appointment_master_deleted_on = Column(DateTime)
+    
+#     appointment_visit_master_id = Column(Integer)
+#     appointment_visit_master_appointment_date = Column(Date)
+#     appointment_visit_master_source_of_enquiry_id = Column(Integer)
+#     source = Column(String)
+#     appointment_visit_master_appointment_status_id = Column(Integer)
+#     is_paid = Column(Enum('yes', 'no'), nullable=False, default='no')
+   
+#     appointment_status = Column(String)
+#     appointment_visit_master_payment_mode_id = Column(Integer)
+#     payment_mode = Column(String)
+#     appointment_visit_master_payment_transaction_number = Column(String)
+#     appointment_visit_master_payment_status_id = Column(Integer)
+#     payment_status = Column(String)
+#     appointment_visit_master_payment_date = Column(Date)
+#     appointment_visit_master_is_refunded = Column(Enum('yes', 'no'), nullable=False, default='no')
+   
+#     appointment_visit_master_refund_status_id = Column(Integer)
+#     refund_status = Column(String)
+#     appointment_visit_master_refund_amount = Column(Float)
+#     appointment_visit_master_refund_date = Column(Date)
+#     appointment_visit_master_refund_reason_id = Column(Integer)
+#     refund_reason = Column(String)
+#     appointment_visit_master_refund_transaction_number = Column(String)
+#     appointment_visit_master_service_charge = Column(Float)
+#     appointment_visit_master_gst_percentage = Column(Float)
+#     appointment_visit_master_sgst_percentage = Column(Float)
+#     appointment_visit_master_cgst_percentage = Column(Float)
+#     appointment_visit_master_discount_percentage = Column(Float)
+#     appointment_visit_master_discount_amount = Column(Float)
+#     appointment_visit_master_special_discount_percentage = Column(Float)
+#     appointment_visit_master_special_discount_amount = Column(Float)
+#     appointment_visit_master_net_amount = Column(Float)
+#     appointment_visit_master_remarks = Column(String)
+#     appointment_visit_master_is_deleted = Column(String)
+#     appointment_visit_master_is_deleted_directly = Column(String)
+#     appointment_visit_master_is_deleted_with_master = Column(String)
+#     appointment_visit_master_deleted_by = Column(Integer)
+#     appointment_visit_master_deleted_on = Column(DateTime)
+    
+    
+#--------------------------------------------------------
+class PaymentsMode(caerp_base):
+    __tablename__ = 'app_payments_mode'
+
+    id = Column(Integer, primary_key=True)
+    payment_mode= Column(String(500), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class PaymentStatus(caerp_base):
+    __tablename__ = 'app_payment_status'
+
+    id = Column(Integer, primary_key=True)
+    payment_status= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class RefundStatus(caerp_base):
+    __tablename__ = 'app_refund_status'
+
+    id = Column(Integer, primary_key=True)
+    refund_status= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class RefundReason(caerp_base):
+    __tablename__ = 'app_refund_reason'
+
+    id = Column(Integer, primary_key=True)
+    refund_reason= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+
+
+
+
+

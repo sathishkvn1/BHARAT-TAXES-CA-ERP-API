@@ -1,14 +1,22 @@
 
 
 
+from caerp_constants.caerp_constants import ActionType
 from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
 from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema     
 
+from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
+from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
+
 def get_countries(db: Session):
     return db.query(CountryDB).all()
+
+
+# def get_states(db: Session):
+#     return db.query(StateTestDB).all()
 
 
 
@@ -154,6 +162,9 @@ def save_educational_qualifications(db: Session, id: int, data: EducationSchema)
         db.refresh(existing_qualification)
         return existing_qualification
 
+
+
+
 def delete_educational_qualifications(db: Session, id: int):
     result = db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.id == id).first()
 
@@ -247,3 +258,343 @@ def get_query_manager_query_by_id(db: Session, id: int):
 
 def get_queries_by_id(db: Session, id: int):
     return db.query(QueryView).filter(QueryView.id == id).first()
+
+#-----------------------------------------------------------
+
+
+
+
+
+
+
+def save_payments_mode(db: Session,
+                   payments_mode_data: PaymentModeSchema, 
+                   id: int = 0):
+    # Check if a PaymentsMode with the same name already exists and is not deleted
+    existing_payments_mode = db.query(PaymentsMode).filter(
+        PaymentsMode.payment_mode == payments_mode_data.payment_mode,
+        PaymentsMode.is_deleted == "no"
+    ).first()
+
+    # If a Payments Mode with the same name already exists
+    if existing_payments_mode:
+        # If updating and the existing PaymentsMode's ID is different from the ID being updated, or if adding a new Payments Mode
+        if id != 0 or id == 0:
+            raise HTTPException(status_code=400, detail="A Payments Mode with the same name already exists.")
+
+    # If creating a new PaymentsMode
+    if id == 0:
+        new_payment = PaymentsMode(**payments_mode_data.dict())
+        db.add(new_payment)
+    # If updating an existing Payments Mode
+    else:
+        payments_mode = db.query(PaymentsMode).filter(PaymentsMode.id == id).first()
+        if not payments_mode:
+            raise HTTPException(status_code=404, detail=f'Payments Mode with id {id} not found')
+
+        # Update Payments Mode data
+        for key, value in payments_mode_data.dict().items():
+            setattr(payments_mode, key, value)
+
+    db.commit()
+    db.refresh(new_payment if id == 0 else payments_mode)
+    return new_payment if id == 0 else payments_mode
+#-----------by id-----------------------
+def get_payment_mode(db: Session, 
+                 id: int
+                 ):
+    Payments_Mode = db.query(PaymentsMode).filter(PaymentsMode.id == id).first()
+    
+    if not Payments_Mode:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Payments Mode with id {id} not found"
+        )
+
+    return Payments_Mode
+
+#-----------delete----------------
+def delete_payments_mode(db: Session, 
+                           id: int, 
+                           action: ActionType):
+    payments_mode = db.query(PaymentsMode).filter(PaymentsMode.id == id).first()
+    if payments_mode is None:
+        raise HTTPException(status_code=404, detail="Payments Mode not found")
+    
+    if action == ActionType.DELETE:
+        if payments_mode.is_deleted == 'yes':
+            raise HTTPException(status_code=400, detail="payments mode  already deleted")
+        
+        payments_mode.is_deleted = 'yes'
+        
+    elif action == ActionType.UNDELETE:
+        if payments_mode.is_deleted == 'no':
+            raise HTTPException(status_code=400, detail="payments_mode not deleted")
+        
+        payments_mode.is_deleted = 'no'
+
+    
+    db.commit()
+    return {"success": True, "message": f"Payments Mode {action.value.lower()} successfully"}
+
+
+    
+
+ 
+#------------ payment_status-----------------
+
+def save_payment_status(db: Session,
+                   payment_status_data: PaymentStatusSchema, 
+                   id: int = 0):
+    # Check if a payment_status with the same name already exists and is not deleted
+    existing_payment_status = db.query(PaymentStatus).filter(
+        PaymentStatus.payment_status == payment_status_data.payment_status,
+        PaymentStatus.is_deleted == "no"
+    ).first()
+
+    # If a Payments Status with the same name already exists
+    if existing_payment_status:
+        # If updating and the existing Payments Status's ID is different from the ID being updated, or if adding a new Payments Status
+        if id != 0 or id == 0:
+            raise HTTPException(status_code=400, detail="A Payments Status with the same name already exists.")
+
+    # If creating a new Payments Status
+    if id == 0:
+        new_payment_status = PaymentStatus(**payment_status_data.dict())
+        db.add(new_payment_status)
+    # If updating an existing Payment Status
+    else:
+        payment_status = db.query(PaymentStatus).filter(PaymentStatus.id == id).first()
+        if not payment_status:
+            raise HTTPException(status_code=404, detail=f'Payments Status with id {id} not found')
+
+        # Update Payment Status data
+        for key, value in payment_status_data.dict().items():
+            setattr(payment_status, key, value)
+
+    db.commit()
+    db.refresh(new_payment_status if id == 0 else payment_status)
+    return new_payment_status if id == 0 else payment_status
+#-----------by id-----------------------
+def get_payment_status(db: Session, 
+                 id: int
+                 ):
+    payment_status = db.query(PaymentStatus).filter(PaymentStatus.id == id).first()
+    
+    if not payment_status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Payment Status with id {id} not found"
+        )
+
+    return payment_status
+#-----------delete----------------
+def delete_payment_status(db: Session, 
+                           id: int, 
+                           action: ActionType):
+    payment_status = db.query(PaymentStatus).filter(PaymentStatus.id == id).first()
+    if payment_status is None:
+        raise HTTPException(status_code=404, detail="Payment Status not found")
+    
+    if action == ActionType.DELETE:
+        if payment_status.is_deleted == 'yes':
+            raise HTTPException(status_code=400, detail="Payment Status already deleted")
+        
+        payment_status.is_deleted = 'yes'
+        
+    elif action == ActionType.UNDELETE:
+        if payment_status.is_deleted == 'no':
+            raise HTTPException(status_code=400, detail="Payment Status not deleted")
+        
+        payment_status.is_deleted = 'no'
+
+    
+    db.commit()
+    return {"success": True, "message": f"Payment Status {action.value.lower()} successfully"}
+
+
+    
+
+#------------ refund_status-----------------
+
+def save_refund_status(db: Session,
+                   refund_status_data: RefundStatusSchema, 
+                   id: int = 0):
+    # Check if a refund_status with the same name already exists and is not deleted
+    existing_refund_status = db.query(RefundStatus).filter(
+        RefundStatus.refund_status == refund_status_data.refund_status,
+        RefundStatus.is_deleted == "no"
+    ).first()
+
+    # If a Refund Status with the same name already exists
+    if existing_refund_status:
+        # If updating and the existing refund status's ID is different from the ID being updated, or if adding a new Refund Status
+        if id != 0 or id == 0:
+            raise HTTPException(status_code=400, detail="A Refund Status with the same name already exists.")
+
+    # If creating a new Refund Status
+    if id == 0:
+        new_refund_status = RefundStatus(**refund_status_data.dict())
+        db.add(new_refund_status)
+    # If updating an existing Refund Status 
+    else:
+        refund_status = db.query(RefundStatus).filter(RefundStatus.id == id).first()
+        if not refund_status:
+            raise HTTPException(status_code=404, detail=f'Refund Status with id {id} not found')
+
+        # Update RefundStatus data
+        for key, value in refund_status_data.dict().items():
+            setattr(refund_status, key, value)
+
+    db.commit()
+    db.refresh(new_refund_status if id == 0 else refund_status)
+    return new_refund_status if id == 0 else refund_status
+#-----------by id-----------------------
+def get_refund_status(db: Session, 
+                 id: int
+                 ):
+    refund_status = db.query(RefundStatus).filter(RefundStatus.id == id).first()
+    
+    if not refund_status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Refund Status with id {id} not found"
+        )
+
+    return refund_status
+#-----------delete----------------
+def delete_refund_status(db: Session, 
+                           id: int, 
+                           action: ActionType):
+    refund_status = db.query(RefundStatus).filter(RefundStatus.id == id).first()
+    if refund_status is None:
+        raise HTTPException(status_code=404, detail="Refund Status not found")
+    
+    if action == ActionType.DELETE:
+        if refund_status.is_deleted == 'yes':
+            raise HTTPException(status_code=400, detail="Refund Status already deleted")
+        
+        refund_status.is_deleted = 'yes'
+        
+    elif action == ActionType.UNDELETE:
+        if refund_status.is_deleted == 'no':
+            raise HTTPException(status_code=400, detail="Refund Status not deleted")
+        
+        refund_status.is_deleted = 'no'
+
+    
+    db.commit()
+    return {"success": True, "message": f"Refund Status {action.value.lower()} successfully"}
+
+
+#-----------refund_reason-----------------
+
+def save_refund_reason(db: Session,
+                   refund_reason_data: RefundReasonSchema, 
+                   id: int = 0):
+    # Check if a refund_status with the same name already exists and is not deleted
+    existing_refund_reason = db.query(RefundStatus).filter(
+        RefundReason.refund_reason == refund_reason_data.refund_reason,
+        RefundReason.is_deleted == "no"
+    ).first()
+
+    # If a Refund Reason with the same name already exists
+    if existing_refund_reason:
+        # If updating and the existing refund Reason's ID is different from the ID being updated, or if adding a new Refund Reason
+        if id != 0 or id == 0:
+            raise HTTPException(status_code=400, detail="A Refund Reason with the same name already exists.")
+
+    # If creating a new Refund Reason
+    if id == 0:
+        new_refund_reason = RefundReason(**refund_reason_data.dict())
+        db.add(new_refund_reason)
+    # If updating an existing Refund Reason 
+    else:
+        refund_reason = db.query(RefundReason).filter(RefundReason.id == id).first()
+        if not refund_reason:
+            raise HTTPException(status_code=404, detail=f'Refund Reason with id {id} not found')
+
+        # Update Refund Reason data
+        for key, value in refund_reason_data.dict().items():
+            setattr(refund_reason, key, value)
+
+    db.commit()
+    db.refresh(new_refund_reason if id == 0 else refund_reason)
+    return new_refund_reason if id == 0 else refund_reason
+#-----------by id-----------------------
+def get_refund_reason(db: Session, 
+                 id: int
+                 ):
+    refund_reason = db.query(RefundReason).filter(RefundReason.id == id).first()
+    
+    if not refund_reason:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Refund Reason with id {id} not found"
+        )
+
+    return refund_reason
+
+#-----------delete----------------
+def delete_refund_reason(db: Session, 
+                           id: int, 
+                           action: ActionType):
+    refund_reason = db.query(RefundReason).filter(RefundReason.id == id).first()
+    if refund_reason is None:
+        raise HTTPException(status_code=404, detail="Refund Reason not found")
+    
+    if action == ActionType.DELETE:
+        if refund_reason.is_deleted == 'yes':
+            raise HTTPException(status_code=400, detail="Refund Reason already deleted")
+        
+        refund_reason.is_deleted = 'yes'
+        
+    elif action == ActionType.UNDELETE:
+        if refund_reason.is_deleted == 'no':
+            raise HTTPException(status_code=400, detail="Refund Reason not deleted")
+        
+        refund_reason.is_deleted = 'no'
+
+    
+    db.commit()
+    return {"success": True, "message": f"Refund Reason {action.value.lower()} successfully"}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

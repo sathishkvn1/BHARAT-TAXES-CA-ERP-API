@@ -31,3 +31,7 @@ class VerifiedStatus(str, Enum):
 class ApprovedStatus(str, Enum):
     APPROVED      = 'yes'
     NOT_APPROVED  = 'no'    
+    
+class ActionType(str, Enum):
+    DELETE = 'DELETE'
+    UNDELETE = 'UNDELETE'
