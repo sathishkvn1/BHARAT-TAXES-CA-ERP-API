@@ -1,7 +1,7 @@
 
 # from sqlalchemy import Date
 from sqlalchemy import Date
-from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL
+from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
@@ -48,61 +48,7 @@ class LoginAttempt(caerp_base):
     when        =  Column(DateTime, nullable=True)
 
     
-# class Employee(caerp_base):
-#     __tablename__ = "employee_master"
 
-#     employee_id            = Column(Integer, primary_key=True, autoincrement=True)
-#     employee_number = Column(String(20), nullable=True)
-#     first_name      = Column(String(100), nullable=True)
-#     middle_name     = Column(String(100), nullable=True)
-#     last_name       = Column(String(100), nullable=True)
-#     gender_id       = Column(Integer, nullable=True)
-#     date_of_birth   = Column(DateTime, default=None)
-#     nationality_id  = Column(Integer, nullable=True)
-#     marital_status_id = Column(Integer, nullable=True)
-#     designation_id    = Column(Integer, nullable=True)
-#     aadhaar_number    = Column(String(50), default=None)
-#     passport_number    = Column(String(50), default=None)
-#     pan_number          = Column(String(20), default=None)
-#     driving_licence_number= Column(String(50), default=None)
-#     other_id_doc        = Column(String(50), default=None)
-#     present_address_line_1 = Column(String(100), nullable=True)
-#     present_address_line_2 = Column(String(100), default=None)
-#     present_address_line_3 = Column(String(100), default=None)
-#     present_address_line_4 = Column(String(100), default=None)
-#     present_pin_code       = Column(String(20), default=None)
-#     present_city_id        = Column(Integer, nullable=True)
-#     present_taluk_id        = Column(Integer, nullable=True)
-#     present_district_id     = Column(Integer, nullable=True)
-#     present_state_id        = Column(Integer, nullable=True)
-#     present_country_id      = Column(Integer, nullable=True)
-#     permanent_address_line_1= Column(String(100), nullable=True)
-#     permanent_address_line_2= Column(String(100), default=None)
-#     permanent_address_line_3 = Column(String(100), default=None)
-#     permanent_address_line_4= Column(String(100), default=None)
-#     permanent_pin_code      = Column(String(20), default=None)
-#     permanent_city_id       = Column(Integer, nullable=True)
-#     permanent_taluk_id      = Column(Integer, nullable=True)
-#     permanent_district_id   = Column(Integer, nullable=True)
-#     permanent_state_id      = Column(Integer, nullable=True)
-#     permanent_country_id    = Column(Integer, nullable=True)
-#     home_phone              = Column(String(20), default=None)
-#     mobile_phone            = Column(String(20), default=None)
-#     whatsapp_number         = Column(String(20), default=None)
-#     work_phone              = Column(String(20), default=None)
-#     work_email              = Column(String(50), default=None)
-#     private_email           = Column(String(50), default=None)
-#     account_number          = Column(String(20), default=None)
-#     bank_name                = Column(String(50), default=None)
-#     bank_branch_name         = Column(String(50), default=None)
-#     ifsc_code                = Column(String(20), default=None)
-#     created_by = Column(Integer, nullable=False, default=0)
-#     created_on = Column(DateTime, nullable=False, default=func.now())
-#     modified_by = Column(Integer, default=None)
-#     modified_on = Column(DateTime, default=None)
-#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-#     deleted_by = Column(Integer, default=None)
-#     deleted_on = Column(DateTime, default=None)
 
 class Employee(caerp_base):
     __tablename__ = "employee_master"
@@ -117,6 +63,7 @@ class Employee(caerp_base):
     nationality_id           = Column(Integer, nullable=False)
     marital_status_id        = Column(Integer, nullable=False)
     designation_id           = Column(Integer, nullable=False)
+    is_consultant            = Column(Enum('yes', 'no'), nullable=False, default='no')
     aadhaar_number           = Column(String(50), default=None)
     passport_number          = Column(String(50), default=None)
     pan_number               = Column(String(20), default=None)
@@ -170,6 +117,88 @@ class Employee(caerp_base):
     approved_by              = Column(Integer, default=None)
     approved_on              = Column(DateTime, default=None)
 
+
+class EmployeeMasterView(caerp_base):
+    __tablename__ = "view_employee_master"
+    employee_id              = Column(Integer, primary_key=True, autoincrement=True)
+    employee_number          = Column(String(20), nullable=False)
+    first_name               = Column(String(100), nullable=False)
+    middle_name              = Column(String(100), nullable=False)
+    last_name                = Column(String(100), nullable=False)
+    gender_id                = Column(Integer, nullable=False)
+    gender                   = Column(String(15), nullable=False)
+    date_of_birth            = Column(Date, default=None)
+    nationality_id           = Column(Integer, nullable=False)
+    nationality_name         = Column(String(50), nullable=False)
+    marital_status_id        = Column(Integer, nullable=False)
+    marital_status           = Column(String(30), nullable=False)
+    designation_id           = Column(Integer, nullable=False)
+    designation              = Column(String(50), nullable=False)
+    is_consultant            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    aadhaar_number           = Column(String(50), default=None)
+    passport_number          = Column(String(50), default=None)
+    pan_number               = Column(String(20), default=None)
+    driving_licence_number   = Column(String(50), default=None)
+    other_id_doc             = Column(String(50), default=None)
+    present_house_or_flat_name   = Column(String(100), nullable=False)
+    present_house_flat_or_door_number   = Column(String(100), default=None)
+    present_road_name   = Column(String(100), default=None)
+    present_street_name   = Column(String(100), default=None)
+    present_land_mark      = Column(String(100), default=None)
+    present_pin_code         = Column(String(20), default=None)
+    present_post_office_id   = Column(Integer, nullable=False)
+    present_post_office_name = Column(String(250), nullable=False)
+    present_city_id          = Column(Integer, nullable=False)
+    present_city_name        = Column(String(50), nullable=False)
+    present_taluk_id         = Column(Integer, nullable=False)
+    present_taluk_name       = Column(String(50), nullable=False)
+    present_district_id      = Column(Integer, nullable=False)
+    present_district_name    = Column(String(50), nullable=False)
+    present_state_id         = Column(Integer, nullable=False)
+    present_state_name       = Column(String(50), nullable=False)
+    present_country_id       = Column(Integer, nullable=False)
+    present_country_name     = Column(String(300), nullable=False)
+    permanent_house_or_flat_name = Column(String(100), nullable=False)
+    permanent_house_flat_or_door_number = Column(String(100), default=None)
+    permanent_road_name = Column(String(100), default=None)
+    permanent_street_name = Column(String(100), default=None)
+    permanent_land_mark  = Column(String(100), default=None)
+    permanent_pin_code       = Column(String(20), default=None)
+    permanent_post_office_id = Column(Integer, nullable=False)
+    permanent_post_office_name = Column(String(250), nullable=False)
+    permanent_city_id        = Column(Integer, nullable=False)
+    permanent_city_name      = Column(String(50), nullable=False)
+    permanent_taluk_id       = Column(Integer, nullable=False)
+    permanent_taluk_name     = Column(String(50), nullable=False)
+    permanent_district_id    = Column(Integer, nullable=False)
+    permanent_district_name  = Column(String(50), nullable=False)
+    permanent_state_id       = Column(Integer, nullable=False)
+    permanent_state_name     = Column(String(50), nullable=False)
+    permanent_country_id     = Column(Integer, nullable=False)
+    permanent_country_name   = Column(String(300), nullable=False)
+    home_phone               = Column(String(20), default=None)
+    mobile_phone             = Column(String(20), default=None)
+    whatsapp_number          = Column(String(20), default=None)
+    work_phone               = Column(String(20), default=None)
+    work_email               = Column(String(50), default=None)
+    private_email            = Column(String(50), default=None)
+    account_number           = Column(String(20), default=None)
+    bank_name                = Column(String(50), default=None)
+    bank_branch_name         = Column(String(50), default=None)
+    ifsc_code                = Column(String(20), default=None)
+    created_by               = Column(Integer, nullable=False, default=0)
+    created_on               = Column(DateTime, nullable=False, default=func.now())
+    modified_by              = Column(Integer, default=None)
+    modified_on              = Column(DateTime, default=None)
+    is_deleted               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by               = Column(Integer, default=None)
+    deleted_on               = Column(DateTime, default=None)
+    is_verified              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    verified_by              = Column(Integer, default=None)
+    verified_on              = Column(DateTime, default=None)
+    is_approved              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    approved_by              = Column(Integer, default=None)
+    approved_on              = Column(DateTime, default=None)
 
 class EmailCredentials(caerp_base):
     __tablename__ = "app_email_api_settings"
@@ -397,6 +426,7 @@ class Gender(caerp_base):
     id          = Column(Integer, primary_key=True, autoincrement=True)
     gender      = Column(String(20), nullable=False)
     
+    
 class PanCard(caerp_base):
     __tablename__   =   "app_pan_card_types"
 
@@ -404,12 +434,12 @@ class PanCard(caerp_base):
     pan_card_type_code	= Column(String(1), nullable=False)
     pan_card_type	    = Column(String(100), nullable=False)
     
-class Qualification(caerp_base):
-    __tablename__   =   "app_qualification"
+class AppEducationalQualificationsMaster(caerp_base):
+    __tablename__   =   "app_educational_qualifications"
 
     id                  = Column(Integer, primary_key=True, autoincrement=True)
     qualification	    = Column(String(50), nullable=False)
-    
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     
 class ConstitutionTypes(caerp_base):
     __tablename__   =   "app_constitution_types"
@@ -423,4 +453,241 @@ class Profession(caerp_base):
     id                   = Column(Integer, primary_key=True, autoincrement=True)
     profession_name 	 = Column(String(100), nullable=False)
     profession_code      = Column(String(100), nullable=False)
+
+
+
+class QueryManagerQuery(caerp_base):
+    __tablename__ = "app_query_manager_queries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    query = Column(String(500), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class QueryManager(caerp_base):
+    __tablename__ = "app_query_manager"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    query_id = Column(Integer, nullable=False)
+    query_description = Column(String(2000), default=None)
+    queried_by = Column(Integer,  nullable=False)
+    query_on = Column(DateTime, nullable=False)
+    is_resolved = Column(Enum('yes', 'no'), nullable=False, default='no')
+    resolved_by = Column(Integer,nullable=True )
+    resolved_on = Column(DateTime, nullable=False, default=func.now())
+    
+   
+   
+    
+class QueryView(caerp_base):
+    __tablename__ = 'view_user_queries'
+
+    id = Column(Integer, primary_key=True)
+    query_id = Column(Integer)
+    query_description=Column(String)
+    query = Column(String)
+    is_deleted = Column(String)
+    queried_by = Column(Integer)
+    query_on = Column(DateTime)
+    is_resolved = Column(String)
+    resolved_by = Column(Integer)
+    resolved_on = Column(DateTime)
+    user_id = Column(Integer)
+    user_name = Column(String)
+    role_id = Column(Integer)
+    role = Column(String)
+    employee_number = Column(String)
+    first_name = Column(String)
+    last_name = Column(String)
+    gender_id = Column(Integer)
+    gender = Column(String)
+    designation_id = Column(Integer)
+    designation = Column(String)
+    
+
+# class ConsultancyService(caerp_base):
+#     __tablename__ = 'off_consultancy_services'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     service_master_id = Column(Integer, nullable=False)
+#     consultant_id = Column(Integer, nullable=False, default=0)
+#     consultation_fee = Column(Float)
+#     gst_rate = Column(Float)
+#     cgst_rate = Column(Float)
+#     sgst_rate = Column(Float)
+#     cess_rate = Column(Float)
+#     discount_percentage = Column(Float)
+#     discount_amount = Column(Float)
+#     available_time_from = Column(Time, nullable=False)
+#     available_time_to = Column(Time, nullable=False)
+#     slot_duration_in_minutes = Column(Integer, nullable=False)
+#     effective_from_date = Column(Date, nullable=False)
+#     effective_to_date = Column(Date, default=None)
+#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+        
+# class AppointmentVisitDetail(caerp_base):
+#     __tablename__ = 'off_appointment_visit_details'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     visit_master_id = Column(Integer, ForeignKey('off_enquiry_visit_master.id'), nullable=False)
+#     consultancy_service_id = Column(Integer, ForeignKey('off_consultancy_services.id'), nullable=False)
+#     consultant_id = Column(Integer, ForeignKey('employee_master.empoyee_id'), nullable=False)
+#     appointment_time = Column(Time, nullable=False)
+#     service_charge = Column(Float, default=None)
+#     gst_percentage = Column(Float, default=None)
+#     sgst_percentage = Column(Float, default=None)
+#     cgst_percentage = Column(Float, default=None)
+#     discount_percentage = Column(Float, default=None)
+#     discount_amount = Column(Float, default=None)
+#     net_amount = Column(Float, default=None)
+#     remarks = Column(String(1000), default=None)
+    
+ #--------------------------------------------------------
+ 
+# class OffAppointmentDetails(caerp_base):
+#     __tablename__ = 'view_off_appointment_details'
+
+#     appointment_visit_details_id = Column(Integer, primary_key=True)
+#     appointment_visit_master_id = Column(Integer)
+#     appointment_date = Column(Date)
+#     appointment_time = Column(Time)
+#     consultancy_service_id = Column(Integer)
+#     service_name = Column(String)
+#     consultant_id = Column(Integer)
+#     employee_number = Column(String)
+#     first_name = Column(String)
+#     middle_name = Column(String)
+#     last_name = Column(String)
+#     appointment_visit_details_service_charge = Column(Integer)
+#     appointment_visit_details_gst_percentage = Column(Integer)
+#     appointment_visit_details_sgst_percentage = Column(Integer)
+#     appointment_visit_details_cgst_percentage = Column(Integer)
+#     appointment_visit_details_discount_percentage = Column(Integer)
+#     appointment_visit_details_discount_amount = Column(Integer)
+#     appointment_visit_details_net_amount = Column(Integer)
+#     appointment_visit_details_remarks = Column(String)
+#     appointment_visit_details_created_by = Column(Integer)
+#     appointment_visit_details_created_on = Column(DateTime)
+#     appointment_visit_details_modified_by = Column(Integer)
+#     appointment_visit_details_modified_on = Column(DateTime)
+#     appointment_visit_details_is_deleted = Column(String)
+#     appointment_visit_details_is_deleted_directly = Column(String)
+#     appointment_visit_details_is_deleted_with_master = Column(String)
+#     appointment_visit_details_deleted_by = Column(Integer)
+#     appointment_visit_details_deleted_on = Column(DateTime)
+    
+    
+# class OffAppointmentMaster(caerp_base):
+#     __tablename__ = 'off_appointment_master'
+
+#     id = Column(Integer, primary_key=True, autoincrement=True)
+#     full_name = Column(String(200), nullable=False)
+#     appointment_number = Column(String(100), default=None)
+#     enquiry_number = Column(String(100), default=None)
+#     customer_number = Column(String(100), default=None)
+#     mobile_number = Column(String(20), default=None)
+#     email_id = Column(String(50), default=None)
+#     created_by = Column(Integer, default=None)
+#     created_on = Column(Date, default=None)
+#     modified_by = Column(Integer, default=None)
+#     modified_on = Column(Date, default=None)
+#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by = Column(Integer, default=None)
+#     deleted_on = Column(Date, default=None)
+    
+
+
+# class ViewOffAppointmentMaster(caerp_base):
+#     __tablename__ = 'view_off_appointment_master'
+
+#     id = Column(Integer, primary_key=True)
+#     full_name = Column(String)
+#     appointment_number = Column(String)
+#     enquiry_number = Column(String)
+#     customer_number = Column(String)
+#     mobile_number = Column(String)
+#     email_id = Column(String)
+#     appointment_master_created_by = Column(Integer)
+#     appointment_master_created_on = Column(DateTime)
+#     appointment_master_modified_by = Column(Integer)
+#     appointment_master_modified_on = Column(DateTime)
+#     appointment_master_is_deleted = Column(String)
+#     appointment_master_deleted_by = Column(Integer)
+#     appointment_master_deleted_on = Column(DateTime)
+    
+#     appointment_visit_master_id = Column(Integer)
+#     appointment_visit_master_appointment_date = Column(Date)
+#     appointment_visit_master_source_of_enquiry_id = Column(Integer)
+#     source = Column(String)
+#     appointment_visit_master_appointment_status_id = Column(Integer)
+#     is_paid = Column(Enum('yes', 'no'), nullable=False, default='no')
+   
+#     appointment_status = Column(String)
+#     appointment_visit_master_payment_mode_id = Column(Integer)
+#     payment_mode = Column(String)
+#     appointment_visit_master_payment_transaction_number = Column(String)
+#     appointment_visit_master_payment_status_id = Column(Integer)
+#     payment_status = Column(String)
+#     appointment_visit_master_payment_date = Column(Date)
+#     appointment_visit_master_is_refunded = Column(Enum('yes', 'no'), nullable=False, default='no')
+   
+#     appointment_visit_master_refund_status_id = Column(Integer)
+#     refund_status = Column(String)
+#     appointment_visit_master_refund_amount = Column(Float)
+#     appointment_visit_master_refund_date = Column(Date)
+#     appointment_visit_master_refund_reason_id = Column(Integer)
+#     refund_reason = Column(String)
+#     appointment_visit_master_refund_transaction_number = Column(String)
+#     appointment_visit_master_service_charge = Column(Float)
+#     appointment_visit_master_gst_percentage = Column(Float)
+#     appointment_visit_master_sgst_percentage = Column(Float)
+#     appointment_visit_master_cgst_percentage = Column(Float)
+#     appointment_visit_master_discount_percentage = Column(Float)
+#     appointment_visit_master_discount_amount = Column(Float)
+#     appointment_visit_master_special_discount_percentage = Column(Float)
+#     appointment_visit_master_special_discount_amount = Column(Float)
+#     appointment_visit_master_net_amount = Column(Float)
+#     appointment_visit_master_remarks = Column(String)
+#     appointment_visit_master_is_deleted = Column(String)
+#     appointment_visit_master_is_deleted_directly = Column(String)
+#     appointment_visit_master_is_deleted_with_master = Column(String)
+#     appointment_visit_master_deleted_by = Column(Integer)
+#     appointment_visit_master_deleted_on = Column(DateTime)
+    
+    
+#--------------------------------------------------------
+class PaymentsMode(caerp_base):
+    __tablename__ = 'app_payments_mode'
+
+    id = Column(Integer, primary_key=True)
+    payment_mode= Column(String(500), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class PaymentStatus(caerp_base):
+    __tablename__ = 'app_payment_status'
+
+    id = Column(Integer, primary_key=True)
+    payment_status= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class RefundStatus(caerp_base):
+    __tablename__ = 'app_refund_status'
+
+    id = Column(Integer, primary_key=True)
+    refund_status= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class RefundReason(caerp_base):
+    __tablename__ = 'app_refund_reason'
+
+    id = Column(Integer, primary_key=True)
+    refund_reason= Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+
+
+
+
 

@@ -18,6 +18,15 @@ class CountryCreate(BaseModel):
 
     class Config:
         orm_mode = True
+        
+        
+# class DemoCreate(BaseModel):        
+#     id: int                     
+#     country_id: int            
+#     state_name: str               
+   
+#     country: int                
+#     districts: int
 
 class CountryDetail(BaseModel):
     id: int
@@ -237,6 +246,7 @@ class GenderSchema(BaseModel):
         orm_mode = True
 
 class GenderSchemaResponse(BaseModel):
+    id:int
     gender: List[GenderSchema]
     
 
@@ -1355,22 +1365,22 @@ class InstallmentDetailsForGet(BaseModel):
     
 #///
 class PancardSchemaResponse(BaseModel):
-
+    id:int
     pan_card_type_code : str
     pan_card_type : str
     
 class QualificationSchemaResponse(BaseModel):
-
+    id:int
     qualification : str
 
 
 class ConstitutionTypeSchemaResponse(BaseModel):
-
+    id:int
     constitution_type   : str
 
 
 class ProfessionSchemaResponse(BaseModel):
-
+    id:int
     profession_name : str 
     profession_code : str
 
@@ -1598,7 +1608,7 @@ class StateDetail(BaseModel):
         orm_mode = True
     
     
-class QualificationSchemaForUpdate(BaseModel):
+class EducationSchema(BaseModel):
 
     qualification : str
     
@@ -1621,3 +1631,126 @@ class ProfessionSchemaForUpdate(BaseModel):
 
 class CAPTCHARequest(BaseModel):
     answer: int
+
+class QueryManagerQuerySchema(BaseModel):
+
+    query: str
+
+class QueryManagerQuerySchemaForGet(BaseModel):
+    id:int
+    query: str
+    is_deleted: str
+
+
+
+
+class QueryManagerSchema(BaseModel):
+    query_id: int
+    queried_by: str
+    query_description: Optional[str]
+
+
+    class Config:
+        orm_mode = True
+        
+        
+class QueryStatus(str, Enum):
+    ALL = "ALL"
+    RESOLVED = "RESOLVED"
+    NOT_RESOLVED = "NOT RESOLVED"
+    
+
+    
+# class QueryFilterSchema(BaseModel):
+#     id:int
+#     query_id: int
+#     queried_by: str
+#     query_on: datetime
+#     is_resolved: str
+#     resolved_by: Optional[int]
+#     resolved_on: Optional[datetime]
+    
+class QueryViewSchema(BaseModel):
+    id: int
+    query_id: int
+    query_description:str
+    query: str
+    is_deleted: str
+    queried_by: int
+    query_on: datetime
+    is_resolved: str
+    resolved_by: Optional[int]
+    resolved_on: Optional[datetime]
+    user_id: int
+    user_name: str
+    role_id: int
+    role: str
+    employee_number: str
+    first_name: str
+    last_name: str
+    gender_id: int
+    gender: str
+    designation_id: int
+    designation: str
+
+
+
+
+    
+class ConsultancyServiceCreate(BaseModel):
+    service_master_id: int
+    consultant_id: int
+    consultation_fee: Optional[float] = None
+    gst_rate: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    cess_rate: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    available_time_from: str
+    available_time_to: str
+    slot_duration_in_minutes: int
+    effective_from_date: Optional[str] = None
+    effective_to_date: Optional[str] = None
+    is_deleted: str = 'no'
+    
+#----------------------------------------------------------------
+class PaymentModeSchema(BaseModel):
+
+    payment_mode: str
+
+class PaymentModeSchemaForGet(BaseModel):
+    id:int
+    payment_mode: str
+    is_deleted: str
+
+
+class PaymentStatusSchema(BaseModel):
+
+    payment_status: str
+
+class PaymentStatusSchemaForGet(BaseModel):
+    id:int
+    payment_status: str
+    is_deleted: str
+
+
+class RefundStatusSchema(BaseModel):
+
+    refund_status: str
+
+class RefundStatusSchemaForGet(BaseModel):
+    id:int
+    refund_status: str
+    is_deleted: str
+
+
+class RefundReasonSchema(BaseModel):
+
+    refund_reason: str
+
+class RefundReasonSchemaForGet(BaseModel):
+    id:int
+    refund_reason: str
+    is_deleted: str
+

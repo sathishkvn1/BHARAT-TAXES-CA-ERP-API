@@ -13,8 +13,6 @@ router = APIRouter(
     prefix ='/otp',
     tags=['OTP']
 )
-
-
 @router.post("/mobile_otp_verification/{otp}")
 def mobile_otp_verification(
     otp: str,
@@ -57,12 +55,20 @@ def mobile_resend_otp(
     mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
     new_otp = db_otp.create_otp(db, mobile_otp_value,user_data.employee_id)
     mobile_otp_id = new_otp.id    
-    message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
-    temp_id= 1607100000000128308
-    
+    # message= f"{mobile_otp_value}is your SECRET One Time Password (OTP) for your mobile registration. Please use this password to complete your transaction. From:BRQ GLOB TECH"
+    # temp_id= 1607100000000128308
+    sms_type= 'OTP'
+    template_data = db_user.get_templates_by_type(db,sms_type)
+    temp_id= template_data.template_id
+    template_message = template_data.message_template
+    replace_values = [ mobile_otp_value, 'mobile registration']
+    placeholder = "{#var#}"
+    for value in replace_values:
+        template_message = template_message.replace(placeholder, str(value),1)
+            
     
     try:
-        send_message.send_sms_otp(mobile_number,message,temp_id,db)
+        send_message.send_sms_otp(mobile_number,template_message,temp_id,db)
         data={
                     "mobile_otp_id": mobile_otp_id,                    
                     'user_id'     : user_data.employee_id

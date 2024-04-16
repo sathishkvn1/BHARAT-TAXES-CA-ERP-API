@@ -12,9 +12,7 @@ from io import BytesIO
 from settings import CAPTCHA_FONT_PATH,BASE_URL,CAPTCHA_MODIFIED_IMAGE_PATH,CAPTCHA_IMAGE_PATH
 import random,os
 
-# CAPTCHA_MODIFIED_IMAGE_PATH = "uploads/captcha_modified_images"
-# CAPTCHA_IMAGE_PATH = "resources/captcha_image/10001.jpg"
-# CAPTCHA_FONT_PATH = "resources/fonts"
+
 
 
 router = APIRouter(

@@ -1,16 +1,32 @@
-from fastapi import APIRouter,Depends,HTTPException,status
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaForUpdate, QualificationSchemaResponse, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict
+from fastapi import APIRouter,Depends,HTTPException,status,Query
+from caerp_auth.authentication import authenticate_user
+from caerp_db.common.models import  Employee, QueryManager, QueryManagerQuery, QueryView, UserBase
+from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, User
+
+from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
+from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
-from caerp_constants.caerp_constants import ActiveStatus
+from caerp_constants.caerp_constants import ActionType, ActiveStatus, DeletedStatus
 from typing import List
 from caerp_auth import oauth2
+from datetime import datetime
+from sqlalchemy import text
+
 
 router = APIRouter(
     
     tags = ['COMMON FUNCTIONS']
 )
+
+
+
+# @router.get("/states", response_model=List[DemoCreate], tags=['demo'])
+# def get_all_states(db: Session = Depends(get_db)):
+#     states = db_common.get_states(db)  
+#     return states
+
 
 
 @router.get("/country", response_model=List[CountryCreate])
@@ -948,8 +964,9 @@ def get_pan_card_by_card_type(
         raise HTTPException(status_code=404, detail="Pan card not found")
     return pan_card_detail
 
-@router.get("/qualification", response_model=List[QualificationSchemaResponse])
-def get_qualification_details(
+
+@router.get("/educational_qualification", response_model=List[QualificationSchemaResponse])
+def get_educational_qualification_details(
         db: Session = Depends(get_db),
         token: str = Depends(oauth2.oauth2_scheme)
        
@@ -965,23 +982,126 @@ def get_qualification_details(
     return qualification_details
 
 
-@router.post("/qualification_update/{qualification_id}", response_model=List[QualificationSchemaForUpdate])
-def update_qualification_details(        
-        qualification_data : QualificationSchemaForUpdate ,
-        qualification_id : int ,
-        db: Session = Depends(get_db),
-        token: str = Depends(oauth2.oauth2_scheme)
-    ):
-    """
-    Parameters:
-    - `token` (required): Authentication token.
-    """
-    # Check authorization
+
+
+# @router.post("/save/educational_qualifications/{id}", response_model=dict)
+# def save_educational_qualifications(
+#     data: EducationSchema,
+#     id: int = 0,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     try:
+#         if not token:
+#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#         # Authenticate the token
+#         payload = verify_token(token)
+
+#         # Save educational qualifications
+#         result = db_common.save_educational_qualifications(db, id, data)
+        
+#         # If the operation fails for any reason, return failure with error message
+#         if not result:
+#             return {"message": "Failed to save educational qualifications", "success": False}
+        
+#         # Return a response indicating success
+#         return {"message": "Educational qualifications saved successfully", "success": True}
+#     except HTTPException as e:
+#         # Propagate HTTPException to the client
+#         raise e
+#     except Exception as ex:
+#         # Handle other exceptions (e.g., database errors)
+#         error_detail = "An error occurred while saving educational qualifications"
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
+
+
+
+
+@router.post("/save/educational_qualifications/{id}", response_model=dict)
+def save_educational_qualifications(
+    data: EducationSchema,
+    id: int = 0,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+        # Authenticate the token
+        payload = verify_token(token)
+
+        # Save educational qualifications
+        result = db_common.save_educational_qualifications(db, id, data)
+        
+        # If the operation fails for any reason, return failure with error message
+        if not result:
+            return {"message": "Failed to save educational qualifications", "success": False}
+        
+        # Return a response indicating success
+        return {"message": "Educational qualifications saved successfully", "success": True}
+    
+    except HTTPException as e:
+        # Check if the exception is due to an invalid token
+        if e.status_code == status.HTTP_401_UNAUTHORIZED:
+            # Return a specific response for invalid token
+            return {"message": "Invalid token", "success": False}
+        else:
+            # Propagate other HTTP exceptions to the client
+            raise e
+            
+    except Exception as ex:
+        # Handle other exceptions (e.g., database errors)
+        error_detail = "An error occurred while saving educational qualifications"
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
+
+
+    
+
+from caerp_auth.oauth2 import SECRET_KEY, ALGORITHM
+
+from fastapi import HTTPException, status
+from jose import jwt, JWTError
+
+
+def verify_token(token: str):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    new_qualification = db_common.update_qualification(db, qualification_data,qualification_id)
-        
-    return [new_qualification]
+
+    try:
+        # Decode and verify the token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        # Token has expired
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has expired")
+    except JWTError:
+        # Token is invalid
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+
+
+
+    
+@router.delete("/delete/educational_qualifications/{id}")
+def delete_educational_qualifications(
+                    
+                     id: int,
+                     db: Session = Depends(get_db),
+                     token: str = Depends(oauth2.oauth2_scheme)):
+    
+    
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+
+    
+    return db_common.delete_educational_qualifications(db, id)
+
+
 
 
 @router.get("/constitution", response_model=List[ConstitutionTypeSchemaResponse])
@@ -1055,3 +1175,558 @@ def update_profession_details(
     new_profession = db_common.update_profession(db, profession_data,profession_id)
         
     return [new_profession]
+
+
+@router.post("/save/query_manager_queries/{id}", response_model=dict)
+def save_query_manager_queries(
+    data: QueryManagerQuerySchema,
+    id: int = 0,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    return db_common.save_query_manager_queries(db, id, data)
+
+
+@router.delete("/delete/query_manager_queries/{id}")
+def delete_query_manager_queries(
+                    
+                     id: int,
+                     db: Session = Depends(get_db),
+                     token: str = Depends(oauth2.oauth2_scheme)):
+    
+    
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+
+    
+    return db_common.delete_query_manager_queries(db, id)
+
+
+@router.get("/query_manager_queries/{id}", response_model=QueryManagerQuerySchemaForGet)
+def get_query_manager_query_by_id(
+    id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    query = db_common.get_query_manager_query_by_id(db, id)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query not found")
+
+    return query
+
+
+@router.get("/get_all_query_manager_queries/" , response_model=List[QueryManagerQuerySchemaForGet])
+async def get_all_query_manager_queries(deleted_status: DeletedStatus = DeletedStatus.NOT_DELETED,
+                              db: Session = Depends(get_db),
+                             ):
+    return get_all_query_manager_queries(db, deleted_status)
+
+
+
+def get_all_query_manager_queries(db: Session, deleted_status: DeletedStatus):
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(QueryManagerQuery).filter(QueryManagerQuery.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(QueryManagerQuery).filter(QueryManagerQuery.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(QueryManagerQuery).all()
+    else:
+       
+        raise ValueError("Invalid deleted_status")
+    
+    
+    
+@router.post("/save/query_manager/")
+def save_query_manager(
+    data: QueryManagerSchema,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+
+
+    # Retrieve the user_id based on the provided username
+    user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Create a new QueryManager record
+    new_query_manager = QueryManager(
+        query_id=data.query_id,
+        queried_by=user.id, 
+        query_on=datetime.now(),
+        query_description=data.query_description 
+      
+    )
+
+    # Save the new record
+    db.add(new_query_manager)
+    db.commit()
+    db.refresh(new_query_manager)
+
+    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
+
+
+
+@router.post("/resolve/query_manager/{query_manager_id}")
+def resolve_query_manager(
+    query_manager_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    resolved_by = auth_info["user_id"]
+    
+    # Retrieve the QueryManager record
+    query_manager = db.query(QueryManager).filter(QueryManager.id == query_manager_id).first()
+    if query_manager is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query Manager not found")
+
+    # Check if the query is already resolved
+    if query_manager.is_resolved == 'yes':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Query is already resolved")
+
+    # Update the query_manager record to mark it as resolved
+    query_manager.is_resolved = 'yes'
+    query_manager.resolved_by = resolved_by
+    query_manager.resolved_on = datetime.now()
+
+    # Commit the changes to the database
+    db.commit()
+
+    return {"message": "Query resolved successfully", "query_manager": query_manager}
+
+		
+
+
+@router.get("/queries/", response_model=List[QueryViewSchema])
+def get_queries_by_status(
+    status: QueryStatus = Query(QueryStatus.ALL),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    query = db.query(QueryView)  # Query the QueryView view
+    
+    # Filter queries based on resolution status
+    if status == QueryStatus.RESOLVED:
+        query = query.filter(QueryView.is_resolved == 'yes')
+    elif status == QueryStatus.NOT_RESOLVED:
+        query = query.filter(QueryView.is_resolved == 'no')
+    
+    # Execute the query and fetch results
+    queries = query.all()
+    
+    return queries
+
+
+
+@router.get("/queries/{id}", response_model=QueryViewSchema)
+def get_queries_by_id(id: int,
+                      db: Session = Depends(get_db),
+                      token: str = Depends(oauth2.oauth2_scheme)):
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    query = db_common.get_queries_by_id(db, id)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return query
+
+
+@router.get("/get_usernames_with_names_and_ids", response_model=List[dict])
+def get_usernames_with_names_and_ids(db: Session = Depends(get_db)):
+    try:
+        # SQL query using SQLAlchemy text() function
+        query = text(
+            "SELECT users.id, users.user_name, "
+            "CONCAT_WS(' ', "
+            "employee_master.first_name, "
+            "COALESCE(employee_master.middle_name, ''), "
+            "employee_master.last_name"
+            ") AS full_name "
+            "FROM users "
+            "LEFT JOIN employee_master ON users.employee_id = employee_master.employee_id;"
+        )
+        result = db.execute(query)
+
+        # List to store formatted data
+        formatted_data = []
+
+        # Iterate over query results and format data
+        for row in result:
+            formatted_data.append(dict(row))
+
+        return formatted_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+#------------ -----------------
+
+@router.post('/save_Payments_mode/{id}', response_model=PaymentModeSchema)
+def save_payments_mode(
+    data: PaymentModeSchema,
+    id: int = 0,  # Default value of 0 for id
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Handles the creation or update of a Payments mode.
+
+    - **data**: Data for the Payments mode, provided as parameters of type PaymentModeSchema.
+    - **id**: An optional integer parameter with a default value of 0, indicating the Payments mode's identifier.
+    
+    - If Payments mode id is 0, it indicates the creation of a new Payments mode.
+    - Returns: The newly created Payments mode as the response.
+
+    If Payments mode id is not 0, it indicates the update of an existing Payments mode.
+    - Returns: The updated Payments mode as the response.
+
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_common.save_payments_mode (db, data, id)
+    
+#------All-----------------  
+@router.get('/payments_mode/all', response_model=list[PaymentModeSchemaForGet])
+def get_all_payments_mode(deleted_status: DeletedStatus = Query(DeletedStatus.ALL),
+                          token: str = Depends(oauth2.oauth2_scheme),
+                          db: Session = Depends(get_db)
+                          ):
+    """                       
+    Get payments_mode from the database based on status.
+
+    - **status**: Query parameter to filter payments_mode by status (ALL/DELETED/NOT DELETED).
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(PaymentsMode).filter(PaymentsMode.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(PaymentsMode).filter(PaymentsMode.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(PaymentsMode).all()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid deleted_status")
+#-----------by id----------------------
+
+@router.get('/get/Payments_mode/{id}', response_model=PaymentModeSchemaForGet)
+def get_payments_mode_by_id(id: int, 
+                    token: str = Depends(oauth2.oauth2_scheme),
+                    db: Session = Depends(get_db)):
+    """
+     - Get Payments mode by Payments_mode id.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    payments_mode = db_common.get_payment_mode(db, id)
+    if not payments_mode:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"payments mode with id {id} not found"
+        )
+    return payments_mode
+#-----delete------
+@router.delete("/payments_mode/delete/{id}")
+def delete_payments_mode(
+    id: int,
+    action_type: ActionType,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+   
+    
+    return db_common.delete_payments_mode(db, id, action_type)
+
+
+    
+
+#------------6/4/2024 Payments_Status -----------------
+
+@router.post('/get/save_payment_status/{id}', response_model=PaymentStatusSchema)
+def save_payment_status(
+    data: PaymentStatusSchema,
+    id: int = 0,  # Default value of 0 for id
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Handles the creation or update of a payment status
+
+    - **data**: Data for the payment_status, provided as parameters of type PaymentStatusSchema.
+    - **id**: An optional integer parameter with a default value of 0, indicating the payment_status's identifier.
+    
+    - If payment_status id is 0, it indicates the creation of a new payment_status.
+    - Returns: The newly created payment_status as the response.
+
+    If payment_status id is not 0, it indicates the update of an existing payment_status.
+    - Returns: The updated payment_status as the response.
+
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_common.save_payment_status (db, data, id)
+    
+#-----------------------  
+
+@router.get('/payment_status/all', response_model=list[PaymentStatusSchemaForGet])
+def get_all_payment_status(deleted_status: DeletedStatus = Query(DeletedStatus.ALL),
+                          token: str = Depends(oauth2.oauth2_scheme),
+                          db: Session = Depends(get_db)
+                          ):
+    """                       
+    Get payment_status from the database based on status.
+
+    - **status**: Query parameter to filter payment_status by status (ALL/DELETED/NOT DELETED).
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(PaymentStatus).filter(PaymentStatus.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(PaymentStatus).filter(PaymentStatus.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(PaymentStatus).all()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid deleted_status")
+
+#---------------------------------
+
+@router.get('/get/payment_status/{id}', response_model=PaymentStatusSchemaForGet)
+def get_payments_status_by_id(id: int, 
+                    token: str = Depends(oauth2.oauth2_scheme),
+                    db: Session = Depends(get_db)):
+    """
+     - Get payment status by payment_status id.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    payment_status = db_common.get_payment_status(db, id)
+    if not payment_status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"payments status with id {id} not found"
+        )
+    return payment_status
+#-----delete------
+@router.delete("/payment_status/delete/{id}")
+def delete_payment_status(
+    id: int,
+    action_type: ActionType,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+   
+    
+    return db_common.delete_payment_status(db, id, action_type)
+
+
+    
+
+#-----------------------------
+
+@router.post('/get/save_refund_status/{id}', response_model=RefundStatusSchema)
+def save_refund_status(
+    data: RefundStatusSchema,
+    id: int = 0,  # Default value of 0 for id
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Handles the creation or update of a Refund Status
+
+    - **data**: Data for the Refund Status, provided as parameters of type RefundStatusSchema.
+    - **id**: An optional integer parameter with a default value of 0, indicating the refund_status's identifier.
+    
+    - If Refund Status id is 0, it indicates the creation of a new Refund Status.
+    - Returns: The newly created Refund Status as the response.
+
+    If Refund Status id is not 0, it indicates the update of an existing Refund Status.
+    - Returns: The updated Refund Status as the response.
+
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_common.save_refund_status (db, data, id)
+    
+#------All-----------------  
+
+@router.get('/refund_status/all', response_model=list[RefundStatusSchemaForGet])
+def get_all_refund_status(deleted_status: DeletedStatus = Query(DeletedStatus.ALL),
+                          token: str = Depends(oauth2.oauth2_scheme),
+                          db: Session = Depends(get_db)
+                          ):
+    """                       
+    Get refund_status from the database based on status.
+
+    - **status**: Query parameter to filter refund_status by status (ALL/DELETED/NOT DELETED).
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(RefundStatus).filter(RefundStatus.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(RefundStatus).filter(RefundStatus.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(RefundStatus).all()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid deleted_status")
+
+#-----------by id----------------------
+
+@router.get('/get/refund_status/{id}', response_model=RefundStatusSchemaForGet)
+def get_refund_status_by_id(id: int, 
+                    token: str = Depends(oauth2.oauth2_scheme),
+                    db: Session = Depends(get_db)):
+    """
+     - Get refund status by refund_status id.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    refund_status = db_common.get_refund_status(db, id)
+    if not refund_status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"refund status  with id {id} not found"
+        )
+    return refund_status
+#-----delete------
+@router.delete("/refund_status/delete/{id}")
+def delete_refund_status(
+    id: int,
+    action_type: ActionType,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+   
+    
+    return db_common.delete_refund_status(db, id, action_type)
+
+
+#------------8/4/2024 refund reason -----------------
+
+@router.post('/save_refund_reason/{id}', response_model=RefundReasonSchema)
+def save_refund_reason(
+    data: RefundReasonSchema,
+    id: int = 0,  # Default value of 0 for id
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Handles the creation or update of a Refund Reason
+
+    - **data**: Data for the Refund Reason, provided as parameters of type RefundReasonSchema.
+    - **id**: An optional integer parameter with a default value of 0, indicating the Refund Reason's identifier.
+    
+    - If Refund Reason id is 0, it indicates the creation of a new Refund Reason.
+    - Returns: The newly created Refund Reason as the response.
+
+    If Refund Reason id is not 0, it indicates the update of an existing Refund Reason.
+    - Returns: The updated Refund Reason as the response.
+
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_common.save_refund_reason (db, data, id)
+    
+#------All-----------------  
+
+
+@router.get('/refund_reason/all', response_model=list[RefundReasonSchemaForGet])
+def get_all_refund_status(deleted_status: DeletedStatus = Query(DeletedStatus.ALL),
+                          token: str = Depends(oauth2.oauth2_scheme),
+                          db: Session = Depends(get_db)
+                          ):
+    """                       
+    Get refund_reason from the database based on status.
+
+    - **status**: Query parameter to filter refund_reason by status (ALL/DELETED/NOT DELETED).
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    if deleted_status == DeletedStatus.DELETED:
+        return db.query(RefundReason).filter(RefundReason.is_deleted == 'yes').all()
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        return db.query(RefundReason).filter(RefundReason.is_deleted == 'no').all()
+    elif deleted_status == DeletedStatus.ALL:
+        return db.query(RefundReason).all()
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid deleted_status")
+
+    
+
+#-----------by id----------------------
+
+@router.get('/get/refund_reason/{id}', response_model=RefundReasonSchemaForGet)
+def get_refund_reason_by_id(id: int, 
+                    token: str = Depends(oauth2.oauth2_scheme),
+                    db: Session = Depends(get_db)):
+    """
+     - Get refund status by refund_reason id.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    refund_reason = db_common.get_refund_reason(db, id)
+    if not refund_reason:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"refund reason with id {id} not found"
+        )
+    return refund_reason
+#-----delete------
+@router.delete("/refund_reason/delete/{id}")
+def delete_refund_reason(
+    id: int,
+    action_type: ActionType,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+   
+    
+    return db_common.delete_refund_reason(db, id, action_type)
+
+
+
+
+#----------------------------------------------------------------------------
+
+
+
+

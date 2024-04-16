@@ -1,12 +1,13 @@
 
 
 from caerp_schema.common.common_schema import UserCreateSchema
-from caerp_db.common.models import UserBase,Employee
+from caerp_db.common.models import UserBase,Employee,SmsTemplates
 from fastapi import HTTPException , status     
 from caerp_db.hash import Hash
 from datetime import datetime,timedelta
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import ActiveStatus
+
 
 def save_user(db: Session,  request: UserCreateSchema, user_id: int):
 
@@ -43,7 +44,6 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
         db.commit()
         db.refresh(user_data)
         return user_data
-
 
 
 def get_user_by_mobile(db: Session, mobile: str):
@@ -108,12 +108,27 @@ def update_user_active_status(db: Session, active_status: ActiveStatus, username
     }
 
 
-# def get_active_user(db: Session, active_status: ActiveStatus):
-#     if active_status == ActiveStatus.ACTIVE:
-#         return db.query(UserBase).filter(UserBase.is_active == 'yes').all()
-#     elif active_status == ActiveStatus.NOT_ACTIVE:
-#         return db.query(UserBase).filter(UserBase.is_active == 'no').all()
-#     elif active_status == ActiveStatus.ALL:
-#         return db.query(UserBase).all()
-#     else:
-#         raise ValueError("Invalid active_status")
+def user_password_reset(db: Session, user_id: int, password: str):
+    
+    hashed_password =Hash.bcrypt(password)
+    existing_user = db.query(UserBase).filter(UserBase.employee_id == user_id).first()
+    print("Existing user : ",existing_user)
+  
+    existing_user.password= hashed_password
+   
+    try:
+        db.commit()  # Commit changes to the database
+    except Exception as e:
+        db.rollback()  # Rollback changes if an error occurs
+        raise HTTPException(status_code=500, detail=f"Failed to reset password: {str(e)}")
+
+
+    return {
+        "message": "Password reset successful",
+
+    }
+
+
+def get_templates_by_type(db: Session, type: str):
+    return db.query(SmsTemplates).filter(SmsTemplates.sms_type == type).first()
+
