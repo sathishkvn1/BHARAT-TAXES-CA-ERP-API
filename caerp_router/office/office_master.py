@@ -1663,100 +1663,12 @@ def generate_slots_status(start_time: time, end_time: time, slot_duration: int, 
 
 
 
-from fastapi import Query
 
-@router.get("/get_slots/{consultant_id}/{date}")
-def get_slots(consultant_id: int,
-              date: Optional[str] = None,
-              booking_status: BookingStatus = BookingStatus.ALL,
-              db: Session = Depends(get_db),
-              token: str = Depends(oauth2.oauth2_scheme)):
-    """
-    Retrieve slots for booking appointments with a consultant.
-
-    Parameters:
-    - consultant_id (path parameter, required): The ID of the consultant for whom slots are being retrieved.
-    - booking_status (query parameter, optional): The booking status filter. Options: "all", "booked", "available". Default: "all".
-    - date (query parameter, optional): The date for which slots are being retrieved. Format: "YYYY-MM-DD".
-    - token (header, required): Authentication token for accessing the API.
-
-    Responses:
-    - 200 OK: Returns a list of slots filtered by the booking status.
-    - 401 Unauthorized: Token is missing.
-    - 404 Not Found: Consultancy service not found.
-
-    Returns:
-    - A list of slots with the specified booking status.
-    """
-    
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
-
-    if consultancy_service:
-        available_time_from = consultancy_service.available_time_from
-        available_time_to = consultancy_service.available_time_to
-        slot_duration = consultancy_service.slot_duration_in_minutes
-
-        # Fetch booked slots from the database
-        if date:
-            date_dt = datetime.strptime(date, "%Y-%m-%d")
-            appointments = db.query(OffAppointmentVisitDetailsView.appointment_time).filter(
-                OffAppointmentVisitDetailsView.consultant_id == consultant_id,
-                func.date(OffAppointmentVisitDetailsView.appointment_date) == date_dt.date()
-            ).all()
-        else:
-            appointments = db.query(OffAppointmentVisitDetailsView.appointment_time).filter(
-                OffAppointmentVisitDetailsView.consultant_id == consultant_id
-            ).all()
-
-        # Convert booked slots to string format
-        booked_slots = [appointment[0].strftime("%H:%M:%S") for appointment in appointments]
-
-        # Generate slots based on available time and duration
-        slots_with_status = generate_slots_status(available_time_from, available_time_to, slot_duration, booked_slots)
-        
-        if date:
-            available_person_details = db.query(OffAppointmentVisitMasterView).join(
-                OffAppointmentVisitDetailsView,
-                OffAppointmentVisitMasterView.appointment_visit_master_id == OffAppointmentVisitDetailsView.appointment_visit_master_id
-            ).filter(
-                OffAppointmentVisitDetailsView.appointment_date == date_dt.date(),
-                OffAppointmentVisitDetailsView.consultant_id == consultant_id
-            ).all()
-        else:
-            available_person_details = []
-
-        # Append person details to the slots
-        for slot in slots_with_status:
-            if slot['status'] == 'booked':
-                # Assuming each available person is represented by a single item in the list
-                # You may need to adjust this logic based on your data structure
-                if available_person_details:
-                    available_person = available_person_details[0]
-                    slot['full_name'] = available_person.full_name
-                    slot['email_id'] = available_person.email_id
-                    slot['appointment_number'] = available_person.appointment_number
-                    slot['enquiry_number'] = available_person.enquiry_number
-                    break  # Added break to stop appending booked person details multiple times
-        available_slots = [slot for slot in slots_with_status if slot['status'] == 'available']        
-
-        # Filter slots by booking status
-        if booking_status == BookingStatus.BOOKED:
-            slots_with_status = [slot for slot in slots_with_status if slot['status'] == 'booked']
-        elif booking_status == BookingStatus.AVAILABLE:
-            slots_with_status = [slot for slot in slots_with_status if slot['status'] == 'available']
-
-        return {"slots": slots_with_status,"available_slots": available_slots}
-    else:
-        raise HTTPException(status_code=404, detail="Consultancy service not found")
-    
     
 
 
 
-@router.get("/slots/{consultant_id}/{date}")
+@router.get("/get/slots/{consultant_id}/{date}")
 def get_slots(consultant_id: int,
               date: Optional[str] = None,
               booking_status: BookingStatus = BookingStatus.ALL,
