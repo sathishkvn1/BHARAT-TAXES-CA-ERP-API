@@ -35,3 +35,8 @@ class ApprovedStatus(str, Enum):
 class ActionType(str, Enum):
     DELETE = 'DELETE'
     UNDELETE = 'UNDELETE'
+    
+class BookingStatus(str, Enum):
+    ALL ='all',
+    BOOKED="BOOKED",
+    AVAILABLE="AVAILABLE"

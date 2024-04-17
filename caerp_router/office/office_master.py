@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
-from caerp_db.office.models import ConsultancyService, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, ServiceProvider
+from caerp_db.office.models import ConsultancyService, OffAppointmentVisitDetails, OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView, ServiceProvider
 from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
 from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
@@ -17,9 +17,12 @@ from caerp_schema.office.office_schema import ServiceProcessingStatusBase,Servic
 from caerp_auth import oauth2
 from typing import List
 from datetime import datetime
-from caerp_constants.caerp_constants import DeletedStatus,ActionType
+from caerp_constants.caerp_constants import BookingStatus, DeletedStatus,ActionType
 from caerp_db.common.models import AppEducationalQualificationsMaster
 from caerp_schema.office.office_schema import OffAppointmentDetails,ResponseModel,OffSourceOfEnquiryBase,OffSourceOfEnquiryDisplay,OffAppointmentStatusBase,OffAppointmentStatusDisplay
+
+from datetime import datetime, time, timedelta, datetime
+
 
 from typing import Optional
 from sqlalchemy import func
@@ -1010,10 +1013,7 @@ def delete_stock_keeping_unit_code(id: int, db: Session = Depends(get_db),
 
     return {"message": message}
 
-#-----------------------------------app_hsn_sac_classes---------------------------------------------------------
-
-
-
+#-----------------------------------app_hsn_sac_classes--------------------------------------------------------
 @router.post('/save_hsn_sac_classes/{id}', response_model=HsnSacClassesDisplay)
 def save_hsn_sac_classes(
     id: int,
@@ -1487,6 +1487,7 @@ def get_off_appointment_status_by_id(
         )
     return appointment_status
 
+
 @router.delete('/off_appointment_status/delete/{id}')
 def delete_off_appointment_status(
     id: int,
@@ -1553,7 +1554,7 @@ def create_appointment_visit_master_endpoint(appointment_data: OffAppointmentDet
 
 
 
-router.get("/get/appointment_visit/{appointment_master_id}", response_model=ResponseModel)
+@router.get("/get/appointment_visit/{appointment_master_id}", response_model=ResponseModel)
 def get_appointment_visit_by_id(
     appointment_master_id: int,
     db: Session = Depends(get_db),
@@ -1628,155 +1629,17 @@ def delete_appointment_visit_details(
 #........................aparna..........................
 
 
-@router.get("/get_all/consultancy_services/", response_model=List[ConsultancyServiceResponse])
-def get_all_consultancy_services(db: Session = Depends(get_db)):
-    # Retrieve all consultancy services from the database
-    consultancy_services = db.query(ConsultancyService).all()
-    return consultancy_services
-
-
-
-from datetime import datetime, timedelta
-
-def generate_slots(start_time, end_time, slot_duration):
-    """
-    Generate time slots between start_time and end_time with the given slot duration.
-    """
-    slots = []
-    current_time = start_time
-    while current_time < end_time:
-        end_slot_time = current_time + timedelta(minutes=slot_duration)
-        slots.append({
-            "start_time": current_time.strftime("%H:%M:%S"),
-            "end_time": end_slot_time.strftime("%H:%M:%S")
-        })
-        current_time = end_slot_time
-    return slots
-
-@router.get("/generate_slots/{consultant_id}", response_model=List[dict])
-def generate_slots_for_consultant(consultant_id: int, db: Session = Depends(get_db)):
-    # Retrieve the consultancy service from the database based on consultant_id
-    consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
-
-    if consultancy_service:
-        # Extract necessary details from the consultancy service object
-        available_time_from = datetime.combine(datetime.min, consultancy_service.available_time_from)
-        available_time_to = datetime.combine(datetime.min, consultancy_service.available_time_to)
-        slot_duration = consultancy_service.slot_duration_in_minutes
-
-        # Generate slots
-        slots = generate_slots(available_time_from, available_time_to, slot_duration)
-        return slots
-    else:
-        raise HTTPException(status_code=404, detail="Consultancy service not found")
 
 
 
 
-@router.get("/check_slot/{consultant_id}/{start_time}", response_model=str)
-def check_slot_availability(consultant_id: int, start_time: str, db: Session = Depends(get_db)):
-    # Convert start_time to a datetime object
-    start_time_dt = datetime.strptime(start_time, "%H:%M:%S")
-
-    # Query the database to check if an appointment exists for the given consultant and start time
-    appointment_exists = db.query(OffAppointmentVisitDetails).filter(
-        OffAppointmentVisitDetails.consultant_id == consultant_id,
-        OffAppointmentVisitDetails.appointment_time == start_time_dt.time()
-    ).first()
-
-    # If appointment exists, return "Slot not available", else return "Slot available"
-    if appointment_exists:
-        return "Slot not available"
-    else:
-        raise HTTPException(status_code=404, detail="Slot available")
-    
-    
-
-from datetime import datetime
-from typing import List, Dict
-from fastapi import APIRouter, Depends
-
-
-
-
-
-
-
-@router.get("/generate_slots/{consultant_id}", response_model=List[dict])
-def generate_slots_for_consultant(consultant_id: int, db: Session = Depends(get_db)):
-    # Retrieve the consultancy service from the database based on consultant_id
-    consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
-
-    if consultancy_service:
-        # Extract necessary details from the consultancy service object
-        available_time_from = datetime.combine(datetime.min, consultancy_service.available_time_from)
-        available_time_to = datetime.combine(datetime.min, consultancy_service.available_time_to)
-        slot_duration = consultancy_service.slot_duration_in_minutes
-
-        # Generate slots
-        slots = generate_slots(available_time_from, available_time_to, slot_duration)
-
-        # Get the list of appointment times for the specified consultant
-        appointments = db.query(OffAppointmentVisitDetails.appointment_time).filter(
-            OffAppointmentVisitDetails.consultant_id == consultant_id
-        ).all()
-
-        # Convert the list of appointment times into a set for faster lookup
-        booked_slots = set([appointment[0] for appointment in appointments])
-
-        # Initialize a list to store the availability of each slot
-        availability = []
-
-        # Check each slot against the booked slots
-        for slot in slots:
-            slot_start_time = slot["start_time"]
-            slot_end_time = slot["end_time"]
-            slot_available = (slot_start_time not in booked_slots) and (slot_end_time not in booked_slots)
-            availability.append({"start_time": slot_start_time, "end_time": slot_end_time, "available": slot_available})
-
-        return availability
-    else:
-        raise HTTPException(status_code=404, detail="Consultancy service not found")
-    
     
 
 
 
-@router.get("/public/available_slots/{consultant_id}/")
-def get_slots(consultant_id: int, db: Session = Depends(get_db), date: Optional[str] = None):
-    consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
-
-    if consultancy_service:
-        available_time_from = datetime.combine(datetime.min, consultancy_service.available_time_from)
-        available_time_to = datetime.combine(datetime.min, consultancy_service.available_time_to)
-        slot_duration = consultancy_service.slot_duration_in_minutes  # Assuming slot_duration_in_minutes is an integer
-
-        slots = generate_slots(available_time_from, available_time_to, slot_duration)
-
-        if date:
-            date_dt = datetime.strptime(date, "%Y-%m-%d")
-            appointments = db.query(OffAppointmentDetails.appointment_time).filter(
-                OffAppointmentDetails.consultant_id == consultant_id,
-                func.date(OffAppointmentDetails.appointment_date) == date_dt.date()
-            ).all()
-        else:
-            appointments = db.query(OffAppointmentDetails.appointment_time).filter(
-                OffAppointmentDetails.consultant_id == consultant_id
-            ).all()
-
-        booked_slots = [appointment.appointment_time.strftime("%H:%M:%S") for appointment in appointments]
-
-        available_slots = [slot for slot in slots if slot['start_time'] not in booked_slots]
-
-        return {"available_slots": available_slots, "booked_slots": booked_slots}
-    else:
-        raise HTTPException(status_code=404, detail="Consultancy service not found")
-    
 
 
-from datetime import datetime, time, timedelta, datetime
 
-# Rest of your code...
 
 def generate_slots_status(start_time: time, end_time: time, slot_duration: int, booked_slots: List[str]) -> List[dict]:
     slots = []
@@ -1794,10 +1657,37 @@ def generate_slots_status(start_time: time, end_time: time, slot_duration: int, 
     return slots
 
 
-@router.get("/slots/{consultant_id}/")
+
+
+from fastapi import Query
+
+@router.get("/get_slots/{consultant_id}/{date}")
 def get_slots(consultant_id: int,
-              db: Session = Depends(get_db), 
-              date: Optional[str] = None):
+              date: Optional[str] = None,
+              booking_status: BookingStatus = BookingStatus.ALL,
+              db: Session = Depends(get_db),
+              token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Retrieve slots for booking appointments with a consultant.
+
+    Parameters:
+    - consultant_id (path parameter, required): The ID of the consultant for whom slots are being retrieved.
+    - booking_status (query parameter, optional): The booking status filter. Options: "all", "booked", "available". Default: "all".
+    - date (query parameter, optional): The date for which slots are being retrieved. Format: "YYYY-MM-DD".
+    - token (header, required): Authentication token for accessing the API.
+
+    Responses:
+    - 200 OK: Returns a list of slots filtered by the booking status.
+    - 401 Unauthorized: Token is missing.
+    - 404 Not Found: Consultancy service not found.
+
+    Returns:
+    - A list of slots with the specified booking status.
+    """
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
 
     if consultancy_service:
@@ -1808,13 +1698,13 @@ def get_slots(consultant_id: int,
         # Fetch booked slots from the database
         if date:
             date_dt = datetime.strptime(date, "%Y-%m-%d")
-            appointments = db.query(OffAppointmentDetails.appointment_time).filter(
-                OffAppointmentDetails.consultant_id == consultant_id,
-                func.date(OffAppointmentDetails.appointment_date) == date_dt.date()
+            appointments = db.query(OffAppointmentVisitDetailsView.appointment_time).filter(
+                OffAppointmentVisitDetailsView.consultant_id == consultant_id,
+                func.date(OffAppointmentVisitDetailsView.appointment_date) == date_dt.date()
             ).all()
         else:
-            appointments = db.query(OffAppointmentDetails.appointment_time).filter(
-                OffAppointmentDetails.consultant_id == consultant_id
+            appointments = db.query(OffAppointmentVisitDetailsView.appointment_time).filter(
+                OffAppointmentVisitDetailsView.consultant_id == consultant_id
             ).all()
 
         # Convert booked slots to string format
@@ -1822,15 +1712,14 @@ def get_slots(consultant_id: int,
 
         # Generate slots based on available time and duration
         slots_with_status = generate_slots_status(available_time_from, available_time_to, slot_duration, booked_slots)
-
-        # Fetch details of available persons
+        
         if date:
             available_person_details = db.query(OffAppointmentVisitMasterView).join(
-                OffAppointmentDetails,
-                OffAppointmentVisitMasterView.appointment_visit_master_id == OffAppointmentDetails.appointment_visit_master_id
+                OffAppointmentVisitDetailsView,
+                OffAppointmentVisitMasterView.appointment_visit_master_id == OffAppointmentVisitDetailsView.appointment_visit_master_id
             ).filter(
-                OffAppointmentDetails.appointment_date == date_dt.date(),
-                OffAppointmentDetails.consultant_id == consultant_id
+                OffAppointmentVisitDetailsView.appointment_date == date_dt.date(),
+                OffAppointmentVisitDetailsView.consultant_id == consultant_id
             ).all()
         else:
             available_person_details = []
@@ -1846,14 +1735,17 @@ def get_slots(consultant_id: int,
                     slot['email_id'] = available_person.email_id
                     slot['appointment_number'] = available_person.appointment_number
                     slot['enquiry_number'] = available_person.enquiry_number
+                    break  # Added break to stop appending booked person details multiple times
+
+        # Filter slots by booking status
+        if booking_status == BookingStatus.BOOKED:
+            slots_with_status = [slot for slot in slots_with_status if slot['status'] == 'booked']
+        elif booking_status == BookingStatus.AVAILABLE:
+            slots_with_status = [slot for slot in slots_with_status if slot['status'] == 'available']
 
         return {"slots": slots_with_status}
     else:
         raise HTTPException(status_code=404, detail="Consultancy service not found")
-
-
-
-
 
 
 
