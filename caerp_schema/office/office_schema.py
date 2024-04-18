@@ -419,6 +419,7 @@ class OffAppointmentVisitDetailsViewGet(BaseModel):
         from_attributes = True
 
 
+
 class ResponseModel(BaseModel):
     appointment_master: OffAppointmentMasterView
     visit_master: OffAppointmentVisitMasterViewSchema
