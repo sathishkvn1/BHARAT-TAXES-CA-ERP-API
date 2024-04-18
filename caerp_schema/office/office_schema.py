@@ -233,7 +233,6 @@ class OffAvailableServicesDisplay(BaseModel):
     effective_to_date: Optional[date]= None
     
 
-
 class ViewOffAvailableServicesDisplay(BaseModel):
     available_services_id: int
     service_master_id: int
@@ -467,3 +466,46 @@ class BusinessConstitutionSchema(BaseModel):
     pan_code: Optional[str]
     display_order:int
     is_deleted: str
+    
+    
+class OffConsultancyServicesDisplay(BaseModel):
+    
+    service_master_id: int
+    consultant_id: int
+    consultation_fee: Optional[float]
+    gst_rate: Optional[float]= None
+    cgst_rate: Optional[float]= None
+    sgst_rate: Optional[float]= None
+    cess_rate: Optional[float]= None
+    discount_percentage: Optional[float]= None
+    discount_amount: Optional[float]= None
+    available_time_from: time
+    available_time_to: time
+    slot_duration_in_minutes: int
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date] =None
+   
+
+class ViewOffConsultancyServicesBase(BaseModel):
+    consultancy_service_id: int
+    service_master_id: int
+    service_name: str
+    consultant_id: int
+    employee_number: int
+    consultant_first_name: str
+    consultant_middle_name: Optional[str]
+    consultant_last_name: str
+    consultation_fee: Optional[float]
+    gst_rate: Optional[float]
+    cgst_rate: Optional[float]
+    sgst_rate: Optional[float]
+    cess_rate: Optional[float]
+    discount_percentage: Optional[float]
+    discount_amount: Optional[float]
+    available_time_from: time
+    available_time_to: time
+    slot_duration_in_minutes: int
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+    is_deleted: str
+

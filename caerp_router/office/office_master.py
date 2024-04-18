@@ -11,9 +11,9 @@ from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBa
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
 from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
-from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
-from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,BusinessConstitutionSchema
+from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,OffConsultancyServicesDisplay,ViewOffConsultancyServicesBase,BusinessConstitutionSchema
 from caerp_auth import oauth2
 from typing import List
 from datetime import datetime
@@ -24,6 +24,7 @@ from datetime import datetime, time, timedelta, datetime
 from typing import Optional
 from sqlalchemy import func
 from datetime import datetime
+
 
 
 
@@ -1783,5 +1784,64 @@ def get_all_business_constitution(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     return db_office_master.get_all_business_constitution(db, deleted_status)
+
+
+#-----------swathy_____________________
+@router.post('/services/save_off_consultancy_services/{ID}', response_model=OffConsultancyServicesDisplay)
+def save_off_consultancy_services(
+    ID: int,
+    ser_data: OffConsultancyServicesDisplay = Depends(),
+    db: Session = Depends(get_db)
+#    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save  or Create consultancy service  for a specific ID.
+    """
+  #  if not token:
+   #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    if not ser_data.effective_to_date:
+        ser_data.effective_to_date = None
+    try:
+    
+        return db_office_master.save_off_consultancy_services(db, ser_data, ID)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+       
+
+
+@router.get('/services/get_services_by_consultant_id/{consultant_id}')
+def get_services_by_consultant_id(
+    consultant_id: int,
+    date: date = Query(date.today()),
+    db: Session = Depends(get_db)
+):
+    """
+    Get available services for a consultant based on the provided date.
+    """
+    document = db_office_master.get_services_by_consultant_id(db, consultant_id, date)  
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Services for consultant with this id not found" 
+        )
+    return document
+
+
+@router.get('/services/get_consultants_by_service_id/{service_master_id}', response_model=list[ViewOffConsultancyServicesBase])
+def get_consultants_by_service_id(service_master_id: int, date: date = Query(date.today()),db: Session = Depends(get_db)):
+                                 # token: str = Depends(oauth2.oauth2_scheme)):
+                   
+    """
+    Get available Consultants for the specific  service based on the provided date.
+    """
+    #if not token:
+     #   raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    document = db_office_master.get_consultants_by_service_id(db,service_master_id ,date)  
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consultants for service with id {service_master_id} not found" 
+        )
+    return document
 
 

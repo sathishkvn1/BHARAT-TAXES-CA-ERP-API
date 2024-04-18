@@ -2,7 +2,7 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, OffAppointmentVisitDetails, OffAvailableServices, OffServiceFrequency, AppStockKeepingUnitCode, Document_Master, OffServices, ViewOffAvailableServices, ViewOffServices
 from sqlalchemy.orm import Session
 from caerp_db.hash import Hash
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_schema.office.office_schema import DocumentMasterBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyDisplay, StockKeepingUnitCodeDisplay
 from caerp_db.office.models import ServiceProvider
@@ -15,11 +15,13 @@ from sqlalchemy import and_, between
 import pandas as pd
 import io
 from sqlalchemy.exc import IntegrityError
-from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService,ViewOffConsultancyServices
+
 from caerp_db.common.models import AppEducationalQualificationsMaster
-from caerp_schema.office.office_schema import EducationalQualificationsBase,EnquirerTypeBase,EnquirerStatusBase,EnquirerStatusDisplay,ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
+from caerp_schema.office.office_schema import EducationalQualificationsBase,EnquirerTypeBase,OffConsultancyServicesDisplay,EnquirerStatusBase,EnquirerStatusDisplay,ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffSourceOfEnquiry,OffAppointmentStatus,OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView
 from caerp_schema.office.office_schema import OffAppointmentDetails,OffSourceOfEnquiryBase,OffAppointmentStatusBase,OffAppointmentMasterView
+
 #-------------------------------------document master------------------------------------------------------------------
 
 
@@ -1576,6 +1578,84 @@ def get_all_business_constitution(db: Session, deleted_status: DeletedStatus):
         query = query.filter(AppBusinessConstitution.is_deleted == 'no')
     
     return query.all()
+
+
+def save_off_consultancy_services(db: Session, details: OffConsultancyServicesDisplay, id: int):
+    
+    existing_services  = db.query(ConsultancyService).filter(
+        ConsultancyService.service_master_id == details.service_master_id,
+        ConsultancyService.is_deleted == "no",
+        ConsultancyService.effective_from_date.isnot(None),
+        ConsultancyService.consultant_id == details.consultant_id
+    ).all()
+    
+    if existing_services:
+        existing_from_dates = [service.effective_from_date for service in existing_services]
+       #existing_to_dates = [service.effective_to_date for service in existing_services]
+        existing_to_dates = [service.effective_to_date for service in existing_services if service.effective_to_date is not None]
+        if details.effective_from_date is not None:
+       # Check if the provided effective_from_date is greater than all existing from dates
+           if any(details.effective_from_date <= date for date in existing_from_dates):
+               raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New effective from date must be greater than all existing from dates")
+           if any(details.effective_from_date <= date for date in existing_to_dates):
+               raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="there is an existing  rate in that date range")
+
+         # Iterate over each existing service data
+        for existing_data in existing_services:
+            if details.effective_from_date != existing_data.effective_from_date and details.effective_from_date is not None:
+               if existing_data.effective_to_date is None:
+                # Update the corresponding effective_to_date to the new start date
+                   existing_data.effective_to_date = details.effective_from_date - timedelta(days=1)
+
+    
+    if details.effective_from_date is not None and details.effective_to_date is not None:
+       if details.effective_from_date >= details.effective_to_date:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Effective from date must be before effective to date...")
+
+
+       
+    # If id is 0,creating a new entry
+    if id == 0:
+        details_data = details.dict()
+        new_service = ConsultancyService(**details_data)
+        db.add(new_service)
+        db.commit()
+        db.refresh(new_service)
+        return new_service  
+
+    # If id is not 0,  updating an existing entry
+    else:
+        service = db.query(ConsultancyService).filter(ConsultancyService.id == id).first()
+        if not service:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with id {id} not found")
+        for key, value in details.dict().items():
+            setattr(service, key, value)
+
+        db.commit()
+        db.refresh(service)  
+        return service
+
+
+
+def get_services_by_consultant_id(db: Session, consultant_id: int, date_param: date = date.today()):
+    return db.query(ViewOffConsultancyServices).filter(
+        ViewOffConsultancyServices.consultant_id == consultant_id,
+        ViewOffConsultancyServices.effective_from_date <= date_param,
+        (ViewOffConsultancyServices.effective_to_date >= date_param) |
+        (ViewOffConsultancyServices.effective_to_date == None)  
+    ).all()
+
+
+
+def get_consultants_by_service_id(db: Session, service_master_id: int, date_param: date = date.today()):
+    return db.query(ViewOffConsultancyServices).filter(
+        ViewOffConsultancyServices.service_master_id == service_master_id,
+        ViewOffConsultancyServices.effective_from_date <= date_param,
+        (ViewOffConsultancyServices.effective_to_date >= date_param) |
+        (ViewOffConsultancyServices.effective_to_date == None)  
+    ).all()
+
+
 
 
 

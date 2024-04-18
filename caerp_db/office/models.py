@@ -186,6 +186,7 @@ class ViewOffAvailableServices(caerp_base):
     __tablename__ = 'view_off_available_services'
 
     available_services_id = Column(Integer, primary_key=True)
+    is_available = Column(String(10),nullable=False, default='yes')
     service_master_id = Column(Integer)
     service_name = Column(String(500))
     hsn_sac_id = Column(Integer)
@@ -456,3 +457,30 @@ class AppBusinessConstitution(caerp_base):
     pan_code                   = Column(String(10))
     display_order              = Column(Integer, nullable=False, default=1)
     is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+
+    
+class ViewOffConsultancyServices(caerp_base):
+    __tablename__ = 'view_off_consultancy_services'
+
+    consultancy_service_id = Column(Integer, primary_key=True)
+    service_master_id = Column(Integer)
+    service_name = Column(String)
+    consultant_id = Column(Integer)
+    employee_number = Column(Integer)
+    consultant_first_name = Column(String)
+    consultant_middle_name = Column(String)
+    consultant_last_name = Column(String)
+    consultation_fee = Column(Float)
+    gst_rate = Column(Float)
+    cgst_rate = Column(Float)
+    sgst_rate = Column(Float)
+    cess_rate = Column(Float)
+    discount_percentage = Column(Float)
+    discount_amount = Column(Float)
+    available_time_from = Column(Time)
+    available_time_to = Column(Time)
+    slot_duration_in_minutes = Column(Integer)
+    effective_from_date = Column(Date)
+    effective_to_date = Column(Date)
+    is_deleted = Column(String)
