@@ -23,6 +23,7 @@ from caerp_schema.office.office_schema import OffAppointmentDetails,OffSourceOfE
 #-------------------------------------document master------------------------------------------------------------------
 
 
+
 def save_document(db: Session, document_data: DocumentMasterBase, id: int = 0):
     # Check if a document with the same name already exists and is not deleted
     existing_document = db.query(Document_Master).filter(
