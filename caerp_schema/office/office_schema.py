@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+
+from pydantic import BaseModel, constr,validator
 from typing import List,Dict,Optional
 from typing import Dict, Any,Union
-
+import re
 
 from datetime import date, datetime,time
 
@@ -170,6 +171,7 @@ class HsnSacMasterBase(BaseModel):
   
 
 
+
 class HsnSacMasterDisplay(BaseModel):
     hsn_sac_class_id: int
     hsn_sac_code: str
@@ -304,11 +306,14 @@ class OffAppointmentVisitMaster(BaseModel):
     appointment_status_id: int
     appointment_date: date
 
+appointment_time_regex = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
 class OffAppointmentVisitDetails(BaseModel):
     # visit_master_id: int
     consultancy_service_id: int
     consultant_id: int
-    appointment_time: time
+    appointment_time: str
+
+    
 
 class OffAppointmentDetails(BaseModel):
     appointment_master: OffAppointmentMaster
@@ -414,6 +419,7 @@ class OffAppointmentVisitDetailsViewGet(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
 class ResponseModel(BaseModel):
     appointment_master: OffAppointmentMasterView
     visit_master: OffAppointmentVisitMasterViewSchema
@@ -438,4 +444,26 @@ class ConsultancyServiceResponse(BaseModel):
     slot_duration_in_minutes: int
     effective_from_date: date  # Change type to datetime.date
     effective_to_date: Optional[date]  # Change type to Optional[datetime.date]
+    is_deleted: str
+
+
+#------------------18-4-2024----------------------
+
+class BusinessConstitutionBase(BaseModel):
+
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    pan_code: Optional[str]
+    display_order:int
+   
+
+  
+class BusinessConstitutionSchema(BaseModel):
+    id:int
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    pan_code: Optional[str]
+    display_order:int
     is_deleted: str
