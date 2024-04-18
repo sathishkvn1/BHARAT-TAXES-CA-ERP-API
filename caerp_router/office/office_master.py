@@ -1508,17 +1508,17 @@ from datetime import date
 @router.post("/save_appointment_visit_master/", response_model=OffAppointmentDetails)
 def create_appointment_visit_master_endpoint(appointment_data: OffAppointmentDetails, 
                                              db: Session = Depends(get_db),
-                                             token: str = Depends(oauth2.oauth2_scheme)
+                                             #token: str = Depends(oauth2.oauth2_scheme)
                                              ):
     """
     Save or create appointment visit_master for a specific ID.
     """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    auth_info = authenticate_user(token)
-    user_id = auth_info["user_id"]
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # auth_info = authenticate_user(token)
+    # user_id = auth_info["user_id"]
     try:
-        appointment_master, visit_master, visit_details_list = db_office_master.create_appointment_visit_master(db, appointment_data,user_id)
+        appointment_master, visit_master, visit_details_list = db_office_master.create_appointment_visit_master(db, appointment_data)
 
         # Construct response using the provided data
         response_data = {
@@ -1548,7 +1548,7 @@ def create_appointment_visit_master_endpoint(appointment_data: OffAppointmentDet
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# #------------------get save_appointment_visit_master
+# #------------------get appointment_visit_master
 
 
 

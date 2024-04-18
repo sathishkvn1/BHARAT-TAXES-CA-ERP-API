@@ -1316,14 +1316,10 @@ def delete_off_appointment_status(db: Session,
     db.commit()
     return {"success": True, "message": f"appointment status {action.value.lower()} successfully"}
 
-from fastapi import HTTPException
-from datetime import date
+#-------------------create_appointment_visit_master--------------
 
 
-
-
-
-def create_appointment_visit_master(db: Session, appointment_data: OffAppointmentDetails, user_id: int):
+def create_appointment_visit_master(db: Session, appointment_data: OffAppointmentDetails):
     try:
         # Check if an existing appointment master with the same mobile number exists
         existing_appointment_master = db.query(OffAppointmentMaster).filter_by(mobile_number=appointment_data.appointment_master.mobile_number).first()
@@ -1332,7 +1328,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
             # Update existing appointment master with new data
             existing_appointment_master.full_name = appointment_data.appointment_master.full_name
             existing_appointment_master.email_id = appointment_data.appointment_master.email_id
-            existing_appointment_master.modified_by = user_id
+            # existing_appointment_master.modified_by = user_id
             existing_appointment_master.modified_on = datetime.utcnow()
             appointment_master = existing_appointment_master
         else:
@@ -1341,7 +1337,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 full_name=appointment_data.appointment_master.full_name,
                 mobile_number=appointment_data.appointment_master.mobile_number,
                 email_id=appointment_data.appointment_master.email_id,
-                created_by=user_id,
+                # created_by=user_id,
                 created_on=datetime.utcnow()
             )
             db.add(appointment_master)
@@ -1355,7 +1351,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
             # Update existing visit master with new data
             existing_visit_master.source_of_enquiry_id = appointment_data.visit_master.source_of_enquiry_id
             existing_visit_master.appointment_status_id = appointment_data.visit_master.appointment_status_id
-            existing_visit_master.modified_by = user_id
+            # existing_visit_master.modified_by = user_id
             existing_visit_master.modified_on = datetime.utcnow()
             visit_master = existing_visit_master
         else:
@@ -1365,7 +1361,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 source_of_enquiry_id=appointment_data.visit_master.source_of_enquiry_id,
                 appointment_status_id=appointment_data.visit_master.appointment_status_id,
                 appointment_date=appointment_data.visit_master.appointment_date,
-                created_by=user_id,
+                # created_by=user_id,
                 created_on=datetime.utcnow()
             )
             db.add(visit_master)
@@ -1386,7 +1382,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
 
             if existing_visit_detail:
                 # Update existing visit detail
-                existing_visit_detail.modified_by = user_id
+                # existing_visit_detail.modified_by = user_id
                 existing_visit_detail.modified_on = datetime.utcnow()
                 existing_visit_detail.field_to_update = detail.field_to_update
                 db.commit()
@@ -1398,9 +1394,9 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                     consultancy_service_id=detail.consultancy_service_id,
                     consultant_id=detail.consultant_id,
                     appointment_time=detail.appointment_time,
-                    created_by=user_id,
+                    # created_by=user_id,
                     created_on=datetime.utcnow(),
-                    modified_by=user_id,
+                    # modified_by=user_id,
                     modified_on=datetime.utcnow()
                 )
                 db.add(visit_detail)
