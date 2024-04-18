@@ -367,7 +367,7 @@ class OffAppointmentVisitDetails(caerp_base):
     visit_master_id = Column(Integer, nullable=False)
     consultancy_service_id = Column(Integer, nullable=False)
     consultant_id = Column(Integer, nullable=False)
-    appointment_time = Column(String, nullable=False)  
+    appointment_time = Column(Time, nullable=False)  
 
     service_charge = Column(Float, nullable=True)
     gst_percentage = Column(Float, nullable=True)
@@ -394,7 +394,7 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_master_id= Column(Integer)
     appointment_master_id= Column(Integer)
     appointment_date= Column(Date)
-    appointment_time= Column(String)
+    appointment_time= Column(Time)
     consultancy_service_id= Column(Integer)
     service_name= Column(String(100))
     consultant_id= Column(Integer)
