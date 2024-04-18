@@ -388,6 +388,7 @@ class OffAppointmentVisitDetails(caerp_base):
     deleted_on = Column(Date, nullable=True)
 
 
+
 class OffAppointmentVisitDetailsView(caerp_base):
     __tablename__ = 'view_off_appointment_details'
     appointment_visit_details_id=Column(Integer, primary_key=True)
