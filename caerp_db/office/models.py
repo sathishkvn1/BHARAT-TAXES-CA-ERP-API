@@ -367,8 +367,7 @@ class OffAppointmentVisitDetails(caerp_base):
     visit_master_id = Column(Integer, nullable=False)
     consultancy_service_id = Column(Integer, nullable=False)
     consultant_id = Column(Integer, nullable=False)
-    appointment_time = Column(String, nullable=False)  
-
+    appointment_time = Column(Time, nullable=False)  
     service_charge = Column(Float, nullable=True)
     gst_percentage = Column(Float, nullable=True)
     sgst_percentage = Column(Float, nullable=True)
@@ -394,7 +393,7 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_master_id= Column(Integer)
     appointment_master_id= Column(Integer)
     appointment_date= Column(Date)
-    appointment_time= Column(String)
+    appointment_time= Column(Time)
     consultancy_service_id= Column(Integer)
     service_name= Column(String(100))
     consultant_id= Column(Integer)
@@ -443,15 +442,4 @@ class ConsultancyService(caerp_base):
     effective_to_date = Column(Date, default=None)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
-#--------------------18-4-2024-----------------------------------------
-
-class AppBusinessConstitution(caerp_base):
-    __tablename__ = 'app_business_constitution'
-
-    id                         = Column(BigInteger, primary_key=True, autoincrement=True)
-    business_constitution_name = Column(String(100),nullable=False)
-    business_constitution_code = Column(String(100),nullable=False)
-    description                = Column(String(500))
-    pan_code                   = Column(String(10))
-    display_order              = Column(Integer, nullable=False, default=1)
-    is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
+   
