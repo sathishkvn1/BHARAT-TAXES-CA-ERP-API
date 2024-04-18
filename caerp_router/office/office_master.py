@@ -8,11 +8,11 @@ from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSac
 from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
-from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster
+from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
 from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
-from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
+from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,BusinessConstitutionSchema
 from caerp_auth import oauth2
 from typing import List
 from datetime import datetime
@@ -1672,7 +1672,8 @@ def get_slots(consultant_id: int,
               date: Optional[str] = None,
               booking_status: BookingStatus = BookingStatus.ALL,
               db: Session = Depends(get_db),
-              token: str = Depends(oauth2.oauth2_scheme)):
+            #   token: str = Depends(oauth2.oauth2_scheme)
+            ):
     """
     Retrieve slots for booking appointments with a consultant.
 
@@ -1691,8 +1692,8 @@ def get_slots(consultant_id: int,
     - A list of slots with the specified booking status.
     """
     
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
 
@@ -1758,6 +1759,27 @@ def get_slots(consultant_id: int,
     else:
         raise HTTPException(status_code=404, detail="Consultancy service not found")
 
+#-------get all bussiness constitution
+@router.get('/get_all/business_constitution', response_model=list[BusinessConstitutionSchema])
 
+def get_all_business_constitution(
+    deleted_status: DeletedStatus = Query(..., title="Select deleted status"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get all business_constitution based on the provided deleted status.
+    """
+    # Check if deleted_status is a valid option
+    if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
+        )
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_office_master.get_all_business_constitution(db, deleted_status)
 
 

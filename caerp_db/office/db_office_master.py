@@ -7,7 +7,7 @@ from sqlalchemy.orm.session import Session
 from caerp_schema.office.office_schema import DocumentMasterBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyDisplay, StockKeepingUnitCodeDisplay
 from caerp_db.office.models import ServiceProvider
 from caerp_schema.office.office_schema import ServiceProviderBase,ServiceDepartmentBase
-from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster
+from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityMasterBase
 from fastapi import HTTPException, status
 from caerp_constants.caerp_constants import DeletedStatus,ActionType
@@ -1377,7 +1377,8 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 visit_master_id=visit_master.id,
                 consultancy_service_id=detail.consultancy_service_id,
                 consultant_id=detail.consultant_id,
-                appointment_time=detail.appointment_time,
+                appointment_time = detail.appointment_time,
+                
                 is_deleted='no'
             ).first()
 
@@ -1394,7 +1395,8 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                     visit_master_id=visit_master.id,
                     consultancy_service_id=detail.consultancy_service_id,
                     consultant_id=detail.consultant_id,
-                    appointment_time=detail.appointment_time,
+                    
+                    appointment_time = detail.appointment_time,
                     # created_by=user_id,
                     created_on=datetime.utcnow(),
                     # modified_by=user_id,
@@ -1565,6 +1567,16 @@ def delete_appointment_visit_details(db: Session,
     return {"success": True, "message": f"appointment visit master {action.value.lower()} successfully"}
 
 
+#-------get all bussiness constitution
+def get_all_business_constitution(db: Session, deleted_status: DeletedStatus):
+    query = db.query(AppBusinessConstitution)
+    
+    if deleted_status == DeletedStatus.DELETED:
+        query = query.filter(AppBusinessConstitution.is_deleted == 'yes')
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        query = query.filter(AppBusinessConstitution.is_deleted == 'no')
+    
+    return query.all()
 
 
 
