@@ -306,12 +306,11 @@ class OffAppointmentVisitMaster(BaseModel):
     appointment_status_id: int
     appointment_date: date
 
-appointment_time_regex = re.compile(r'^([01]\d|2[0-3]):([0-5]\d)$')
 class OffAppointmentVisitDetails(BaseModel):
     # visit_master_id: int
     consultancy_service_id: int
     consultant_id: int
-    appointment_time: str
+    appointment_time: time
 
     
 
