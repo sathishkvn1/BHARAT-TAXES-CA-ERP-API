@@ -210,29 +210,41 @@ class ViewOffServicesDisplay(BaseModel):
 
 
 class OffAvailableServicesDisplay(BaseModel):
-    
     service_master_id: int
     is_main_service: str
     main_service_id: int
-    purchase_price: Optional[float]= None
-    selling_price: Optional[float]= None
-    gst_rate: Optional[float]= None
-    cgst_rate: Optional[float]= None
-    sgst_rate: Optional[float]= None
-    cess_rate: Optional[float]= None
-    discount_percentage: Optional[float]= None
-    discount_amount: Optional[float]= None
-    filing_day_from: Optional[int]= None
-    filing_day_to: Optional[int]= None
-    filing_month_from: Optional[int]= None
-    filing_month_to: Optional[int]= None
-    department_amount: Optional[float]= None
-    days_required_for_processing: Optional[int]= None
-    display_order: Optional[int]= None
-    effective_from_date: Optional[date]= None
-    effective_to_date: Optional[date]= None
+    purchase_price: Optional[float] = None
+    selling_price: Optional[float] = None
+    gst_rate: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    cess_rate: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    filing_day_from: Optional[int] = None
+    filing_day_to: Optional[int] = None
+    filing_month_from: Optional[int] = None
+    filing_month_to: Optional[int] = None
+    department_amount: Optional[float] = None
+    days_required_for_processing: Optional[int] = None
+    display_order: Optional[int] = None
+    effective_from_date: Optional[str] = None
+    effective_to_date: Optional[str] = None
+    off_available_services_is_deleted: Optional[str] = None
+    service_provider_id: Optional[int] = None
+    service_provider: Optional[str] = None
+    service_department_id: Optional[int] = None
+    service_department_name: Optional[str] = None
+    service_frequency_id: Optional[int] = None
+    service_frequency: Optional[str] = None
+    sku_code_id: Optional[int] = None
+    unit_code: Optional[str] = None
+    is_consultancy_service: Optional[str] = None
+    service_master_is_deleted: Optional[str] = None
     
-
+class OffAvailableServicesDisplayList(BaseModel):
+    services: List[OffAvailableServicesDisplay]
+    
 class ViewOffAvailableServicesDisplay(BaseModel):
     available_services_id: int
     service_master_id: int
@@ -485,6 +497,8 @@ class OffConsultancyServicesDisplay(BaseModel):
     effective_from_date: Optional[date]
     effective_to_date: Optional[date] =None
    
+
+
 
 class ViewOffConsultancyServicesBase(BaseModel):
     consultancy_service_id: int

@@ -185,12 +185,15 @@ class OffAvailableServices(caerp_base):
 class ViewOffAvailableServices(caerp_base):
     __tablename__ = 'view_off_available_services'
 
-    available_services_id = Column(Integer, primary_key=True)
-    is_available = Column(String(10),nullable=False, default='yes')
+    ID = Column(Integer, primary_key=True)
+    available_services_id = Column(Integer)
+    is_available = Column(Enum('yes', 'no'))
+
+    # Include other fields from the view
     service_master_id = Column(Integer)
-    service_name = Column(String(500))
+    service_name = Column(String)
     hsn_sac_id = Column(Integer)
-    hsn_sac_description = Column(String(1000))
+    hsn_sac_description = Column(String)
     is_main_service = Column(Enum('yes', 'no'))
     main_service_id = Column(Integer)
     purchase_price = Column(Float)
@@ -211,16 +214,18 @@ class ViewOffAvailableServices(caerp_base):
     effective_from_date = Column(Date)
     effective_to_date = Column(Date)
     off_available_services_is_deleted = Column(Enum('yes', 'no'))
+
     service_provider_id = Column(Integer)
-    service_provider = Column(String(500))
+    service_provider = Column(String)
     service_department_id = Column(Integer)
-    service_department_name = Column(String(500))
+    service_department_name = Column(String)
     service_frequency_id = Column(Integer)
-    service_frequency = Column(String(500))
+    service_frequency = Column(String)
     sku_code_id = Column(Integer)
-    unit_code = Column(String(250))
+    unit_code = Column(String)
     is_consultancy_service = Column(Enum('yes', 'no'))
     service_master_is_deleted = Column(Enum('yes', 'no'))
+
     
 #------------------------------------------------------------------
 

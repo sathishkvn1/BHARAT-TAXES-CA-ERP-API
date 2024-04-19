@@ -1143,6 +1143,7 @@ def get_all_off_available_services(db: Session, deleted_status: DeletedStatus):
     return query.all()
 
 
+
 def get_off_available_service_by_id(db: Session, id: int):
     return db.query(ViewOffAvailableServices).filter(ViewOffAvailableServices.service_master_id == id).first()
 
