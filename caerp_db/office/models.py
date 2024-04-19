@@ -185,11 +185,15 @@ class OffAvailableServices(caerp_base):
 class ViewOffAvailableServices(caerp_base):
     __tablename__ = 'view_off_available_services'
 
-    available_services_id = Column(Integer, primary_key=True)
+    ID = Column(Integer, primary_key=True)
+    available_services_id = Column(Integer)
+    is_available = Column(Enum('yes', 'no'))
+
+    # Include other fields from the view
     service_master_id = Column(Integer)
-    service_name = Column(String(500))
+    service_name = Column(String)
     hsn_sac_id = Column(Integer)
-    hsn_sac_description = Column(String(1000))
+    hsn_sac_description = Column(String)
     is_main_service = Column(Enum('yes', 'no'))
     main_service_id = Column(Integer)
     purchase_price = Column(Float)
@@ -210,16 +214,18 @@ class ViewOffAvailableServices(caerp_base):
     effective_from_date = Column(Date)
     effective_to_date = Column(Date)
     off_available_services_is_deleted = Column(Enum('yes', 'no'))
+
     service_provider_id = Column(Integer)
-    service_provider = Column(String(500))
+    service_provider = Column(String)
     service_department_id = Column(Integer)
-    service_department_name = Column(String(500))
+    service_department_name = Column(String)
     service_frequency_id = Column(Integer)
-    service_frequency = Column(String(500))
+    service_frequency = Column(String)
     sku_code_id = Column(Integer)
-    unit_code = Column(String(250))
+    unit_code = Column(String)
     is_consultancy_service = Column(Enum('yes', 'no'))
     service_master_is_deleted = Column(Enum('yes', 'no'))
+
     
 #------------------------------------------------------------------
 
@@ -368,6 +374,7 @@ class OffAppointmentVisitDetails(caerp_base):
     consultancy_service_id = Column(Integer, nullable=False)
     consultant_id = Column(Integer, nullable=False)
     appointment_time = Column(Time, nullable=False)  
+
     service_charge = Column(Float, nullable=True)
     gst_percentage = Column(Float, nullable=True)
     sgst_percentage = Column(Float, nullable=True)
@@ -385,6 +392,7 @@ class OffAppointmentVisitDetails(caerp_base):
     is_deleted_with_master = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
+
 
 
 class OffAppointmentVisitDetailsView(caerp_base):
@@ -442,4 +450,42 @@ class ConsultancyService(caerp_base):
     effective_to_date = Column(Date, default=None)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
-   
+#--------------------18-4-2024-----------------------------------------
+
+class AppBusinessConstitution(caerp_base):
+    __tablename__ = 'app_business_constitution'
+
+    id                         = Column(BigInteger, primary_key=True, autoincrement=True)
+    business_constitution_name = Column(String(100),nullable=False)
+    business_constitution_code = Column(String(100),nullable=False)
+    description                = Column(String(500))
+    pan_code                   = Column(String(10))
+    display_order              = Column(Integer, nullable=False, default=1)
+    is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+
+    
+class ViewOffConsultancyServices(caerp_base):
+    __tablename__ = 'view_off_consultancy_services'
+
+    consultancy_service_id = Column(Integer, primary_key=True)
+    service_master_id = Column(Integer)
+    service_name = Column(String)
+    consultant_id = Column(Integer)
+    employee_number = Column(Integer)
+    consultant_first_name = Column(String)
+    consultant_middle_name = Column(String)
+    consultant_last_name = Column(String)
+    consultation_fee = Column(Float)
+    gst_rate = Column(Float)
+    cgst_rate = Column(Float)
+    sgst_rate = Column(Float)
+    cess_rate = Column(Float)
+    discount_percentage = Column(Float)
+    discount_amount = Column(Float)
+    available_time_from = Column(Time)
+    available_time_to = Column(Time)
+    slot_duration_in_minutes = Column(Integer)
+    effective_from_date = Column(Date)
+    effective_to_date = Column(Date)
+    is_deleted = Column(String)

@@ -5,27 +5,27 @@ from caerp_auth.authentication import authenticate_user
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from caerp_db.office.models import ConsultancyService, OffAppointmentVisitDetails, OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView, ServiceProvider
-from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
+from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffAvailableServicesDisplayList, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
 from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
-from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster
+from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
-from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
-from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
+from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,OffConsultancyServicesDisplay,ViewOffConsultancyServicesBase,BusinessConstitutionSchema
 from caerp_auth import oauth2
 from typing import List
 from datetime import datetime
 from caerp_constants.caerp_constants import BookingStatus, DeletedStatus,ActionType
 from caerp_db.common.models import AppEducationalQualificationsMaster
 from caerp_schema.office.office_schema import OffAppointmentDetails,ResponseModel,OffSourceOfEnquiryBase,OffSourceOfEnquiryDisplay,OffAppointmentStatusBase,OffAppointmentStatusDisplay
-
 from datetime import datetime, time, timedelta, datetime
 from typing import Optional
 from sqlalchemy import func
-
 from datetime import datetime
+
+
 
 
 router = APIRouter(
@@ -1267,33 +1267,133 @@ def delete_or_undelete_off_services(
 
 #---------------------------------off_available_services---------------------------------------------
 
-@router.post('/services/save_off_available_services/{ID}', response_model=OffAvailableServicesDisplay)
+# @router.post('/services/save_off_available_services/{ID}', response_model=OffAvailableServicesDisplay)
+# def save_off_available_services(
+#     ID: int,
+#     ser_data: OffAvailableServicesDisplay = Depends(),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Save  or Create service  for a specific ID.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     if not ser_data.effective_to_date:
+#         ser_data.effective_to_date = None
+#     try:
+    
+#         return db_office_master.save_off_available_services(db, ser_data, ID)
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post('/services/save_off_available_services/{ID}', response_model=List[OffAvailableServicesDisplay])
 def save_off_available_services(
     ID: int,
-    ser_data: OffAvailableServicesDisplay = Depends(),
+    ser_data_list: OffAvailableServicesDisplayList,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    Save  or Create service  for a specific ID.
+    Save or create services for a specific ID.
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    if not ser_data.effective_to_date:
-        ser_data.effective_to_date = None
-    try:
     
-        return db_office_master.save_off_available_services(db, ser_data, ID)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    saved_services = []
+    for ser_data in ser_data_list.services:
+        try:
+            saved_service = db_office_master.save_off_available_services(db, ser_data, ID)
+            saved_services.append(saved_service)
+        except Exception as e:
+            # You might want to handle errors for individual services here
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+    return saved_services
+
        
-@router.get('/services/get_all_off_available_services', response_model=list[ViewOffAvailableServicesDisplay])
-def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
-  db: Session = Depends(get_db),
-      token: str = Depends(oauth2.oauth2_scheme)):
+# @router.get('/services/get_all_off_available_services', response_model=list[ViewOffAvailableServicesDisplay])
+# def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
+#   db: Session = Depends(get_db),
+#       token: str = Depends(oauth2.oauth2_scheme)):
    
+#     """
+#     Get all available  office services.
+#     """
+#     # Check if deleted_status is a valid option
+#     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
+#         )
+
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     return db_office_master.get_all_off_available_services(db,deleted_status)
+
+from typing import List, Dict, Any
+
+# @router.get('/services/get_all_off_available_services', response_model=List[Dict[str, Any]])
+# def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
+#                                    db: Session = Depends(get_db),
+#                                    token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Get all available office services.
+#     """
+#     # Check if deleted_status is a valid option
+#     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
+#         raise HTTPException(
+#             status_code=400,
+#             detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
+#         )
+
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+        
+#     services = db_office_master.get_all_off_available_services(db, deleted_status)
+#     print("Services:")
+    
+#     # Convert SQLAlchemy model instances to dictionaries
+#     services_dict = []
+#     for service in services:
+#         print(service.__dict__)
+#         service_dict = {
+#             "ID":service.ID,
+#             "service_master_id": service.service_master_id,
+#             "is_main_service": service.is_main_service,
+#             "main_service_id": service.main_service_id,
+#             # "purchase_price": service.purchase_price,
+#             # "selling_price": service.selling_price,
+#             # "gst_rate": service.gst_rate,
+#             # "cgst_rate": service.cgst_rate,
+#             # "sgst_rate": service.sgst_rate,
+#             # "cess_rate": service.cess_rate,
+#             # "discount_percentage": service.discount_percentage,
+#             # "discount_amount": service.discount_amount,
+#             # "filing_day_from": service.filing_day_from,
+#             # "filing_day_to": service.filing_day_to,
+#             # "filing_month_from": service.filing_month_from,
+#             # "filing_month_to": service.filing_month_to,
+#             # "department_amount": service.department_amount,
+#             # "days_required_for_processing": service.days_required_for_processing,
+#             # "display_order": service.display_order,
+#             # "effective_from_date": service.effective_from_date,
+#             # "effective_to_date": service.effective_to_date,
+#         }
+#         services_dict.append(service_dict)
+    
+#     return services_dict
+
+from typing import List, Dict, Any
+import logging
+
+@router.get('/services/get_all_off_available_services', response_model=List[Dict[str, Any]])
+def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
+                                   db: Session = Depends(get_db),
+                                   token: str = Depends(oauth2.oauth2_scheme)):
     """
-    Get all available  office services.
+    Get all available office services.
     """
     # Check if deleted_status is a valid option
     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
@@ -1304,7 +1404,43 @@ def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., t
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    return db_office_master.get_all_off_available_services(db,deleted_status)
+        
+    services = db_office_master.get_all_off_available_services(db, deleted_status)
+    
+    # Convert SQLAlchemy objects to dictionaries
+    services_dict = []
+    for service in services:
+        service_dict = {
+            "ID": service.ID,
+            "available_services_id":service.available_services_id,
+            "service_master_id": service.service_master_id,
+            "service_name":service.service_name,
+            "is_main_service": service.is_main_service,
+            "main_service_id": service.main_service_id,
+            "purchase_price": service.purchase_price,
+            "selling_price": service.selling_price,
+            "gst_rate": service.gst_rate,
+            "cgst_rate": service.cgst_rate,
+            "sgst_rate": service.sgst_rate,
+            "cess_rate": service.cess_rate,
+            "discount_percentage": service.discount_percentage,
+            "discount_amount": service.discount_amount,
+            "filing_day_from": service.filing_day_from,
+            "filing_day_to": service.filing_day_to,
+            "filing_month_from": service.filing_month_from,
+            "filing_month_to": service.filing_month_to,
+            "department_amount": service.department_amount,
+            "days_required_for_processing": service.days_required_for_processing,
+            "display_order": service.display_order,
+            "effective_from_date": service.effective_from_date,
+            "effective_to_date": service.effective_to_date,
+            
+        }
+        services_dict.append(service_dict)
+    
+    return services_dict
+
+
 
 
 @router.get('/services/get_off_available_service/{id}', response_model=ViewOffAvailableServicesDisplay)
@@ -1508,17 +1644,19 @@ from datetime import date
 @router.post("/save_appointment_visit_master/", response_model=OffAppointmentDetails)
 def create_appointment_visit_master_endpoint(appointment_data: OffAppointmentDetails, 
                                              db: Session = Depends(get_db),
-                                             token: str = Depends(oauth2.oauth2_scheme)
+                                             #token: str = Depends(oauth2.oauth2_scheme)
                                              ):
     """
     Save or create appointment visit_master for a specific ID.
+    - appointment_time : The time is Format as string.
+
     """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    auth_info = authenticate_user(token)
-    user_id = auth_info["user_id"]
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # auth_info = authenticate_user(token)
+    # user_id = auth_info["user_id"]
     try:
-        appointment_master, visit_master, visit_details_list = db_office_master.create_appointment_visit_master(db, appointment_data,user_id)
+        appointment_master, visit_master, visit_details_list = db_office_master.create_appointment_visit_master(db, appointment_data)
 
         # Construct response using the provided data
         response_data = {
@@ -1548,7 +1686,7 @@ def create_appointment_visit_master_endpoint(appointment_data: OffAppointmentDet
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# #------------------get save_appointment_visit_master
+# #------------------get appointment_visit_master
 
 
 
@@ -1673,7 +1811,8 @@ def get_slots(consultant_id: int,
               date: Optional[str] = None,
               booking_status: BookingStatus = BookingStatus.ALL,
               db: Session = Depends(get_db),
-              token: str = Depends(oauth2.oauth2_scheme)):
+            #   token: str = Depends(oauth2.oauth2_scheme)
+            ):
     """
     Retrieve slots for booking appointments with a consultant.
 
@@ -1692,8 +1831,8 @@ def get_slots(consultant_id: int,
     - A list of slots with the specified booking status.
     """
     
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     consultancy_service = db.query(ConsultancyService).filter(ConsultancyService.consultant_id == consultant_id).first()
 
@@ -1759,6 +1898,86 @@ def get_slots(consultant_id: int,
     else:
         raise HTTPException(status_code=404, detail="Consultancy service not found")
 
+#-------get all bussiness constitution
+@router.get('/get_all/business_constitution', response_model=list[BusinessConstitutionSchema])
 
+def get_all_business_constitution(
+    deleted_status: DeletedStatus = Query(..., title="Select deleted status"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get all business_constitution based on the provided deleted status.
+    """
+    # Check if deleted_status is a valid option
+    if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
+        )
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    return db_office_master.get_all_business_constitution(db, deleted_status)
+
+
+#-----------swathy_____________________
+@router.post('/services/save_off_consultancy_services/{ID}', response_model=OffConsultancyServicesDisplay)
+def save_off_consultancy_services(
+    ID: int,
+    ser_data: OffConsultancyServicesDisplay = Depends(),
+    db: Session = Depends(get_db)
+#    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save  or Create consultancy service  for a specific ID.
+    """
+  #  if not token:
+   #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    if not ser_data.effective_to_date:
+        ser_data.effective_to_date = None
+    try:
+    
+        return db_office_master.save_off_consultancy_services(db, ser_data, ID)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+       
+
+
+@router.get('/services/get_services_by_consultant_id/{consultant_id}')
+def get_services_by_consultant_id(
+    consultant_id: int,
+    date: date = Query(date.today()),
+    db: Session = Depends(get_db)
+):
+    """
+    Get available services for a consultant based on the provided date.
+    """
+    document = db_office_master.get_services_by_consultant_id(db, consultant_id, date)  
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Services for consultant with this id not found" 
+        )
+    return document
+
+
+@router.get('/services/get_consultants_by_service_id/{service_master_id}', response_model=list[ViewOffConsultancyServicesBase])
+def get_consultants_by_service_id(service_master_id: int, date: date = Query(date.today()),db: Session = Depends(get_db)):
+                                 # token: str = Depends(oauth2.oauth2_scheme)):
+                   
+    """
+    Get available Consultants for the specific  service based on the provided date.
+    """
+    #if not token:
+     #   raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    document = db_office_master.get_consultants_by_service_id(db,service_master_id ,date)  
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Consultants for service with id {service_master_id} not found" 
+        )
+    return document
 
 

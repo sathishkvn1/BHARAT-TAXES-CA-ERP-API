@@ -2,12 +2,12 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, OffAppointmentVisitDetails, OffAvailableServices, OffServiceFrequency, AppStockKeepingUnitCode, Document_Master, OffServices, ViewOffAvailableServices, ViewOffServices
 from sqlalchemy.orm import Session
 from caerp_db.hash import Hash
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_schema.office.office_schema import DocumentMasterBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyDisplay, StockKeepingUnitCodeDisplay
 from caerp_db.office.models import ServiceProvider
 from caerp_schema.office.office_schema import ServiceProviderBase,ServiceDepartmentBase
-from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster
+from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
 from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityMasterBase
 from fastapi import HTTPException, status
 from caerp_constants.caerp_constants import DeletedStatus,ActionType
@@ -15,11 +15,13 @@ from sqlalchemy import and_, between
 import pandas as pd
 import io
 from sqlalchemy.exc import IntegrityError
-from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus
+from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService,ViewOffConsultancyServices
+
 from caerp_db.common.models import AppEducationalQualificationsMaster
-from caerp_schema.office.office_schema import EducationalQualificationsBase,EnquirerTypeBase,EnquirerStatusBase,EnquirerStatusDisplay,ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
+from caerp_schema.office.office_schema import EducationalQualificationsBase,EnquirerTypeBase,OffConsultancyServicesDisplay,EnquirerStatusBase,EnquirerStatusDisplay,ServiceProcessingStatusBase,ServiceProcessingStatusDisplay
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffSourceOfEnquiry,OffAppointmentStatus,OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView
 from caerp_schema.office.office_schema import OffAppointmentDetails,OffSourceOfEnquiryBase,OffAppointmentStatusBase,OffAppointmentMasterView
+
 #-------------------------------------document master------------------------------------------------------------------
 
 
@@ -1141,6 +1143,7 @@ def get_all_off_available_services(db: Session, deleted_status: DeletedStatus):
     return query.all()
 
 
+
 def get_off_available_service_by_id(db: Session, id: int):
     return db.query(ViewOffAvailableServices).filter(ViewOffAvailableServices.service_master_id == id).first()
 
@@ -1316,14 +1319,10 @@ def delete_off_appointment_status(db: Session,
     db.commit()
     return {"success": True, "message": f"appointment status {action.value.lower()} successfully"}
 
-from fastapi import HTTPException
-from datetime import date
+#-------------------create_appointment_visit_master--------------
 
 
-
-
-
-def create_appointment_visit_master(db: Session, appointment_data: OffAppointmentDetails, user_id: int):
+def create_appointment_visit_master(db: Session, appointment_data: OffAppointmentDetails):
     try:
         # Check if an existing appointment master with the same mobile number exists
         existing_appointment_master = db.query(OffAppointmentMaster).filter_by(mobile_number=appointment_data.appointment_master.mobile_number).first()
@@ -1332,7 +1331,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
             # Update existing appointment master with new data
             existing_appointment_master.full_name = appointment_data.appointment_master.full_name
             existing_appointment_master.email_id = appointment_data.appointment_master.email_id
-            existing_appointment_master.modified_by = user_id
+            # existing_appointment_master.modified_by = user_id
             existing_appointment_master.modified_on = datetime.utcnow()
             appointment_master = existing_appointment_master
         else:
@@ -1341,7 +1340,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 full_name=appointment_data.appointment_master.full_name,
                 mobile_number=appointment_data.appointment_master.mobile_number,
                 email_id=appointment_data.appointment_master.email_id,
-                created_by=user_id,
+                # created_by=user_id,
                 created_on=datetime.utcnow()
             )
             db.add(appointment_master)
@@ -1355,7 +1354,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
             # Update existing visit master with new data
             existing_visit_master.source_of_enquiry_id = appointment_data.visit_master.source_of_enquiry_id
             existing_visit_master.appointment_status_id = appointment_data.visit_master.appointment_status_id
-            existing_visit_master.modified_by = user_id
+            # existing_visit_master.modified_by = user_id
             existing_visit_master.modified_on = datetime.utcnow()
             visit_master = existing_visit_master
         else:
@@ -1365,7 +1364,7 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 source_of_enquiry_id=appointment_data.visit_master.source_of_enquiry_id,
                 appointment_status_id=appointment_data.visit_master.appointment_status_id,
                 appointment_date=appointment_data.visit_master.appointment_date,
-                created_by=user_id,
+                # created_by=user_id,
                 created_on=datetime.utcnow()
             )
             db.add(visit_master)
@@ -1380,13 +1379,14 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                 visit_master_id=visit_master.id,
                 consultancy_service_id=detail.consultancy_service_id,
                 consultant_id=detail.consultant_id,
-                appointment_time=detail.appointment_time,
+                appointment_time = detail.appointment_time,
+                
                 is_deleted='no'
             ).first()
 
             if existing_visit_detail:
                 # Update existing visit detail
-                existing_visit_detail.modified_by = user_id
+                # existing_visit_detail.modified_by = user_id
                 existing_visit_detail.modified_on = datetime.utcnow()
                 existing_visit_detail.field_to_update = detail.field_to_update
                 db.commit()
@@ -1397,10 +1397,11 @@ def create_appointment_visit_master(db: Session, appointment_data: OffAppointmen
                     visit_master_id=visit_master.id,
                     consultancy_service_id=detail.consultancy_service_id,
                     consultant_id=detail.consultant_id,
-                    appointment_time=detail.appointment_time,
-                    created_by=user_id,
+                    
+                    appointment_time = detail.appointment_time,
+                    # created_by=user_id,
                     created_on=datetime.utcnow(),
-                    modified_by=user_id,
+                    # modified_by=user_id,
                     modified_on=datetime.utcnow()
                 )
                 db.add(visit_detail)
@@ -1566,6 +1567,94 @@ def delete_appointment_visit_details(db: Session,
     
     db.commit()
     return {"success": True, "message": f"appointment visit master {action.value.lower()} successfully"}
+
+
+#-------get all bussiness constitution
+def get_all_business_constitution(db: Session, deleted_status: DeletedStatus):
+    query = db.query(AppBusinessConstitution)
+    
+    if deleted_status == DeletedStatus.DELETED:
+        query = query.filter(AppBusinessConstitution.is_deleted == 'yes')
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        query = query.filter(AppBusinessConstitution.is_deleted == 'no')
+    
+    return query.all()
+
+
+def save_off_consultancy_services(db: Session, details: OffConsultancyServicesDisplay, id: int):
+    
+    existing_services  = db.query(ConsultancyService).filter(
+        ConsultancyService.service_master_id == details.service_master_id,
+        ConsultancyService.is_deleted == "no",
+        ConsultancyService.effective_from_date.isnot(None),
+        ConsultancyService.consultant_id == details.consultant_id
+    ).all()
+    
+    if existing_services:
+        existing_from_dates = [service.effective_from_date for service in existing_services]
+       #existing_to_dates = [service.effective_to_date for service in existing_services]
+        existing_to_dates = [service.effective_to_date for service in existing_services if service.effective_to_date is not None]
+        if details.effective_from_date is not None:
+       # Check if the provided effective_from_date is greater than all existing from dates
+           if any(details.effective_from_date <= date for date in existing_from_dates):
+               raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New effective from date must be greater than all existing from dates")
+           if any(details.effective_from_date <= date for date in existing_to_dates):
+               raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="there is an existing  rate in that date range")
+
+         # Iterate over each existing service data
+        for existing_data in existing_services:
+            if details.effective_from_date != existing_data.effective_from_date and details.effective_from_date is not None:
+               if existing_data.effective_to_date is None:
+                # Update the corresponding effective_to_date to the new start date
+                   existing_data.effective_to_date = details.effective_from_date - timedelta(days=1)
+
+    
+    if details.effective_from_date is not None and details.effective_to_date is not None:
+       if details.effective_from_date >= details.effective_to_date:
+           raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Effective from date must be before effective to date...")
+
+
+       
+    # If id is 0,creating a new entry
+    if id == 0:
+        details_data = details.dict()
+        new_service = ConsultancyService(**details_data)
+        db.add(new_service)
+        db.commit()
+        db.refresh(new_service)
+        return new_service  
+
+    # If id is not 0,  updating an existing entry
+    else:
+        service = db.query(ConsultancyService).filter(ConsultancyService.id == id).first()
+        if not service:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Service with id {id} not found")
+        for key, value in details.dict().items():
+            setattr(service, key, value)
+
+        db.commit()
+        db.refresh(service)  
+        return service
+
+
+
+def get_services_by_consultant_id(db: Session, consultant_id: int, date_param: date = date.today()):
+    return db.query(ViewOffConsultancyServices).filter(
+        ViewOffConsultancyServices.consultant_id == consultant_id,
+        ViewOffConsultancyServices.effective_from_date <= date_param,
+        (ViewOffConsultancyServices.effective_to_date >= date_param) |
+        (ViewOffConsultancyServices.effective_to_date == None)  
+    ).all()
+
+
+
+def get_consultants_by_service_id(db: Session, service_master_id: int, date_param: date = date.today()):
+    return db.query(ViewOffConsultancyServices).filter(
+        ViewOffConsultancyServices.service_master_id == service_master_id,
+        ViewOffConsultancyServices.effective_from_date <= date_param,
+        (ViewOffConsultancyServices.effective_to_date >= date_param) |
+        (ViewOffConsultancyServices.effective_to_date == None)  
+    ).all()
 
 
 

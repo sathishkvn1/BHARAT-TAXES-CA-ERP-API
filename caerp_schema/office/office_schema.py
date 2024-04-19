@@ -1,7 +1,8 @@
-from pydantic import BaseModel
+
+from pydantic import BaseModel, constr,validator
 from typing import List,Dict,Optional
 from typing import Dict, Any,Union
-
+import re
 
 from datetime import date, datetime,time
 
@@ -209,30 +210,41 @@ class ViewOffServicesDisplay(BaseModel):
 
 
 class OffAvailableServicesDisplay(BaseModel):
-    
     service_master_id: int
     is_main_service: str
     main_service_id: int
-    purchase_price: Optional[float]= None
-    selling_price: Optional[float]= None
-    gst_rate: Optional[float]= None
-    cgst_rate: Optional[float]= None
-    sgst_rate: Optional[float]= None
-    cess_rate: Optional[float]= None
-    discount_percentage: Optional[float]= None
-    discount_amount: Optional[float]= None
-    filing_day_from: Optional[int]= None
-    filing_day_to: Optional[int]= None
-    filing_month_from: Optional[int]= None
-    filing_month_to: Optional[int]= None
-    department_amount: Optional[float]= None
-    days_required_for_processing: Optional[int]= None
-    display_order: Optional[int]= None
-    effective_from_date: Optional[date]= None
-    effective_to_date: Optional[date]= None
+    purchase_price: Optional[float] = None
+    selling_price: Optional[float] = None
+    gst_rate: Optional[float] = None
+    cgst_rate: Optional[float] = None
+    sgst_rate: Optional[float] = None
+    cess_rate: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discount_amount: Optional[float] = None
+    filing_day_from: Optional[int] = None
+    filing_day_to: Optional[int] = None
+    filing_month_from: Optional[int] = None
+    filing_month_to: Optional[int] = None
+    department_amount: Optional[float] = None
+    days_required_for_processing: Optional[int] = None
+    display_order: Optional[int] = None
+    effective_from_date: Optional[str] = None
+    effective_to_date: Optional[str] = None
+    off_available_services_is_deleted: Optional[str] = None
+    service_provider_id: Optional[int] = None
+    service_provider: Optional[str] = None
+    service_department_id: Optional[int] = None
+    service_department_name: Optional[str] = None
+    service_frequency_id: Optional[int] = None
+    service_frequency: Optional[str] = None
+    sku_code_id: Optional[int] = None
+    unit_code: Optional[str] = None
+    is_consultancy_service: Optional[str] = None
+    service_master_is_deleted: Optional[str] = None
     
-
-
+class OffAvailableServicesDisplayList(BaseModel):
+    services: List[OffAvailableServicesDisplay]
+    
 class ViewOffAvailableServicesDisplay(BaseModel):
     available_services_id: int
     service_master_id: int
@@ -310,6 +322,8 @@ class OffAppointmentVisitDetails(BaseModel):
     consultancy_service_id: int
     consultant_id: int
     appointment_time: time
+
+    
 
 class OffAppointmentDetails(BaseModel):
     appointment_master: OffAppointmentMaster
@@ -415,6 +429,8 @@ class OffAppointmentVisitDetailsViewGet(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
+
 class ResponseModel(BaseModel):
     appointment_master: OffAppointmentMasterView
     visit_master: OffAppointmentVisitMasterViewSchema
@@ -440,3 +456,70 @@ class ConsultancyServiceResponse(BaseModel):
     effective_from_date: date  # Change type to datetime.date
     effective_to_date: Optional[date]  # Change type to Optional[datetime.date]
     is_deleted: str
+
+
+#------------------18-4-2024----------------------
+
+class BusinessConstitutionBase(BaseModel):
+
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    pan_code: Optional[str]
+    display_order:int
+   
+
+  
+class BusinessConstitutionSchema(BaseModel):
+    id:int
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    pan_code: Optional[str]
+    display_order:int
+    is_deleted: str
+    
+    
+class OffConsultancyServicesDisplay(BaseModel):
+    
+    service_master_id: int
+    consultant_id: int
+    consultation_fee: Optional[float]
+    gst_rate: Optional[float]= None
+    cgst_rate: Optional[float]= None
+    sgst_rate: Optional[float]= None
+    cess_rate: Optional[float]= None
+    discount_percentage: Optional[float]= None
+    discount_amount: Optional[float]= None
+    available_time_from: time
+    available_time_to: time
+    slot_duration_in_minutes: int
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date] =None
+   
+
+
+
+class ViewOffConsultancyServicesBase(BaseModel):
+    consultancy_service_id: int
+    service_master_id: int
+    service_name: str
+    consultant_id: int
+    employee_number: int
+    consultant_first_name: str
+    consultant_middle_name: Optional[str]
+    consultant_last_name: str
+    consultation_fee: Optional[float]
+    gst_rate: Optional[float]
+    cgst_rate: Optional[float]
+    sgst_rate: Optional[float]
+    cess_rate: Optional[float]
+    discount_percentage: Optional[float]
+    discount_amount: Optional[float]
+    available_time_from: time
+    available_time_to: time
+    slot_duration_in_minutes: int
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+    is_deleted: str
+
