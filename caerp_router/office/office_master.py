@@ -5,7 +5,7 @@ from caerp_auth.authentication import authenticate_user
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from caerp_db.office.models import ConsultancyService, OffAppointmentVisitDetails, OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView, ServiceProvider
-from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffAvailableServicesDisplayList, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
+from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAppointmentMasterView, OffAvailableServicesDisplay, OffAvailableServicesDisplayList, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
 from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
@@ -1553,6 +1553,7 @@ def get_off_appointment_status_by_id(
     return appointment_status
 
 
+
 @router.delete('/off_appointment_status/delete/{id}')
 def delete_off_appointment_status(
     id: int,
@@ -1642,6 +1643,26 @@ def get_appointment_visit_by_id(
     return appointment_visit		
 
 
+
+@router.get("/get/get_appointment_visit_by_mobile_number/{mobile_number}", response_model=OffAppointmentMasterView)
+def get_appointment_visit_by_mobile_number(
+    mobile_number: int,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get appointment visit by ID.
+    """
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    appointment_visit = db_office_master.get_appointment_master_by_mobile_number(db, mobile_number)  
+    if not appointment_visit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Appointment with mobile_number {mobile_number} not found" 
+        )
+    return appointment_visit	
 
 
 #-----delete appointment_master------

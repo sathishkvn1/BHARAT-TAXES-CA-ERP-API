@@ -228,19 +228,10 @@ class OffAvailableServicesDisplay(BaseModel):
     department_amount: Optional[float] = None
     days_required_for_processing: Optional[int] = None
     display_order: Optional[int] = None
-    effective_from_date: Optional[str] = None
-    effective_to_date: Optional[str] = None
-    off_available_services_is_deleted: Optional[str] = None
-    service_provider_id: Optional[int] = None
-    service_provider: Optional[str] = None
-    service_department_id: Optional[int] = None
-    service_department_name: Optional[str] = None
-    service_frequency_id: Optional[int] = None
-    service_frequency: Optional[str] = None
-    sku_code_id: Optional[int] = None
-    unit_code: Optional[str] = None
-    is_consultancy_service: Optional[str] = None
-    service_master_is_deleted: Optional[str] = None
+    effective_from_date: Optional[date] = None
+    effective_to_date: Optional[date] = None
+
+   
     
 class OffAvailableServicesDisplayList(BaseModel):
     services: List[OffAvailableServicesDisplay]
@@ -329,14 +320,18 @@ class OffAppointmentDetails(BaseModel):
     appointment_master: OffAppointmentMaster
     visit_master: OffAppointmentVisitMaster
     visit_details: List[OffAppointmentVisitDetails]
-#get
+
 class OffAppointmentMasterView(BaseModel):
-    
+    id:int
     full_name: str 
     mobile_number: Optional[str]
     email_id: Optional[str]
+    appointment_number:Optional[str]
+    enquiry_number:Optional[str]
+    customer_number:Optional[str]
     class Config:
         orm_mode = True  
+
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_master_id: int
     appointment_visit_master_id: int

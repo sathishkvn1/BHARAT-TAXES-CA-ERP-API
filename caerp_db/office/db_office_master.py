@@ -1462,6 +1462,22 @@ def get_appointment_visit_by_id(db: Session,appointment_master_id: int):
     
 
 
+def get_appointment_master_by_mobile_number(db: Session, mobile_number: int):
+    try:
+        # Fetch appointment master details
+        appointment_master_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.mobile_number == mobile_number).first()
+        if not appointment_master_data:
+            raise HTTPException(status_code=404, detail="Mobile number not found")
+
+        # Convert appointment master details to dictionary
+        appointment_master = appointment_master_data.__dict__
+        # Remove unnecessary attribute
+        appointment_master.pop("_sa_instance_state", None)
+
+        return appointment_master
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #-----------delete appointment_master----------------
 from caerp_constants.caerp_constants import DeletedStatus,ActionType
