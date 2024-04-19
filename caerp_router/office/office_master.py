@@ -10,7 +10,7 @@ from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
 from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
-from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
+from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay,OffAppointmentVisitDetailsViewGet
 from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
 from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,OffConsultancyServicesDisplay,ViewOffConsultancyServicesBase,BusinessConstitutionSchema
@@ -1554,6 +1554,7 @@ def get_off_appointment_status_by_id(
 
 
 
+
 @router.delete('/off_appointment_status/delete/{id}')
 def delete_off_appointment_status(
     id: int,
@@ -1664,7 +1665,22 @@ def get_appointment_visit_by_mobile_number(
         )
     return appointment_visit	
 
-
+@router.get("/get/get_appointment_visit_details_by_consultant_id/{consultant_id}",response_model=List[OffAppointmentVisitDetailsViewGet])
+def get_appointment_visit_details_by_consultant_id(
+    consultant_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Get appointment visit by consultant_id.
+    - if date not provide it takes current date.
+    """
+    appointment_visit = db_office_master.get_appointment_visit_details_by_consultant_id(db, consultant_id)  
+    if not appointment_visit:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Appointment with consultant_id {consultant_id} not found" 
+        )
+    return appointment_visit
 #-----delete appointment_master------
 from caerp_constants.caerp_constants import DeletedStatus,ActionType
 @router.delete("/appointment_master/delete/{id}")
