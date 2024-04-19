@@ -2,6 +2,7 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, OffAppointmentVisitDetails, OffAvailableServices, OffServiceFrequency, AppStockKeepingUnitCode, Document_Master, OffServices, ViewOffAvailableServices, ViewOffServices
 from sqlalchemy.orm import Session
 from caerp_db.hash import Hash
+from typing import Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_schema.office.office_schema import DocumentMasterBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffServicesDisplay, ServiceFrequencyDisplay, StockKeepingUnitCodeDisplay
@@ -1462,6 +1463,45 @@ def get_appointment_visit_by_id(db: Session,appointment_master_id: int):
     
 
 
+def get_appointment_master_by_mobile_number(db: Session, mobile_number: int):
+    try:
+        # Fetch appointment master details
+        appointment_master_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.mobile_number == mobile_number).first()
+        if not appointment_master_data:
+            raise HTTPException(status_code=404, detail="Mobile number not found")
+
+        # Convert appointment master details to dictionary
+        appointment_master = appointment_master_data.__dict__
+        # Remove unnecessary attribute
+        appointment_master.pop("_sa_instance_state", None)
+
+        return appointment_master
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+#get by consultant
+
+def get_appointment_visit_details_by_consultant_id(db: Session, consultant_id: int, appointment_date: Optional[date] = None):
+    try:
+        # If appointment_date is not provided, choose the current date
+        if not appointment_date:
+            appointment_date = date.today()
+
+        # Fetch appointment visit details by consultant ID and date
+        appointment_visit_details = (
+            db.query(OffAppointmentVisitDetailsView)
+            .filter(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
+            .filter(OffAppointmentVisitDetailsView.appointment_date == appointment_date)
+            .all()
+        )
+        
+        if not appointment_visit_details:
+            raise HTTPException(status_code=404, detail=f"Appointment visit details not found for the consultant {consultant_id} on {appointment_date}")
+
+        return appointment_visit_details
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #-----------delete appointment_master----------------
 from caerp_constants.caerp_constants import DeletedStatus,ActionType

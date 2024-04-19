@@ -5,12 +5,12 @@ from caerp_auth.authentication import authenticate_user
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from caerp_db.office.models import ConsultancyService, OffAppointmentVisitDetails, OffAppointmentVisitDetailsView, OffAppointmentVisitMasterView, ServiceProvider
-from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAvailableServicesDisplay, OffAvailableServicesDisplayList, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
+from caerp_schema.office.office_schema import ConsultancyServiceResponse, HsnSacClassesBase, HsnSacClassesDisplay, HsnSacMasterBase, HsnSacMasterDisplay, OffAppointmentMasterView, OffAvailableServicesDisplay, OffAvailableServicesDisplayList, OffServicesDisplay, ServiceFrequencyBase, ServiceFrequencyDisplay, ServiceProviderBase,ServiceProBase, StockKeepingUnitCodeBase, StockKeepingUnitCodeDisplay, ViewOffAvailableServicesDisplay, ViewOffServicesDisplay
 from caerp_db.office.models import ServiceDepartments,Document_Master
 from caerp_schema.office.office_schema import ServiceDepartmentBase,ServiceDepBase
 from caerp_schema.office.office_schema import DocumentMasterBase,DocumentBase
 from caerp_db.office.models import ServiceDepartments,AppBusinessActivityType,AppBusinessActivityMaster,AppBusinessConstitution
-from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay
+from caerp_schema.office.office_schema import BusinessActivityTypeBase,BusinessActivityTypeDisplay,BusinessActivityMasterBase,BusinessActivityMasterDisplay,OffAppointmentVisitDetailsViewGet
 from caerp_db.office.models import EnquirerType,EnquirerStatus,ServiceProcessingStatus,ConsultancyService
 from caerp_schema.office.office_schema import EducationalQualificationsBase,EducationalQualificationsDisplay,EnquirerTypeBase,EnquirerTypeDisplay,EnquirerStatusBase,EnquirerStatusDisplay
 from caerp_schema.office.office_schema import ServiceProcessingStatusBase,ServiceProcessingStatusDisplay,OffConsultancyServicesDisplay,ViewOffConsultancyServicesBase,BusinessConstitutionSchema
@@ -24,6 +24,8 @@ from datetime import datetime, time, timedelta, datetime
 from typing import Optional
 from sqlalchemy import func
 from datetime import datetime
+from typing import List, Dict, Any
+import logging
 
 
 
@@ -1313,80 +1315,8 @@ def save_off_available_services(
     return saved_services
 
        
-# @router.get('/services/get_all_off_available_services', response_model=list[ViewOffAvailableServicesDisplay])
-# def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
-#   db: Session = Depends(get_db),
-#       token: str = Depends(oauth2.oauth2_scheme)):
-   
-#     """
-#     Get all available  office services.
-#     """
-#     # Check if deleted_status is a valid option
-#     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
-#         )
 
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-#     return db_office_master.get_all_off_available_services(db,deleted_status)
 
-from typing import List, Dict, Any
-
-# @router.get('/services/get_all_off_available_services', response_model=List[Dict[str, Any]])
-# def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
-#                                    db: Session = Depends(get_db),
-#                                    token: str = Depends(oauth2.oauth2_scheme)):
-#     """
-#     Get all available office services.
-#     """
-#     # Check if deleted_status is a valid option
-#     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
-#         raise HTTPException(
-#             status_code=400,
-#             detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
-#         )
-
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-        
-#     services = db_office_master.get_all_off_available_services(db, deleted_status)
-#     print("Services:")
-    
-#     # Convert SQLAlchemy model instances to dictionaries
-#     services_dict = []
-#     for service in services:
-#         print(service.__dict__)
-#         service_dict = {
-#             "ID":service.ID,
-#             "service_master_id": service.service_master_id,
-#             "is_main_service": service.is_main_service,
-#             "main_service_id": service.main_service_id,
-#             # "purchase_price": service.purchase_price,
-#             # "selling_price": service.selling_price,
-#             # "gst_rate": service.gst_rate,
-#             # "cgst_rate": service.cgst_rate,
-#             # "sgst_rate": service.sgst_rate,
-#             # "cess_rate": service.cess_rate,
-#             # "discount_percentage": service.discount_percentage,
-#             # "discount_amount": service.discount_amount,
-#             # "filing_day_from": service.filing_day_from,
-#             # "filing_day_to": service.filing_day_to,
-#             # "filing_month_from": service.filing_month_from,
-#             # "filing_month_to": service.filing_month_to,
-#             # "department_amount": service.department_amount,
-#             # "days_required_for_processing": service.days_required_for_processing,
-#             # "display_order": service.display_order,
-#             # "effective_from_date": service.effective_from_date,
-#             # "effective_to_date": service.effective_to_date,
-#         }
-#         services_dict.append(service_dict)
-    
-#     return services_dict
-
-from typing import List, Dict, Any
-import logging
 
 @router.get('/services/get_all_off_available_services', response_model=List[Dict[str, Any]])
 def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
@@ -1416,6 +1346,7 @@ def get_all_off_available_services(deleted_status: DeletedStatus =  Query(..., t
             "service_master_id": service.service_master_id,
             "service_name":service.service_name,
             "is_main_service": service.is_main_service,
+            "is_available":service.is_available,
             "main_service_id": service.main_service_id,
             "purchase_price": service.purchase_price,
             "selling_price": service.selling_price,
@@ -1622,6 +1553,8 @@ def get_off_appointment_status_by_id(
     return appointment_status
 
 
+
+
 @router.delete('/off_appointment_status/delete/{id}')
 def delete_off_appointment_status(
     id: int,
@@ -1712,7 +1645,42 @@ def get_appointment_visit_by_id(
 
 
 
+@router.get("/get/get_appointment_visit_by_mobile_number/{mobile_number}", response_model=OffAppointmentMasterView)
+def get_appointment_visit_by_mobile_number(
+    mobile_number: int,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get appointment visit by ID.
+    """
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    appointment_visit = db_office_master.get_appointment_master_by_mobile_number(db, mobile_number)  
+    if not appointment_visit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Appointment with mobile_number {mobile_number} not found" 
+        )
+    return appointment_visit	
 
+@router.get("/get/get_appointment_visit_details_by_consultant_id/{consultant_id}",response_model=List[OffAppointmentVisitDetailsViewGet])
+def get_appointment_visit_details_by_consultant_id(
+    consultant_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Get appointment visit by consultant_id.
+    - if date not provide it takes current date.
+    """
+    appointment_visit = db_office_master.get_appointment_visit_details_by_consultant_id(db, consultant_id)  
+    if not appointment_visit:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Appointment with consultant_id {consultant_id} not found" 
+        )
+    return appointment_visit
 #-----delete appointment_master------
 from caerp_constants.caerp_constants import DeletedStatus,ActionType
 @router.delete("/appointment_master/delete/{id}")
