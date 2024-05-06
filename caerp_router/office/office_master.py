@@ -231,20 +231,8 @@ def get_services_by_consultant(
                 "service_name": "Service 2"
             }
         ]
-    },
-    {
-        "consultant_id": 456,
-        "services": [
-            {
-                "id": 3,
-                "service_name": "Service 3"
-            },
-            {
-                "id": 4,
-                "service_name": "Service 4"
-            }
-        ]
     }
+    
 ]
 
     return consultant
