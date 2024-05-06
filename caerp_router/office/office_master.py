@@ -12,28 +12,29 @@ router = APIRouter(
     tags=['Office Master']
 )
 #--------------------save_appointment_details-----------------------
-
 @router.post("/save_appointment_details/{id}", response_model=dict)
-def create_appointment_visit_master_endpoint(
+def save_appointment_details(
+    id: int,
     appointment_data: List[OffAppointmentDetails], 
     db: Session = Depends(get_db),
-    # token: str = Depends(oauth2.oauth2_scheme)  
 ):
     """
-    Save or create appointment visit_master for a specific ID.
-    """
+   - Save or create appointment details for a specific ID.
+   - **data**: Data for the visit master, provided as parameters of type OffAppointmentDetails.
+    - **id**: An optional integer parameter with a default value of 0, indicating the appointment_details's identifier.
     
-    # if not token:
-    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    try:
-        # Authenticate user if needed
-        # auth_info = authenticate_user(token)
-        # user_id = auth_info["user_id"]
+    - If appointment_master id is 0, it indicates the creation of a new appointment_details.
+    - Returns: The newly created appointment_details as the response.
 
+    If appointment_master id is not 0, it indicates the update of an existing appointment_details.
+    - Returns: The updated appointment_details as the response.
+
+    """
+    try:
         for appointment in appointment_data:
             # Create appointment visit master for each appointment
             appointment_master, visit_master, visit_details_list = db_office_master.save_appointment_visit_master(
-                db, appointment
+                db, id, appointment, created_by=1  # Pass each individual appointment
             )
         
         # Return success response
@@ -42,7 +43,6 @@ def create_appointment_visit_master_endpoint(
     except Exception as e:
         # Handle other exceptions
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 
 # # get all

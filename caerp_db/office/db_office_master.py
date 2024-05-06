@@ -9,39 +9,60 @@ from caerp_schema.office.office_schema import OffAppointmentDetails,ResponseSche
 from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
 
+from sqlalchemy.exc import IntegrityError
+
 def save_appointment_visit_master(
     db: Session,
-    appointment_data: List[OffAppointmentDetails],
+    appointment_master_id: int,
+    appointment_data: OffAppointmentDetails,
     created_by: Optional[int] = None
 ):
     try:
         # Create or update appointment master record
-        appointment_master = OffAppointmentMaster(
-            created_by=created_by,
-            created_on=datetime.utcnow(),
-            **appointment_data.appointment_master.dict(exclude_unset=True)
-        )
-        db.add(appointment_master)
-        db.commit()
+        if appointment_master_id == 0:
+            appointment_master = OffAppointmentMaster(
+                created_by=created_by,
+                created_on=datetime.utcnow(),
+                **appointment_data.appointment_master.dict(exclude_unset=True)
+            )
+            db.add(appointment_master)
+            db.flush()  # Flush to generate ID before committing
+        else:
+            appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
+            if appointment_master is None:
+                raise HTTPException(status_code=404, detail="Appointment master not found")
 
-        # Refresh the session to get the generated id of the appointment_master
-        db.refresh(appointment_master)
+            for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
+                setattr(appointment_master, field, value)
+            appointment_master.modified_by = created_by
+            appointment_master.modified_on = datetime.utcnow()
 
-        # Create visit master record
-        visit_master = OffAppointmentVisitMaster(
-            appointment_master_id=appointment_master.id,  # Use the id of the appointment_master
-            created_by=created_by,
-            created_on=datetime.utcnow(),
-            **appointment_data.visit_master.dict(exclude_unset=True)
-        )
-        db.add(visit_master)
-        db.commit()
+        # Create or update visit master record
+        if appointment_master_id == 0:
+            visit_master = OffAppointmentVisitMaster(
+                appointment_master_id=appointment_master.id,
+                created_by=created_by,
+                created_on=datetime.utcnow(),
+                **appointment_data.visit_master.dict(exclude_unset=True)
+            )
+            db.add(visit_master)
+            db.flush()  # Flush to generate ID before committing
+        else:
+            visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
+            if visit_master is None:
+                raise HTTPException(status_code=404, detail="Visit master not found")
+
+            for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
+                setattr(visit_master, field, value)
+            visit_master.modified_by = created_by
+            visit_master.modified_on = datetime.utcnow()
 
         # Create or update visit details records
         visit_details_list = []
         for detail in appointment_data.visit_details:
             visit_detail = OffAppointmentVisitDetails(
-                visit_master_id=visit_master.id,
+                visit_master_id=visit_master.id if appointment_master_id == 0 else visit_master.id,
+                consultant_id=visit_master.consultant_id,
                 created_by=created_by,
                 created_on=datetime.utcnow(),
                 **detail.dict(exclude_unset=True)
@@ -53,44 +74,15 @@ def save_appointment_visit_master(
 
         return appointment_master, visit_master, visit_details_list
     
+    except IntegrityError as e:
+        db.rollback()
+        # Check if the error message indicates a duplicate entry violation
+        if 'Duplicate entry' in str(e):
+            # Return a custom error message indicating the duplicate entry
+            raise HTTPException(status_code=400, detail="Duplicate entry: This appointment already exists.")
+        else:
+            # For other IntegrityError cases, raise the exception with the original message
+            raise e
     except Exception as e:
+        db.rollback()
         raise e
-
-# get by email id
-
-# def get_appointment_visit_by_email(db: Session, email: str) -> Union[dict, HTTPException]:
-#     try:
-#         # Query the database to check if the email exists
-#         appointment_visit_details = db.query(OffAppointmentVisitMasterView).filter(OffAppointmentVisitMasterView.email_id == email).first()
-
-#         # If the email exists, construct and return the success response
-#         if appointment_visit_details:
-#             return {
-#                 "success": True,
-#                 "message": "Email already exists",
-#                 "details": [OffAppointmentVisitMasterView.from_orm(appointment_visit_details).dict()]
-#             }
-#         else:
-#             # If the email does not exist, return the failure response
-#             return {
-#                 "success": False,
-#                 "message": "Email does not exist"
-#             }
-#     except Exception as e:
-#         # If any error occurs, raise an HTTPException
-#         raise HTTPException(status_code=500, detail=str(e))
-    
-
-# # get all 
-
-
-# def get_appointments_by_criteria(db: Session, SearchCriteria: str, search_value: str):
-#     if SearchCriteria == "retrieve_appointments":
-#         # Retrieve all appointments
-#         return db.query(OffAppointmentMaster).all()
-#     elif SearchCriteria == "mobile_number":
-#         # Search appointments by mobile number
-#         return db.query(OffAppointmentMaster).filter_by(mobile_number=search_value).all()
-#     elif SearchCriteria == "email_id":
-#         # Search appointments by email ID
-#         return db.query(OffAppointmentMaster).filter_by(email_id=search_value).all()

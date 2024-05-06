@@ -43,7 +43,7 @@ class OffAppointmentVisitMasterSchema(BaseModel):
     remarks: Optional[str]
 
 class OffAppointmentVisitDetailsSchema(BaseModel):
-    consultant_id : int
+    
     service_id: int
 
     
