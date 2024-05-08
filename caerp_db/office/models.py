@@ -4,8 +4,6 @@ from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column
 
-
-
 class OffAppointmentMaster(caerp_base):
     __tablename__  =  "off_appointment_master"
 
@@ -15,6 +13,7 @@ class OffAppointmentMaster(caerp_base):
     mobile_number  = Column(String(20), nullable=True)
     whatsapp_number=Column(String(20), nullable=True)
     email_id  = Column(String(50), nullable=True)
+    gender_id= Column(Integer, nullable=True)
     locality=Column(String(50), nullable=True)
     pin_code=Column(String(50), nullable=True)
     post_office_id= Column(Integer, nullable=True)
@@ -82,6 +81,7 @@ class OffAppointmentVisitMasterView(caerp_base):
 
     appointment_master_id = Column(Integer,  primary_key=True,nullable=False)
     full_name 	 = Column(String(200), nullable=False)
+    gender_id= Column(Integer, nullable=False)
     customer_number=Column(String(100), nullable=True)
     mobile_number  = Column(String(20), nullable=True)
     whatsapp_number=Column(String(20), nullable=True)
@@ -110,8 +110,8 @@ class OffAppointmentVisitMasterView(caerp_base):
     financial_year_id= Column(Integer, nullable=True)
     voucher_number=Column(String(50), nullable=True)
     appointment_date= Column(Date, nullable=True)
-    appointment_time_from= Column(Time, nullable=False)  
-    appointment_time_to= Column(Time, nullable=False)  
+    appointment_time_from= Column(String(50), nullable=False)  
+    appointment_time_to= Column(String(50), nullable=True)  
     source_of_enquiry_id= Column(Integer, nullable=True)
     source= Column(String(100), nullable=False)
     appointment_status_id= Column(Integer, nullable=True)
@@ -124,7 +124,7 @@ class OffAppointmentVisitMasterView(caerp_base):
     gross_amount=Column(Float, nullable=False)
     discount_percentage=Column(Float, nullable=False)
     special_discount_percentage=Column(Float, nullable=False)
-    special_discount_amounFloatt=Column(Float, nullable=False)
+    special_discount_amount=Column(Float, nullable=False)
     net_amount=Column(Float, nullable=False)
     igst_amount=Column(Float, nullable=False)
     sgst_amount=Column(Float, nullable=False)
@@ -141,8 +141,8 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_master_voucher_number=Column(String(50), nullable=True)
     appointment_visit_master_appointment_master_id= Column(Integer, nullable=True)
     appointment_visit_master_appointment_date= Column(Date, nullable=True)
-    appointment_visit_master_appointment_time_from= Column(Time, nullable=False)  
-    appointment_visit_master_appointment_time_to= Column(Time, nullable=False)  
+    appointment_visit_master_appointment_time_from= Column(String(50), nullable=False)  
+    appointment_visit_master_appointment_time_to= Column(String(50), nullable=True)  
     source_of_enquiry_id= Column(Integer, nullable=True)
     appointment_status_id= Column(Integer, nullable=True)
     appointment_visit_master_gross_amount=Column(Float, nullable=False)
@@ -159,8 +159,8 @@ class OffAppointmentVisitDetailsView(caerp_base):
     service_master_id= Column(Integer, nullable=True)
     consultation_fee=Column(Float, nullable=False)
     consultancy_services_igst_rate=Column(Float, nullable=False)
-    available_time_from= Column(Time, nullable=False) 
-    available_time_to= Column(Time, nullable=False) 
+    available_time_from=Column(String(50), nullable=False) 
+    available_time_to= Column(String(50), nullable=True) 
     slot_duration_in_minutes= Column(Integer, nullable=True)
     consultancy_services_effective_from_date= Column(Date, nullable=True)
     consultancy_services_effective_to_date= Column(Date, nullable=True)
@@ -177,6 +177,4 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_details_is_deleted= Column(Enum('yes', 'no'), nullable=False, default='no')
     appointment_visit_details_deleted_by= Column(Integer, nullable=True)
     appointment_visit_details_deleted_on= Column(Date, nullable=True)
-
-
 

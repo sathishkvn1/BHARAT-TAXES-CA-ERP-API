@@ -5,7 +5,6 @@ class DeletedStatus(str, Enum):
     DELETED = "yes"
     NOT_DELETED = "no"
     
-    
 class ActiveStatus(str,Enum):
     ALL         = 'all'
     ACTIVE      = 'yes'
@@ -20,9 +19,8 @@ class ParameterConstant(str,Enum):
     TYPE        = 'customer_type_id' 
     
 class BooleanFlag(str, Enum):
-    yes = "yes"
-    no = "no"
-
+    yes         = "yes"
+    no          = "no"
 
 class VerifiedStatus(str, Enum):
     VERIFIED      = 'yes'
@@ -33,10 +31,31 @@ class ApprovedStatus(str, Enum):
     NOT_APPROVED  = 'no'    
     
 class ActionType(str, Enum):
-    DELETE = 'DELETE'
-    UNDELETE = 'UNDELETE'
-    
+    DELETE      = 'DELETE'
+    UNDELETE    = 'UNDELETE'
+
 class BookingStatus(str, Enum):
-    ALL ='all',
-    BOOKED="BOOKED",
-    AVAILABLE="AVAILABLE"
+    ALL         ='all',
+    BOOKED      ="BOOKED",
+    AVAILABLE   ="AVAILABLE"
+    
+class CRUD(str, Enum):
+    CREATE      = "create"
+    READ        = "read"
+    UPDATE      = "update"
+    DELETE      = "delete"
+ 
+    
+class EmployeeDetails(str, Enum):
+    ALL 		        ="ALL"
+    EMPLOYEE_MASTER     = "EMPLOYEE_MASTER"
+    PRESENT_ADDRESS     = "PRESENT_ADDRESS"
+    PERMANENT_ADDRESS   = "PERMANENT_ADDRESS"
+    CONTACT_DETAILS     = "CONTACT_DETAILS"
+    BANK_DETAILS        = "BANK_DETAILS"
+
+class AppointmentStatus(str,Enum):
+    NEW = "NEW"
+    CANCELED = "CANCELED"
+    RESCHEDULED = "RESCHEDULED"
+    CLOSED = "CLOSED"

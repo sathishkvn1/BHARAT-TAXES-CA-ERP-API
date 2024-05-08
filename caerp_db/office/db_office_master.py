@@ -1,11 +1,12 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
+from caerp_constants.caerp_constants import AppointmentStatus
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView
-from caerp_schema.office.office_schema import OffAppointmentDetails,ResponseSchema
+from caerp_schema.office.office_schema import OffAppointmentDetails, RescheduleOrCancelRequest
 from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
 
@@ -86,3 +87,49 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise e
+
+
+def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCancelRequest, action: AppointmentStatus, visit_master_id: int):
+    if action == AppointmentStatus.RESCHEDULED:
+        if not request_data.date or not request_data.time:
+            raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
+        # Update appointment status to RESCHEDULED (ID: 3) and update date and time
+        appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
+        if appointment:
+            appointment.appointment_status_id = 3  # Assuming 3 is the appointment status ID for RESCHEDULED
+            appointment.appointment_date = request_data.date
+            appointment.appointment_time_from = request_data.time
+            appointment.remarks = request_data.description
+            db.commit()
+            return {"success": True, "message": "Appointment rescheduled successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+    elif action == AppointmentStatus.CANCELED:
+        # Update appointment status to CANCELED (ID: 2)
+        appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
+        if appointment:
+            appointment.appointment_status_id = 2
+            appointment.remarks = request_data.description  # Assuming 2 is the appointment status ID for CANCELED
+            db.commit()
+            return {"success": True, "message": "Appointment canceled successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+#-------------------------------get_appointment_info
+def get_appointment_info(db: Session, type: str) -> List[dict]:
+    if type == "cancellation_reasons":
+        # Query the database to get unique cancellation reasons
+        reasons = db.query(OffAppointmentVisitDetailsView.visit_master_id, OffAppointmentVisitDetailsView.remarks).filter(
+           
+        ).distinct().all()
+        # Format the reasons into a list of dictionaries
+        return [{"visit_master_id": reason[0], "reason": reason[1]} for reason in reasons]
+    elif type == "status":
+        # Query the database to get unique appointment statuses
+        statuses = db.query(OffAppointmentVisitMasterView.appointment_master_id, OffAppointmentVisitMasterView.appointment_status).distinct().all()
+        # Format the statuses into a list of dictionaries
+        return [{"appointment_master_id": status[0], "status": status[1]} for status in statuses]
+    else:
+        raise HTTPException(status_code=400, detail="Invalid type parameter. Please specify either 'cancellation_reasons' or 'status'.")

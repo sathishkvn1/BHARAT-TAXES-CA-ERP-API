@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File,status,Query,Response
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
+from caerp_constants.caerp_constants import AppointmentStatus
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_schema.office.office_schema import OffAppointmentDetails,ResponseSchema,OffAppointmentMasterView,OffAppointmentMasterSchema
+from caerp_schema.office.office_schema import OffAppointmentDetails,RescheduleOrCancelRequest
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -339,3 +340,45 @@ def get_appointment_cancellation_reasons():
 
     response_data = {"reasons": reasons}
     return response_data
+
+
+
+@router.post("/reschedule_or_cancel")
+async def reschedule_or_cancel_appointment(
+    request_data: RescheduleOrCancelRequest,
+    action: AppointmentStatus,
+    visit_master_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    CANCELLATION PROCESS
+    Cancel an appointment.
+    
+    ### Request Body:
+    - **visit_master_id**: The ID of the appointment to be canceled.
+    - **description**: The reason for cancellation.
+
+    ### Response:
+    - **success**: Indicates whether the cancellation was successful.
+  
+    RESCHEDULE PROCESS
+    Reschedule an appointment.
+    
+    ### Request Body:
+    - **consultant_id**: The ID of the consultant.
+    - **appointment_master_id**: The ID of the appointment.
+    - **visit_master_id**: The ID of the visit.
+    - **date**: The new date for the appointment.
+    - **time**: The new time for the appointment.
+    - **description**: The reason for rescheduling.
+
+    ### Response:
+    - **success**: Indicates whether the rescheduling was successful.
+    - **message**: A message indicating the outcome of the reschedule process.
+"""
+    return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
+    
+@router.get("/get/appointment_info")
+async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"), db: Session = Depends(get_db)):
+    info = db_office_master.get_appointment_info(db, type)
+    return {"info": info}
