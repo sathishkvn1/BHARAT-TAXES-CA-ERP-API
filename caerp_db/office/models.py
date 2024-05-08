@@ -178,3 +178,10 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_details_deleted_by= Column(Integer, nullable=True)
     appointment_visit_details_deleted_on= Column(Date, nullable=True)
 
+class OffAppointmentCancellationReason(caerp_base):
+    __tablename__ = 'off_appointment_cancellation_reason'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    off_appointment_cancellation_reason = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+ 

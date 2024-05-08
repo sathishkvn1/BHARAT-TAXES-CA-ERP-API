@@ -5,7 +5,7 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason
 from caerp_schema.office.office_schema import OffAppointmentDetails, RescheduleOrCancelRequest
 from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -121,11 +121,11 @@ def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCanc
 def get_appointment_info(db: Session, type: str) -> List[dict]:
     if type == "cancellation_reasons":
         # Query the database to get unique cancellation reasons
-        reasons = db.query(OffAppointmentVisitDetailsView.visit_master_id, OffAppointmentVisitDetailsView.remarks).filter(
+        reasons = db.query(OffAppointmentCancellationReason.id, OffAppointmentCancellationReason.off_appointment_cancellation_reason).filter(
            
         ).distinct().all()
         # Format the reasons into a list of dictionaries
-        return [{"visit_master_id": reason[0], "reason": reason[1]} for reason in reasons]
+        return [{"id": reason[0], "reason": reason[1]} for reason in reasons]
     elif type == "status":
         # Query the database to get unique appointment statuses
         statuses = db.query(OffAppointmentVisitMasterView.appointment_master_id, OffAppointmentVisitMasterView.appointment_status).distinct().all()
