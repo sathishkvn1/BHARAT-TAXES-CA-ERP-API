@@ -184,4 +184,48 @@ class OffAppointmentCancellationReason(caerp_base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     off_appointment_cancellation_reason = Column(String(100), nullable=False)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+class OffAppointmentStatus(caerp_base):
+    __tablename__ = 'off_appointment_status'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    appointment_status = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
  
+class OffServices(caerp_base):
+    __tablename__ = 'off_service_master'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_name = Column(String(500), nullable=False)
+    is_consultancy_service = Column(Enum('yes', 'no'), nullable=False, default='no')
+    has_sub_service= Column(Enum('yes', 'no'), nullable=False, default='no')
+    hsn_sac_id = Column(Integer, nullable=False)
+    service_provider_id = Column(Integer, nullable=False)
+    service_department_id = Column(Integer, nullable=False)
+    service_frequency_id = Column(Integer, nullable=False)
+    sku_code_id = Column(Integer, nullable=False)
+   
+    purchase_price = Column(Float, default=None)
+    selling_price = Column(Float, default=None)
+    igst_rate = Column(Float, default=None)
+    cgst_rate = Column(Float, default=None)
+    sgst_rate = Column(Float, default=None)
+    cess_rate = Column(Float, default=None)
+    discount_percentage = Column(Float, default=None)
+    discount_amount = Column(Float, default=None)
+    filing_day_from = Column(Integer, default=None)
+    filing_day_to = Column(Integer, default=None)
+    filing_month_from = Column(Integer, default=None)
+    filing_month_to = Column(Integer, default=None)
+    department_amount = Column(Float, default=None)
+    days_required_for_processing = Column(Integer, default=None)
+    
+    effective_from_date = Column(Date, default=None)
+    effective_to_date = Column(Date, default=None)
+    created_by = Column(Integer, nullable=True)
+    created_on = Column(Date, nullable=True)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(Date, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(Date, nullable=True)
+

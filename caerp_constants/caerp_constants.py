@@ -59,3 +59,9 @@ class AppointmentStatus(str,Enum):
     CANCELED = "CANCELED"
     RESCHEDULED = "RESCHEDULED"
     CLOSED = "CLOSED"
+    
+class SearchCriteria(str, Enum):
+    mobile_number = "mobile_number"
+    email_id = "email_id"
+    ALL= "ALL"
+

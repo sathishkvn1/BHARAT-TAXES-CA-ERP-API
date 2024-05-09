@@ -1,17 +1,16 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import AppointmentStatus
+from caerp_constants.caerp_constants import AppointmentStatus,SearchCriteria
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason
-from caerp_schema.office.office_schema import OffAppointmentDetails, RescheduleOrCancelRequest
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema
 from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
 
 from sqlalchemy.exc import IntegrityError
-
 def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
@@ -133,3 +132,144 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
         return [{"appointment_master_id": status[0], "status": status[1]} for status in statuses]
     else:
         raise HTTPException(status_code=400, detail="Invalid type parameter. Please specify either 'cancellation_reasons' or 'status'.")
+    
+    
+#------get_consultancy_services
+def get_consultancy_services(db: Session):
+    return db.query(OffServices).filter(OffServices.is_consultancy_service == "yes").all()
+# # get all 
+
+
+
+
+def get_appointments(
+    db: Session,
+    
+    search_criteria: Optional[SearchCriteria] = None,
+    search_value: Union[str, int, None] = None,
+    id: Optional[int] = None,
+) -> Union[List[ResponseSchema], ResponseSchema]:
+    try:
+        if search_criteria == SearchCriteria.retrieve_appointments:
+            # Fetch all appointments and their related details using joins
+            query_result = db.query(
+                OffAppointmentVisitMasterView,
+                OffAppointmentVisitDetailsView
+            ).filter(
+                OffAppointmentVisitMasterView.appointment_master_id == OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id
+            ).all()
+
+            if not query_result:
+                raise HTTPException(status_code=404, detail="Appointment data not found")
+
+            response_schemas = []
+            for appointment_master_data, visit_master_data in query_result:
+                # Convert database models to Pydantic schemas
+                appointment_master_schema = OffAppointmentMasterViewSchema.from_orm(appointment_master_data)
+                visit_master_schema = OffAppointmentVisitMasterViewSchema.from_orm(visit_master_data)
+
+                # Filter visit details for the current visit master ID
+                visit_master_id = visit_master_data.appointment_visit_master_appointment_master_id
+                visit_details_schema = [
+                    OffAppointmentVisitDetailsViewSchema.from_orm(data)
+                    for _, data in query_result
+                    if data.appointment_visit_master_appointment_master_id == visit_master_id
+                ]
+
+                # Create ResponseSchema instance
+                response_schema_instance = ResponseSchema(
+                    appointment_master=appointment_master_schema,
+                    visit_master=visit_master_schema,
+                    visit_details=visit_details_schema
+                )
+                response_schemas.append(response_schema_instance)
+
+            return response_schemas
+
+        elif search_criteria == SearchCriteria.mobile_number:
+            # Fetch appointments based on mobile number
+            appointment_visit_details = db.query(OffAppointmentVisitMasterView).filter(
+                OffAppointmentVisitMasterView.mobile_number == search_value
+            ).first()
+
+            if appointment_visit_details:
+                visit_master_data = appointment_visit_details  # Assuming visit master data is the same as appointment visit details
+                visit_details_data = db.query(OffAppointmentVisitDetailsView).filter(
+                    OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == appointment_visit_details.appointment_master_id
+                ).all()
+
+                visit_master_schema = OffAppointmentVisitMasterViewSchema.from_orm(visit_master_data)
+                visit_details_schema = [OffAppointmentVisitDetailsViewSchema.from_orm(data) for data in visit_details_data]
+
+                response_schema_instance = ResponseSchema(
+                    appointment_master=OffAppointmentMasterViewSchema.from_orm(appointment_visit_details),
+                    visit_master=visit_master_schema,
+                    visit_details=visit_details_schema
+                )
+
+                return [response_schema_instance]
+            else:
+                raise HTTPException(status_code=404, detail="Appointments not found for the given mobile number")
+
+        elif search_criteria == SearchCriteria.email_id:
+            # Fetch appointments based on email ID
+            appointment_visit_details = db.query(OffAppointmentVisitMasterView).filter(
+                OffAppointmentVisitMasterView.email_id == search_value
+            ).first()
+
+            if appointment_visit_details:
+                visit_master_data = appointment_visit_details  # Assuming visit master data is the same as appointment visit details
+                visit_details_data = db.query(OffAppointmentVisitDetailsView).filter(
+                    OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == appointment_visit_details.appointment_master_id
+                ).all()
+
+                visit_master_schema = OffAppointmentVisitMasterViewSchema.from_orm(visit_master_data)
+                visit_details_schema = [OffAppointmentVisitDetailsViewSchema.from_orm(data) for data in visit_details_data]
+
+                response_schema_instance = ResponseSchema(
+                    appointment_master=OffAppointmentMasterViewSchema.from_orm(appointment_visit_details),
+                    visit_master=visit_master_schema,
+                    visit_details=visit_details_schema
+                )
+
+                return [response_schema_instance]
+            else:
+                raise HTTPException(status_code=404, detail="Appointments not found for the given email ID")
+
+        elif id is not None:
+            # Fetch appointments based on ID
+            # Use search_value or id to filter appointments by ID
+            search_id = search_value if id is None else id
+            query_result = db.query(
+                OffAppointmentVisitMasterView,
+                OffAppointmentVisitDetailsView
+            ).filter(
+                OffAppointmentVisitMasterView.appointment_master_id == search_id,
+                OffAppointmentVisitMasterView.appointment_master_id == OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id
+            ).all()
+
+            if not query_result:
+                raise HTTPException(status_code=404, detail="Appointment data not found")
+
+            # Extract data from the query result
+            appointment_master_data, visit_master_data = query_result[0]
+
+            # Convert database models to Pydantic schemas
+            appointment_master_schema = OffAppointmentMasterViewSchema.from_orm(appointment_master_data)
+            visit_master_schema = OffAppointmentVisitMasterViewSchema.from_orm(visit_master_data)
+            visit_details_schema = [OffAppointmentVisitDetailsViewSchema.from_orm(data) for _, data in query_result]
+
+            # Create ResponseSchema instance
+            return ResponseSchema(
+                appointment_master=appointment_master_schema,
+                visit_master=visit_master_schema,
+                visit_details=visit_details_schema
+            )
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid search criteria")
+
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions to maintain their original status codes and details
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
