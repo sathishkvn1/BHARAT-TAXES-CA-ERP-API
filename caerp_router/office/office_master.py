@@ -125,20 +125,28 @@ def get_consultancy_services(
 
 
 #-----------get all
-@router.get("/get_appointments", response_model=List[ResponseSchema])
+@router.get("/get_appointments", response_model=dict)
 def get_all_appointments(
     id: Optional[int] = None,
     db: Session = Depends(get_db),
     search_criteria: SearchCriteria = Query(None, description="Search criteria"),
     search_value: Union[str, int, None] = None
 ):
-    if search_criteria is None and id is not None:
-        # Use "retrieve_appointments" criteria if search_criteria is not provided but id is given
-        search_criteria = SearchCriteria.ALL
-
-    # Call the consolidated get_appointments function
-    appointments = db_office_master.get_appointments(db, search_criteria, search_value)
-    return appointments
+    try:
+        if id is not None:
+            # If id is provided, filter appointments by ID
+            appointments = db_office_master.get_appointments(db, id=id)
+        elif search_criteria is not None:
+            # If search_criteria is provided, use it with search_value
+            appointments = db_office_master.get_appointments(db, search_criteria=search_criteria, search_value=search_value)
+        else:
+            # If neither id nor search_criteria is provided, return an empty list
+            appointments = []
+        
+        # Wrap appointments list in a dictionary
+        return {"Appointments": appointments}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 ###......................test
 
