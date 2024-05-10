@@ -134,7 +134,7 @@ def get_all_appointments(
 ):
     if search_criteria is None and id is not None:
         # Use "retrieve_appointments" criteria if search_criteria is not provided but id is given
-        search_criteria = SearchCriteria.retrieve_appointments
+        search_criteria = SearchCriteria.ALL
 
     # Call the consolidated get_appointments function
     appointments = db_office_master.get_appointments(db, search_criteria, search_value)

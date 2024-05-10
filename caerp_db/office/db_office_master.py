@@ -150,7 +150,7 @@ def get_appointments(
     id: Optional[int] = None,
 ) -> Union[List[ResponseSchema], ResponseSchema]:
     try:
-        if search_criteria == SearchCriteria.retrieve_appointments:
+        if search_criteria == SearchCriteria.ALL:
             # Fetch all appointments and their related details using joins
             query_result = db.query(
                 OffAppointmentVisitMasterView,
@@ -185,6 +185,7 @@ def get_appointments(
                 response_schemas.append(response_schema_instance)
 
             return response_schemas
+        
 
         elif search_criteria == SearchCriteria.mobile_number:
             # Fetch appointments based on mobile number
