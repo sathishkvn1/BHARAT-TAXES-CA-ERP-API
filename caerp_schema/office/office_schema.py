@@ -168,5 +168,50 @@ class OffServicesDisplay(BaseModel):
     id:int
     service_name: Optional[str]
     is_consultancy_service: str
-    
+ 
+ 
+ 
+class AppointmentVisitDetailsSchema(BaseModel):
+    appointment_visit_details_id: int
+    visit_master_id: int
+    appointment_visit_master_financial_year_id: Optional[int]
+    appointment_visit_master_voucher_number: Optional[str]
+    appointment_visit_master_appointment_master_id: Optional[int]
+    appointment_visit_master_appointment_date: Optional[date]
+    appointment_visit_master_appointment_time_from: Optional[str]
+    appointment_visit_master_appointment_time_to: Optional[str]
+    source_of_enquiry_id: Optional[int]
+    appointment_status_id: Optional[int]
+    appointment_visit_master_gross_amount: Optional[float]
+    appointment_visit_master_discount_percentage: Optional[float]
+    special_discount_percentage: Optional[float]
+    special_discount_amount: Optional[float]
+    appointment_visit_master_net_amount: Optional[float]
+    appointment_visit_master_igst_amount: Optional[float]
+    appointment_visit_master_sgst_amount: Optional[float]
+    appointment_visit_master_cgst_amount: Optional[float]
+    appointment_visit_master_bill_amount: Optional[float]
+    remarks: str
+    service_id: Optional[int]
+    service_master_id: Optional[int]
+    consultation_fee: Optional[float]
+    consultancy_services_igst_rate: Optional[float]
+    available_time_from: Optional[time]
+    available_time_to: Optional[time]
+    slot_duration_in_minutes: Optional[int]
+    consultancy_services_effective_from_date: Optional[date]
+    consultancy_services_effective_to_date: Optional[date]
+    consultancy_services_is_deleted: str
+    consultant_id: Optional[int]
+    employee_master_employee_number: Optional[str]
+    employee_master_first_name: Optional[str]
+    employee_master_middle_name: Optional[str]
+    employee_master_last_name: Optional[str]
+    appointment_visit_details_created_by: Optional[int]
+    appointment_visit_details_created_on: Optional[date]
+    appointment_visit_details_modified_by: Optional[int]
+    appointment_visit_details_modified_on: Optional[date]
+    appointment_visit_details_is_deleted: str
+    appointment_visit_details_deleted_by: Optional[int]
+    appointment_visit_details_deleted_on: Optional[date]   
 #-------------------

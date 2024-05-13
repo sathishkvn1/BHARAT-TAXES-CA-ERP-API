@@ -13,6 +13,9 @@ from typing import Optional
 router = APIRouter(
     tags=['Office Master']
 )
+
+
+
 #--------------------save_appointment_details-----------------------
 @router.post("/save_appointment_details/{id}", response_model=dict)
 def save_appointment_details(
@@ -95,7 +98,7 @@ async def reschedule_or_cancel_appointment(
     
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
-                                token: str = Depends(oauth2.oauth2_scheme),
+                                # token: str = Depends(oauth2.oauth2_scheme),
                                 db: Session = Depends(get_db)
                                 ):
     """
@@ -108,20 +111,12 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     - If 'type' is 'cancellation_reasons', returns a list of cancellation reasons with their IDs.
     - If 'type' is 'status', returns a list of appointment statuses with their IDs.
     """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    info = db_office_master.get_appointment_info(db, type)
-    return {"info": info}
+
+#-----------get_consultancy_services--------------------------------------------#
 
 
-
-
-
-#-----------get_consultancy_services
 @router.get('/get_consultancy_services',response_model=List[OffServicesDisplay])
 def get_consultancy_services(
-   
     db: Session = Depends(get_db),
     # token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -139,13 +134,11 @@ def get_consultancy_services(
         )
     return consultancy_services
 
-
-#-------------get all
-
+#-------------get all-------------------------------------------------------------------------
 @router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
 def get_all_appointments(
     id: Optional[int] = None,
-    token: str = Depends(oauth2.oauth2_scheme),
+    # token: str = Depends(oauth2.oauth2_scheme),
     db: Session = Depends(get_db),
     search_criteria: SearchCriteria = Query(None, description="Search criteria"),
     search_value: Union[str, int, None] = None
@@ -161,8 +154,8 @@ def get_all_appointments(
     Response:
     - If no appointments are found, returns a message indicating no appointments found and success status.
     """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     try:
         if id is not None:
@@ -179,23 +172,48 @@ def get_all_appointments(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+    
+#search
+from datetime import date
+@router.get("/search_appointments", response_model=dict)
+def search_appointments(
+    consultant_id: Optional[Union[int, str]] = None,
+    service: Optional[Union[int, str]] = None,
+    status: Optional[int] = None,
+    effective_from_date: Optional[date] = Query(date.today()),
+    effective_to_date: Optional[date] = Query(date.today()),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve appointments based on Parameters.
+
+    Parameters:
+    - **consultant_id**: Consultant ID.
+    - **service**: Service_Id.
+    - **status**: Status_id).
+    - **effective_from_date**: Effective from date (default: today's date).
+    - **effective_to_date**: Effective to date (default: today's date).
+    """
+    result = db_office_master.get_search_appointments(
+        db,
+        consultant_id=consultant_id,
+        service=service,
+        status=status,
+        appointment_visit_master_appointment_date_from=effective_from_date,
+        appointment_visit_master_appointment_date_to=effective_to_date
+    )
+    return {"appointments": result}
+
 
 ###......................test
 
 
 from api_library.api_library import DynamicAPI
 
-
-
-
-
 # cancellation_reason_api = DynamicAPI(OffAppointmentCancellationReason)
 # status_api = DynamicAPI(OffAppointmentStatus)
     
-
-
-
-
 # @router.get("/get_appointment_info", operation_id="get_appointment_info")
 # async def get_appointment_info(
 #     fields: str = Query(..., description="Fields to retrieve"),
@@ -225,12 +243,6 @@ from api_library.api_library import DynamicAPI
     
 
 
-
-
-
-
-
-
 from typing import List, Type
 
 TABLE_MODEL_MAPPING = {
@@ -254,6 +266,8 @@ def get_model_by_model_name(model_name: str) -> Type:
     Get the SQLAlchemy model class corresponding to the provided model name.
     """
     return TABLE_MODEL_MAPPING.get(model_name)
+
+
 
 @router.get("/test/get_info2", operation_id="get_appointment_info")
 async def get_info(
@@ -284,8 +298,6 @@ async def get_info(
     else:
         # Fetch records using the DynamicAPI instance
         return dynamic_api.get_records(db, fields_list)
-
-
 
 #........................correct one
 # # Define your model mappings

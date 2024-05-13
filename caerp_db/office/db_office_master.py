@@ -6,7 +6,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema
 from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
 
@@ -270,3 +270,63 @@ def get_appointments(
 
 
 
+#get search
+from sqlalchemy import and_
+def get_search_appointments(
+    db: Session,
+    consultant_id: Optional[Union[int, str]] = None,
+    service: Optional[Union[int, str]] = None,
+    status: Optional[int] = None, # Default: New
+    appointment_visit_master_appointment_date_from: Optional[date] = date.today(),  # Default: today's date
+    appointment_visit_master_appointment_date_to: Optional[date] = date.today()  # Default: today's date
+) ->List[AppointmentVisitDetailsSchema]:
+    try:
+        appointments = []
+
+        # Start building the base query
+        query = db.query(OffAppointmentVisitDetailsView)
+
+        # Initialize the search conditions
+        search_conditions = []
+
+        # Add conditions based on the provided parameters
+        if consultant_id and consultant_id != 'all':
+            search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
+        elif service and service != 'all':
+            search_conditions.append(OffAppointmentVisitDetailsView.service_id == service)
+        elif status:
+            search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status)
+
+        # Add conditions for appointment visit date range
+        if appointment_visit_master_appointment_date_from and appointment_visit_master_appointment_date_to:
+            query = query.filter(
+                OffAppointmentVisitDetailsView.appointment_visit_master_appointment_date.between(
+                    appointment_visit_master_appointment_date_from,
+                    appointment_visit_master_appointment_date_to
+                )
+            )
+
+        # Apply all the search conditions to the query
+        if search_conditions:
+            query = query.filter(and_(*search_conditions))
+
+        # Execute the query
+        query_result = query.all()
+
+        if not query_result:
+            raise HTTPException(status_code=404, detail="No appointments found")
+
+        # Process the query result
+        for row in query_result:
+            appointment_data = AppointmentVisitDetailsSchema(
+                **row.__dict__
+            )
+            appointments.append(appointment_data)
+
+        return appointments
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
