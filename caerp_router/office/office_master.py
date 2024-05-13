@@ -94,7 +94,23 @@ async def reschedule_or_cancel_appointment(
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
 @router.get("/get/appointment_info")
-async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"), db: Session = Depends(get_db)):
+async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
+                                token: str = Depends(oauth2.oauth2_scheme),
+                                db: Session = Depends(get_db)
+                                ):
+    """
+    Retrieve information about appointment cancellation reasons or statuses.
+
+    Parameters:
+    - **type**: Type of information to retrieve. Can be 'cancellation_reasons' or 'status'.
+
+    Response:
+    - If 'type' is 'cancellation_reasons', returns a list of cancellation reasons with their IDs.
+    - If 'type' is 'status', returns a list of appointment statuses with their IDs.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     info = db_office_master.get_appointment_info(db, type)
     return {"info": info}
 
@@ -124,14 +140,30 @@ def get_consultancy_services(
     return consultancy_services
 
 
-#-----------get all
-@router.get("/get_appointments", response_model=dict)
+#-------------get all
+
+@router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
 def get_all_appointments(
     id: Optional[int] = None,
+    token: str = Depends(oauth2.oauth2_scheme),
     db: Session = Depends(get_db),
     search_criteria: SearchCriteria = Query(None, description="Search criteria"),
     search_value: Union[str, int, None] = None
 ):
+    """
+    Retrieve appointments based on search criteria or appointment ID.
+
+    Parameters:
+    - **search_criteria**: Type of search criteria. Can be 'mobile_number', 'email_id', or 'ALL'.
+    - **search_value**: Search value corresponding to the search criteria.
+    - **id**: Appointment ID.
+
+    Response:
+    - If no appointments are found, returns a message indicating no appointments found and success status.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     try:
         if id is not None:
             # If id is provided, filter appointments by ID
@@ -143,8 +175,8 @@ def get_all_appointments(
             # If neither id nor search_criteria is provided, return an empty list
             appointments = []
         
-        # Wrap appointments list in a dictionary
-        return {"Appointments": appointments}
+        return {"Appointments": appointments}  # Return the dictionary with the key "Appointments"
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
