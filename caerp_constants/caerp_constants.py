@@ -65,3 +65,9 @@ class SearchCriteria(str, Enum):
     email_id = "email_id"
     ALL= "ALL"
 
+
+
+class EmployeeActionType(str, Enum):
+    INSERT_ONLY = 'INSERT_ONLY'    
+    UPDATE_ONLY = 'UPDATE_ONLY'
+    UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'
