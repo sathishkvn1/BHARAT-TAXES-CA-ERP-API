@@ -10,6 +10,7 @@ from caerp_schema.office.office_schema import OffAppointmentDetails, OffServices
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
+from datetime import date
 router = APIRouter(
     tags=['Office Master']
 )
@@ -188,35 +189,6 @@ def get_all_appointments(
     
     
 #search
-from datetime import date
-@router.get("/search_appointments", response_model=dict)
-def search_appointments(
-    consultant_id: Optional[Union[int, str]] = None,
-    service: Optional[Union[int, str]] = None,
-    status: Optional[int] = None,
-    effective_from_date: Optional[date] = Query(date.today()),
-    effective_to_date: Optional[date] = Query(date.today()),
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve appointments based on Parameters.
-
-    Parameters:
-    - **consultant_id**: Consultant ID.
-    - **service**: Service_Id.
-    - **status**: Status_id).
-    - **effective_from_date**: Effective from date (default: today's date).
-    - **effective_to_date**: Effective to date (default: today's date).
-    """
-    result = db_office_master.get_search_appointments(
-        db,
-        consultant_id=consultant_id,
-        service=service,
-        status=status,
-        appointment_visit_master_appointment_date_from=effective_from_date,
-        appointment_visit_master_appointment_date_to=effective_to_date
-    )
-    return {"appointments": result}
 
 
 
@@ -248,6 +220,7 @@ def search_appointments(
         effective_to_date=effective_to_date
     )
     return {"appointments": result}
+
 
 ###......................test
 
