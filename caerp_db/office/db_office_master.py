@@ -11,17 +11,19 @@ from typing import Union,List
 # from caerp_constants.caerp_constants import SearchCriteria
 
 from sqlalchemy.exc import IntegrityError
+
+
 def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
     appointment_data: OffAppointmentDetails,
-    created_by: Optional[int] = None
+    user_id: int
 ):
     try:
         # Create or update appointment master record
         if appointment_master_id == 0:
             appointment_master = OffAppointmentMaster(
-                created_by=created_by,
+                created_by=user_id,
                 created_on=datetime.utcnow(),
                 **appointment_data.appointment_master.dict(exclude_unset=True)
             )
@@ -34,14 +36,14 @@ def save_appointment_visit_master(
 
             for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
                 setattr(appointment_master, field, value)
-            appointment_master.modified_by = created_by
+            appointment_master.modified_by = user_id
             appointment_master.modified_on = datetime.utcnow()
 
         # Create or update visit master record
         if appointment_master_id == 0:
             visit_master = OffAppointmentVisitMaster(
                 appointment_master_id=appointment_master.id,
-                created_by=created_by,
+                created_by=user_id,
                 created_on=datetime.utcnow(),
                 **appointment_data.visit_master.dict(exclude_unset=True)
             )
@@ -54,7 +56,7 @@ def save_appointment_visit_master(
 
             for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
                 setattr(visit_master, field, value)
-            visit_master.modified_by = created_by
+            visit_master.modified_by = user_id
             visit_master.modified_on = datetime.utcnow()
 
         # Create or update visit details records
@@ -63,7 +65,7 @@ def save_appointment_visit_master(
             visit_detail = OffAppointmentVisitDetails(
                 visit_master_id=visit_master.id if appointment_master_id == 0 else visit_master.id,
                 consultant_id=visit_master.consultant_id,
-                created_by=created_by,
+                created_by=user_id,
                 created_on=datetime.utcnow(),
                 **detail.dict(exclude_unset=True)
             )
@@ -87,6 +89,89 @@ def save_appointment_visit_master(
         db.rollback()
         raise e
 
+
+
+def search_appointments(
+    db: Session,
+    consultant_id: Optional[int] = None,
+    service_id: Optional[int] = None,
+    status_id: Optional[int] = None,
+    effective_from_date: date = date.today(),
+    effective_to_date: date = date.today()
+) -> List[ResponseSchema]:
+    try:
+        appointments = []
+
+        # Start building the base query
+        query = db.query(OffAppointmentVisitMasterView, OffAppointmentVisitDetailsView)
+
+        # Initialize the search conditions
+        search_conditions = []
+
+        # Add conditions based on the provided parameters
+        if consultant_id is not None:
+            search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
+        elif service_id is not None:
+            search_conditions.append(OffAppointmentVisitDetailsView.service_id == service_id)
+        elif status_id is not None:
+            search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status_id)
+
+        # Add conditions for appointment visit date range
+        query = query.filter(
+            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_date.between(
+                effective_from_date,
+                effective_to_date
+            )
+        )
+
+        # Apply all the search conditions to the query
+        if search_conditions:
+            query = query.filter(and_(*search_conditions))
+
+        # Execute the query
+        query_result = query.all()
+        if not query_result:
+            # Raise custom exception if no appointments are found
+            raise HTTPException(status_code=404, detail="No appointments found")
+
+        # Dictionary to store appointments by ID
+        appointment_dict = {}
+
+        # Iterate over query result
+        for appointment_master_data, visit_detail_data in query_result:
+            appointment_id = appointment_master_data.appointment_master_id
+
+            # If appointment ID is already in the dictionary, append visit detail
+            if appointment_id in appointment_dict:
+                visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
+                    **visit_detail_data.__dict__
+                )
+                appointment_dict[appointment_id]["visit_details"].append(visit_detail_schema)
+            else:
+                # Convert appointment_master_data to schema
+                appointment_master_schema = OffAppointmentVisitMasterViewSchema(
+                    **appointment_master_data.__dict__
+                )
+
+                # Convert visit_detail_data to schema
+                visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
+                    **visit_detail_data.__dict__
+                )
+
+                # Create new appointment entry in dictionary
+                appointment_dict[appointment_id] = {
+                    "appointment_master": appointment_master_schema,
+                    "visit_master": appointment_master_schema,  # Assuming appointment_master_schema is what you want for visit_master
+                    "visit_details": [visit_detail_schema]
+                }
+
+        # Convert dictionary values to list of ResponseSchema objects
+        appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
+
+        return appointments
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCancelRequest, action: AppointmentStatus, visit_master_id: int):
     if action == AppointmentStatus.RESCHEDULED:

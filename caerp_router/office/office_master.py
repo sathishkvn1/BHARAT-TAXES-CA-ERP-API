@@ -17,11 +17,14 @@ router = APIRouter(
 
 
 #--------------------save_appointment_details-----------------------
+
+
 @router.post("/save_appointment_details/{id}", response_model=dict)
 def save_appointment_details(
     id: int,
     appointment_data: List[OffAppointmentDetails], 
     db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
    - Save or create appointment details for a specific ID.
@@ -33,12 +36,19 @@ def save_appointment_details(
 
     If appointment_master id is not 0, it indicates the update of an existing appointment_details.
     - Returns: The updated appointment_details as the response.
+
     """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    
     try:
         for appointment in appointment_data:
             # Create appointment visit master for each appointment
-            appointment_master, visit_master, visit_details_list = db_office_master.save_appointment_visit_master(
-                db, id, appointment, created_by=1  # Pass each individual appointment
+            db_office_master.save_appointment_visit_master(
+                db, id, appointment,user_id  # Pass each individual appointment
             )
         
         # Return success response
@@ -47,7 +57,6 @@ def save_appointment_details(
     except Exception as e:
         # Handle other exceptions
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 # # get all
 
@@ -63,8 +72,10 @@ async def reschedule_or_cancel_appointment(
     action: AppointmentStatus,
     visit_master_id: int,
     request_data: RescheduleOrCancelRequest = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
+    
     """
     CANCELLATION PROCESS
     Cancel an appointment.
@@ -93,6 +104,8 @@ async def reschedule_or_cancel_appointment(
 
 """
 
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
    
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
@@ -206,40 +219,42 @@ def search_appointments(
     return {"appointments": result}
 
 
+
+@router.get("/search_appointments", response_model=Dict[str, List[ResponseSchema]])
+def search_appointments(
+    consultant_id: Optional[int] = None,
+    service_id: Optional[int] = None,
+    status_id: Optional[int] = None,
+    effective_from_date: date = Query(date.today()),
+    effective_to_date: date = Query(date.today()),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve appointments based on Parameters.
+
+    Parameters:
+    - **consultant_id**: Consultant ID.
+    - **service_id**: Service ID.
+    - **status_id**: Status ID.
+    - **effective_from_date**: Effective from date (default: today's date).
+    - **effective_to_date**: Effective to date (default: today's date).
+    """
+    result = db_office_master.search_appointments(
+        db,
+        consultant_id=consultant_id,
+        service_id=service_id,
+        status_id=status_id,
+        effective_from_date=effective_from_date,
+        effective_to_date=effective_to_date
+    )
+    return {"appointments": result}
+
 ###......................test
 
 
 from api_library.api_library import DynamicAPI
 
-# cancellation_reason_api = DynamicAPI(OffAppointmentCancellationReason)
-# status_api = DynamicAPI(OffAppointmentStatus)
-    
-# @router.get("/get_appointment_info", operation_id="get_appointment_info")
-# async def get_appointment_info(
-#     fields: str = Query(..., description="Fields to retrieve"),
-#     model_name: str = Query(..., description="Model name to fetch data from"),
-#     id: Optional[int] = None,
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Get appointment information based on provided fields, model name, and optional id.
-#     """
-#     # Convert the fields string to a list of strings
-#     fields_list = fields.split(",")  # Split the string by comma to create a list
 
-#     # Choose the appropriate DynamicAPI instance based on the provided model name
-#     if model_name == "OffAppointmentCancellationReason":
-#         if id is not None:
-#             return cancellation_reason_api.get_record_by_id(db, id, fields_list)
-#         else:
-#             return cancellation_reason_api.get_records(db, fields_list)
-#     elif model_name == "OffAppointmentStatus":
-#         if id is not None:
-#             return status_api.get_record_by_id(db, id, fields_list)
-#         else:
-#             return status_api.get_records(db, fields_list)
-#     else:
-#         raise HTTPException(status_code=400, detail="Invalid model name")
     
 
 
@@ -299,50 +314,109 @@ async def get_info(
         # Fetch records using the DynamicAPI instance
         return dynamic_api.get_records(db, fields_list)
 
-#........................correct one
-# # Define your model mappings
-# TABLE_MODEL_MAPPING = {
-#     "off_appointment_cancellation_reason": OffAppointmentCancellationReason,
-#     "off_appointment_status": OffAppointmentStatus,
-#     "off_appointment_master": OffAppointmentMaster,
-#     # Add more mappings as needed
-# }
+#........................fr delete
 
-# # Define a function to get the model class based on the provided model name
-# def get_model_by_model_name(model_name: str) -> Type:
-#     return TABLE_MODEL_MAPPING.get(model_name)
+@router.get("/test/delete_undelete_by_id", operation_id="delete_undelete_record")
+async def get_info(
+    model_name: str = Query(..., description="Model name to fetch data from"),
+    id: Optional[int] = Query(None, description="ID of the record to retrieve"),
+    delete: Optional[str] = Query(None, description="Whether to delete the record ('true' or 'false')"),
+    undelete: Optional[str] = Query(None, description="Whether to undelete the record ('true' or 'false')"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get appointment information based on provided fields, model name, and optional ID.
+    """
+    # Convert the fields string to a list of strings
+ 
+    
+    # Get the model class based on the provided model name
+    table_model = get_model_by_model_name(model_name)
 
-# # Define your FastAPI endpoint
-# @router.get("/test_new/get_info2", operation_id="get_appointment_info")
-# async def get_info(
-#     fields: str = Query(..., description="Fields to retrieve"),
-#     model_name: str = Query(..., description="Model name to fetch data from"),
+    # Check if the model exists
+    if table_model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Initialize DynamicAPI instance with the retrieved model
+    dynamic_api = DynamicAPI(table_model)
+
+    if delete and undelete:
+        raise HTTPException(status_code=400, detail="Both delete and undelete cannot be True simultaneously")
+    elif delete == 'true':
+        # Delete the record
+        dynamic_api.delete_record_by_id(db, id)
+        return {"message": f"Record with ID {id} from model {model_name} has been deleted"}
+    elif undelete == 'true':
+        # Undelete the record
+        dynamic_api.undelete_record_by_id(db, id)
+        return {"message": f"Record with ID {id} from model {model_name} has been undeleted"}
+    
+    
+#--------------------------------------------------------
+@router.post("/test/save_record", operation_id="save_record")
+async def save_record(
+    model_name: str = Query(..., description="Model name to save data to"),
+    data: dict = Body(..., description="Data to be saved to the table"),
+    db: Session = Depends(get_db)
+):
+    """
+    Save a record to the specified table.
+    """
+    # Get the model class based on the provided model name
+    table_model = get_model_by_model_name(model_name)
+
+    # Check if the model exists
+    if table_model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Extract the appointment_status value from the data dictionary
+    appointment_status = data.get("appointment_status")
+
+    # Initialize DynamicAPI instance with the retrieved model
+    dynamic_api = DynamicAPI(table_model)
+
+    # Create a dictionary containing the appointment_status
+    record_data = {"appointment_status": appointment_status}
+
+    # Call the common function to save the record
+    dynamic_api.save_record(db, record_data)
+
+    return {"message": "Record saved successfully"}
+
+#.........................................................
+
+# @router.post("/test/save_recordsss", operation_id="save_record")
+# async def save_record(
+#     model_name: str = Query(..., description="Model name to save data to"),
+#     data: dict = Body(..., description="Data to be saved to the table"),
+#     id: Optional[int] = Query(None, description="ID of the record to update. If not provided or 0, insert a new record."),
 #     db: Session = Depends(get_db)
 # ):
 #     """
-#     Get appointment information based on provided fields and model name.
+#     Save a record to the specified table. If ID is provided and nonzero, update an existing record.
 #     """
-#     try:
-#         # Convert the fields string to a list of strings
-#         fields_list = fields.split(",")  # Split the string by comma to create a list
+#     # Get the model class based on the provided model name
+#     table_model = get_model_by_model_name(model_name)
 
-#         # Print the received request fields and model name for debugging
-#         print("Received request with fields:", fields)
-#         print("Model name:", model_name)
+#     # Check if the model exists
+#     if table_model is None:
+#         raise HTTPException(status_code=404, detail="Model not found")
 
-#         # Get the model class based on the provided model name
-#         table_model = get_model_by_model_name(model_name)
+#     # Initialize DynamicAPI instance with the retrieved model
+#     dynamic_api = DynamicAPI(table_model)
 
-#         # Check if the model exists
-#         if table_model is None:
-#             raise HTTPException(status_code=404, detail="Model not found")
+#     if id is not None and id != 0:
+#         # Update existing record if ID is provided and nonzero
+#         # Check if the record exists
+#         existing_record = dynamic_api.get_record_by_id(db, id, [])  # Provide an empty list for fields
+#         if existing_record:
+#             # Update the existing record
+#             dynamic_api.update_record_by_id(db, id, data)
+#             return {"message": f"Record with ID {id} from model {model_name} has been updated"}
+#         else:
+#             raise HTTPException(status_code=404, detail="Record not found")
+#     else:
+#         # Insert a new record if ID is not provided or 0
+#         dynamic_api.save_record(db, data)
+#         return {"message": "New record inserted successfully"}
 
-#         # Initialize DynamicAPI instance with the retrieved model
-#         dynamic_api = DynamicAPI(table_model)
-
-#         # Fetch records using the DynamicAPI instance
-#         return dynamic_api.get_records(db, fields_list)
-#     except Exception as e:
-#         # Print any exceptions for debugging
-#         print("Error:", e)
-#         raise HTTPException(status_code=500, detail=str(e))
