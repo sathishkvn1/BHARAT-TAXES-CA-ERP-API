@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, File,status,Query,Response
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import AppointmentStatus,SearchCriteria
+from caerp_constants.caerp_constants import AppointmentStatus, DeletedStatus,SearchCriteria
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffServicesDisplay,RescheduleOrCancelRequest, ResponseSchema
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffServicesDisplay, OffViewServiceGoodsMasterDisplay,RescheduleOrCancelRequest, ResponseSchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -222,6 +222,26 @@ def search_appointments(
     return {"appointments": result}
 
 
+#-------------------------swathy--------------------------------
+@router.get('/services/get_all_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
+def get_all_service_goods_master(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
+  db: Session = Depends(get_db),
+      token: str = Depends(oauth2.oauth2_scheme)):
+   
+    """
+    Get all  service goods master
+    """
+    # Check if deleted_status is a valid option
+    if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
+        )
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    return db_office_master.get_all_service_goods_master(db,deleted_status)
+
 ###......................test
 
 
@@ -355,8 +375,7 @@ async def save_record(
     dynamic_api.save_record(db, record_data)
 
     return {"message": "Record saved successfully"}
-
-#.........................................................
+#....................................................................................................
 
 # @router.post("/test/save_recordsss", operation_id="save_record")
 # async def save_record(

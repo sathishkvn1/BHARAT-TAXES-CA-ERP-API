@@ -1,8 +1,10 @@
+
 from sqlalchemy import Column, Integer, String,BigInteger,Date,Float,Enum,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column
+from sqlalchemy import Column ,DateTime
+
 
 class OffAppointmentMaster(caerp_base):
     __tablename__  =  "off_appointment_master"
@@ -231,4 +233,75 @@ class OffServices(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
+
+#..........................by swathy 15/5----------------------------------
+
+class AppHsnSacClasses(caerp_base):
+    __tablename__ = 'app_hsn_sac_classes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hsn_sac_class = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+    
+class OffServiceGoodsGroup(caerp_base):
+    __tablename__ = 'off_service_goods_group'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hsn_sac_classess_id = Column(Integer, nullable=False)
+    group_name = Column(String(250), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class OffServiceGoodsSubGroup(caerp_base):
+    __tablename__ = 'off_service_goods_sub_group'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(Integer, nullable=False)
+    sub_group_name = Column(String(100), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffServiceGoodsCategory(caerp_base):
+    __tablename__ = 'off_service_goods_category'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sub_group_id = Column(Integer, nullable=False)
+    category_name = Column(String(200), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffServiceGoodsSubCategory(caerp_base):
+    __tablename__ = 'off_service_goods_sub_category'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category_id = Column(Integer, nullable=False)
+    sub_category_name = Column(String(200), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffViewServiceGoodsMaster(caerp_base): 
+    __tablename__ = 'off_view_service_goods_master'
+
+    service_goods_master_id = Column(Integer, primary_key=True, nullable=False)
+    hsn_sac_class_id = Column(Integer, nullable=False)
+    hsn_sac_class = Column(String(100), nullable=False)
+    group_id = Column(Integer, nullable=False)
+    service_goods_group_name = Column(String(250), nullable=True)
+    sub_group_id = Column(Integer, nullable=False)
+    service_goods_sub_group_name = Column(String(100), nullable=True)
+    category_id = Column(Integer, nullable=False)
+    service_goods_category_name = Column(String(200), nullable=True)
+    sub_category_id = Column(Integer, nullable=False)
+    service_goods_sub_category_name = Column(String(200), nullable=True)
+    service_name = Column(String(500), nullable=False)
+    hsn_sac_id = Column(Integer, nullable=False)
+    hsn_sac_code = Column(String(20), nullable=False)
+    hsn_sac_description = Column(String(2000), nullable=True)
+    gst = Column(String(2), nullable=False)
+    sku_code_id = Column(Integer, nullable=False)
+    stock_keeping_unit_code = Column(String(250), nullable=True)
+    is_consultancy_service = Column(Enum('yes', 'no'), nullable=False)
+    is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
+    service_goods_master_created_by = Column(Integer, nullable=False)
+    service_goods_master_created_on = Column(DateTime, nullable=False)
+    service_goods_master_modified_by = Column(Integer, nullable=True)
+    service_goods_master_modified_on = Column(DateTime, nullable=True)
+    service_goods_master_is_deleted = Column(Enum('yes', 'no'), nullable=False)
+    service_goods_master_deleted_by = Column(Integer, nullable=True)
+    service_goods_master_deleted_on = Column(DateTime, nullable=True)
 

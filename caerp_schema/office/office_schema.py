@@ -5,6 +5,8 @@ import re
 from datetime import date, datetime,time
 
 
+
+
 class OffAppointmentMasterSchema(BaseModel):
  
     full_name: str
@@ -214,4 +216,34 @@ class AppointmentVisitDetailsSchema(BaseModel):
     appointment_visit_details_is_deleted: str
     appointment_visit_details_deleted_by: Optional[int]
     appointment_visit_details_deleted_on: Optional[date]   
-#-------------------
+#------------------- swathy
+
+class OffViewServiceGoodsMasterDisplay(BaseModel):
+
+    service_goods_master_id: int
+    hsn_sac_class_id: int
+    hsn_sac_class: str
+    group_id: int
+    service_goods_group_name: Optional[str]
+    sub_group_id: int
+    service_goods_sub_group_name: Optional[str]
+    category_id: int
+    service_goods_category_name: Optional[str]
+    sub_category_id: int
+    service_goods_sub_category_name: Optional[str]
+    service_name: str
+    hsn_sac_id: int
+    hsn_sac_code: str
+    hsn_sac_description: Optional[str]
+    gst: str
+    sku_code_id: int
+    stock_keeping_unit_code: Optional[str]
+    is_consultancy_service: str
+    is_bundled_service: str
+    service_goods_master_created_by: int
+    service_goods_master_created_on: datetime
+    service_goods_master_modified_by: Optional[int]
+    service_goods_master_modified_on: Optional[datetime]
+    service_goods_master_is_deleted: str
+    service_goods_master_deleted_by: Optional[int]
+    service_goods_master_deleted_on: Optional[datetime]

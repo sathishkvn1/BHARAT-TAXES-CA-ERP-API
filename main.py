@@ -3,12 +3,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware 
 from caerp_auth import authentication
-from caerp_router.common import user,otp_process,common
+from caerp_router.common import user,otp_process,common,common_functions
 from caerp_router.office import office_master
 from caerp_router.hr_and_payroll import employee_master
 from caerp_functions import captcha
 from caerp_db.database import caerp_base, caerp_engine
 from fastapi.staticfiles import StaticFiles
+
 
 
 
@@ -65,6 +66,7 @@ app.include_router(authentication.router)
 # # for common module
 app_common.include_router(authentication.router)
 app_common.include_router(common.router)
+app_common.include_router(common_functions.router)
 app_common.include_router(otp_process.router)
 app_common.include_router(user.router)
 app_common.include_router(captcha.router)

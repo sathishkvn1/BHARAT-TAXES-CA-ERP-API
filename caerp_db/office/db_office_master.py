@@ -1,11 +1,11 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import AppointmentStatus,SearchCriteria
+from caerp_constants.caerp_constants import AppointmentStatus, DeletedStatus,SearchCriteria
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices, OffViewServiceGoodsMaster
 from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema
 from typing import Union,List
 from sqlalchemy import and_
@@ -353,5 +353,21 @@ def get_appointments(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+#---service-goods-master  swathy---------------------------
+
+
+
+
+def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus):
+    query = db.query(OffViewServiceGoodsMaster)
+    
+    if deleted_status == DeletedStatus.DELETED:
+        query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
+    elif deleted_status == DeletedStatus.NOT_DELETED:
+        query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
+    
+    return query.all()
 
 
