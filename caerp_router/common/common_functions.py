@@ -1,6 +1,8 @@
+from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from caerp_db.common.models import Employee
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 
@@ -16,11 +18,11 @@ router = APIRouter(
 )
 
 
+class ActionType(str, Enum):
+    DELETE = 'DELETE'
+    UNDELETE = 'UNDELETE'
+
 from api_library.api_library import DynamicAPI
-
-
-    
-
 
 from typing import List, Type
 
@@ -32,7 +34,8 @@ TABLE_MODEL_MAPPING = {
     "OffServiceGoodsGroup" : OffServiceGoodsGroup,
     "OffServiceGoodsSubGroup" : OffServiceGoodsSubGroup,
     "OffServiceGoodsCategory":  OffServiceGoodsCategory,
-    "OffServiceGoodsSubCategory": OffServiceGoodsSubCategory
+    "OffServiceGoodsSubCategory": OffServiceGoodsSubCategory,
+    "Employee":Employee
      
 }
 
@@ -85,20 +88,53 @@ async def get_info(
 
 #........................fr delete
 
-@router.get("/delete_undelete_by_id", operation_id="delete_undelete_record")
-async def get_info(
+# @router.get("/delete_undelete_by_id", operation_id="delete_undelete_record")
+# async def get_info(
+#     model_name: str = Query(..., description="Model name to fetch data from"),
+#     id: Optional[int] = Query(None, description="ID of the record to retrieve"),
+#     delete: Optional[str] = Query(None, description="Whether to delete the record ('true' or 'false')"),
+#     undelete: Optional[str] = Query(None, description="Whether to undelete the record ('true' or 'false')"),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Get appointment information based on provided fields, model name, and optional ID.
+#     """
+#     # Convert the fields string to a list of strings
+ 
+    
+#     # Get the model class based on the provided model name
+#     table_model = get_model_by_model_name(model_name)
+
+#     # Check if the model exists
+#     if table_model is None:
+#         raise HTTPException(status_code=404, detail="Model not found")
+
+#     # Initialize DynamicAPI instance with the retrieved model
+#     dynamic_api = DynamicAPI(table_model)
+
+#     if delete and undelete:
+#         raise HTTPException(status_code=400, detail="Both delete and undelete cannot be True simultaneously")
+#     elif delete == 'true':
+#         # Delete the record
+#         dynamic_api.delete_record_by_id(db, id)
+#         return {"message": f"Record with ID {id} from model {model_name} has been deleted"}
+#     elif undelete == 'true':
+#         # Undelete the record
+#         dynamic_api.undelete_record_by_id(db, id)
+#         return {"message": f"Record with ID {id} from model {model_name} has been undeleted"}
+    
+
+
+@router.get("/delete_undelete_by_id", operation_id="modify_records")
+async def delete_undelete_by_id(
     model_name: str = Query(..., description="Model name to fetch data from"),
-    id: Optional[int] = Query(None, description="ID of the record to retrieve"),
-    delete: Optional[str] = Query(None, description="Whether to delete the record ('true' or 'false')"),
-    undelete: Optional[str] = Query(None, description="Whether to undelete the record ('true' or 'false')"),
+    ids: str = Query(..., description="Comma-separated list of IDs of the records to modify"),
+    action: ActionType = Query(..., description="Action to perform (DELETE or UNDELETE)"),
     db: Session = Depends(get_db)
 ):
     """
-    Get appointment information based on provided fields, model name, and optional ID.
+    Perform delete or undelete operations on records based on provided model name and IDs.
     """
-    # Convert the fields string to a list of strings
- 
-    
     # Get the model class based on the provided model name
     table_model = get_model_by_model_name(model_name)
 
@@ -106,21 +142,26 @@ async def get_info(
     if table_model is None:
         raise HTTPException(status_code=404, detail="Model not found")
 
+    # Convert the comma-separated string of IDs into a list of integers
+    try:
+        id_list = [int(id_str) for id_str in ids.split(',')]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="IDs must be a comma-separated list of integers")
+
     # Initialize DynamicAPI instance with the retrieved model
     dynamic_api = DynamicAPI(table_model)
 
-    if delete and undelete:
-        raise HTTPException(status_code=400, detail="Both delete and undelete cannot be True simultaneously")
-    elif delete == 'true':
-        # Delete the record
-        dynamic_api.delete_record_by_id(db, id)
-        return {"message": f"Record with ID {id} from model {model_name} has been deleted"}
-    elif undelete == 'true':
-        # Undelete the record
-        dynamic_api.undelete_record_by_id(db, id)
-        return {"message": f"Record with ID {id} from model {model_name} has been undeleted"}
-    
-    
+    if action == ActionType.DELETE:
+        # Delete the records
+        dynamic_api.delete_records_by_ids(db, id_list)
+        return {"message": f"Records with IDs {id_list} from model {model_name} have been deleted"}
+    elif action == ActionType.UNDELETE:
+        # Undelete the records
+        dynamic_api.undelete_records_by_ids(db, id_list)
+        return {"message": f"Records with IDs {id_list} from model {model_name} have been undeleted"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action type")
+       
 #--------------------------------------------------------
 @router.post("/test/save_record", operation_id="save_record")
 async def save_record(
