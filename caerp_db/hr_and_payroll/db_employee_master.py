@@ -1,236 +1,225 @@
-from fastapi import HTTPException,status, Depends
+from fastapi import HTTPException, Query
 from sqlalchemy.orm import Session
-from caerp_db.common.models import Employee, EmployeeMasterView
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeMasterSchema, EmployeeMasterSchemaForGet, EmployeePersonalDetailSchema, EmployeeAddressDetailSchema, EmployeeContactDetailSchema, EmployeeBankAccountDetailSchema
-from caerp_db.hash import Hash
-from caerp_db.database import get_db
-from typing import List,Optional, Union,Dict
-from caerp_constants.caerp_constants import DeletedStatus, ActiveStatus, VerifiedStatus, ApprovedStatus
-from datetime import date,datetime
-from sqlalchemy import func, and_
+from caerp_db.common.models import Employee, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress  
+from datetime import date,datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError
-from pydantic import ValidationError
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails
+from caerp_constants.caerp_constants import DeletedStatus, ActionType, EmployeeActionType
+from typing import Union
+from sqlalchemy import and_
 
+def save_employee_master(db: Session, request: EmployeeDetails, id: int, user_id: int, Action: ActionType):
+    try:
+        updated_entities = {}
+        if id == 0:
+          # new employee master creation
+          if Action == EmployeeActionType.INSERT_ONLY:
+            data = request.employee_master.dict()
+            data["created_by"] = user_id
+            result = Employee(**data)
+            emp_id = result.employee_id
+            db.add(result)
+            db.commit()
+            db.refresh(result)
 
+            # Get the employee_id of the newly inserted record
+            emp_id = result.employee_id
 
-def save_employee_master(db: Session, request: EmployeeMasterSchema, id: int, user_id: int):
-   try:
-      if id == 0:
-        data = request.dict()
-        data["created_by"] = user_id
-        result = Employee(**data)
-        db.add(result)
-        db.commit()
-        db.refresh(result)
-        return result
-      else:
-        updated = db.query(Employee).filter(Employee.employee_id == id).first()
-        if updated is None:
-          raise HTTPException(status_code=404, detail="Employee not found")
-        for field,value in request.dict(exclude_unset = True).items():
-           setattr(updated, field, value)
-        updated.modified_by = user_id
-        updated.modified_on = datetime.utcnow()
-        updated.is_verified = 'yes'
-        updated.verified_by = user_id
-        updated.verified_on = datetime.utcnow()
-        updated.is_approved = 'yes'
-        updated.approved_by = user_id
-        updated.approved_on = datetime.utcnow()
-        db.commit()
-        db.refresh(updated)
-        return updated
-   except SQLAlchemyError as e:
+            # Insert into EmployeePresentAddress
+            present_address_data = request.present_address.dict()
+            present_address_data["employee_id"] = emp_id
+            present_address = EmployeePresentAddress(**present_address_data)
+            db.add(present_address)
+
+            # Insert into EmployeePermanentAddress
+            permanent_address_data = request.permanent_address.dict()
+            permanent_address_data["employee_id"] = emp_id
+            permanent_address = EmployeePermanentAddress(**permanent_address_data)
+            db.add(permanent_address)
+
+            # Insert into EmployeeContactDetails
+            contact_details_data = request.contact_details.dict()
+            contact_details_data["employee_id"] = emp_id
+            contact_details = EmployeeContactDetails(**contact_details_data)
+            db.add(contact_details)
+
+            # Insert into EmployeeBankDetails
+            bank_details_data = request.bank_details.dict()
+            bank_details_data["employee_id"] = emp_id
+            bank_details = EmployeeBankDetails(**bank_details_data)
+            db.add(bank_details)
+
+            db.commit()
+            return result
+        else:
+          # updating existing employee master
+          if Action == EmployeeActionType.UPDATE_ONLY:   
+            update_emp = db.query(Employee).filter(Employee.employee_id == id).first()
+            if update_emp is None:
+                raise HTTPException(status_code=404, detail="Employee not found")
+            
+            if request.employee_master:
+              for field, value in request.employee_master.dict(exclude_unset=True).items():
+                setattr(update_emp, field, value)
+                update_emp.modified_by = user_id
+                update_emp.modified_on = datetime.utcnow()   
+              updated_entities['employee_master'] = update_emp 
+            
+            # updating present address detail table with employee_id
+            if request.present_address:            
+              update_present_addr = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.employee_id == id).first()
+              if update_present_addr is None:
+                update_present_addr = EmployeePresentAddress(employee_id = id)
+              for field, value in request.present_address.dict(exclude_unset=True).items():
+                setattr(update_present_addr, field, value)
+              updated_entities['present_address'] = update_present_addr  
+            
+            # updating permanent address detail table with employee_id
+            if request.permanent_address: 
+              update_per_addr = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == id).first()
+              if update_per_addr is None:
+                update_per_addr = EmployeePermanentAddress(employee_id=id)
+              for field, value in request.permanent_address.dict(exclude_unset=True).items():
+                  setattr(update_per_addr, field, value)
+              updated_entities['permanent_address'] = update_per_addr    
+            
+            # updating contact_details detail table with employee_id
+            if request.contact_details:
+              update_contact = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == id).first()
+              if update_contact is None:
+                update_contact = EmployeeContactDetails(employee_id=id)
+              for field, value in request.contact_details.dict(exclude_unset=True).items():
+                  setattr(update_contact, field, value)
+              updated_entities['contact_details'] = update_contact    
+            
+            # updating bank_details detail table with employee_id
+            if request.bank_details:  
+              update_bank = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == id).first()
+              if update_bank is None:
+                update_bank = EmployeeBankDetails(employee_id=id)
+              for field, value in request.bank_details.dict(exclude_unset=True).items():
+                  setattr(update_bank, field, value)
+              updated_entities['bank_details'] = update_bank 
+              
+            # Commit changes to the database
+            db.commit()
+            return updated_entities 
+          
+          # inserting new record to detail tables
+          if Action == EmployeeActionType.UPDATE_AND_INSERT:    
+            update_emp = db.query(Employee).filter(Employee.employee_id == id).first()
+            if update_emp is None:
+              raise HTTPException(status_code=404, detail="Employee not found")          
+            
+            if request.present_address:
+              existing_present_address = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.employee_id == id).first()
+              if existing_present_address:
+                new_effective_from_date = datetime.utcnow()
+                existing_present_address.effective_to_date = new_effective_from_date - timedelta(days=1)
+                db.add(existing_present_address)
+
+              new_present_address_data = request.present_address.dict(exclude={"effective_to_date"})
+              new_present_address_data["employee_id"] = id
+              new_present_address_data["effective_from_date"] = new_effective_from_date
+              new_present_address = EmployeePresentAddress(**new_present_address_data)
+              db.add(new_present_address)
+
+            if request.permanent_address:
+              existing_permanent_address = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == id).first()
+              if existing_permanent_address:
+                new_effective_from_date = datetime.utcnow()
+                existing_permanent_address.effective_to_date = new_effective_from_date - timedelta(days=1)
+                db.add(existing_permanent_address)
+
+              new_permanent_address_data = request.permanent_address.dict(exclude={"effective_to_date"})
+              new_permanent_address_data["employee_id"] = id
+              new_permanent_address_data["effective_from_date"] = new_effective_from_date
+              new_permanent_address = EmployeePermanentAddress(**new_permanent_address_data)
+              db.add(new_permanent_address)  
+              
+            if request.contact_details:
+              existing_contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == id).first()
+              if existing_contact_details:
+                new_effective_from_date = datetime.utcnow()
+                existing_contact_details.effective_to_date = new_effective_from_date - timedelta(days=1)
+                db.add(existing_contact_details)
+
+              new_contact_details_data = request.contact_details.dict(exclude={"effective_to_date"})
+              new_contact_details_data["employee_id"] = id
+              new_contact_details_data["effective_from_date"] = new_effective_from_date
+              new_contact_details = EmployeeContactDetails(**new_contact_details_data)
+              db.add(new_contact_details) 
+
+            if request.bank_details:
+              existing_bank_details = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == id).first()
+              if existing_bank_details:
+                new_effective_from_date = datetime.utcnow()
+                existing_bank_details.effective_to_date = new_effective_from_date - timedelta(days=1)
+                db.add(existing_bank_details)
+
+              new_bank_details_data = request.bank_details.dict(exclude={"effective_to_date"})
+              new_bank_details_data["employee_id"] = id
+              new_bank_details_data["effective_from_date"] = new_effective_from_date
+              new_bank_details = EmployeeBankDetails(**new_bank_details_data)
+              db.add(new_bank_details)   
+              
+              db.commit()
+    except SQLAlchemyError as e:
         error_message = f"Failed to save Employee Master: {e}"
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)  
-   
-#-------------------------------------------------------------------------------------------------------------------
+        raise HTTPException(status_code=500, detail=error_message)
 
-def get_employee_master(db: Session, deleted_status: DeletedStatus):
-    if deleted_status == DeletedStatus.DELETED:
-        return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'yes').all()
-    elif deleted_status == DeletedStatus.NOT_DELETED:
-        return db.query(EmployeeMasterView).filter(EmployeeMasterView.is_deleted == 'no').all()
-    elif deleted_status == DeletedStatus.ALL:
-        return db.query(EmployeeMasterView).all()
-    else:
-        
-        raise ValueError("No matching records found")
 
-#-------------------------------------------------------------------------------------------------------------------
+def get_employee_master_details(db: Session):
+    return db.query(Employee).all()
 
-def get_employee_master_by_id(db: Session, id: int):
-  emp = db.query(EmployeeMasterView).filter(EmployeeMasterView.employee_id == id).first()
-  if not emp:
-    raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
-    detail = f"Employee with id {id} not found" )  
-  return emp    
+def get_present_address_details(db: Session):
+    return db.query(EmployeePresentAddress).all()
 
-#-------------------------------------------------------------------------------------------------------------------
+def get_permanent_address_details(db: Session):
+    return db.query(EmployeePermanentAddress).all()
 
-def delete_employee_master(db: Session, id: int, deleted_by: int):
-    result = db.query(Employee).filter(Employee.employee_id == id).first()
+def get_contact_details(db: Session):
+    return db.query(EmployeeContactDetails).all()
 
-    if not result:
-        raise HTTPException(status_code=404, detail="Employee not found")
+def get_bank_details(db: Session):
+    return db.query(EmployeeBankDetails).all()
 
-    result.is_deleted = 'yes'
-    result.deleted_by = deleted_by
-    result.deleted_on = datetime.utcnow()
 
-    db.commit()
-
-    return {
-        "message": "Deleted successfully",
-    }
-
-#---------------------------------------------------------------------------------------------------------------------
-
-def get_verified_employees(db: Session, verified_status: VerifiedStatus):
-   if verified_status == VerifiedStatus.VERIFIED:
-      return db.query(EmployeeMasterView).filter(
-         and_(
-            EmployeeMasterView.is_verified == 'yes',
-            EmployeeMasterView.is_deleted  == "no"
-        )
-      ).all()
-   elif verified_status == VerifiedStatus.NOT_VERIFIED:
-      return db.query(EmployeeMasterView).filter(
-         and_(
-            EmployeeMasterView.is_verified == 'no',
-            EmployeeMasterView.is_deleted  == "no"
-        )
-      ).all() 
-   else:
-        # Handle invalid state or raise an error
-        raise ValueError("No matching records found")
-   
-#-----------------------------------------------------------------------------------------------------------------------
-
-def get_approved_employees(db: Session, approved_status: ApprovedStatus):
-   if approved_status == ApprovedStatus.APPROVED:
-      return db.query(EmployeeMasterView).filter(
-         and_(
-            EmployeeMasterView.is_approved == 'yes',
-            EmployeeMasterView.is_deleted  == "no"
-        )
-      ).all()
-   elif approved_status == ApprovedStatus.NOT_APPROVED:
-      return db.query(EmployeeMasterView).filter(
-         and_(
-            EmployeeMasterView.is_approved == 'no',
-            EmployeeMasterView.is_deleted  == "no"
-        )
-      ).all() 
-   else:
-        # Handle invalid state or raise an error
-        raise ValueError("No matching records found")      
-   
-#-------------------------------------------------------------------------------------------------------------------
-
-def update_employee_personal_details(db: Session, request: EmployeePersonalDetailSchema, id: int, user_id: int):
-   try:   
-     update_emp_per_det = db.query(Employee).filter(Employee.employee_id == id).first()
-     if update_emp_per_det is None:
-        raise HTTPException(status_code=404, detail="Employee not found")
-  
-     for field,value in request.dict(exclude_unset = True).items():
-        setattr(update_emp_per_det, field, value)
-     update_emp_per_det.modified_by = user_id
-     update_emp_per_det.modified_on = datetime.utcnow()
-     db.commit()
-     db.refresh(update_emp_per_det)
-     return update_emp_per_det
-   except SQLAlchemyError as e:
-        error_message = f"Failed to update Employee Personal Details: {e}"
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)
-   
-#----------------------------------------------------------------------------------------------------------------------
-
-def update_employee_address_details(db: Session, request: EmployeeAddressDetailSchema, id: int, user_id: int):
-   try:   
-     update_emp_addr_det = db.query(Employee).filter(Employee.employee_id == id).first()
-     if update_emp_addr_det is None:
-        raise HTTPException(status_code=404, detail="Employee not found")
-  
-     for field,value in request.dict(exclude_unset = True).items():
-        setattr(update_emp_addr_det, field, value)
-     update_emp_addr_det.modified_by = user_id
-     update_emp_addr_det.modified_on = datetime.utcnow()
-     db.commit()
-     db.refresh(update_emp_addr_det)
-     return update_emp_addr_det
-   except SQLAlchemyError as e:
-        error_message = f"Failed to update Employee Address Details: {e}"
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)       
-   
-#------------------------------------------------------------------------------------------------------------------------
-
-def update_employee_contact_details(db: Session, request: EmployeeContactDetailSchema, id: int, user_id: int):
-   try:   
-     update_emp_contact_det = db.query(Employee).filter(Employee.employee_id == id).first()
-     if update_emp_contact_det is None:
-        raise HTTPException(status_code=404, detail="Employee not found")
-  
-     for field,value in request.dict(exclude_unset = True).items():
-        setattr(update_emp_contact_det, field, value)
-     update_emp_contact_det.modified_by = user_id
-     update_emp_contact_det.modified_on = datetime.utcnow()
-     db.commit()
-     db.refresh(update_emp_contact_det)
-     return update_emp_contact_det
-   except SQLAlchemyError as e:
-     error_message = f"Failed to update Employee Contact Details: {e}"
-     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)      
-   
-#-----------------------------------------------------------------------------------------------------------------------
-
-def update_employee_bank_acc_details(db: Session, request: EmployeeBankAccountDetailSchema, id: int, user_id: int):
-   try:   
-     update_emp_bank_acc = db.query(Employee).filter(Employee.employee_id == id).first()
-     if update_emp_bank_acc is None:
-        raise HTTPException(status_code=404, detail="Employee not found")
-  
-     for field,value in request.dict(exclude_unset = True).items():
-        setattr(update_emp_bank_acc, field, value)
-     update_emp_bank_acc.modified_by = user_id
-     update_emp_bank_acc.modified_on = datetime.utcnow()
-     db.commit()
-     db.refresh(update_emp_bank_acc)
-     return update_emp_bank_acc
-   except SQLAlchemyError as e:
-     error_message = f"Failed to update Employee Bank Account Details: {e}"
-     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_message)
-   
-#-----------------------------------------------------------------------------------------------------------------------
 
 def get_consultants(db: Session):
-   is_consult = db.query(EmployeeMasterView).filter(
+   is_consultant = db.query(Employee).filter(
          and_(
-            EmployeeMasterView.is_consultant == 'yes',
-            EmployeeMasterView.is_deleted  == "no"
+            Employee.is_consultant == 'yes',
+            Employee.is_deleted  == "no"
         )
       ).all()
    
-   if is_consult is None:
-        raise HTTPException(status_code=404, detail="There are no employees who are consultants")
-   return is_consult
+   if is_consultant is None:
+        raise HTTPException(status_code=404, detail="No consultant employees found")
+   return is_consultant
 
-#----------------------------------------------------------------------------------------------------------------------------
 
-def get_consultant_by_id(db: Session, id: int):
-   is_employee_found = db.query(EmployeeMasterView).filter(EmployeeMasterView.employee_id == id).first()
-   if is_employee_found is None:
+
+
+def delete_undelete_employee_master(db: Session, 
+                           id: int,
+                           Action: ActionType                           
+                           ):
+    employee_delete = db.query(Employee).filter(Employee.employee_id == id).first()
+
+    if employee_delete is None:
         raise HTTPException(status_code=404, detail="Employee not found")
-  
-   is_consult_id = db.query(EmployeeMasterView).filter(
-         and_(
-            EmployeeMasterView.employee_id == id,
-            EmployeeMasterView.is_consultant == 'yes',
-            EmployeeMasterView.is_deleted  == "no"
-        )
-      ).first()
-   
-   if is_consult_id is None:
-      raise HTTPException(status_code=404, detail="the particular employee is not a consultant")
-   return is_consult_id
+    
+    if Action == ActionType.DELETE:
+        employee_delete.is_deleted = 'yes'
+        db.commit()
+        return {
+        "message": "Employee Master Deleted successfully",
+        }
+
+    elif Action == ActionType.UNDELETE: 
+        employee_delete.is_deleted = 'no'
+        db.commit()
+        return {
+        "message": "Employee Master Undeleted successfully",
+        }
