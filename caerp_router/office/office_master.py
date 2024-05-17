@@ -190,12 +190,14 @@ def search_appointments(
 
 #-------------------------swathy--------------------------------
 @router.get('/services/get_all_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
-def get_all_service_goods_master(deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
-  db: Session = Depends(get_db),
-      token: str = Depends(oauth2.oauth2_scheme)):
-   
+def get_all_service_goods_master(
+    deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
+    service_name: Optional[str] = Query(None, title="Service Name for search (optional)"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
     """
-    Get all  service goods master
+    Get all service goods master
     """
     # Check if deleted_status is a valid option
     if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
@@ -206,8 +208,8 @@ def get_all_service_goods_master(deleted_status: DeletedStatus =  Query(..., tit
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    return db_office_master.get_all_service_goods_master(db,deleted_status)
-
+    return db_office_master.get_all_service_goods_master(db, deleted_status, service_name)
+  
 ###......................test
 
 

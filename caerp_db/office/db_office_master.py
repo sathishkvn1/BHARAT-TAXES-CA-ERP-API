@@ -249,7 +249,10 @@ def get_appointments(
 
 
 
-def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus):
+
+
+
+def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus, name: Optional[str] = None):
     query = db.query(OffViewServiceGoodsMaster)
     
     if deleted_status == DeletedStatus.DELETED:
@@ -257,6 +260,7 @@ def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus):
     elif deleted_status == DeletedStatus.NOT_DELETED:
         query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
     
+    if name:
+        query = query.filter(OffViewServiceGoodsMaster.service_name.ilike(f'%{name}%'))
+    
     return query.all()
-
-
