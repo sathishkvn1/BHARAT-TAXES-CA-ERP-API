@@ -43,62 +43,60 @@ class DynamicAPI:
     
     
     
-    def delete_record_by_id(self, db: Session, record_id: int) -> None:
-        try:
-            # Find the record by ID
-            record = db.query(self.table_model).filter(self.table_model.id == record_id).first()
-            if record:
-                # Perform soft delete by updating is_deleted to 'yes'
-                record.is_deleted = 'yes'
-                db.commit()
-            else:
-                raise HTTPException(status_code=404, detail="Record not found")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    def undelete_record_by_id(self, db: Session, record_id: int) -> None:
-        try:
-            # Find the record by ID
-            record = db.query(self.table_model).filter(self.table_model.id == record_id).first()
-            if record:
-                # Perform undelete by updating is_deleted to 'no'
-                record.is_deleted = 'no'
-                db.commit()
-            else:
-                raise HTTPException(status_code=404, detail="Record not found")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-        
-        
-    # def save_record(self, db: Session, data: dict, id: Optional[int] = None) -> None:
-    #     """
-    #     Save a record to the database. If id is provided and nonzero, update an existing record.
-    #     """
+    # def delete_record_by_id(self, db: Session, record_id: int) -> None:
     #     try:
-    #         if id == 0:
-    #             # Create a new instance of the table model with the provided data
-    #             record = self.table_model(**data)
-    #             # Add the record to the session
-    #             db.add(record)
-    #         elif id:
-    #             # Query the existing record by ID
-    #             existing_record = db.query(self.table_model).filter(self.table_model.id == id).first()
-    #             if existing_record:
-    #                 # Update existing record attributes
-    #                 for key, value in data.items():
-    #                     setattr(existing_record, key, value)
-    #             else:
-    #                 raise HTTPException(status_code=404, detail=f"Record with ID {id} not found")
+    #         # Find the record by ID
+    #         record = db.query(self.table_model).filter(self.table_model.id == record_id).first()
+    #         if record:
+    #             # Perform soft delete by updating is_deleted to 'yes'
+    #             record.is_deleted = 'yes'
+    #             db.commit()
     #         else:
-    #             raise HTTPException(status_code=400, detail="Invalid ID provided")
-            
-    #         # Commit changes
-    #         db.commit()
+    #             raise HTTPException(status_code=404, detail="Record not found")
     #     except Exception as e:
-    #         # Rollback changes if an error occurs
-    #         db.rollback()
     #         raise HTTPException(status_code=500, detail=str(e))
 
+    # def undelete_record_by_id(self, db: Session, record_id: int) -> None:
+    #     try:
+    #         # Find the record by ID
+    #         record = db.query(self.table_model).filter(self.table_model.id == record_id).first()
+    #         if record:
+    #             # Perform undelete by updating is_deleted to 'no'
+    #             record.is_deleted = 'no'
+    #             db.commit()
+    #         else:
+    #             raise HTTPException(status_code=404, detail="Record not found")
+    #     except Exception as e:
+    #         raise HTTPException(status_code=500, detail=str(e))
+        
+        
+
+
+    def delete_records_by_ids(self, db: Session, record_ids: List[int]) -> None:
+        try:
+            # Find the records by IDs
+            records = db.query(self.table_model).filter(self.table_model.id.in_(record_ids)).all()
+            if not records:
+                raise HTTPException(status_code=404, detail="Records not found")
+            for record in records:
+                # Perform soft delete by updating is_deleted to 'yes'
+                record.is_deleted = 'yes'
+            db.commit()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def undelete_records_by_ids(self, db: Session, record_ids: List[int]) -> None:
+        try:
+            # Find the records by IDs
+            records = db.query(self.table_model).filter(self.table_model.id.in_(record_ids)).all()
+            if not records:
+                raise HTTPException(status_code=404, detail="Records not found")
+            for record in records:
+                # Perform undelete by updating is_deleted to 'no'
+                record.is_deleted = 'no'
+            db.commit()
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 
 
