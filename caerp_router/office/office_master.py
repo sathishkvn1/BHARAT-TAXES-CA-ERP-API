@@ -150,53 +150,15 @@ def get_consultancy_services(
 
 #-------------get all-------------------------------------------------------------------------
 @router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
-def get_all_appointments(
-    id: Optional[int] = None,
-    # token: str = Depends(oauth2.oauth2_scheme),
-    db: Session = Depends(get_db),
-    search_criteria: SearchCriteria = Query(None, description="Search criteria"),
-    search_value: Union[str, int, None] = None
-):
-    """
-    Retrieve appointments based on search criteria or appointment ID.
-
-    Parameters:
-    - **search_criteria**: Type of search criteria. Can be 'mobile_number', 'email_id', or 'ALL'.
-    - **search_value**: Search value corresponding to the search criteria.
-    - **id**: Appointment ID.
-
-    Response:
-    - If no appointments are found, returns a message indicating no appointments found and success status.
-    """
-    # if not token:
-    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    try:
-        if id is not None:
-            # If id is provided, filter appointments by ID
-            appointments = db_office_master.get_appointments(db, id=id)
-        elif search_criteria is not None:
-            # If search_criteria is provided, use it with search_value
-            appointments = db_office_master.get_appointments(db, search_criteria=search_criteria, search_value=search_value)
-        else:
-            # If neither id nor search_criteria is provided, return an empty list
-            appointments = []
-        
-        return {"Appointments": appointments}  # Return the dictionary with the key "Appointments"
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    
-#search
-
-@router.get("/search_appointments", response_model=Dict[str, List[ResponseSchema]])
 def search_appointments(
-    consultant_id: Optional[int] = None,
-    service_id: Optional[int] = None,
-    status_id: Optional[int] = None,
-    effective_from_date: date = Query(date.today()),
-    effective_to_date: date = Query(date.today()),
+    consultant_id: Optional[str] = "ALL",
+    service_id: Optional[str] = "ALL",
+    status_id: Optional[str] = "ALL",
+    from_date: Optional[date]  = Query(date.today()),
+    to_date: Optional[date]  = Query(date.today()),
+    # search_criteria: SearchCriteriaConstants = "ALL",
+    # id:Optional[int]=0,
+    search_value: Union[str, int] = "ALL",
     db: Session = Depends(get_db)
 ):
     """
@@ -208,18 +170,22 @@ def search_appointments(
     - **status_id**: Status ID.
     - **effective_from_date**: Effective from date (default: today's date).
     - **effective_to_date**: Effective to date (default: today's date).
+    - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
     """
-    result = db_office_master.search_appointments(
+    result = db_office_master.get_appointments(
         db,
         consultant_id=consultant_id,
         service_id=service_id,
         status_id=status_id,
-        effective_from_date=effective_from_date,
-        effective_to_date=effective_to_date
+        from_date=from_date,
+        to_date=to_date,
+       
+        # search_criteria=search_criteria,
+        search_value=search_value
     )
     return {"Appointments": result}
 
-
+    
 
 
 #-------------------------swathy--------------------------------

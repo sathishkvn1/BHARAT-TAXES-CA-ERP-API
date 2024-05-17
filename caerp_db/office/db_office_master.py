@@ -8,7 +8,7 @@ from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices, OffViewServiceGoodsMaster
 from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema
 from typing import Union,List
-from sqlalchemy import and_
+from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
 
 from sqlalchemy.exc import IntegrityError
@@ -92,82 +92,6 @@ def save_appointment_visit_master(
 
 
 
-def search_appointments(
-    db: Session,
-    consultant_id: Optional[int] = None,
-    service_id: Optional[int] = None,
-    status_id: Optional[int] = None,
-    effective_from_date: date = date.today(),
-    effective_to_date: date = date.today()
-) -> List[ResponseSchema]:
-    try:
-        appointments = []
-
-        # Start building the base query
-        query = db.query(OffAppointmentVisitDetailsView)
-
-        # Initialize the search conditions
-        search_conditions = []
-
-        # Add condition for consultant ID
-        if consultant_id is not None:
-            search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
-
-        # Add condition for service ID
-        if service_id is not None:
-            search_conditions.append(OffAppointmentVisitDetailsView.service_id == service_id)
-
-        # Add condition for status ID
-        if status_id is not None:
-            search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status_id)
-
-        # Add conditions for appointment visit date range
-        query = query.filter(
-            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_date.between(
-                effective_from_date,
-                effective_to_date
-            )
-        )
-
-        # Apply all the search conditions to the query
-        if search_conditions:
-            query = query.filter(and_(*search_conditions))
-
-        # Execute the query
-        query_result = query.all()
-        if not query_result:
-                raise HTTPException(status_code=404, detail="Appointment not found")
-            
-        # Iterate over query result
-        for visit_details_data in query_result:
-            appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
-
-            # Get the appointment master corresponding to the visit details
-            appointment_master_data = db.query(OffAppointmentVisitMasterView).filter_by(appointment_master_id=appointment_id).first()
-
-            if appointment_master_data:
-                # Convert appointment_master_data to schema
-                appointment_master_schema = OffAppointmentVisitMasterViewSchema(
-                    **appointment_master_data.__dict__
-                )
-
-                # Convert visit_details_data to schema
-                visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
-
-                # Create new appointment entry
-                appointment_data = {
-                    "appointment_master": appointment_master_schema,
-                    "visit_master": appointment_master_schema,  # Assuming appointment_master_schema is what you want for visit_master
-                    "visit_details": [visit_details_schema]
-                }
-
-                appointments.append(ResponseSchema(**appointment_data))
-
-        return appointments
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCancelRequest, action: AppointmentStatus, visit_master_id: int):
     if action == AppointmentStatus.RESCHEDULED:
         if not request_data.date or not request_data.time:
@@ -215,138 +139,109 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 
-#------get_consultancy_services
+#-------------get_consultancy_services-------------------------------------------------------------------------
 def get_consultancy_services(db: Session):
     return db.query(OffServices).filter(OffServices.is_consultancy_service == "yes").all()
 
-
-#get all
+#///////////
 def get_appointments(
     db: Session,
-    search_criteria: Optional[str] = None,
-    search_value: Union[str, int, None] = None,
-    id: Optional[int] = None
+    search_value: Union[str, int] = "ALL",
+    id: Optional[int] = 0,
+    consultant_id: Optional[Union[int, str]] = "ALL",
+    service_id: Optional[Union[int, str]] = "ALL",
+    status_id: Optional[Union[int, str]] = "ALL",
+    from_date: Optional[date] = date.today(),
+    to_date: Optional[date] = date.today()
 ) -> List[ResponseSchema]:
     try:
         appointments = []
 
-        if search_criteria == "ALL":
-            # Fetch all appointments and their related details using joins
-            query_result = db.query(
-                OffAppointmentVisitMasterView,
-                OffAppointmentVisitDetailsView
-            ).filter(
-                OffAppointmentVisitMasterView.appointment_master_id ==
-                OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id
-            ).all()
+        # Initialize search conditions
+        search_conditions = []
 
-            if not query_result:
-                raise HTTPException(status_code=404, detail="Appointment data not found")
+        # Add condition for ID if provided
+        if id != 0:
+            search_conditions.append(OffAppointmentVisitMasterView.appointment_master_id == id)
 
-            # Dictionary to store appointments by ID
-            appointment_dict = {}
+        # Add condition for consultant ID
+        if consultant_id != "ALL":
+            search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
 
-            # Iterate over query result
-            for appointment_master_data, visit_detail_data in query_result:
-                appointment_id = appointment_master_data.appointment_master_id
+        # Add condition for service ID
+        if service_id != "ALL":
+            search_conditions.append(OffAppointmentVisitDetailsView.service_id == service_id)
 
-                # If appointment ID is already in the dictionary, append visit detail
-                if appointment_id in appointment_dict:
-                    visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
-                        **visit_detail_data.__dict__
-                    )
-                    appointment_dict[appointment_id]["visit_details"].append(visit_detail_schema)
-                else:
-                    # Convert appointment_master_data to schema
-                    appointment_master_schema = OffAppointmentVisitMasterViewSchema(
-                        **appointment_master_data.__dict__
-                    )
+        # Add condition for status ID
+        if status_id != "ALL":
+            search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status_id)
 
-                    # Convert visit_detail_data to schema
-                    visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
-                        **visit_detail_data.__dict__
-                    )
+        # Add conditions for appointment visit date range
+        search_conditions.append(
+            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_date.between(from_date, to_date)
+        )
 
+        # Add condition for search value if it's not 'ALL'
+        if search_value != "ALL":
+            # Filter search value from OffAppointmentVisitMasterView
+            search_conditions.append(
+                or_(
+                    OffAppointmentVisitMasterView.mobile_number == search_value,
+                    OffAppointmentVisitMasterView.email_id == search_value
+                )
+            )
+
+        # Execute the query
+        query_result = db.query(OffAppointmentVisitDetailsView).join(
+            OffAppointmentVisitMasterView,
+            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
+        ).filter(and_(*search_conditions)).all()
+
+        if not query_result:
+            raise HTTPException(status_code=404, detail="Appointment not found")
+
+        # Dictionary to store appointments by ID
+        appointment_dict = {}
+
+        # Iterate over query result
+        for visit_details_data in query_result:
+            appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
+
+            # Get the appointment master corresponding to the visit details
+            appointment_master_data = db.query(OffAppointmentVisitMasterView).filter_by(
+                appointment_master_id=appointment_id
+            ).first()
+
+            if appointment_master_data:
+                # Convert appointment_master_data to schema
+                appointment_master_schema = OffAppointmentVisitMasterViewSchema(
+                    **appointment_master_data.__dict__
+                )
+
+                # Convert visit_details_data to schema
+                visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
+
+                if appointment_id not in appointment_dict:
                     # Create new appointment entry in dictionary
                     appointment_dict[appointment_id] = {
                         "appointment_master": appointment_master_schema,
-                        "visit_master": appointment_master_schema,  # Assuming appointment_master_schema is what you want for visit_master
-                        "visit_details": [visit_detail_schema]
+                        "visit_master": appointment_master_schema,
+                        "visit_details": [visit_details_schema]
                     }
+                else:
+                    # Append visit details to existing entry
+                    appointment_dict[appointment_id]["visit_details"].append(visit_details_schema)
 
-            # Convert dictionary values to list of ResponseSchema objects
-            appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
-
-        elif id is not None:
-            # If id is provided, filter appointments by ID
-            appointment_master_data = db.query(OffAppointmentVisitMasterView).filter(OffAppointmentVisitMasterView.appointment_master_id == id).first()
-            if not appointment_master_data:
-                raise HTTPException(status_code=404, detail="Appointment not found")
-            
-            # Fetch related visit details
-            visit_details_data = db.query(OffAppointmentVisitDetailsView).filter(
-                OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == id
-            ).all()
-
-            # Convert appointment_master_data to schema
-            appointment_master_schema = OffAppointmentVisitMasterViewSchema(
-                **appointment_master_data.__dict__
-            )
-
-            # Convert visit_details_data to schema
-            visit_details_schemas = [OffAppointmentVisitDetailsViewSchema(
-                **visit_detail.__dict__
-            ) for visit_detail in visit_details_data]
-
-            # Create response model
-            response_model = ResponseSchema(
-                appointment_master=appointment_master_schema,
-                visit_master=appointment_master_schema,  # Assuming appointment_master_schema is what you want for visit_master
-                visit_details=visit_details_schemas
-            )
-
-            appointments.append(response_model)
-            
-        elif search_criteria in ["email_id", "mobile_number"]:
-            # Fetch appointments based on email ID or mobile number
-            appointment_visit_details = db.query(OffAppointmentVisitMasterView).filter(
-                getattr(OffAppointmentVisitMasterView, search_criteria) == search_value
-            ).first()
-
-            if not appointment_visit_details:
-                raise HTTPException(status_code=404, detail=f"Appointments not found for the given {search_criteria}")
-
-            # Fetch related visit details
-            visit_details_data = db.query(OffAppointmentVisitDetailsView).filter(
-                OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id ==
-                appointment_visit_details.appointment_master_id
-            ).all()
-
-            # Convert appointment_visit_details to schema
-            appointment_visit_details_schema = OffAppointmentVisitMasterViewSchema(
-                **appointment_visit_details.__dict__
-            )
-
-            # Convert visit_details_data to schema
-            visit_details_schemas = [OffAppointmentVisitDetailsViewSchema(
-                **visit_detail.__dict__
-            ) for visit_detail in visit_details_data]
-
-            # Create response model
-            response_model = ResponseSchema(
-                appointment_master=appointment_visit_details_schema,
-                visit_master=appointment_visit_details_schema,  # Assuming appointment_visit_details_schema is what you want for visit_master
-                visit_details=visit_details_schemas
-            )
-
-            appointments.append(response_model)
+        # Convert dictionary values to list of ResponseSchema objects
+        appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
 
         return appointments
 
-    except HTTPException:
-        raise
+    except HTTPException as http_error:
+        raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 #---service-goods-master  swathy---------------------------
