@@ -247,3 +247,17 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_master_is_deleted: str
     service_goods_master_deleted_by: Optional[int]
     service_goods_master_deleted_on: Optional[datetime]
+    
+    
+#-----------Aparna
+class Slot(BaseModel):
+    # Define the fields for a slot
+    start_time: datetime
+    end_time: datetime
+
+class ConsultationRequest(BaseModel):
+   
+    service_id: int
+    consultant_id: int
+    start_time: str  
+    end_time: str 
