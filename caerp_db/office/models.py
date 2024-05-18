@@ -304,4 +304,93 @@ class OffViewServiceGoodsMaster(caerp_base):
     service_goods_master_is_deleted = Column(Enum('yes', 'no'), nullable=False)
     service_goods_master_deleted_by = Column(Integer, nullable=True)
     service_goods_master_deleted_on = Column(DateTime, nullable=True)
+    
+#-------------Aparna...........
+class OffConsultantMaster(caerp_base):
+    __tablename__ = 'off_consultant_master'
 
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultant_id = Column(Integer, nullable=False)
+    available_date_from = Column(Date, nullable=False)
+    available_date_to = Column(Date, nullable=True)
+    available_time_from = Column(Time, nullable=False)
+    available_time_to = Column(Time, nullable=False)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    modified_by = Column(Integer, nullable=True, default=None)
+    modified_on = Column(DateTime, nullable=True, default=None)
+
+class OffConsultantDetails(caerp_base):
+    __tablename__ = 'off_consultant_details'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultant_id = Column(Integer, nullable=False)
+    service_goods_master_id = Column(Integer, nullable=False)
+    consultation_fee = Column(Float, nullable=False)
+    slot_duration_in_minutes = Column(Integer, nullable=False)
+    effective_from_date = Column(DateTime, nullable=False)
+    effective_to_date = Column(DateTime, nullable=True)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    
+class OffViewConsultantMaster(caerp_base):
+    __tablename__ = 'off_view_consultant_master'
+
+    consultant_master_id = Column(Integer, primary_key=True)
+    consultant_id = Column(Integer)
+    employee_number = Column(String)
+    first_name = Column(String)
+    middle_name = Column(String, nullable=True)
+    last_name = Column(String)
+    consultant_master_available_date_from = Column(Date)
+    consultant_master_available_date_to = Column(Date)
+    consultant_master_available_time_from = Column(Time)
+    consultant_master_available_time_to = Column(Time)
+    consultant_master_created_by = Column(Integer)
+    consultant_master_created_on = Column(DateTime)
+    consultant_master_modified_by = Column(Integer, nullable=True)
+    consultant_master_modified_on = Column(DateTime, nullable=True)
+    
+    
+class OffViewConsultantDetails(caerp_base):
+    __tablename__ = 'off_view_consultant_details'
+
+    consultant_details_id = Column(Integer, primary_key=True)
+    consultant_id = Column(Integer)
+    employee_number = Column(String)
+    first_name = Column(String)
+    middle_name = Column(String, nullable=True)
+    last_name = Column(String)
+    service_goods_master_id = Column(Integer)
+    hsn_sac_class_id = Column(Integer)
+    hsn_sac_class = Column(String)
+    group_id = Column(Integer)
+    group_name = Column(String)
+    sub_group_id = Column(Integer)
+    sub_group_name = Column(String)
+    category_id = Column(Integer)
+    category_name = Column(String)
+    sub_category_id = Column(Integer)
+    sub_category_name = Column(String)
+    service_name = Column(String)
+    hsn_sac_id = Column(Integer)
+    hsn_sac_code = Column(String)
+    hsn_sac_description = Column(String)
+    sku_code_id = Column(Integer)
+    unit_code = Column(String)
+    is_consultancy_service = Column(Integer)
+    is_bundled_service = Column(Integer)
+    service_goods_master_modified_by = Column(Integer)
+    service_goods_master_modified_on = Column(DateTime)
+    service_goods_master_is_deleted = Column(String)
+    service_goods_master_deleted_by = Column(Integer)
+    service_goods_master_deleted_on = Column(DateTime)
+    consultation_fee = Column(Float)
+    slot_duration_in_minutes = Column(Integer)
+    consultant_details_effective_from_date = Column(DateTime)
+    consultant_details_effective_to_date = Column(DateTime, nullable=True)
+    consultant_details_created_by = Column(Integer)
+    consultant_details_created_on = Column(DateTime)
+    
+    
+    
