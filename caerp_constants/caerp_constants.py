@@ -54,11 +54,13 @@ class EmployeeDetails(str, Enum):
     CONTACT_DETAILS     = "CONTACT_DETAILS"
     BANK_DETAILS        = "BANK_DETAILS"
 
+
 class AppointmentStatus(str,Enum):
     NEW = "NEW"
     CANCELED = "CANCELED"
     RESCHEDULED = "RESCHEDULED"
     CLOSED = "CLOSED"
+
     
 class SearchCriteria(str, Enum):
     mobile_number = "mobile_number"
@@ -71,3 +73,11 @@ class EmployeeActionType(str, Enum):
     INSERT_ONLY = 'INSERT_ONLY'    
     UPDATE_ONLY = 'UPDATE_ONLY'
     UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'
+
+
+class RecordActionType(str, Enum):
+    INSERT_ONLY = 'INSERT_ONLY'    
+    UPDATE_ONLY = 'UPDATE_ONLY'
+    UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'  
+    DELETE      = 'DELETE'
+    UNDELETE ='UNDELETE'
