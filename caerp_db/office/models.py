@@ -265,7 +265,6 @@ class OffServiceGoodsSubCategory(caerp_base):
     sub_category_name = Column(String(200), nullable=True)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
-
 class OffViewServiceGoodsMaster(caerp_base): 
     __tablename__ = 'off_view_service_goods_master'
 
@@ -280,7 +279,7 @@ class OffViewServiceGoodsMaster(caerp_base):
     service_goods_category_name = Column(String(200), nullable=True)
     sub_category_id = Column(Integer, nullable=False)
     service_goods_sub_category_name = Column(String(200), nullable=True)
-    service_name = Column(String(500), nullable=False)
+    service_goods_name = Column(String(500), nullable=False)
     hsn_sac_id = Column(Integer, nullable=False)
     hsn_sac_code = Column(String(20), nullable=False)
     hsn_sac_description = Column(String(2000), nullable=True)
@@ -296,7 +295,9 @@ class OffViewServiceGoodsMaster(caerp_base):
     service_goods_master_is_deleted = Column(Enum('yes', 'no'), nullable=False)
     service_goods_master_deleted_by = Column(Integer, nullable=True)
     service_goods_master_deleted_on = Column(DateTime, nullable=True)
-    
+
+
+
 #-------------Aparna...........
 class OffConsultantMaster(caerp_base):
     __tablename__ = 'off_consultant_master'
@@ -432,7 +433,7 @@ class OffServiceGoodsMaster(caerp_base):
     sub_group_id = Column(Integer, nullable=False)
     category_id = Column(Integer, nullable=False)
     sub_category_id = Column(Integer, nullable=False)
-    service_name = Column(String(500), nullable=False)
+    service_goods_name = Column(String(500), nullable=False)
     hsn_sac_id = Column(Integer, nullable=False)
     sku_code_id = Column(Integer, nullable=False)
     is_consultancy_service = Column(Enum('yes', 'no'), default='no', nullable=False)

@@ -227,7 +227,7 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_category_name: Optional[str]
     sub_category_id: int
     service_goods_sub_category_name: Optional[str]
-    service_name: str
+    service_goods_name: str
     hsn_sac_id: int
     hsn_sac_code: str
     hsn_sac_description: Optional[str]
@@ -243,7 +243,8 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_master_is_deleted: str
     service_goods_master_deleted_by: Optional[int]
     service_goods_master_deleted_on: Optional[datetime]
-    
+
+
     
 #-----------Aparna
 class Slot(BaseModel):
@@ -258,7 +259,6 @@ class ConsultationRequest(BaseModel):
     start_time: str  
     end_time: str 
 
-
 class OffServiceGoodsMasterCreate(BaseModel):
    
     hsn_sac_class_id: int
@@ -266,11 +266,13 @@ class OffServiceGoodsMasterCreate(BaseModel):
     sub_group_id: int
     category_id: int
     sub_category_id: int
-    service_name: str
+    service_goods_name: str
     hsn_sac_id: int
     sku_code_id: int
     is_consultancy_service: str
     is_bundled_service: str
+
+
 
 class OffServiceGoodsDetailsCreate(BaseModel):
     bundled_service_goods_id: int

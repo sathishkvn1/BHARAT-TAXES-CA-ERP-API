@@ -281,22 +281,113 @@ def get_appointments(
 
 
 
+#---service-goods-master----------------------------
 
-
-
-
-def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus, name: Optional[str] = None):
+def get_all_service_goods_master(
+    db: Session, 
+    deleted_status: Optional[DeletedStatus] = None, 
+    name: Optional[str] = None
+):
     query = db.query(OffViewServiceGoodsMaster)
-    
+     
     if deleted_status == DeletedStatus.DELETED:
-        query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
+         query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
     elif deleted_status == DeletedStatus.NOT_DELETED:
         query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
     
+    # Apply filter based on service name
     if name:
-        query = query.filter(OffViewServiceGoodsMaster.service_name.ilike(f'%{name}%'))
+        query = query.filter(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
     
     return query.all()
+
+#-----------------------
+
+def save_services_goods_master(
+    db: Session,
+    id: int,
+    data: SaveServicesGoodsMasterRequest,
+    user_id: int,
+    action_type: RecordActionType
+):
+    if action_type == RecordActionType.INSERT_ONLY and id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
+
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            for master_data in data.master:
+                new_master_data = master_data.dict()
+                new_master_data.update({
+                    "created_by": user_id,
+                    "created_on": datetime.utcnow()
+                })
+                new_master = OffServiceGoodsMaster(**new_master_data)
+                db.add(new_master)
+                db.flush()  # Ensure new_master.id is available for details
+
+                if master_data.is_bundled_service == 'yes':
+                    for detail_data in data.details:
+                        new_detail_data = detail_data.dict()
+                        new_detail_data.update({
+                            "service_goods_master_id": new_master.id,
+                            "created_by": user_id,
+                            "created_on": datetime.utcnow()
+                        })
+                        new_detail = OffServiceGoodsDetails(**new_detail_data)
+                        db.add(new_detail)
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
+
+            # Use the first item from data.master for update
+            master_update_data = data.master[0].dict()
+            for key, value in master_update_data.items():
+                setattr(existing_master, key, value)
+            existing_master.modified_by = user_id
+            existing_master.modified_on = datetime.utcnow()
+
+            if existing_master.is_bundled_service == 'yes':
+                for detail_data in data.details:
+                    existing_detail = db.query(OffServiceGoodsDetails).filter(
+                        OffServiceGoodsDetails.service_goods_master_id == existing_master.id,
+                        OffServiceGoodsDetails.bundled_service_goods_id == detail_data.bundled_service_goods_id
+                    ).first()
+
+                    if existing_detail:
+                        for key, value in detail_data.dict().items():
+                            setattr(existing_detail, key, value)
+                        existing_detail.modified_by = user_id
+                        existing_detail.modified_on = datetime.utcnow()
+                    else:
+                        new_detail_data = detail_data.dict()
+                        new_detail_data.update({
+                            "service_goods_master_id": existing_master.id,
+                            "created_by": user_id,
+                            "created_on": datetime.utcnow()
+                        })
+                        new_detail = OffServiceGoodsDetails(**new_detail_data)
+                        db.add(new_detail)
+
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        if 'Duplicate entry' in str(e):
+            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
+        else:
+            raise e
+    except Exception as e:
+        db.rollback()
+        raise e
+
+
+
+
+
+
 
 
 
@@ -413,16 +504,13 @@ def get_all_services(db: Session) -> List[OffViewConsultantDetails]:
     return db.query(OffViewConsultantDetails).all()
 
 
-# def get_consultants_for_service(db: Session, service_id: int) -> List[str]:
-#     # Query the database to get consultants for the given service_id
-#     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
 
-#     # Extract the first names from the query results
-#     consultant_names = [consultant.first_name for consultant in consultants]
-
-#     return consultant_names
 
 def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
     # Query the database to get consultants for the given service_id
     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
     return consultants
+
+def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantDetails]:
+    services = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.consultant_id == consultant_id).all()
+    return services

@@ -175,27 +175,55 @@ def get_and_search_appointments(
 
 
 #-------------------------swathy--------------------------------
-@router.get('/services/get_all_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
+@router.get('/services/search_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
+
 def get_all_service_goods_master(
-    deleted_status: DeletedStatus =  Query(..., title="Select deleted status"),
-    service_name: Optional[str] = Query(None, title="Service Name for search (optional)"),
+    deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
+    service_goods_name: Optional[str] = Query(None, title="Service Name for search (optional)"),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     Get all service goods master
     """
-    # Check if deleted_status is a valid option
-    if deleted_status not in [DeletedStatus.DELETED, DeletedStatus.NOT_DELETED, DeletedStatus.ALL]:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid value for 'deleted_status'. Allowed values are 'yes', 'no', and 'all'."
-        )
+   
 
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    return db_office_master.get_all_service_goods_master(db, deleted_status, service_name)
-  
+    return db_office_master.get_all_service_goods_master(db, deleted_status, service_goods_name)
+
+@router.post("/services/save_services_goods_master{id}")
+def save_services_goods_master(
+    id: int,
+    data: List[SaveServicesGoodsMasterRequest], 
+    action_type: RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+    
+):
+   
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        for service in data:
+            db_office_master.save_services_goods_master(
+                db, id, service, user_id, action_type
+            )
+
+        return {"success": True, "message": "Saved successfully"}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 ###......................test
 
 # @router.get("/generate_consultation_slots/", response_model=List[Slot])
@@ -348,45 +376,11 @@ def save_services_goods_master(
 
 #///////////////////////////////////////////////
 
-# @router.get("/consultants_and_services/")
-# def get_consultants_and_services(
-#     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),
-#     # category: str = Query(..., description="Selection category: 'consultant', 'all'"),
-#     service_id: Optional[int] = None,
-#     db: Session = Depends(get_db)
-# ):
-#     if category == "consultant":
-#         # Fetch consultants from the database
-#         consultants = db_office_master.get_consultants(db)
-#         # Convert consultants to a list of dictionaries
-#         consultants_data = [{"id": consultant.employee_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-#         return EmployeeResponse(employees=consultants_data)
-
-#     elif category == "all":
-#         # Fetch all employees from the database
-#         employees = db_office_master.get_all_employees(db)
-#         # Convert employees to a list of dictionaries
-#         employees_data = [{"id": employee.employee_id, "first_name": employee.first_name, "middle_name": employee.middle_name, "last_name": employee.last_name} for employee in employees]
-#         return EmployeeResponse(employees=employees_data)
-    
-#     elif service_id is not None and service_id != 0:
-#         # Fetch consultants for the given service_id from off_view_consultant_details table
-#         consultants = db_office_master.get_consultants_for_service(db, service_id)
-#         # Convert consultants to a list of dictionaries
-#         consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-#         return {"consultants": consultants_data}
-    
-#     else:
-#         # Fetch all services from off_view_consultant_details table
-#         services = db_office_master.get_all_services(db)
-#         # Convert services to a list of dictionaries
-#         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
-#         return {"services": services_data}
-
-
-@router.get("/get_consultants/")
-def get_consultants(
+@router.get("/consultants_and_services/")
+def get_consultants_and_services(
     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),
+    # category: str = Query(..., description="Selection category: 'consultant', 'all'"),
+    service_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
     if category == "consultant":
@@ -402,14 +396,118 @@ def get_consultants(
         # Convert employees to a list of dictionaries
         employees_data = [{"id": employee.employee_id, "first_name": employee.first_name, "middle_name": employee.middle_name, "last_name": employee.last_name} for employee in employees]
         return EmployeeResponse(employees=employees_data)
+    
+    elif service_id is not None and service_id != 0:
+        # Fetch consultants for the given service_id from off_view_consultant_details table
+        consultants = db_office_master.get_consultants_for_service(db, service_id)
+        # Convert consultants to a list of dictionaries
+        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        return {"consultants": consultants_data}
+    
+    else:
+        # Fetch all services from off_view_consultant_details table
+        services = db_office_master.get_all_services(db)
+        # Convert services to a list of dictionaries
+        services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
+        return {"services": services_data}
+
+
+# @router.get("/get_consultants/")
+# def get_consultants(
+#     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),
+#     db: Session = Depends(get_db)
+# ):
+#     if category == "consultant":
+#         # Fetch consultants from the database
+#         consultants = db_office_master.get_consultants(db)
+#         # Convert consultants to a list of dictionaries
+#         consultants_data = [{"id": consultant.employee_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+#         return EmployeeResponse(employees=consultants_data)
+
+#     elif category == "all":
+#         # Fetch all employees from the database
+#         employees = db_office_master.get_all_employees(db)
+#         # Convert employees to a list of dictionaries
+#         employees_data = [{"id": employee.employee_id, "first_name": employee.first_name, "middle_name": employee.middle_name, "last_name": employee.last_name} for employee in employees]
+#         return EmployeeResponse(employees=employees_data)
+
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid selection category. Must be 'consultant' or 'all'")
+
+
+# @router.get("/get_services/")
+# def get_services(
+#     service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
+#     db: Session = Depends(get_db)
+# ):
+#     if service_id is None or service_id == 0:
+#         # Fetch all services from off_view_consultant_details table
+#         services = db_office_master.get_all_services(db)
+#         # Convert services to a list of dictionaries
+#         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
+#         return {"services": services_data}
+
+#     elif service_id is not None and service_id != 0:
+#         # Fetch consultants for the given service_id from off_view_consultant_details table
+#         consultants = db_office_master.get_consultants_for_service(db, service_id)
+#         # Convert consultants to a list of dictionaries
+#         consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+#         return {"service_id": service_id, "consultants": consultants_data}
+
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid service ID")
+
+
+
+@router.get("/get_consultants/")
+def get_consultants(
+    id: Optional[int] = None,
+    service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
+    db: Session = Depends(get_db)
+):
+
+    if service_id is not None and service_id != 0:
+        # Fetch consultants for the given service_id from off_view_consultant_details table
+        consultants = db_office_master.get_consultants_for_service(db, service_id)
+        # Convert consultants to a list of dictionaries
+        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        return {"service_id": service_id, "consultants": consultants_data}
+    elif id==0:
+        consultants = db_office_master.get_consultants(db)
+        consultants_data = [{"id": consultant.employee_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        return EmployeeResponse(employees=consultants_data)
 
     else:
-        raise HTTPException(status_code=400, detail="Invalid selection category. Must be 'consultant' or 'all'")
+        raise HTTPException(status_code=400, detail="Invalid service ID")
 
 
-@router.get("/get_services/")
-def get_services(
+# @router.get("/get_consultation_services/")
+# def get_consultatipn_services(
+#     service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
+#     consultant_id: Optional[int] = Query(None, description="ID of the consultant to retrieve services for"),
+#     db: Session = Depends(get_db)
+# ):
+#     if service_id is None or service_id == 0:
+#         # Fetch all services from off_view_consultant_details table
+#         services = db_office_master.get_all_services(db)
+#         # Convert services to a list of dictionaries
+#         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
+#         return {"services": services_data}
+
+#     elif consultant_id is not None and consultant_id != 0:
+#         # Fetch consultants for the given service_id from off_view_consultant_details table
+#         consultants = db_office_master.get_all_services_by_consultant_id(db, consultant_id)
+#         # Convert consultants to a list of dictionaries
+#         consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+#         return {"service_id": service_id, "consultants": consultants_data}
+
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid service ID")
+
+@router.get("/get_consultation_services/")
+def get_consultation_services(
     service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
+    consultant_id: Optional[int] = Query(None, description="ID of the consultant to retrieve services for"),
     db: Session = Depends(get_db)
 ):
     if service_id is None or service_id == 0:
@@ -418,13 +516,16 @@ def get_services(
         # Convert services to a list of dictionaries
         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
         return {"services": services_data}
-
-    elif service_id is not None and service_id != 0:
-        # Fetch consultants for the given service_id from off_view_consultant_details table
-        consultants = db_office_master.get_consultants_for_service(db, service_id)
-        # Convert consultants to a list of dictionaries
-        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-        return {"service_id": service_id, "consultants": consultants_data}
-
+    
+    elif consultant_id is not None and consultant_id != 0:
+        # Fetch services for the given consultant_id from off_view_consultant_details table
+        services = db_office_master.get_all_services_by_consultant_id(db, consultant_id)
+        print(services)
+        if not services:
+            raise HTTPException(status_code=404, detail=f"No services found for consultant ID {consultant_id}")
+        # Convert services to a list of dictionaries
+        services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
+        return {"consultant_id": consultant_id, "services": services_data}
+    
     else:
-        raise HTTPException(status_code=400, detail="Invalid service ID")
+        raise HTTPException(status_code=400, detail="Invalid request. Provide a valid service ID or consultant ID.")
