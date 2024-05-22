@@ -1,12 +1,13 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import AppointmentStatus, DeletedStatus, RecordActionType,SearchCriteria
+from caerp_db.common.models import Employee
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -173,8 +174,7 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 #-------------get_consultancy_services-------------------------------------------------------------------------
-def get_consultancy_services(db: Session):
-    return db.query(OffServices).filter(OffServices.is_consultancy_service == "yes").all()
+
 
 #///////////
 def get_appointments(
@@ -301,52 +301,128 @@ def get_all_service_goods_master(db: Session, deleted_status: DeletedStatus, nam
 
 
 #-----------Aparna----------------------------------
-# def get_service_and_consultants_by_service(db: Session, service_id: int):
-#     # Get service and consultants from the view
-#     service_and_consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_id == service_id).all()
+def save_services_goods_master(
+    db: Session,
+    id: int,
+    data: SaveServicesGoodsMasterRequest,
+    user_id: int,
+    action_type: RecordActionType
+):
+    if action_type == RecordActionType.INSERT_ONLY and id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
 
-#     # Extract service and unique consultants from the results
-#     service = None
-#     consultants = set()
-#     for item in service_and_consultants:
-#         if service is None:
-#             service = item.service_name  # Assuming service name is available in the view
-#         consultants.add(item.consultant_id)  # Assuming consultant ID is available in the view
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            for master_data in data.master:
+                new_master_data = master_data.dict()
+                new_master_data.update({
+                    "created_by": user_id,
+                    "created_on": datetime.utcnow()
+                })
+                new_master = OffServiceGoodsMaster(**new_master_data)
+                db.add(new_master)
+                db.flush()  # Ensure new_master.id is available for details
 
-#     return service, list(consultants)
+                for detail_data in data.details:
+                    new_detail_data = detail_data.dict()
+                    new_detail_data.update({
+                        "service_goods_master_id": new_master.id,
+                        "created_by": user_id,
+                        "created_on": datetime.utcnow()
+                    })
+                    new_detail = OffServiceGoodsDetails(**new_detail_data)
+                    db.add(new_detail)
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
+
+            master_update_data = master_data.dict()
+            for key, value in master_update_data.items():
+                setattr(existing_master, key, value)
+            existing_master.modified_by = user_id
+            existing_master.modified_on = datetime.utcnow()
+
+            for detail_data in data.details:
+                existing_detail = db.query(OffServiceGoodsDetails).filter(
+                    OffServiceGoodsDetails.service_goods_master_id == existing_master.id,
+                    OffServiceGoodsDetails.bundled_service_goods_id == detail_data.bundled_service_goods_id
+                ).first()
+
+                if existing_detail:
+                    for key, value in detail_data.dict().items():
+                        setattr(existing_detail, key, value)
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.utcnow()
+                else:
+                    new_detail_data = detail_data.dict()
+                    new_detail_data.update({
+                        "service_goods_master_id": existing_master.id,
+                        "created_by": user_id,
+                        "created_on": datetime.utcnow()
+                    })
+                    new_detail = OffServiceGoodsDetails(**new_detail_data)
+                    db.add(new_detail)
+
+        db.commit()
+    except IntegrityError as e:
+        db.rollback()
+        if 'Duplicate entry' in str(e):
+            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
+        else:
+            raise e
+    except Exception as e:
+        db.rollback()
+        raise e
+
+#---------------------------------------------------------------------
 
 
-# from datetime import datetime, time
-# def check_consultant_availability(db: Session, consultant_id: int, date: datetime, start_time: time, end_time: time) -> bool:
-#     # Query the view to check consultant availability based on consultant_id and date
-#     consultant_availability = db.query(OffViewConsultantMaster).filter(
-#         OffViewConsultantMaster.consultant_id == consultant_id,
-#         OffViewConsultantMaster.consultant_master_available_date_from <= date,
-#         OffViewConsultantMaster.consultant_master_available_time_from <= start_time,
-#         OffViewConsultantMaster.consultant_master_available_time_to >= end_time
-#     ).first()
+def get_consultants(db: Session) -> List[Employee]:
+    """
+    Fetches all consultants from the database.
 
-#     if consultant_availability:
-#         # Combine first_name and middle_name for the consultant
-#         consultant_name = f"{consultant_availability.first_name} {consultant_availability.middle_name}"
-#         print("Consultant:", consultant_name)
-#         return True  # Consultant is available
-#     else:
-#         return False  # Consultant is not available
+    Args:
+        db (Session): Database session.
 
-# def generate_slots(start_time, end_time, slot_duration):
-#     current_time = start_time
-#     slots = []
+    Returns:
+        List[Employee]: List of consultants.
+    """
+    return db.query(Employee).filter(Employee.is_consultant == 'yes').all()
 
-#     # Iterate over the time range in increments of the slot duration
-#     while current_time < end_time:
-#         # Calculate the end time of the slot
-#         end_slot_time = min(current_time + slot_duration, end_time)
+def get_all_employees(db: Session) -> List[Employee]:
+    """
+    Fetches all employees (non-consultants) from the database.
 
-#         # Create a slot with the current time and end slot time
-#         slots.append(Slot(start_time=current_time, end_time=end_slot_time))
+    Args:
+        db (Session): Database session.
 
-#         # Move to the next slot
-#         current_time += slot_duration
+    Returns:
+        List[Employee]: List of employees.
+    """
+    return db.query(Employee).filter(Employee.is_consultant == 'no').all()
 
-#     return slots
+
+
+
+def get_all_services(db: Session) -> List[OffViewConsultantDetails]:
+
+    return db.query(OffViewConsultantDetails).all()
+
+
+# def get_consultants_for_service(db: Session, service_id: int) -> List[str]:
+#     # Query the database to get consultants for the given service_id
+#     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
+
+#     # Extract the first names from the query results
+#     consultant_names = [consultant.first_name for consultant in consultants]
+
+#     return consultant_names
+
+def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
+    # Query the database to get consultants for the given service_id
+    consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
+    return consultants

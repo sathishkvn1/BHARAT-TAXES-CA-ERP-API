@@ -161,15 +161,7 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_master_bill_amount=Column(Float, nullable=False)
     remarks= Column(String(2000), nullable=False)
     service_id= Column(Integer, nullable=True)
-    service_master_id= Column(Integer, nullable=True)
-    consultation_fee=Column(Float, nullable=False)
-    consultancy_services_igst_rate=Column(Float, nullable=False)
-    available_time_from=Column(Time, nullable=False) 
-    available_time_to= Column(Time, nullable=True) 
-    slot_duration_in_minutes= Column(Integer, nullable=True)
-    consultancy_services_effective_from_date= Column(Date, nullable=True)
-    consultancy_services_effective_to_date= Column(Date, nullable=True)
-    consultancy_services_is_deleted= Column(Enum('yes', 'no'), nullable=False, default='no')
+    service_goods_name= Column(String(500), nullable=False)  
     consultant_id= Column(Integer, nullable=True)
     employee_master_employee_number=Column(String(50), nullable=True)
     employee_master_first_name=Column(String(50), nullable=True)
@@ -352,6 +344,46 @@ class OffViewConsultantMaster(caerp_base):
     consultant_master_modified_on = Column(DateTime, nullable=True)
     
     
+# class OffViewConsultantDetails(caerp_base):
+#     __tablename__ = 'off_view_consultant_details'
+
+#     consultant_details_id = Column(Integer, primary_key=True)
+#     consultant_id = Column(Integer)
+#     employee_number = Column(String)
+#     first_name = Column(String)
+#     middle_name = Column(String, nullable=True)
+#     last_name = Column(String)
+#     service_goods_master_id = Column(Integer)
+#     hsn_sac_class_id = Column(Integer)
+#     hsn_sac_class = Column(String)
+#     group_id = Column(Integer)
+#     group_name = Column(String)
+#     sub_group_id = Column(Integer)
+#     sub_group_name = Column(String)
+#     category_id = Column(Integer)
+#     category_name = Column(String)
+#     sub_category_id = Column(Integer)
+#     sub_category_name = Column(String)
+#     service_name = Column(String)
+#     hsn_sac_id = Column(Integer)
+#     hsn_sac_code = Column(String)
+#     hsn_sac_description = Column(String)
+#     sku_code_id = Column(Integer)
+#     unit_code = Column(String)
+#     is_consultancy_service = Column(Integer)
+#     is_bundled_service = Column(Integer)
+#     service_goods_master_modified_by = Column(Integer)
+#     service_goods_master_modified_on = Column(DateTime)
+#     service_goods_master_is_deleted = Column(String)
+#     service_goods_master_deleted_by = Column(Integer)
+#     service_goods_master_deleted_on = Column(DateTime)
+#     consultation_fee = Column(Float)
+#     slot_duration_in_minutes = Column(Integer)
+#     consultant_details_effective_from_date = Column(DateTime)
+#     consultant_details_effective_to_date = Column(DateTime, nullable=True)
+#     consultant_details_created_by = Column(Integer)
+#     consultant_details_created_on = Column(DateTime)
+    
 class OffViewConsultantDetails(caerp_base):
     __tablename__ = 'off_view_consultant_details'
 
@@ -372,7 +404,7 @@ class OffViewConsultantDetails(caerp_base):
     category_name = Column(String)
     sub_category_id = Column(Integer)
     sub_category_name = Column(String)
-    service_name = Column(String)
+    service_goods_name = Column(String)  
     hsn_sac_id = Column(Integer)
     hsn_sac_code = Column(String)
     hsn_sac_description = Column(String)
@@ -392,5 +424,39 @@ class OffViewConsultantDetails(caerp_base):
     consultant_details_created_by = Column(Integer)
     consultant_details_created_on = Column(DateTime)
     
+class OffServiceGoodsMaster(caerp_base):
+    __tablename__ = 'off_service_goods_master'
+    id = Column(Integer, primary_key=True, index=True)
+    hsn_sac_class_id = Column(Integer, nullable=False)
+    group_id = Column(Integer, nullable=False)
+    sub_group_id = Column(Integer, nullable=False)
+    category_id = Column(Integer, nullable=False)
+    sub_category_id = Column(Integer, nullable=False)
+    service_name = Column(String(500), nullable=False)
+    hsn_sac_id = Column(Integer, nullable=False)
+    sku_code_id = Column(Integer, nullable=False)
+    is_consultancy_service = Column(Enum('yes', 'no'), default='no', nullable=False)
+    is_bundled_service = Column(Enum('yes', 'no'), default='no', nullable=False)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(DateTime, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(DateTime, nullable=True)
+
+class OffServiceGoodsDetails(caerp_base):
+    __tablename__ = 'off_service_goods_details'
+    id = Column(Integer, primary_key=True, index=True)
+    service_goods_master_id = Column(Integer, nullable=False)
+    bundled_service_goods_id = Column(Integer, nullable=False)
+    display_order = Column(Integer, nullable=True)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(DateTime, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(DateTime, nullable=True)   
     
-    
+

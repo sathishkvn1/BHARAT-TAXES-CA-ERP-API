@@ -149,9 +149,9 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
         from_attributes = True
         
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
-    appointment_visit_details_id:Optional[int] 
+    
     service_id: Optional[int]
-    # serive_name:str
+    service_goods_name:str
     class Config:
         orm_mode = True
         from_attributes = True
@@ -165,11 +165,7 @@ class ResponseSchema(BaseModel):
         orm_mode = True
         from_attributes = True
         
-        
-class OffServicesDisplay(BaseModel):
-    id:int
-    service_name: Optional[str]
-    is_consultancy_service: str
+
  
  
  
@@ -261,3 +257,51 @@ class ConsultationRequest(BaseModel):
     consultant_id: int
     start_time: str  
     end_time: str 
+
+
+class OffServiceGoodsMasterCreate(BaseModel):
+   
+    hsn_sac_class_id: int
+    group_id: int
+    sub_group_id: int
+    category_id: int
+    sub_category_id: int
+    service_name: str
+    hsn_sac_id: int
+    sku_code_id: int
+    is_consultancy_service: str
+    is_bundled_service: str
+
+class OffServiceGoodsDetailsCreate(BaseModel):
+    bundled_service_goods_id: int
+    display_order: int
+
+class SaveServicesGoodsMasterRequest(BaseModel):
+    master: list[OffServiceGoodsMasterCreate]
+    details: list[OffServiceGoodsDetailsCreate]
+    
+    
+# class Consultant(BaseModel):
+#     consultant_id: int
+#     first_name: str
+#     middle_name: Optional[str] = None
+#     last_name: str
+
+# class Service(BaseModel):
+#     service_id: int
+#     service_name: str
+
+# class ConsultantDetails(BaseModel):
+#     consultants: List[Consultant]
+#     services: List[Service]
+#     service_consultants: Optional[List[Consultant]] = None
+    
+# class Employee(BaseModel):
+#     id: int
+#     first_name: str
+#     middle_name: Optional[str]
+#     last_name: str
+
+
+class EmployeeResponse(BaseModel):
+    employees: List[dict]
