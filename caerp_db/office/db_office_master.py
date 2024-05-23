@@ -11,7 +11,8 @@ from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointm
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
-
+from fastapi import logger
+from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
 
 
@@ -302,7 +303,6 @@ def get_all_service_goods_master(
     return query.all()
 
 #-----------------------
-
 def save_services_goods_master(
     db: Session,
     id: int,
@@ -331,7 +331,7 @@ def save_services_goods_master(
                     for detail_data in data.details:
                         new_detail_data = detail_data.dict()
                         new_detail_data.update({
-                            "service_goods_master_id": new_master.id,
+                            "bundled_service_goods_id": new_master.id,
                             "created_by": user_id,
                             "created_on": datetime.utcnow()
                         })
@@ -353,8 +353,8 @@ def save_services_goods_master(
             if existing_master.is_bundled_service == 'yes':
                 for detail_data in data.details:
                     existing_detail = db.query(OffServiceGoodsDetails).filter(
-                        OffServiceGoodsDetails.service_goods_master_id == existing_master.id,
-                        OffServiceGoodsDetails.bundled_service_goods_id == detail_data.bundled_service_goods_id
+                        OffServiceGoodsDetails.bundled_service_goods_id == existing_master.id,
+                        OffServiceGoodsDetails.service_goods_master_id == detail_data.service_goods_master_id
                     ).first()
 
                     if existing_detail:
@@ -365,7 +365,7 @@ def save_services_goods_master(
                     else:
                         new_detail_data = detail_data.dict()
                         new_detail_data.update({
-                            "service_goods_master_id": existing_master.id,
+                            "bundled_service_goods_id": existing_master.id,
                             "created_by": user_id,
                             "created_on": datetime.utcnow()
                         })
@@ -375,14 +375,19 @@ def save_services_goods_master(
         db.commit()
     except IntegrityError as e:
         db.rollback()
+        logger.error("IntegrityError: %s", str(e))
         if 'Duplicate entry' in str(e):
             raise HTTPException(status_code=400, detail="Duplicate entry detected.")
         else:
             raise e
+    except OperationalError as e:
+        db.rollback()
+        logger.error("OperationalError: %s", str(e))
+        raise HTTPException(status_code=500, detail="Database connection error.")
     except Exception as e:
         db.rollback()
+        logger.error("Exception: %s", str(e))
         raise e
-
 
 
 
@@ -511,6 +516,11 @@ def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewCon
     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
     return consultants
 
+
+
 def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantDetails]:
+    print(f"Running query for consultant ID {consultant_id}")  # Debug print
     services = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.consultant_id == consultant_id).all()
+    print(f"Query result for consultant ID {consultant_id}: {services}")  # Debug print
     return services
+

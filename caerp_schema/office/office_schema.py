@@ -275,12 +275,12 @@ class OffServiceGoodsMasterCreate(BaseModel):
 
 
 class OffServiceGoodsDetailsCreate(BaseModel):
-    bundled_service_goods_id: int
+    service_goods_master_id: int
     display_order: int
 
 class SaveServicesGoodsMasterRequest(BaseModel):
     master: list[OffServiceGoodsMasterCreate]
-    details: list[OffServiceGoodsDetailsCreate]
+    details: Optional[list[OffServiceGoodsDetailsCreate]]  = None
     
     
 # class Consultant(BaseModel):
