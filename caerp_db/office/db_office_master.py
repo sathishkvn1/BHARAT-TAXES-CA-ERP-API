@@ -6,7 +6,7 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
@@ -397,84 +397,7 @@ def save_services_goods_master(
 
 
 #-----------Aparna----------------------------------
-def save_services_goods_master(
-    db: Session,
-    id: int,
-    data: SaveServicesGoodsMasterRequest,
-    user_id: int,
-    action_type: RecordActionType
-):
-    if action_type == RecordActionType.INSERT_ONLY and id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
 
-    try:
-        if action_type == RecordActionType.INSERT_ONLY:
-            for master_data in data.master:
-                new_master_data = master_data.dict()
-                new_master_data.update({
-                    "created_by": user_id,
-                    "created_on": datetime.utcnow()
-                })
-                new_master = OffServiceGoodsMaster(**new_master_data)
-                db.add(new_master)
-                db.flush()  # Ensure new_master.id is available for details
-
-                for detail_data in data.details:
-                    new_detail_data = detail_data.dict()
-                    new_detail_data.update({
-                        "service_goods_master_id": new_master.id,
-                        "created_by": user_id,
-                        "created_on": datetime.utcnow()
-                    })
-                    new_detail = OffServiceGoodsDetails(**new_detail_data)
-                    db.add(new_detail)
-
-        elif action_type == RecordActionType.UPDATE_ONLY:
-            existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
-            if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
-
-            master_update_data = master_data.dict()
-            for key, value in master_update_data.items():
-                setattr(existing_master, key, value)
-            existing_master.modified_by = user_id
-            existing_master.modified_on = datetime.utcnow()
-
-            for detail_data in data.details:
-                existing_detail = db.query(OffServiceGoodsDetails).filter(
-                    OffServiceGoodsDetails.service_goods_master_id == existing_master.id,
-                    OffServiceGoodsDetails.bundled_service_goods_id == detail_data.bundled_service_goods_id
-                ).first()
-
-                if existing_detail:
-                    for key, value in detail_data.dict().items():
-                        setattr(existing_detail, key, value)
-                    existing_detail.modified_by = user_id
-                    existing_detail.modified_on = datetime.utcnow()
-                else:
-                    new_detail_data = detail_data.dict()
-                    new_detail_data.update({
-                        "service_goods_master_id": existing_master.id,
-                        "created_by": user_id,
-                        "created_on": datetime.utcnow()
-                    })
-                    new_detail = OffServiceGoodsDetails(**new_detail_data)
-                    db.add(new_detail)
-
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        if 'Duplicate entry' in str(e):
-            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
-        else:
-            raise e
-    except Exception as e:
-        db.rollback()
-        raise e
-
-#---------------------------------------------------------------------
 
 
 def get_consultants(db: Session) -> List[Employee]:
@@ -524,3 +447,29 @@ def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[O
     print(f"Query result for consultant ID {consultant_id}: {services}")  # Debug print
     return services
 
+
+#---------------APARNA
+def get_all_services(db: Session) -> List[OffViewServiceGoodsPriceMaster]:
+    """
+    Fetch all services or goods from the off_view_service_goods_price_master table.
+    """
+    return db.query(OffViewServiceGoodsPriceMaster).all()
+
+def get_services_filtered(db: Session, 
+                          service_type: Optional[str] = None, 
+                          search: Optional[str] = None) -> List[OffViewServiceGoodsPriceMaster]:
+    """
+    Fetch services or goods filtered by service type and search term.
+    """
+    query = db.query(OffViewServiceGoodsPriceMaster)
+    
+    # Apply filters based on provided query parameters
+    if service_type == "GOODS":
+        query = query.filter(OffViewServiceGoodsPriceMaster.hsn_sac_class_id == 1)
+    elif service_type == "SERVICE":
+        query = query.filter(OffViewServiceGoodsPriceMaster.hsn_sac_class_id == 2)
+    
+    if search:
+        query = query.filter(OffViewServiceGoodsPriceMaster.service_goods_name.ilike(f"%{search}%"))
+    
+    return query.all()
