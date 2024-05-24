@@ -63,6 +63,7 @@ class RescheduleOrCancelRequest(BaseModel):
     time: Optional[str] = None
     description: str
 
+    
 class OffAppointmentCancellationReasonSchema(BaseModel):
     id:int
     off_appointment_cancellation_reason:str

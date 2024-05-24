@@ -115,7 +115,7 @@ async def reschedule_or_cancel_appointment(
     
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
-                                # token: str = Depends(oauth2.oauth2_scheme),
+                               
                                 db: Session = Depends(get_db)
                                 ):
     """
@@ -128,6 +128,10 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     - If 'type' is 'cancellation_reasons', returns a list of cancellation reasons with their IDs.
     - If 'type' is 'status', returns a list of appointment statuses with their IDs.
     """
+    
+    
+    info = db_office_master.get_appointment_info(db, type)
+    return {"info": info}
 
 
 

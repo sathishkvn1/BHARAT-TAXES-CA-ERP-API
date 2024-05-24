@@ -6,7 +6,7 @@ from caerp_db.common.models import Employee
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
+from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
 
 from caerp_auth import oauth2
 
@@ -35,8 +35,9 @@ TABLE_MODEL_MAPPING = {
     "OffServiceGoodsSubGroup" : OffServiceGoodsSubGroup,
     "OffServiceGoodsCategory":  OffServiceGoodsCategory,
     "OffServiceGoodsSubCategory": OffServiceGoodsSubCategory,
-    "Employee":Employee
-     
+    "AppHsnSacMaster":AppHsnSacMaster,
+    "AppStockKeepingUnitCode":AppStockKeepingUnitCode
+
 }
 
 # Define a function to get the model class based on the provided model name
@@ -88,41 +89,7 @@ async def get_info(
 
 #........................fr delete
 
-# @router.get("/delete_undelete_by_id", operation_id="delete_undelete_record")
-# async def get_info(
-#     model_name: str = Query(..., description="Model name to fetch data from"),
-#     id: Optional[int] = Query(None, description="ID of the record to retrieve"),
-#     delete: Optional[str] = Query(None, description="Whether to delete the record ('true' or 'false')"),
-#     undelete: Optional[str] = Query(None, description="Whether to undelete the record ('true' or 'false')"),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Get appointment information based on provided fields, model name, and optional ID.
-#     """
-#     # Convert the fields string to a list of strings
- 
-    
-#     # Get the model class based on the provided model name
-#     table_model = get_model_by_model_name(model_name)
 
-#     # Check if the model exists
-#     if table_model is None:
-#         raise HTTPException(status_code=404, detail="Model not found")
-
-#     # Initialize DynamicAPI instance with the retrieved model
-#     dynamic_api = DynamicAPI(table_model)
-
-#     if delete and undelete:
-#         raise HTTPException(status_code=400, detail="Both delete and undelete cannot be True simultaneously")
-#     elif delete == 'true':
-#         # Delete the record
-#         dynamic_api.delete_record_by_id(db, id)
-#         return {"message": f"Record with ID {id} from model {model_name} has been deleted"}
-#     elif undelete == 'true':
-#         # Undelete the record
-#         dynamic_api.undelete_record_by_id(db, id)
-#         return {"message": f"Record with ID {id} from model {model_name} has been undeleted"}
-    
 
 
 @router.get("/delete_undelete_by_id", operation_id="modify_records")

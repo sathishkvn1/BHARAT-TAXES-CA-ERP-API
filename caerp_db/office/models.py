@@ -520,3 +520,21 @@ class OffServiceGoodsPriceMaster(caerp_base):
     created_on = Column(DateTime, nullable=False)
     
     
+
+class AppHsnSacMaster(caerp_base):
+    __tablename__ = 'app_hsn_sac_master'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hsn_sac_class_id = Column(Integer, nullable=False)
+    hsn_sac_code = Column(String(20), unique=True, nullable=False)
+    hsn_sac_description = Column(String(2000), default=None)
+    sku_code = Column(String(20), default=None)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+
+
+class AppStockKeepingUnitCode(caerp_base):
+    __tablename__ = 'app_stock_keeping_unit_code'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    unit_code = Column(String(250), default=None)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
