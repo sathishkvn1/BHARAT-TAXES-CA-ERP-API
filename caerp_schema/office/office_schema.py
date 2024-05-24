@@ -45,10 +45,12 @@ class OffAppointmentVisitMasterSchema(BaseModel):
     remarks: Optional[str]
 
 class OffAppointmentVisitDetailsSchema(BaseModel):
-    # consultant_id : int
+  
     service_id: int
-
-    
+    is_main_service:str
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class OffAppointmentDetails(BaseModel):
     appointment_master: OffAppointmentMasterSchema
@@ -153,6 +155,7 @@ class OffAppointmentVisitDetailsViewSchema(BaseModel):
     
     service_id: Optional[int]
     service_goods_name:str
+    appointment_detail_is_main_service:str
     class Config:
         orm_mode = True
         from_attributes = True
