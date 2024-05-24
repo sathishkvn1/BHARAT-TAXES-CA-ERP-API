@@ -460,4 +460,63 @@ class OffServiceGoodsDetails(caerp_base):
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(DateTime, nullable=True)   
     
+#--------------------
 
+class OffViewServiceGoodsPriceMaster(caerp_base):
+    __tablename__ = 'off_view_service_goods_price_master'
+
+    service_goods_price_master_id = Column(Integer, primary_key=True)
+    service_goods_master_id = Column(Integer)
+    hsn_sac_class_id = Column(Integer)
+    hsn_sac_class = Column(String)
+    group_id = Column(Integer)
+    group_name = Column(String)
+    sub_group_id = Column(Integer)
+    sub_group_name = Column(String)
+    category_id = Column(Integer)
+    category_name = Column(String)
+    sub_category_id = Column(Integer)
+    sub_category_name = Column(String)
+    service_goods_name = Column(String)
+    hsn_sac_id = Column(Integer)
+    hsn_sac_code = Column(String)
+    hsn_sac_description = Column(String)
+    sku_code_id = Column(Integer)
+    unit_code = Column(String)
+    is_consultancy_service = Column(Integer)
+    is_bundled_service = Column(Integer)
+    services_goods_master_modified_by = Column(Integer)
+    services_goods_master_modified_on = Column(DateTime)
+    services_goods_master_is_deleted = Column(String)
+    services_goods_master_deleted_by = Column(Integer)
+    services_goods_master_deleted_on = Column(DateTime)
+    constitution_id = Column(Integer)
+    business_constitution_name = Column(String)
+    business_constitution_code = Column(String)
+    business_constitution_description = Column(String)
+    pan_code = Column(String)
+    service_charge = Column(Float)
+    govt_agency_fee = Column(Float)
+    stamp_duty = Column(Float)
+    stamp_fee = Column(Float)
+    effective_from_date = Column(DateTime)
+    effective_to_date = Column(DateTime)
+    service_goods_price_master_created_by = Column(Integer)
+    service_goods_price_master_created_on = Column(DateTime)
+    
+class OffServiceGoodsPriceMaster(caerp_base):
+    __tablename__ = 'off_service_goods_price_master'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    service_goods_master_id = Column(Integer,nullable=False)
+    constitution_id = Column(Integer, nullable=False)
+    service_charge = Column(Float, default=0.00)
+    govt_agency_fee = Column(Float, default=0.00)
+    stamp_duty = Column(Float, default=0.00)
+    stamp_fee = Column(Float, default=0.00)
+    effective_from_date = Column(Date, nullable=False)
+    effective_to_date = Column(Date, nullable=False)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    
+    

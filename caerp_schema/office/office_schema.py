@@ -307,3 +307,12 @@ class SaveServicesGoodsMasterRequest(BaseModel):
 
 class EmployeeResponse(BaseModel):
     employees: List[dict]
+    
+class ServiceGoodsPrice(BaseModel):
+    service_name: str
+    configuration_status: Optional[str] = None
+    service_type: Optional[str] = None
+    bundled_service: Optional[str] = None
+
+class PriceListResponse(BaseModel):
+    price_list: List[ServiceGoodsPrice]

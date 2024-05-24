@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffViewServiceGoodsMasterDisplay,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, Slot
+from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffViewServiceGoodsMasterDisplay, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -412,7 +412,6 @@ def get_consultants_and_services(
         return {"services": services_data}
 
 
-
 @router.get("/get_consultants/")
 def get_consultants(
     id: Optional[int] = None,
@@ -473,3 +472,98 @@ def get_consultation_services(
 
     else:
         raise HTTPException(status_code=400, detail="Invalid request. Provide a valid service ID or consultant ID.")
+
+
+#..........................................................
+
+
+
+# @router.get("/get_price_list/", response_model=PriceListResponse)
+# def get_price_list(
+#     service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
+    
+#     search: Optional[str] = Query(None, description="Search by service name"),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Fetches a list of services or goods with their configuration status, service type, and rate status.
+#     """
+#     print(f"Received request with service_type: {service_type}, search: {search}")  # Debug print
+
+#     if service_type == "ALL" and search is None:
+#         services = db_office_master.get_all_services(db)
+#     else:
+#         services = db_office_master.get_services_filtered(db, service_type, search)
+    
+#     if not services:
+#         raise HTTPException(status_code=404, detail="No services found matching the criteria")
+    
+#     services_data = [
+#         ServiceGoodsPrice(
+#             service_name=item.service_goods_name,
+#             # configuration_status="CONFIGURED" if not item.services_goods_master_is_deleted else "NOT CONFIGURED",
+#             service_type=item.hsn_sac_class,
+#             # service_type="BUNDLE" if item.is_bundled_service else "SINGLE",
+#             # rate_status="CONFIGURED" if not item.services_goods_master_is_deleted else "NOT CONFIGURED"
+#         ) for item in services
+#     ]
+    
+#     return PriceListResponse(price_list=services_data)
+
+
+from sqlalchemy import text
+from fastapi import HTTPException
+
+@router.get("/get_price_list/", response_model=PriceListResponse)
+def get_price_list(
+    service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
+    configuration_status: Optional[str] = Query(None, description="Filter by configuration status: 'ALL', 'CONFIGURED', 'NOTCONFIGURED'"),
+    search: Optional[str] = Query(None, description="Search by service name"),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetches a list of services or goods with their configuration status, service type, and rate status.
+    """
+    print(f"Received request with service_type: {service_type}, search: {search}")  # Debug print
+
+    if service_type == "ALL" and  configuration_status == "ALL" and search is None:
+        query = text("""
+            SELECT 
+                a.id, 
+                a.hsn_sac_class_id,
+                b.hsn_sac_class,
+                a.service_goods_name,
+                a.is_bundled_service,
+                c.id AS price_master_id,
+                CASE 
+                    WHEN COUNT(c.service_goods_master_id) >= 1 
+                    THEN 'Configured' 
+                    ELSE 'Not Configured' 
+                END AS configuration_status
+            FROM 
+                off_service_goods_master AS a
+            INNER JOIN 
+                app_hsn_sac_classes AS b ON a.hsn_sac_class_id = b.id
+            LEFT JOIN 
+                off_service_goods_price_master AS c ON a.id = c.service_goods_master_id
+            GROUP BY 
+                a.id
+            ORDER BY  a.hsn_sac_class_id DESC, a.service_goods_name ;
+        """)
+   
+
+    results = db.execute(query)
+    services_data = [
+        ServiceGoodsPrice(
+            service_name=item.service_goods_name,
+            service_type=item.hsn_sac_class,
+            bundled_service=item.is_bundled_service,
+        ) for item in results.fetchall()
+    ]
+
+    if not services_data:
+        raise HTTPException(status_code=404, detail="No services found matching the criteria")
+
+    return PriceListResponse(price_list=services_data)
+
+
