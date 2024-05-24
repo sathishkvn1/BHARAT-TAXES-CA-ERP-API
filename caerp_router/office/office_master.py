@@ -6,12 +6,18 @@ from caerp_db.common.models import Employee
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffViewConsultantDetails, OffViewConsultantMaster
+from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
 from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffViewServiceGoodsMasterDisplay, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
+from sqlalchemy import text
+
+from sqlalchemy import select, func
+
+
+from sqlalchemy import select, func, and_
 router = APIRouter(
     tags=['Office Master']
 )
@@ -515,8 +521,67 @@ def get_consultation_services(
 #     return PriceListResponse(price_list=services_data)
 
 
-from sqlalchemy import text
-from fastapi import HTTPException
+
+
+
+
+# @router.get("/get_price_list/", response_model=PriceListResponse)
+# def get_price_list(
+#     service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
+#     configuration_status: Optional[str] = Query(None, description="Filter by configuration status: 'ALL', 'CONFIGURED', 'NOTCONFIGURED'"),
+#     search: Optional[str] = Query(None, description="Search by service name"),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Fetches a list of services or goods with their configuration status, service type, and rate status.
+#     """
+#     print(f"Received request with service_type: {service_type}, configuration_status: {configuration_status}, search: {search}")  # Debug print
+
+#     if service_type == "ALL" and configuration_status == "ALL" and search is None:
+#         query = text("""
+#             SELECT 
+#                 a.id, 
+#                 a.hsn_sac_class_id,
+#                 b.hsn_sac_class,
+#                 a.service_goods_name,
+#                 a.is_bundled_service,
+#                 c.id AS price_master_id,
+#                 CASE 
+#                     WHEN COUNT(c.service_goods_master_id) >= 1 
+#                     THEN 'Configured' 
+#                     ELSE 'Not Configured' 
+#                 END AS configuration_status
+#             FROM 
+#                 off_service_goods_master AS a
+#             INNER JOIN 
+#                 app_hsn_sac_classes AS b ON a.hsn_sac_class_id = b.id
+#             LEFT JOIN 
+#                 off_service_goods_price_master AS c ON a.id = c.service_goods_master_id
+#             GROUP BY 
+#                 a.id
+#             ORDER BY  
+#                 a.hsn_sac_class_id DESC, 
+#                 a.service_goods_name ;
+#         """)
+
+#         results = db.execute(query).fetchall()
+#         services_data = [
+#             ServiceGoodsPrice(
+#                 service_name=item.service_goods_name,
+#                 service_type=item.hsn_sac_class,
+#                 configuration_status=item.configuration_status,
+#                 bundled_service="BUNDLED" if item.is_bundled_service == "yes" else "SINGLE",
+#             ) for item in results
+#         ]
+
+#         if not services_data:
+#             raise HTTPException(status_code=404, detail="No services found matching the criteria")
+
+#         return PriceListResponse(price_list=services_data)
+
+
+#------------------------------------------------------------------
+
 
 @router.get("/get_price_list/", response_model=PriceListResponse)
 def get_price_list(
@@ -525,49 +590,57 @@ def get_price_list(
     search: Optional[str] = Query(None, description="Search by service name"),
     db: Session = Depends(get_db)
 ):
-    """
-    Fetches a list of services or goods with their configuration status, service type, and rate status.
-    """
-    print(f"Received request with service_type: {service_type}, search: {search}")  # Debug print
+    print(f"Received request with service_type: {service_type}, configuration_status: {configuration_status}, search: {search}")  # Debug print
 
-    if service_type == "ALL" and  configuration_status == "ALL" and search is None:
-        query = text("""
-            SELECT 
-                a.id, 
-                a.hsn_sac_class_id,
-                b.hsn_sac_class,
-                a.service_goods_name,
-                a.is_bundled_service,
-                c.id AS price_master_id,
-                CASE 
-                    WHEN COUNT(c.service_goods_master_id) >= 1 
-                    THEN 'Configured' 
-                    ELSE 'Not Configured' 
-                END AS configuration_status
-            FROM 
-                off_service_goods_master AS a
-            INNER JOIN 
-                app_hsn_sac_classes AS b ON a.hsn_sac_class_id = b.id
-            LEFT JOIN 
-                off_service_goods_price_master AS c ON a.id = c.service_goods_master_id
-            GROUP BY 
-                a.id
-            ORDER BY  a.hsn_sac_class_id DESC, a.service_goods_name ;
-        """)
-   
+    base_query = select([
+        OffServiceGoodsMaster.id,
+        OffServiceGoodsMaster.hsn_sac_class_id,
+        AppHsnSacClasses.hsn_sac_class,
+        OffServiceGoodsMaster.service_goods_name,
+        OffServiceGoodsMaster.is_bundled_service,
+        func.count(OffServiceGoodsPriceMaster.service_goods_master_id).label("configured_count")
+    ]).select_from(
+        OffServiceGoodsMaster.__table__.outerjoin(AppHsnSacClasses, OffServiceGoodsMaster.hsn_sac_class_id == AppHsnSacClasses.id)
+        .outerjoin(OffServiceGoodsPriceMaster, OffServiceGoodsMaster.id == OffServiceGoodsPriceMaster.service_goods_master_id)
+    ).group_by(
+        OffServiceGoodsMaster.id
+    ).order_by(
+        OffServiceGoodsMaster.hsn_sac_class_id.desc(),
+        OffServiceGoodsMaster.service_goods_name
+    )
 
-    results = db.execute(query)
+    conditions = []
+
+    if service_type == "GOODS":
+        conditions.append(OffServiceGoodsMaster.hsn_sac_class_id == 1)
+    elif service_type == "SERVICE":
+        conditions.append(OffServiceGoodsMaster.hsn_sac_class_id == 2)
+
+    if configuration_status == "CONFIGURED":
+        having_condition = func.count(OffServiceGoodsPriceMaster.service_goods_master_id) >= 1
+    elif configuration_status == "NOTCONFIGURED":
+        having_condition = func.count(OffServiceGoodsPriceMaster.service_goods_master_id) == 0
+
+    if search:
+        conditions.append(OffServiceGoodsMaster.service_goods_name.ilike(f"%{search}%"))
+
+    if conditions:
+        base_query = base_query.where(and_(*conditions))
+
+    if configuration_status and configuration_status != "ALL":
+        base_query = base_query.having(having_condition)
+
+    results = db.execute(base_query).fetchall()
     services_data = [
         ServiceGoodsPrice(
             service_name=item.service_goods_name,
             service_type=item.hsn_sac_class,
-            bundled_service=item.is_bundled_service,
-        ) for item in results.fetchall()
+            configuration_status="Configured" if item.configured_count >= 1 else "Not Configured",
+            bundled_service="BUNDLED" if item.is_bundled_service == "yes" else "SINGLE",
+        ) for item in results
     ]
 
     if not services_data:
         raise HTTPException(status_code=404, detail="No services found matching the criteria")
 
     return PriceListResponse(price_list=services_data)
-
-
