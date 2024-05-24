@@ -62,21 +62,7 @@ class OffAppointmentVisitMaster(caerp_base):
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
 
-class OffAppointmentVisitDetails(caerp_base):
-    __tablename__ = 'off_appointment_visit_details'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    visit_master_id = Column(Integer, nullable=False)
-    consultant_id = Column(Integer, nullable=False)
-    service_id = Column(Integer, nullable=False)
-    is_main_service= Column(Enum('yes', 'no'), nullable=False, default='no')
-    created_by = Column(Integer, nullable=True)
-    created_on = Column(Date, nullable=True)
-    modified_by = Column(Integer, nullable=True)
-    modified_on = Column(Date, nullable=True)
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by = Column(Integer, nullable=True)
-    deleted_on = Column(Date, nullable=True)
 
 
 class OffAppointmentVisitMasterView(caerp_base):
@@ -154,6 +140,45 @@ class OffAppointmentVisitDetails(caerp_base):
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
 
+class OffAppointmentVisitDetailsView(caerp_base):
+    __tablename__ = 'off_view_appointment_details'
+
+    appointment_visit_details_id= Column(Integer, primary_key=True, nullable=False)
+    visit_master_id= Column(Integer, nullable=False)
+    appointment_visit_master_financial_year_id= Column(Integer, nullable=True)
+    appointment_visit_master_voucher_number=Column(String(50), nullable=True)
+    appointment_visit_master_appointment_master_id= Column(Integer, nullable=True)
+    appointment_visit_master_appointment_date= Column(Date, nullable=True)
+    appointment_visit_master_appointment_time_from= Column(String(50), nullable=False)  
+    appointment_visit_master_appointment_time_to= Column(String(50), nullable=True)  
+    source_of_enquiry_id= Column(Integer, nullable=True)
+    appointment_status_id= Column(Integer, nullable=True)
+    appointment_visit_master_gross_amount=Column(Float, nullable=False)
+    appointment_visit_master_discount_percentage=Column(Float, nullable=False)
+    special_discount_percentage=Column(Float, nullable=False)
+    special_discount_amount=Column(Float, nullable=False)
+    appointment_visit_master_net_amount=Column(Float, nullable=False)
+    appointment_visit_master_igst_amount=Column(Float, nullable=False)
+    appointment_visit_master_sgst_amount=Column(Float, nullable=False)
+    appointment_visit_master_cgst_amount=Column(Float, nullable=False)
+    appointment_visit_master_bill_amount=Column(Float, nullable=False)
+    remarks= Column(String(2000), nullable=False)
+    service_id= Column(Integer, nullable=True)
+    service_goods_name= Column(String(500), nullable=False)  
+    consultant_id= Column(Integer, nullable=True)
+    appointment_detail_is_main_service= Column(Enum('yes', 'no'), nullable=False, default='no')
+    employee_master_employee_number=Column(String(50), nullable=True)
+    employee_master_first_name=Column(String(50), nullable=True)
+    employee_master_middle_name=Column(String(50), nullable=True)
+    employee_master_last_name=Column(String(50), nullable=True)
+    appointment_visit_details_created_by= Column(Integer, nullable=True)
+    appointment_visit_details_created_on= Column(Date, nullable=True)
+    appointment_visit_details_modified_by= Column(Integer, nullable=True)
+    appointment_visit_details_modified_on= Column(Date, nullable=True)
+    appointment_visit_details_is_deleted= Column(Enum('yes', 'no'), nullable=False, default='no')
+    appointment_visit_details_deleted_by= Column(Integer, nullable=True)
+    appointment_visit_details_deleted_on= Column(Date, nullable=True)
+    
 class OffAppointmentCancellationReason(caerp_base):
     __tablename__ = 'off_appointment_cancellation_reason'
 
