@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffViewServiceGoodsMasterDisplay, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, Slot
+from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -26,7 +26,7 @@ router = APIRouter(
 
 #--------------------save_appointment_details-----------------------
 
-
+#---------------------------------------------------------------------------------------------------------------
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
@@ -73,7 +73,7 @@ def save_appointment_details(
 
 
 
-
+#---------------------------------------------------------------------------------------------------------------
 
 
 @router.post("/reschedule_or_cancel")
@@ -139,11 +139,6 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     info = db_office_master.get_appointment_info(db, type)
     return {"info": info}
 
-
-
-
-
-
 #-------------get all-------------------------------------------------------------------------
 @router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
 def get_and_search_appointments(
@@ -184,7 +179,7 @@ def get_and_search_appointments(
     
 
 
-#-------------------------swathy--------------------------------
+#-------------------------swathy-------------------------------------------------------------------------------
 @router.get('/services/search_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
 
 def get_all_service_goods_master(
@@ -201,6 +196,9 @@ def get_all_service_goods_master(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     return db_office_master.get_all_service_goods_master(db, deleted_status, service_goods_name)
+
+
+#---------------------------------------------------------------------------------------------------------------
 
 @router.post("/services/save_services_goods_master{id}")
 def save_services_goods_master(
@@ -233,6 +231,68 @@ def save_services_goods_master(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+#-------------------------------------------------------------------------------------------------------
+
+@router.post("/services/save_off_document_master/{id}")
+def save_off_document_master(
+    id: int,
+    data: OffDocumentDataMasterBase, 
+    action_type: RecordActionType,
+    document_type: str = Query(enum=["DOCUMENT", "DATA"]),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        result = db_office_master.save_off_document_master(
+            db, id, data, document_type,action_type
+        )
+        
+        # Return the message from the database function
+
+        if result["success"]:
+            return {"message": result["message"]}
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+#------------------
+
+
+@router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
+def search_off_document_data_master(
+    type:  Optional[str] = Query(None, description="Filter by type: 'ALL', 'DOCUMENT', 'DATA'"),
+    document_name: Optional[str] = Query(None, title="Document Name for search"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    
+    """
+    Search document names from off document master
+    """
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+       
+    documents = db_office_master.search_off_document_data_master(db, type, document_name)
+    if not documents:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found")
+    return documents
+
+
+
+
+
+
+
+
+
 
 ###......................test
 
@@ -263,6 +323,7 @@ def save_services_goods_master(
 #         slots.extend(db_office_master.generate_slots(db, request.service_id, consultant_id, request.start_time, request.end_time))
     
 #     return slots
+#---------------------------------------------------------------------------------------------------------------
 from datetime import datetime, timedelta
 
 
@@ -315,7 +376,7 @@ async def get_availability(
 
     return available_slots
 
-
+#---------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_availability/")
 async def check_availability(
@@ -351,7 +412,7 @@ def filter_booked_slots(available_slots, consultant_id, check_date, db):
     
     return available_slots
 
-#---------------------
+#---------------------------------------------------------------------------------------------------------------
 
 
 @router.post("/services/save_services_goods_master{id}")
@@ -384,7 +445,7 @@ def save_services_goods_master(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-#///////////////////////////////////////////////
+#---------------------------------------------------------------------------------------------------------------
 
 @router.get("/consultants_and_services/")
 def get_consultants_and_services(
@@ -421,7 +482,7 @@ def get_consultants_and_services(
         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
         return {"services": services_data}
 
-
+#---------------------------------------------------------------------------------------------------------------
 @router.get("/get_consultants/")
 def get_consultants(
     id: Optional[int] = None,
@@ -447,7 +508,7 @@ def get_consultants(
         raise HTTPException(status_code=400, detail="Invalid service ID")
 
 
-
+#---------------------------------------------------------------------------------------------------------------
 @router.get("/get_consultation_services/")
 def get_consultation_services(
     service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
@@ -536,7 +597,6 @@ def get_consultation_services(
 #     Fetches a list of services or goods with their configuration status, service type, and rate status.
 #     """
 #     print(f"Received request with service_type: {service_type}, configuration_status: {configuration_status}, search: {search}")  # Debug print
-
 #     if service_type == "ALL" and configuration_status == "ALL" and search is None:
 #         query = text("""
 #             SELECT 
@@ -573,16 +633,10 @@ def get_consultation_services(
 #                 bundled_service="BUNDLED" if item.is_bundled_service == "yes" else "SINGLE",
 #             ) for item in results
 #         ]
-
 #         if not services_data:
 #             raise HTTPException(status_code=404, detail="No services found matching the criteria")
-
 #         return PriceListResponse(price_list=services_data)
-
-
-#------------------------------------------------------------------
-
-
+#--------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_list/", response_model=PriceListResponse)
 def get_price_list(
     service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
@@ -644,3 +698,148 @@ def get_price_list(
         raise HTTPException(status_code=404, detail="No services found matching the criteria")
 
     return PriceListResponse(price_list=services_data)
+
+
+# @router.get("/get_service_data/",response_model=List[ServiceModel])
+# def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+#                               db: Session = Depends(get_db)):
+#     # Call the function to get service data based on service_id
+#     service_data = db_office_master.get_service_data(service_id, db)
+#     return service_data
+
+#---------------------------------------------------------------------------------------------------------------
+@router.get("/get_service_data/", response_model=List[ServiceModel])
+def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+                              db: Session = Depends(get_db)):
+    # Call the function to get service data based on service_id
+    service_data = db_office_master.get_service_data(service_id, db)
+    return service_data
+
+ #---------------------------------------------------------------------------------------------------------------      
+@router.post("/save_service_price/")
+def save_service_price_endpoint(price_data: List[PriceData], 
+                                id: int,
+                                db: Session = Depends(get_db),
+                                token: str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    try:
+        for data in price_data:
+            db_office_master.save_price_data(data, user_id, db)
+        return {"detail": "Price data saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+#---------------------------------------------------------------------------------------------------------------
+ 
+# @router.post("/add_price/", response_model=dict)
+# def add_price_to_service(
+#                         new_price: SetPriceModel,
+#                         service_id: int = Header(..., description="Service ID"),
+#                         db: Session = Depends(get_db),
+#                         token: str = Depends(oauth2.oauth2_scheme)):
+    
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         # Retrieve the service's pricing history
+#         service = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == service_id).first()
+
+#         if not service:
+#             raise HTTPException(status_code=404, detail="Service not found")
+
+#         # Convert new_price to OffServiceGoodsPriceMaster model
+#         new_price_db = OffServiceGoodsPriceMaster(**new_price.dict())
+
+#         # Check if there is an existing price entry
+#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(
+#             OffServiceGoodsPriceMaster.service_goods_master_id == service_id,
+#             OffServiceGoodsPriceMaster.effective_to_date == None
+#         ).first()
+
+#         # If an existing price entry is found
+#         if existing_price:
+#             # Update the effective_to_date of the previous price entry
+#             existing_price.effective_to_date = new_price_db.effective_from_date - timedelta(days=1)
+
+#         # Insert the new price entry into the database
+#         db.add(new_price_db)
+#         db.commit()
+
+#         return {"success": True, "message": "Price added successfully"}
+
+#     except Exception as e:
+#         return {"success": False, "message": str(e)}
+
+#---------------------------------------------------------------------------------------------------------------
+import datetime
+@router.post("/add_price/", response_model=dict)
+def add_price_to_service(
+                        new_price: SetPriceModel,
+                        service_id: int = Header(..., description="Service ID"),
+                        db: Session = Depends(get_db),
+                        token: str = Depends(oauth2.oauth2_scheme)):
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    
+    try:
+        # Retrieve the service's pricing history
+        service = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == service_id).first()
+
+        if not service:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        # Set the current timestamp for the created_on field
+        created_on = datetime.datetime.now()
+
+        # Convert new_price to OffServiceGoodsPriceMaster model
+        new_price_db = OffServiceGoodsPriceMaster(**new_price.dict(), created_by=user_id, created_on=created_on)
+
+        # Check if there is an existing price entry
+        existing_price = db.query(OffServiceGoodsPriceMaster).filter(
+            OffServiceGoodsPriceMaster.service_goods_master_id == service_id,
+            OffServiceGoodsPriceMaster.effective_to_date == None
+        ).first()
+
+        # If an existing price entry is found
+        if existing_price:
+            # Update the effective_to_date of the previous price entry
+            existing_price.effective_to_date = new_price_db.effective_from_date - timedelta(days=1)
+
+        # Insert the new price entry into the database
+        db.add(new_price_db)
+        db.commit()
+
+        return {"success": True, "message": "Price added successfully"}
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+#---------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

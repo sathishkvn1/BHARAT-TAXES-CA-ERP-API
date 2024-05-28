@@ -170,7 +170,7 @@ class ResponseSchema(BaseModel):
         from_attributes = True
         
 
- 
+
  
  
 class AppointmentVisitDetailsSchema(BaseModel):
@@ -320,3 +320,84 @@ class ServiceGoodsPrice(BaseModel):
 
 class PriceListResponse(BaseModel):
     price_list: List[ServiceGoodsPrice]
+    
+    
+# class ServiceModel(BaseModel):
+#     id: int
+#     service_name: str
+
+#     constitution_id: int
+#     business_constitution_name: str
+#     business_constitution_code: str
+#     service_charge: Optional[int]  # Changed to Optional[int]
+#     govt_agency_fee: Optional[int]  # Changed to Optional[int]
+#     stamp_duty: Optional[int]  # Changed to Optional[int]
+#     stamp_fee: Optional[int]  # Changed to Optional[int]
+#     effective_from_date: Optional[date]
+#     effective_to_date: Optional[date]
+#     service_description: Optional[str] = None
+    
+# class PriceHistoryModel(BaseModel):
+#     service_charge: Optional[int]
+#     govt_agency_fee: Optional[int]
+#     stamp_duty: Optional[int]
+#     stamp_fee: Optional[int]
+#     effective_from_date: Optional[date]
+#     effective_to_date: Optional[date]
+
+class PriceHistoryModel(BaseModel):
+    service_goods_price_master_id: Optional[int]
+    service_charge: Optional[int]
+    govt_agency_fee: Optional[int]
+    stamp_duty: Optional[int]
+    stamp_fee: Optional[int]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+    
+class SetPriceModel(BaseModel):
+    service_goods_master_id:int
+    constitution_id:int
+    service_charge: Optional[int]
+    govt_agency_fee: Optional[int]
+    stamp_duty: Optional[int]
+    stamp_fee: Optional[int]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+
+
+class ServiceModel(BaseModel):
+    id: int
+    service_name: str
+    constitution_id: int
+    business_constitution_name: str
+    business_constitution_code: str
+    price_history: List[PriceHistoryModel]
+
+    
+    
+class ServicePriceHistory(BaseModel):
+    constitution_id: int
+    business_constitution_name: str
+    service_charge: Optional[float]
+    govt_agency_fee: Optional[float]
+    stamp_duty: Optional[float]
+    stamp_fee: Optional[float]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+# class ServiceModel(BaseModel):
+#     service_name: str
+#     price_history: List[ServicePriceHistory]
+class PriceData(BaseModel):
+    service_goods_master_id: int
+    constitution_id: int
+    service_charge: float
+    govt_agency_fee: float
+    stamp_duty: float
+    stamp_fee: float
+    effective_from_date: date
+    effective_to_date: date
+    
+    
+class OffDocumentDataMasterBase(BaseModel):
+    document_data_name : str
+    has_expiry : str    

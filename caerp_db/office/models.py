@@ -553,3 +553,20 @@ class AppBusinessConstitution(caerp_base):
     pan_code = Column(String(10), default=None)
     display_order = Column(Integer, nullable=False, default=1)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+
+
+class OffDocumentDataMaster(caerp_base):
+    __tablename__ = 'off_document_data_master'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_data_type_id = Column(Integer, nullable=False)
+    document_data_name = Column(String(200), nullable=False)
+    has_expiry = Column(Enum('yes', 'no'), default='no', nullable=False) 
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+    
+class OffDocumentDataType(caerp_base):
+    __tablename__ = 'off_document_data_type'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_data_type = Column(String(200), nullable=False) 
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')

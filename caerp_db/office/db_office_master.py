@@ -6,8 +6,8 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceModel, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -126,7 +126,7 @@ def save_appointment_visit_master(
         db.rollback()
         raise e
 
-
+#---------------------------------------------------------------------------------------------------------------
 def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCancelRequest, action: AppointmentStatus, visit_master_id: int):
     if action == AppointmentStatus.RESCHEDULED:
         if not request_data.date or not request_data.time:
@@ -282,7 +282,7 @@ def get_appointments(
 
 
 
-#---service-goods-master----------------------------
+#---service-goods-master-------------------------------------------------------------------------------------
 
 def get_all_service_goods_master(
     db: Session, 
@@ -302,7 +302,7 @@ def get_all_service_goods_master(
     
     return query.all()
 
-#-----------------------
+#---------------------------------------------------------------------------------------------------------------
 def save_services_goods_master(
     db: Session,
     id: int,
@@ -392,11 +392,100 @@ def save_services_goods_master(
 
 
 
+#--------------------------------------------------------------------------------------------------------------
+def search_off_document_data_master(
+    db: Session, 
+    document_type: Optional[str] = None,   
+    name: Optional[str] = None
+):
+    # Perform an explicit join between OffDocumentDataMaster and OffDocumentDataType
+    query = db.query(OffDocumentDataMaster).join(
+        OffDocumentDataType,
+        OffDocumentDataMaster.document_data_type_id == OffDocumentDataType.id
+    )
+    
+    # Filter based on the document_data_type
+    if document_type:
+        if document_type == "DOCUMENT":
+            query = query.filter(OffDocumentDataType.document_data_type == "DOCUMENT")
+        elif document_type == "DATA":
+            query = query.filter(OffDocumentDataType.document_data_type == "DATA")
+    
+    # Apply filter based on document name
+    if name:
+        query = query.filter(OffDocumentDataMaster.document_data_name.ilike(f'%{name}%'))
+    
+    return query.all()
+
+ 
+# #-----------------------
+
+
+def save_off_document_master(
+    db: Session,
+    id: int,
+    data: OffDocumentDataMasterBase,
+    type: str,
+    action_type: RecordActionType
+):
+    if action_type == RecordActionType.INSERT_ONLY:
+        if id != 0:
+            raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY:
+        if id <= 0:
+            raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action type")
+    
+    try:
+        # Retrieve the document type record based on the provided type
+        document_type_record = db.query(OffDocumentDataType).filter(
+            OffDocumentDataType.document_data_type == type
+        ).first()
+
+        if not document_type_record:
+            raise HTTPException(status_code=400, detail="Invalid document type")
+        
+        document_data_type_id = document_type_record.id
+        
+        if action_type == RecordActionType.INSERT_ONLY:
+            document_master = OffDocumentDataMaster(
+                **data.dict(),
+                document_data_type_id=document_data_type_id
+            )
+            db.add(document_master)
+            db.commit()
+            db.refresh(document_master)
+            return {"success": True, "message": "Saved successfully"}
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
+            if not document:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
+            
+            # Update the document type if needed
+            if document.document_data_type_id != document_data_type_id:
+                document.document_data_type_id = document_data_type_id
+            
+            # Update other fields
+            for key, value in data.dict().items():
+                setattr(document, key, value)
+            
+            db.commit()
+            db.refresh(document)
+            return {"success": True, "message": "Updated successfully"}
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Integrity error: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 
 
-#-----------Aparna----------------------------------
+#-----------Aparna----------------------------------------------------------------------------------------------
 
 
 
@@ -426,13 +515,13 @@ def get_all_employees(db: Session) -> List[Employee]:
 
 
 
-
+#---------------------------------------------------------------------------------------------------------------
 def get_all_services(db: Session) -> List[OffViewConsultantDetails]:
 
     return db.query(OffViewConsultantDetails).all()
 
 
-
+#---------------------------------------------------------------------------------------------------------------
 
 def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
     # Query the database to get consultants for the given service_id
@@ -440,7 +529,7 @@ def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewCon
     return consultants
 
 
-
+#---------------------------------------------------------------------------------------------------------------
 def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantDetails]:
     print(f"Running query for consultant ID {consultant_id}")  # Debug print
     services = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.consultant_id == consultant_id).all()
@@ -448,7 +537,7 @@ def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[O
     return services
 
 
-#---------------APARNA
+#---------------APARNA------------------------------------------------------------------------------------------
 def get_all_services(db: Session) -> List[OffViewServiceGoodsPriceMaster]:
     """
     Fetch all services or goods from the off_view_service_goods_price_master table.
@@ -473,3 +562,177 @@ def get_services_filtered(db: Session,
         query = query.filter(OffViewServiceGoodsPriceMaster.service_goods_name.ilike(f"%{search}%"))
     
     return query.all()
+
+#---------------------------------------------------------------------------------------------------------------
+
+
+
+# def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
+#     query_result = db.execute("""
+#         SELECT
+#             a.id AS constitution_id,
+#             a.business_constitution_name,
+#             a.business_constitution_code,
+#             b.id AS service_goods_master_id,
+#             b.service_goods_name,
+#             c.service_charge,
+#             c.govt_agency_fee,
+#             c.stamp_duty,
+#             c.stamp_fee,
+#             c.effective_from_date AS price_master_effective_from_date,
+#             c.effective_to_date AS price_master_effective_to_date
+#         FROM
+#             app_business_constitution AS a
+#         LEFT OUTER JOIN
+#             off_service_goods_master AS b ON TRUE
+#         LEFT OUTER JOIN
+#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id AND a.id = c.constitution_id
+#         WHERE
+#             b.id = :service_id
+#         ORDER BY
+#             a.id, b.id;
+#     """, {"service_id": service_id}).fetchall()
+
+#     service_data = []
+#     for row in query_result:
+#         service_data.append(ServiceModel(
+#             id=row.constitution_id,
+#             service_name=row.service_goods_name,
+#             constitution_id=row.constitution_id,
+#             business_constitution_name=row.business_constitution_name,
+#             business_constitution_code=row.business_constitution_code,
+#             service_charge=row.service_charge if row.service_charge is not None else 0,
+#             govt_agency_fee=row.govt_agency_fee if row.govt_agency_fee is not None else 0,
+#             stamp_duty=row.stamp_duty if row.stamp_duty is not None else 0,
+#             stamp_fee=row.stamp_fee if row.stamp_fee is not None else 0,
+#             effective_from_date=row.price_master_effective_from_date,
+#             effective_to_date=row.price_master_effective_to_date,
+#             service_description=None  # Add description if available in the database
+#         ))
+
+#     return service_data
+#---------------------------------------------------------------------------------------------------------------
+def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
+    query_result = db.execute("""
+        SELECT
+            a.id AS constitution_id,
+            a.business_constitution_name,
+            a.business_constitution_code,
+            b.id AS service_goods_master_id,
+            COALESCE(c.id, 0) AS service_goods_price_master_id,
+            b.service_goods_name,
+            COALESCE(c.service_charge, 0) AS service_charge,
+            COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+            COALESCE(c.stamp_duty, 0) AS stamp_duty,
+            COALESCE(c.stamp_fee, 0) AS stamp_fee,
+            c.effective_from_date AS price_master_effective_from_date,
+            c.effective_to_date AS price_master_effective_to_date
+        FROM
+            app_business_constitution AS a
+        LEFT OUTER JOIN
+            off_service_goods_master AS b ON TRUE
+        LEFT OUTER JOIN
+            off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+                                                 AND a.id = c.constitution_id
+                                                 AND (c.effective_to_date IS NULL OR c.effective_to_date >= CURRENT_DATE)
+                                                 AND c.effective_from_date <= CURRENT_DATE
+        WHERE
+            b.id = :service_id
+        ORDER BY
+            a.id, b.id;
+    """, {"service_id": service_id}).fetchall()
+
+    service_data_dict = {}
+    for row in query_result:
+        if row.constitution_id not in service_data_dict:
+            service_data_dict[row.constitution_id] = {
+                "id": row.service_goods_master_id,
+                "service_name": row.service_goods_name,
+                "constitution_id": row.constitution_id,
+                "business_constitution_name": row.business_constitution_name,
+                "business_constitution_code": row.business_constitution_code,
+                "price_history": []
+            }
+        
+        service_data_dict[row.constitution_id]["price_history"].append({
+            "service_goods_price_master_id": row.service_goods_price_master_id,
+            "service_charge": row.service_charge,
+            "govt_agency_fee": row.govt_agency_fee,
+            "stamp_duty": row.stamp_duty,
+            "stamp_fee": row.stamp_fee,
+            "effective_from_date": row.price_master_effective_from_date,
+            "effective_to_date": row.price_master_effective_to_date
+        })
+    
+    service_data = [ServiceModel(**data) for data in service_data_dict.values()]
+    return service_data
+
+#---------------------------------------------------------------------------------------------------------------
+
+def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
+    query_result = db.execute("""
+        SELECT
+            a.id AS constitution_id,
+            a.business_constitution_name,
+            b.service_goods_name,
+            c.service_charge,
+            c.govt_agency_fee,
+            c.stamp_duty,
+            c.stamp_fee,
+            c.effective_from_date AS price_master_effective_from_date,
+            c.effective_to_date AS price_master_effective_to_date
+        FROM
+            app_business_constitution AS a
+        LEFT OUTER JOIN
+            off_service_goods_price_master AS c ON a.id = c.constitution_id
+        LEFT OUTER JOIN
+            off_service_goods_master AS b ON b.id = c.service_goods_master_id
+        WHERE
+            b.id = :service_id
+        ORDER BY
+            a.id, c.effective_from_date DESC;
+    """, {"service_id": service_id}).fetchall()
+
+    if not query_result:
+        return []
+
+    service_name = query_result[0].service_goods_name
+    price_history = []
+    
+    for row in query_result:
+        price_history.append(ServicePriceHistory(
+            constitution_id=row.constitution_id,
+            business_constitution_name=row.business_constitution_name,
+            service_charge=row.service_charge,
+            govt_agency_fee=row.govt_agency_fee,
+            stamp_duty=row.stamp_duty,
+            stamp_fee=row.stamp_fee,
+            effective_from_date=row.price_master_effective_from_date,
+            effective_to_date=row.price_master_effective_to_date
+        ))
+
+    return [ServiceModel(
+        service_name=service_name,
+        price_history=price_history
+    )]
+    
+#--------------------------------------------------------------------------------------------------------------   
+def save_price_data(price_data: PriceData, user_id: int, db: Session):
+    new_price = OffServiceGoodsPriceMaster(
+        service_goods_master_id=price_data.service_goods_master_id,
+        constitution_id=price_data.constitution_id,
+        service_charge=price_data.service_charge,
+        govt_agency_fee=price_data.govt_agency_fee,
+        stamp_duty=price_data.stamp_duty,
+        stamp_fee=price_data.stamp_fee,
+        effective_from_date=price_data.effective_from_date,
+        effective_to_date=price_data.effective_to_date,
+        created_by=user_id,
+        created_on=datetime.now()
+    )
+    db.add(new_price)
+    db.commit()
+    db.refresh(new_price)
+    return new_price
+
+#---------------------------------------------------------------------------------------------------------------
