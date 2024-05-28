@@ -6,7 +6,7 @@ from caerp_db.common.models import Employee
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
+from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
 
 from caerp_auth import oauth2
 
@@ -37,7 +37,8 @@ TABLE_MODEL_MAPPING = {
     "OffServiceGoodsSubCategory": OffServiceGoodsSubCategory,
     "AppHsnSacMaster":AppHsnSacMaster,
     "AppStockKeepingUnitCode":AppStockKeepingUnitCode,
-    "AppBusinessConstitution":AppBusinessConstitution
+    "AppBusinessConstitution":AppBusinessConstitution,
+    "OffDocumentDataMaster":OffDocumentDataMaster
 }
 
 # Define a function to get the model class based on the provided model name
