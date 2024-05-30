@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -180,8 +180,7 @@ def get_and_search_appointments(
 
 
 #-------------------------swathy-------------------------------------------------------------------------------
-@router.get('/services/search_service_goods_master', response_model=list[OffViewServiceGoodsMasterDisplay])
-
+@router.get('/services/search_service_goods_master', response_model=List[OffViewServiceGoodsMasterDisplay])
 def get_all_service_goods_master(
     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
     service_goods_name: Optional[str] = Query(None, title="Service Name for search (optional)"),
@@ -191,11 +190,19 @@ def get_all_service_goods_master(
     """
     Get all service goods master
     """
-   
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    return db_office_master.get_all_service_goods_master(db, deleted_status, service_goods_name)
+
+    results = db_office_master.get_all_service_goods_master(db, deleted_status, service_goods_name)
+
+    
+    # Remove the "details" field if there are no details available
+    for result in results:
+        if result.is_bundled_service == "no" or not result.details:
+            delattr(result, "details")
+
+    return results
+
 
 
 #---------------------------------------------------------------------------------------------------------------
@@ -253,7 +260,8 @@ def save_off_document_master(
         # Return the message from the database function
 
         if result["success"]:
-            return {"message": result["message"]}
+          
+            return {"success": True, "message":result["message"]}
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
@@ -261,8 +269,7 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-#------------------
+#-------------------------------------------------------------------------------------------------------
 
 
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
@@ -287,7 +294,7 @@ def search_off_document_data_master(
 
 
 
-
+#-------------------------------------------------------------------------------------------------------
 
 
 
@@ -708,14 +715,22 @@ def get_price_list(
 #     return service_data
 
 #---------------------------------------------------------------------------------------------------------------
-@router.get("/get_service_data/", response_model=List[ServiceModel])
+# @router.get("/get_service_data/", response_model=List[ServiceModel])
+# def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+#                               db: Session = Depends(get_db)):
+#     # Call the function to get service data based on service_id
+#     service_data = db_office_master.get_service_data(service_id, db)
+#     return service_data
+
+
+
+@router.get("/get_service_data/", response_model=List[ServiceModelSchema])
 def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
                               db: Session = Depends(get_db)):
     # Call the function to get service data based on service_id
-    service_data = db_office_master.get_service_data(service_id, db)
+    service_data =db_office_master.get_service_data(service_id, db)
     return service_data
-
- #---------------------------------------------------------------------------------------------------------------      
+#---------------------------------------------------------------------------------------------------------------      
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
                                 id: int,
@@ -779,6 +794,7 @@ def save_service_price_endpoint(price_data: List[PriceData],
 #         return {"success": False, "message": str(e)}
 
 #---------------------------------------------------------------------------------------------------------------
+
 import datetime
 @router.post("/add_price/", response_model=dict)
 def add_price_to_service(
@@ -825,6 +841,8 @@ def add_price_to_service(
 
     except Exception as e:
         return {"success": False, "message": str(e)}
+    
+    
 #---------------------------------------------------------------------------------------------------------------
 
 

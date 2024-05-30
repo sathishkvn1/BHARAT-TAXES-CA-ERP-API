@@ -6,8 +6,8 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceModel, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -286,21 +286,54 @@ def get_appointments(
 
 def get_all_service_goods_master(
     db: Session, 
-    deleted_status: Optional[DeletedStatus] = None, 
+    deleted_status: Optional[str] = None, 
     name: Optional[str] = None
-):
-    query = db.query(OffViewServiceGoodsMaster)
-     
-    if deleted_status == DeletedStatus.DELETED:
-         query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
-    elif deleted_status == DeletedStatus.NOT_DELETED:
-        query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
-    
-    # Apply filter based on service name
-    if name:
-        query = query.filter(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
-    
-    return query.all()
+) -> List[OffViewServiceGoodsMasterDisplay]:
+    try:
+        query = db.query(OffViewServiceGoodsMaster)
+
+        # Apply filters based on your requirements
+        if deleted_status == 'deleted':
+            query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
+        elif deleted_status == 'not_deleted':
+            query = query.filter(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
+
+        if name:
+            query = query.filter(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
+
+        # Execute the query to get master records
+        results = query.all()
+
+        # Fetching details for bundled service_goods_master_ids
+        details_dict = {}
+        for result in results:
+            if result.is_bundled_service == "yes":
+                service_goods_details = (
+                    db.query(OffViewServiceGoodsDetails)
+                    .filter(OffViewServiceGoodsDetails.bundled_service_goods_id == result.service_goods_master_id)
+                    .all()
+                )
+                details = []
+                for detail in service_goods_details:
+                    details.append(OffViewServiceGoodsDetailsDisplay(
+                        service_goods_master_id=detail.service_goods_master_id,
+                        service_goods_name=detail.service_goods_name,
+                        display_order=detail.display_order
+                    ))
+                if details:
+                    details_dict[result.service_goods_master_id] = details
+
+        # Convert ORM results to Pydantic models and return
+        return [
+            OffViewServiceGoodsMasterDisplay(
+                **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
+                details=details_dict.get(result.service_goods_master_id, None)
+            )
+            for result in results
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #---------------------------------------------------------------------------------------------------------------
 def save_services_goods_master(
@@ -484,7 +517,6 @@ def save_off_document_master(
 
 
 
-
 #-----------Aparna----------------------------------------------------------------------------------------------
 
 
@@ -612,7 +644,62 @@ def get_services_filtered(db: Session,
 
 #     return service_data
 #---------------------------------------------------------------------------------------------------------------
-def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
+# def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
+#     query_result = db.execute("""
+#         SELECT
+#             a.id AS constitution_id,
+#             a.business_constitution_name,
+#             a.business_constitution_code,
+#             b.id AS service_goods_master_id,
+#             COALESCE(c.id, 0) AS service_goods_price_master_id,
+#             b.service_goods_name,
+#             COALESCE(c.service_charge, 0) AS service_charge,
+#             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+#             COALESCE(c.stamp_duty, 0) AS stamp_duty,
+#             COALESCE(c.stamp_fee, 0) AS stamp_fee,
+#             c.effective_from_date AS price_master_effective_from_date,
+#             c.effective_to_date AS price_master_effective_to_date
+#         FROM
+#             app_business_constitution AS a
+#         LEFT OUTER JOIN
+#             off_service_goods_master AS b ON TRUE
+#         LEFT OUTER JOIN
+#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+#                                                  AND a.id = c.constitution_id
+#                                                  AND (c.effective_to_date IS NULL OR c.effective_to_date >= CURRENT_DATE)
+#                                                  AND c.effective_from_date <= CURRENT_DATE
+#         WHERE
+#             b.id = :service_id
+#         ORDER BY
+#             a.id, b.id;
+#     """, {"service_id": service_id}).fetchall()
+
+#     service_data_dict = {}
+#     for row in query_result:
+#         if row.constitution_id not in service_data_dict:
+#             service_data_dict[row.constitution_id] = {
+#                 "id": row.service_goods_master_id,
+#                 "service_name": row.service_goods_name,
+#                 "constitution_id": row.constitution_id,
+#                 "business_constitution_name": row.business_constitution_name,
+#                 "business_constitution_code": row.business_constitution_code,
+#                 "price_history": []
+#             }
+        
+#         service_data_dict[row.constitution_id]["price_history"].append({
+#             "service_goods_price_master_id": row.service_goods_price_master_id,
+#             "service_charge": row.service_charge,
+#             "govt_agency_fee": row.govt_agency_fee,
+#             "stamp_duty": row.stamp_duty,
+#             "stamp_fee": row.stamp_fee,
+#             "effective_from_date": row.price_master_effective_from_date,
+#             "effective_to_date": row.price_master_effective_to_date
+#         })
+    
+#     service_data = [ServiceModel(**data) for data in service_data_dict.values()]
+#     return service_data
+
+def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
     query_result = db.execute("""
         SELECT
             a.id AS constitution_id,
@@ -642,30 +729,25 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
             a.id, b.id;
     """, {"service_id": service_id}).fetchall()
 
-    service_data_dict = {}
-    for row in query_result:
-        if row.constitution_id not in service_data_dict:
-            service_data_dict[row.constitution_id] = {
-                "id": row.service_goods_master_id,
-                "service_name": row.service_goods_name,
-                "constitution_id": row.constitution_id,
-                "business_constitution_name": row.business_constitution_name,
-                "business_constitution_code": row.business_constitution_code,
-                "price_history": []
-            }
-        
-        service_data_dict[row.constitution_id]["price_history"].append({
-            "service_goods_price_master_id": row.service_goods_price_master_id,
-            "service_charge": row.service_charge,
-            "govt_agency_fee": row.govt_agency_fee,
-            "stamp_duty": row.stamp_duty,
-            "stamp_fee": row.stamp_fee,
-            "effective_from_date": row.price_master_effective_from_date,
-            "effective_to_date": row.price_master_effective_to_date
-        })
+    service_data = [
+        ServiceModelSchema(
+            constitution_id=row.constitution_id,
+            business_constitution_name=row.business_constitution_name,
+            service_goods_master_id=row.service_goods_master_id,
+            service_goods_price_master_id=row.service_goods_price_master_id,
+            service_name=row.service_goods_name,
+            business_constitution_code=row.business_constitution_code,
+            service_charge=row.service_charge,
+            govt_agency_fee=row.govt_agency_fee,
+            stamp_duty=row.stamp_duty,
+            stamp_fee=row.stamp_fee,
+            price_master_effective_from_date=row.price_master_effective_from_date,
+            price_master_effective_to_date=row.price_master_effective_to_date
+        ) for row in query_result
+    ]
     
-    service_data = [ServiceModel(**data) for data in service_data_dict.values()]
     return service_data
+
 
 #---------------------------------------------------------------------------------------------------------------
 

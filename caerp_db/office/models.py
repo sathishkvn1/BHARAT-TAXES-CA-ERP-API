@@ -290,7 +290,7 @@ class OffViewServiceGoodsMaster(caerp_base):
     gst = Column(String(2), nullable=False)
     sku_code_id = Column(Integer, nullable=False)
     stock_keeping_unit_code = Column(String(250), nullable=True)
-    is_consultancy_service = Column(Enum('yes', 'no'), nullable=False)
+    has_consultation = Column(Enum('yes', 'no'), nullable=False)
     is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
     service_goods_master_created_by = Column(Integer, nullable=False)
     service_goods_master_created_on = Column(DateTime, nullable=False)
@@ -299,6 +299,7 @@ class OffViewServiceGoodsMaster(caerp_base):
     service_goods_master_is_deleted = Column(Enum('yes', 'no'), nullable=False)
     service_goods_master_deleted_by = Column(Integer, nullable=True)
     service_goods_master_deleted_on = Column(DateTime, nullable=True)
+
 
 
 
@@ -415,7 +416,8 @@ class OffViewConsultantDetails(caerp_base):
     hsn_sac_description = Column(String)
     sku_code_id = Column(Integer)
     unit_code = Column(String)
-    is_consultancy_service = Column(Integer)
+    # is_consultancy_service = Column(Integer)
+    has_consultation=Column(Integer)
     is_bundled_service = Column(Integer)
     service_goods_master_modified_by = Column(Integer)
     service_goods_master_modified_on = Column(DateTime)
@@ -440,7 +442,7 @@ class OffServiceGoodsMaster(caerp_base):
     service_goods_name = Column(String(500), nullable=False)
     hsn_sac_id = Column(Integer, nullable=False)
     sku_code_id = Column(Integer, nullable=False)
-    is_consultancy_service = Column(Enum('yes', 'no'), default='no', nullable=False)
+    has_consultation = Column(Enum('yes', 'no'), default='no', nullable=False)
     is_bundled_service = Column(Enum('yes', 'no'), default='no', nullable=False)
     created_by = Column(Integer, nullable=False)
     created_on = Column(DateTime, nullable=False)
@@ -462,8 +464,42 @@ class OffServiceGoodsDetails(caerp_base):
     modified_on = Column(DateTime, nullable=True)
     is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
     deleted_by = Column(Integer, nullable=True)
-    deleted_on = Column(DateTime, nullable=True)   
-    
+    deleted_on = Column(DateTime, nullable=True) 
+  
+  
+class OffViewServiceGoodsDetails(caerp_base):
+    __tablename__ = 'off_view_service_goods_details'
+
+    service_goods_details_id = Column(Integer, primary_key=True, nullable=False)
+    service_goods_master_id = Column(Integer, nullable=False)
+    hsn_sac_class_id = Column(Integer, nullable=False)
+    hsn_sac_class = Column(String(100), nullable=False)
+    group_id = Column(Integer, nullable=False)
+    service_master_group_name = Column(String(250), nullable=True)
+    sub_group_id = Column(Integer, nullable=False)
+    service_master_sub_group_name = Column(String(100), nullable=True)
+    category_id = Column(Integer, nullable=False)
+    service_master_category_name = Column(String(200), nullable=True)
+    sub_category_id = Column(Integer, nullable=False)
+    service_master_sub_category_name = Column(String(200), nullable=True)
+    service_goods_name = Column(String(500), nullable=False)
+    hsn_sac_id = Column(Integer, nullable=False)
+    hsn_sac_code = Column(String(20), nullable=False)
+    hsn_sac_description = Column(String(2000), nullable=True)
+    sku_code_id = Column(Integer, nullable=False)
+    unit_code = Column(String(250), nullable=True)
+    has_consultation = Column(Enum('yes', 'no'), nullable=False)
+    is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
+    bundled_service_goods_id = Column(Integer, nullable=False)
+    display_order = Column(Integer, nullable=True)
+    service_goods_details_created_by = Column(Integer, nullable=False)
+    service_goods_details_created_on = Column(DateTime, nullable=False)
+    service_goods_details_modified_by = Column(Integer, nullable=True)
+    service_goods_details_modified_on = Column(DateTime, nullable=True)
+    service_goods_details_is_deleted = Column(Enum('yes', 'no'), nullable=False)
+    service_goods_details_deleted_by = Column(Integer, nullable=True)
+    service_goods_details_deleted_on = Column(DateTime, nullable=True)
+  
 #--------------------
 
 class OffViewServiceGoodsPriceMaster(caerp_base):
@@ -487,7 +523,8 @@ class OffViewServiceGoodsPriceMaster(caerp_base):
     hsn_sac_description = Column(String)
     sku_code_id = Column(Integer)
     unit_code = Column(String)
-    is_consultancy_service = Column(Integer)
+    has_consultation = Column(Integer)
+    # is_consultancy_service = Column(Integer)
     is_bundled_service = Column(Integer)
     services_goods_master_modified_by = Column(Integer)
     services_goods_master_modified_on = Column(DateTime)

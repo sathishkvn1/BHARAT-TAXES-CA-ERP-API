@@ -217,9 +217,14 @@ class AppointmentVisitDetailsSchema(BaseModel):
     appointment_visit_details_deleted_by: Optional[int]
     appointment_visit_details_deleted_on: Optional[date]   
 #------------------- swathy
+class OffViewServiceGoodsDetailsDisplay(BaseModel):
+   
+    service_goods_master_id: int
+    service_goods_name: str
+    display_order: Optional[int]
+
 
 class OffViewServiceGoodsMasterDisplay(BaseModel):
-
     service_goods_master_id: int
     hsn_sac_class_id: int
     hsn_sac_class: str
@@ -238,15 +243,12 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     gst: str
     sku_code_id: int
     stock_keeping_unit_code: Optional[str]
-    is_consultancy_service: str
+    has_consultation: str
     is_bundled_service: str
-    service_goods_master_created_by: int
-    service_goods_master_created_on: datetime
-    service_goods_master_modified_by: Optional[int]
-    service_goods_master_modified_on: Optional[datetime]
-    service_goods_master_is_deleted: str
-    service_goods_master_deleted_by: Optional[int]
-    service_goods_master_deleted_on: Optional[datetime]
+    details: Optional[List[OffViewServiceGoodsDetailsDisplay]] = None
+    
+    
+
 
 
     
@@ -273,7 +275,7 @@ class OffServiceGoodsMasterCreate(BaseModel):
     service_goods_name: str
     hsn_sac_id: int
     sku_code_id: int
-    is_consultancy_service: str
+    has_consultation: str
     is_bundled_service: str
 
 
@@ -364,7 +366,6 @@ class SetPriceModel(BaseModel):
     effective_from_date: Optional[date]
     effective_to_date: Optional[date]
 
-
 class ServiceModel(BaseModel):
     id: int
     service_name: str
@@ -372,8 +373,22 @@ class ServiceModel(BaseModel):
     business_constitution_name: str
     business_constitution_code: str
     price_history: List[PriceHistoryModel]
-
     
+    
+class ServiceModelSchema(BaseModel):
+    constitution_id: int
+    business_constitution_name: str
+    service_goods_master_id: int
+    service_goods_price_master_id: int
+    service_name: str
+    business_constitution_code: str
+    service_charge: float
+    govt_agency_fee: float
+    stamp_duty: float
+    stamp_fee: float
+    price_master_effective_from_date: Optional[date]
+    price_master_effective_to_date: Optional[date]
+
     
 class ServicePriceHistory(BaseModel):
     constitution_id: int
@@ -384,9 +399,12 @@ class ServicePriceHistory(BaseModel):
     stamp_fee: Optional[float]
     effective_from_date: Optional[date]
     effective_to_date: Optional[date]
+
+  
 # class ServiceModel(BaseModel):
 #     service_name: str
 #     price_history: List[ServicePriceHistory]
+
 class PriceData(BaseModel):
     service_goods_master_id: int
     constitution_id: int
@@ -396,8 +414,12 @@ class PriceData(BaseModel):
     stamp_fee: float
     effective_from_date: date
     effective_to_date: date
-    
+   
     
 class OffDocumentDataMasterBase(BaseModel):
     document_data_name : str
     has_expiry : str    
+    
+    
+    
+
