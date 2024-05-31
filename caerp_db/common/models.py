@@ -345,6 +345,7 @@ class Gender(caerp_base):
     
     id          = Column(Integer, primary_key=True, autoincrement=True)
     gender      = Column(String(20), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
     
     
 class PanCard(caerp_base):

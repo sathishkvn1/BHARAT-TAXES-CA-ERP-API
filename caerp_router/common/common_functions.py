@@ -2,7 +2,7 @@ from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import Employee
+from caerp_db.common.models import Employee, Gender
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 
@@ -39,7 +39,8 @@ TABLE_MODEL_MAPPING = {
     "AppStockKeepingUnitCode":AppStockKeepingUnitCode,
     "AppBusinessConstitution":AppBusinessConstitution,
     "OffDocumentDataMaster":OffDocumentDataMaster,
-    "OffDocumentDataType":OffDocumentDataType
+    "OffDocumentDataType":OffDocumentDataType,
+    "Gender":Gender
 }
 
 # Define a function to get the model class based on the provided model name

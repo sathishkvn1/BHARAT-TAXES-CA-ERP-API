@@ -15,115 +15,107 @@ from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
 
-
-def save_appointment_visit_master(
+def save_services_goods_master(
     db: Session,
-    appointment_master_id: int,
-    appointment_data: OffAppointmentDetails,
+    id: int,
+    data: SaveServicesGoodsMasterRequest,
     user_id: int,
-    action_type: RecordActionType  # Default action is INSERT_ONLY
+    action_type: RecordActionType
 ):
-    # Validate action_type and appointment_master_id combination
-    if action_type == RecordActionType.INSERT_ONLY and appointment_master_id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, appointment_master_id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and appointment_master_id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, appointment_master_id should be greater than 0")
+    if action_type == RecordActionType.INSERT_ONLY and id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
 
     try:
         if action_type == RecordActionType.INSERT_ONLY:
-            appointment_master = OffAppointmentMaster(
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                **appointment_data.appointment_master.dict(exclude_unset=True)
-            )
-            db.add(appointment_master)
-            db.flush()
+            for master_data in data.master:
+                new_master_data = master_data.dict()
+                new_master_data.update({
+                    "created_by": user_id,
+                    "created_on": datetime.utcnow()
+                })
+                new_master = OffServiceGoodsMaster(**new_master_data)
+                db.add(new_master)
+                db.flush()  # Ensure new_master.id is available for details
 
-            visit_master = OffAppointmentVisitMaster(
-                appointment_master_id=appointment_master.id,
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                **appointment_data.visit_master.dict(exclude_unset=True)
-            )
-            db.add(visit_master)
-            db.flush()
+                if master_data.is_bundled_service == 'yes':
+                    for detail_data in data.details:
+                        new_detail_data = detail_data.dict()
+                        new_detail_data.update({
+                            "bundled_service_goods_id": new_master.id,
+                            "created_by": user_id,
+                            "created_on": datetime.utcnow()
+                        })
+                        new_detail = OffServiceGoodsDetails(**new_detail_data)
+                        db.add(new_detail)
+
+            db.commit()
+            return {"success": True, "message": "Saved successfully", "action": "insert"}
 
         elif action_type == RecordActionType.UPDATE_ONLY:
-            # Fetch existing appointment master record
-            appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
-            if not appointment_master:
-                raise HTTPException(status_code=404, detail="Appointment master not found")
+            existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
 
-            # Update appointment master fields
-            for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
-                setattr(appointment_master, field, value)
-            appointment_master.modified_by = user_id
-            appointment_master.modified_on = datetime.utcnow()
+            # Use the first item from data.master for update
+            master_update_data = data.master[0].dict()
+            for key, value in master_update_data.items():
+                setattr(existing_master, key, value)
+            existing_master.modified_by = user_id
+            existing_master.modified_on = datetime.utcnow()
 
-            # Fetch existing visit master record
-            visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
-            if not visit_master:
-                raise HTTPException(status_code=404, detail="Visit master not found")
+            if existing_master.is_bundled_service == 'yes':
+                existing_details = db.query(OffServiceGoodsDetails).filter(
+                    OffServiceGoodsDetails.bundled_service_goods_id == existing_master.id
+                ).all()
 
-            # Update visit master fields
-            for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
-                setattr(visit_master, field, value)
-            visit_master.modified_by = user_id
-            visit_master.modified_on = datetime.utcnow()
+                existing_detail_dict = {detail.service_goods_master_id: detail for detail in existing_details}
 
-        # Update or insert visit details
-        for detail_data in appointment_data.visit_details:
-            if action_type == RecordActionType.UPDATE_ONLY:
-                # Check if the visit detail already exists
-                existing_visit_detail = db.query(OffAppointmentVisitDetails).filter(
-                    OffAppointmentVisitDetails.visit_master_id == visit_master.id,
-                    OffAppointmentVisitDetails.service_id == detail_data.service_id
-                ).first()
-                if existing_visit_detail:
-                    # Update existing visit detail if service ID is different
-                    if existing_visit_detail.service_id != detail_data.service_id:
-                        existing_visit_detail.service_id = detail_data.service_id
-                        existing_visit_detail.modified_by = user_id
-                        existing_visit_detail.modified_on = datetime.utcnow()
-                else:
-                    # Insert new visit detail
-                    visit_detail = OffAppointmentVisitDetails(
-                        visit_master_id=visit_master.id,
-                        consultant_id=visit_master.consultant_id,
-                        created_by=user_id,
-                        created_on=datetime.utcnow(),
-                        **detail_data.dict(exclude_unset=True)
-                    )
-                    db.add(visit_detail)
-            else:
-                # Insert new visit detail
-                visit_detail = OffAppointmentVisitDetails(
-                    visit_master_id=visit_master.id,
-                    consultant_id=visit_master.consultant_id,
-                    created_by=user_id,
-                    created_on=datetime.utcnow(),
-                    **detail_data.dict(exclude_unset=True)
-                )
-                db.add(visit_detail)
+                incoming_detail_dict = {detail.service_goods_master_id: detail for detail in data.details}
 
-        db.commit()
+                # Update or add new details
+                for detail_data in data.details:
+                    detail_data_dict = detail_data.dict()
+                    existing_detail = existing_detail_dict.get(detail_data.service_goods_master_id)
 
-        return {
-            "success": True,
-            "message": "Saved successfully"
-        }
+                    if existing_detail:
+                        for key, value in detail_data_dict.items():
+                            setattr(existing_detail, key, value)
+                        existing_detail.modified_by = user_id
+                        existing_detail.modified_on = datetime.utcnow()
+                    else:
+                        new_detail_data = detail_data_dict
+                        new_detail_data.update({
+                            "bundled_service_goods_id": existing_master.id,
+                            "created_by": user_id,
+                            "created_on": datetime.utcnow()
+                        })
+                        new_detail = OffServiceGoodsDetails(**new_detail_data)
+                        db.add(new_detail)
+
+                # Remove details that are no longer in the update request
+                for service_goods_master_id, existing_detail in existing_detail_dict.items():
+                    if service_goods_master_id not in incoming_detail_dict:
+                        db.delete(existing_detail)
+
+            db.commit()
+            return {"success": True, "message": "Updated successfully", "action": "update"}
 
     except IntegrityError as e:
         db.rollback()
-        # Check if the error message indicates a duplicate entry violation
+        logger.error("IntegrityError: %s", str(e))
         if 'Duplicate entry' in str(e):
-            # Return a custom error message indicating the duplicate entry
-            raise HTTPException(status_code=400, detail="The selected slot is already booked. Please choose another slot.")
+            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
         else:
-            # For other IntegrityError cases, raise the exception with the original message
             raise e
+    except OperationalError as e:
+        db.rollback()
+        logger.error("OperationalError: %s", str(e))
+        raise HTTPException(status_code=500, detail="Database connection error.")
     except Exception as e:
         db.rollback()
+        logger.error("Exception: %s", str(e))
         raise e
 
 #---------------------------------------------------------------------------------------------------------------
@@ -331,94 +323,6 @@ def get_all_service_goods_master(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-#---------------------------------------------------------------------------------------------------------------
-def save_services_goods_master(
-    db: Session,
-    id: int,
-    data: SaveServicesGoodsMasterRequest,
-    user_id: int,
-    action_type: RecordActionType
-):
-    if action_type == RecordActionType.INSERT_ONLY and id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
-
-    try:
-        if action_type == RecordActionType.INSERT_ONLY:
-            for master_data in data.master:
-                new_master_data = master_data.dict()
-                new_master_data.update({
-                    "created_by": user_id,
-                    "created_on": datetime.utcnow()
-                })
-                new_master = OffServiceGoodsMaster(**new_master_data)
-                db.add(new_master)
-                db.flush()  # Ensure new_master.id is available for details
-
-                if master_data.is_bundled_service == 'yes':
-                    for detail_data in data.details:
-                        new_detail_data = detail_data.dict()
-                        new_detail_data.update({
-                            "bundled_service_goods_id": new_master.id,
-                            "created_by": user_id,
-                            "created_on": datetime.utcnow()
-                        })
-                        new_detail = OffServiceGoodsDetails(**new_detail_data)
-                        db.add(new_detail)
-
-        elif action_type == RecordActionType.UPDATE_ONLY:
-            existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
-            if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
-
-            # Use the first item from data.master for update
-            master_update_data = data.master[0].dict()
-            for key, value in master_update_data.items():
-                setattr(existing_master, key, value)
-            existing_master.modified_by = user_id
-            existing_master.modified_on = datetime.utcnow()
-
-            if existing_master.is_bundled_service == 'yes':
-                for detail_data in data.details:
-                    existing_detail = db.query(OffServiceGoodsDetails).filter(
-                        OffServiceGoodsDetails.bundled_service_goods_id == existing_master.id,
-                        OffServiceGoodsDetails.service_goods_master_id == detail_data.service_goods_master_id
-                    ).first()
-
-                    if existing_detail:
-                        for key, value in detail_data.dict().items():
-                            setattr(existing_detail, key, value)
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.utcnow()
-                    else:
-                        new_detail_data = detail_data.dict()
-                        new_detail_data.update({
-                            "bundled_service_goods_id": existing_master.id,
-                            "created_by": user_id,
-                            "created_on": datetime.utcnow()
-                        })
-                        new_detail = OffServiceGoodsDetails(**new_detail_data)
-                        db.add(new_detail)
-
-        db.commit()
-    except IntegrityError as e:
-        db.rollback()
-        logger.error("IntegrityError: %s", str(e))
-        if 'Duplicate entry' in str(e):
-            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
-        else:
-            raise e
-    except OperationalError as e:
-        db.rollback()
-        logger.error("OperationalError: %s", str(e))
-        raise HTTPException(status_code=500, detail="Database connection error.")
-    except Exception as e:
-        db.rollback()
-        logger.error("Exception: %s", str(e))
-        raise e
 
 
 

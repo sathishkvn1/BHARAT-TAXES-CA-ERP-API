@@ -207,17 +207,14 @@ def get_all_service_goods_master(
 
 #---------------------------------------------------------------------------------------------------------------
 
-@router.post("/services/save_services_goods_master{id}")
+@router.post("/services/save_services_goods_master/{id}")
 def save_services_goods_master(
     id: int,
     data: List[SaveServicesGoodsMasterRequest], 
     action_type: RecordActionType,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-    
 ):
-   
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -225,17 +222,20 @@ def save_services_goods_master(
     user_id = auth_info.get("user_id")
 
     try:
+        result_message = ""
         for service in data:
-            db_office_master.save_services_goods_master(
+            result = db_office_master.save_services_goods_master(
                 db, id, service, user_id, action_type
             )
-
-        return {"success": True, "message": "Saved successfully"}
+            result_message = result["message"]
+        
+        return {"success": True, "message": result_message}
     
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 #-------------------------------------------------------------------------------------------------------
@@ -420,37 +420,7 @@ def filter_booked_slots(available_slots, consultant_id, check_date, db):
 #---------------------------------------------------------------------------------------------------------------
 
 
-@router.post("/services/save_services_goods_master{id}")
-def save_services_goods_master(
-    id: int,
-    data: List[SaveServicesGoodsMasterRequest], 
-    action_type: RecordActionType,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-    
-):
-   
 
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")
-
-    try:
-        for service in data:
-            db_office_master.save_services_goods_master(
-                db, id, service, user_id, action_type
-            )
-
-        return {"success": True, "message": "Saved successfully"}
-    
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-#---------------------------------------------------------------------------------------------------------------
 
 @router.get("/consultants_and_services/")
 def get_consultants_and_services(
