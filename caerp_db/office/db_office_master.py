@@ -15,6 +15,127 @@ from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
 
+
+
+
+
+def save_appointment_visit_master(
+    db: Session,
+    appointment_master_id: int,
+    appointment_data: OffAppointmentDetails,
+    user_id: int,
+    action_type: RecordActionType  # Default action is INSERT_ONLY
+):
+    # Validate action_type and appointment_master_id combination
+    if action_type == RecordActionType.INSERT_ONLY and appointment_master_id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, appointment_master_id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and appointment_master_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, appointment_master_id should be greater than 0")
+
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            appointment_master = OffAppointmentMaster(
+                created_by=user_id,
+                created_on=datetime.utcnow(),
+                **appointment_data.appointment_master.dict(exclude_unset=True)
+            )
+            db.add(appointment_master)
+            db.flush()
+
+            visit_master = OffAppointmentVisitMaster(
+                appointment_master_id=appointment_master.id,
+                created_by=user_id,
+                created_on=datetime.utcnow(),
+                **appointment_data.visit_master.dict(exclude_unset=True)
+            )
+            db.add(visit_master)
+            db.flush()
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            # Fetch existing appointment master record
+            appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
+            if not appointment_master:
+                raise HTTPException(status_code=404, detail="Appointment master not found")
+
+            # Update appointment master fields
+            for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
+                setattr(appointment_master, field, value)
+            appointment_master.modified_by = user_id
+            appointment_master.modified_on = datetime.utcnow()
+
+            # Fetch existing visit master record
+            visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
+            if not visit_master:
+                raise HTTPException(status_code=404, detail="Visit master not found")
+
+            # Update visit master fields
+            for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
+                # Append new remarks with newline separation
+                if field == "remarks":
+                    if visit_master.remarks:
+                        setattr(visit_master, field, visit_master.remarks + "\n" + value)
+                    else:
+                        setattr(visit_master, field, value)
+                else:
+                    setattr(visit_master, field, value)
+            visit_master.modified_by = user_id
+            visit_master.modified_on = datetime.utcnow()
+
+        # Update or insert visit details
+        for detail_data in appointment_data.visit_details:
+            if action_type == RecordActionType.UPDATE_ONLY:
+                # Check if the visit detail already exists
+                existing_visit_detail = db.query(OffAppointmentVisitDetails).filter(
+                    OffAppointmentVisitDetails.visit_master_id == visit_master.id,
+                    OffAppointmentVisitDetails.service_id == detail_data.service_id
+                ).first()
+                if existing_visit_detail:
+                    # Update existing visit detail if service ID is different
+                    if existing_visit_detail.service_id != detail_data.service_id:
+                        existing_visit_detail.service_id = detail_data.service_id
+                        existing_visit_detail.modified_by = user_id
+                        existing_visit_detail.modified_on = datetime.utcnow()
+                else:
+                    # Insert new visit detail
+                    visit_detail = OffAppointmentVisitDetails(
+                        visit_master_id=visit_master.id,
+                        consultant_id=visit_master.consultant_id,
+                        created_by=user_id,
+                        created_on=datetime.utcnow(),
+                        **detail_data.dict(exclude_unset=True)
+                    ) 
+                    db.add(visit_detail)
+            else:
+                # Insert new visit detail
+                visit_detail = OffAppointmentVisitDetails(
+                    visit_master_id=visit_master.id,
+                    consultant_id=visit_master.consultant_id,
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    **detail_data.dict(exclude_unset=True)
+                )
+                db.add(visit_detail)
+
+        db.commit()
+
+        return {
+            "success": True,
+            "message": "Saved successfully"
+        }
+
+    except IntegrityError as e:
+        db.rollback()
+        # Check if the error message indicates a duplicate entry violation
+        if 'Duplicate entry' in str(e):
+            # Return a custom error message indicating the duplicate entry
+            raise HTTPException(status_code=400, detail="The selected slot is already booked. Please choose another slot.")
+        else:
+            # For other IntegrityError cases, raise the exception with the original message
+            raise e
+    except Exception as e:
+        db.rollback()
+        raise e
+    
 def save_services_goods_master(
     db: Session,
     id: int,
