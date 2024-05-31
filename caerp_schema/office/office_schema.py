@@ -248,7 +248,7 @@ class OffViewServiceGoodsDetailsDisplay(BaseModel):
 class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_master_id: int
     hsn_sac_class_id: int
-    hsn_sac_class: str
+    hsn_sac_class: Optional[str]
     group_id: int
     service_goods_group_name: Optional[str]
     sub_group_id: int
@@ -259,7 +259,7 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_sub_category_name: Optional[str]
     service_goods_name: str
     hsn_sac_id: int
-    hsn_sac_code: str
+    hsn_sac_code: Optional[str]
     hsn_sac_description: Optional[str]
     gst: str
     sku_code_id: int
@@ -286,8 +286,9 @@ class ConsultationRequest(BaseModel):
     start_time: str  
     end_time: str 
 
+
+
 class OffServiceGoodsMasterCreate(BaseModel):
-   
     hsn_sac_class_id: int
     group_id: int
     sub_group_id: int
@@ -299,16 +300,14 @@ class OffServiceGoodsMasterCreate(BaseModel):
     has_consultation: str
     is_bundled_service: str
 
-
-
 class OffServiceGoodsDetailsCreate(BaseModel):
     service_goods_master_id: int
     display_order: int
 
+
 class SaveServicesGoodsMasterRequest(BaseModel):
-    master: list[OffServiceGoodsMasterCreate]
-    details: Optional[list[OffServiceGoodsDetailsCreate]]  = None
-    
+    master: List[OffServiceGoodsMasterCreate]
+    details: Optional[List[OffServiceGoodsDetailsCreate]] = None
     
 # class Consultant(BaseModel):
 #     consultant_id: int
