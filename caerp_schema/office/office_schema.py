@@ -220,8 +220,29 @@ class AppointmentVisitDetailsSchema(BaseModel):
 class OffViewServiceGoodsDetailsDisplay(BaseModel):
    
     service_goods_master_id: int
+    hsn_sac_class_id : int
+    hsn_sac_class : str
+    group_id : int
+    service_master_group_name : Optional[str]
+    sub_group_id  : int
+    service_master_sub_group_name : Optional[str]
+    category_id : int
+    service_master_category_name : Optional[str]
+    sub_category_id : int
+    service_master_sub_category_name : Optional[str]
     service_goods_name: str
+    hsn_sac_id : int
+    hsn_sac_code : str
+    hsn_sac_description : Optional[str]
+    sku_code_id : int
+    unit_code : Optional[str]
+    has_consultation : str
+    is_bundled_service : str
+    bundled_service_goods_id : int
     display_order: Optional[int]
+    
+   
+
 
 
 class OffViewServiceGoodsMasterDisplay(BaseModel):

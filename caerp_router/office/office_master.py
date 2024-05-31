@@ -271,7 +271,6 @@ def save_off_document_master(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 #-------------------------------------------------------------------------------------------------------
 
-
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
     type:  Optional[str] = Query(None, description="Filter by type: 'ALL', 'DOCUMENT', 'DATA'"),
@@ -291,7 +290,6 @@ def search_off_document_data_master(
     if not documents:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found")
     return documents
-
 
 
 #-------------------------------------------------------------------------------------------------------

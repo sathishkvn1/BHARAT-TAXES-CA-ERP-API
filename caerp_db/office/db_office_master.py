@@ -313,13 +313,10 @@ def get_all_service_goods_master(
                     .filter(OffViewServiceGoodsDetails.bundled_service_goods_id == result.service_goods_master_id)
                     .all()
                 )
-                details = []
-                for detail in service_goods_details:
-                    details.append(OffViewServiceGoodsDetailsDisplay(
-                        service_goods_master_id=detail.service_goods_master_id,
-                        service_goods_name=detail.service_goods_name,
-                        display_order=detail.display_order
-                    ))
+                details = [
+                    OffViewServiceGoodsDetailsDisplay(**vars(detail))
+                    for detail in service_goods_details
+                ]
                 if details:
                     details_dict[result.service_goods_master_id] = details
 
@@ -334,6 +331,7 @@ def get_all_service_goods_master(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #---------------------------------------------------------------------------------------------------------------
 def save_services_goods_master(
@@ -432,7 +430,12 @@ def search_off_document_data_master(
     name: Optional[str] = None
 ):
     # Perform an explicit join between OffDocumentDataMaster and OffDocumentDataType
-    query = db.query(OffDocumentDataMaster).join(
+    query = db.query(
+        OffDocumentDataMaster.id,
+        OffDocumentDataMaster.document_data_name,
+        OffDocumentDataMaster.has_expiry,
+        OffDocumentDataType.document_data_type.label('data_type')  # Add the data_type field
+    ).join(
         OffDocumentDataType,
         OffDocumentDataMaster.document_data_type_id == OffDocumentDataType.id
     )
@@ -450,7 +453,7 @@ def search_off_document_data_master(
     
     return query.all()
 
- 
+
 # #-----------------------
 
 
