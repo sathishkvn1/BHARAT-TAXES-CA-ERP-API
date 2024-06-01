@@ -55,11 +55,11 @@ class EmployeeDetails(str, Enum):
     BANK_DETAILS        = "BANK_DETAILS"
 
 
-class AppointmentStatus(str,Enum):
-    NEW = "NEW"
-    CANCELED = "CANCELED"
-    RESCHEDULED = "RESCHEDULED"
-    CLOSED = "CLOSED"
+# class AppointmentStatus(str,Enum):
+#     NEW = "NEW"
+#     CANCELED = "CANCELED"
+#     RESCHEDULED = "RESCHEDULED"
+#     CLOSED = "CLOSED"
 
     
 class SearchCriteria(str, Enum):

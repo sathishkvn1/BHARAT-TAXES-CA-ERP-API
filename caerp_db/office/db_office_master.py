@@ -1,13 +1,13 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import AppointmentStatus, DeletedStatus, RecordActionType,SearchCriteria
+from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
 from caerp_db.common.models import Employee
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -240,8 +240,11 @@ def save_services_goods_master(
         raise e
 
 #---------------------------------------------------------------------------------------------------------------
-def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCancelRequest, action: AppointmentStatus, visit_master_id: int):
-    if action == AppointmentStatus.RESCHEDULED:
+def reschedule_or_cancel_appointment(db: Session,
+                                     request_data: RescheduleOrCancelRequest,
+                                     action: AppointmentStatusConstants, 
+                                     visit_master_id: int):
+    if action == AppointmentStatusConstants.RESCHEDULED:
         if not request_data.date or not request_data.time:
             raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
         # Update appointment status to RESCHEDULED (ID: 3) and update date and time
@@ -250,23 +253,30 @@ def reschedule_or_cancel_appointment(db: Session, request_data: RescheduleOrCanc
             appointment.appointment_status_id = 3  # Assuming 3 is the appointment status ID for RESCHEDULED
             appointment.appointment_date = request_data.date
             appointment.appointment_time_from = request_data.time
-            appointment.remarks = request_data.description
+            if appointment.remarks:
+                appointment.remarks += f"\n{request_data.description}"
+            else:
+                appointment.remarks = request_data.description
             db.commit()
             return {"success": True, "message": "Appointment rescheduled successfully"}
         else:
             raise HTTPException(status_code=404, detail="Appointment not found")
-    elif action == AppointmentStatus.CANCELED:
+    elif action == AppointmentStatusConstants.CANCELED:
         # Update appointment status to CANCELED (ID: 2)
         appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
         if appointment:
-            appointment.appointment_status_id = 2
-            appointment.remarks = request_data.description  # Assuming 2 is the appointment status ID for CANCELED
+            appointment.appointment_status_id = 2  # Assuming 2 is the appointment status ID for CANCELED
+            if appointment.remarks:
+                appointment.remarks += f"\n{request_data.description}"
+            else:
+                appointment.remarks = request_data.description
             db.commit()
             return {"success": True, "message": "Appointment canceled successfully"}
         else:
             raise HTTPException(status_code=404, detail="Appointment not found")
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
+
     
 #-------------------------------get_appointment_info
 def get_appointment_info(db: Session, type: str) -> List[dict]:
@@ -449,6 +459,7 @@ def get_all_service_goods_master(
 
 
 #--------------------------------------------------------------------------------------------------------------
+
 def search_off_document_data_master(
     db: Session, 
     document_type: Optional[str] = None,   
@@ -477,6 +488,9 @@ def search_off_document_data_master(
         query = query.filter(OffDocumentDataMaster.document_data_name.ilike(f'%{name}%'))
     
     return query.all()
+
+
+ 
 
 
 # #-----------------------

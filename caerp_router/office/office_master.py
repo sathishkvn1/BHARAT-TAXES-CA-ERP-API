@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import AppointmentStatus, DeletedStatus, RecordActionType,SearchCriteria
+from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
 from caerp_db.common.models import Employee
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -74,12 +74,10 @@ def save_appointment_details(
 
 
 #---------------------------------------------------------------------------------------------------------------
-
-
 @router.post("/reschedule_or_cancel")
 async def reschedule_or_cancel_appointment(
    
-    action: AppointmentStatus,
+    action: AppointmentStatusConstants,
     visit_master_id: int,
     request_data: RescheduleOrCancelRequest = Depends(),
     db: Session = Depends(get_db),
@@ -274,6 +272,7 @@ def save_off_document_master(
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
     type:  Optional[str] = Query(None, description="Filter by type: 'ALL', 'DOCUMENT', 'DATA'"),
+                                #   enum=["ALL", "DOCUMENT", "DATA"]),
     document_name: Optional[str] = Query(None, title="Document Name for search"),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -290,6 +289,8 @@ def search_off_document_data_master(
     if not documents:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found")
     return documents
+
+
 
 
 #-------------------------------------------------------------------------------------------------------

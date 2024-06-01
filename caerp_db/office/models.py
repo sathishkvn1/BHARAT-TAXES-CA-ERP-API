@@ -485,7 +485,7 @@ class OffViewServiceGoodsDetails(caerp_base):
     hsn_sac_code = Column(String(20), nullable=False)
     hsn_sac_description = Column(String(2000), nullable=True)
     sku_code_id = Column(Integer, nullable=False)
-    unit_code = Column(String(250), nullable=True)
+    stock_keeping_unit_code = Column(String(250), nullable=True)
     has_consultation = Column(Enum('yes', 'no'), nullable=False)
     is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
     bundled_service_goods_id = Column(Integer, nullable=False)
@@ -497,7 +497,8 @@ class OffViewServiceGoodsDetails(caerp_base):
     service_goods_details_is_deleted = Column(Enum('yes', 'no'), nullable=False)
     service_goods_details_deleted_by = Column(Integer, nullable=True)
     service_goods_details_deleted_on = Column(DateTime, nullable=True)
-  
+
+
 #--------------------
 
 class OffViewServiceGoodsPriceMaster(caerp_base):
@@ -604,4 +605,18 @@ class OffDocumentDataType(caerp_base):
     __tablename__ = 'off_document_data_type'
     id = Column(Integer, primary_key=True, autoincrement=True)
     document_data_type = Column(String(200), nullable=False) 
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffDocumentDataCategory(caerp_base):
+    __tablename__ = 'off_document_data_category'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_data_type = Column(String(200), nullable=False) 
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffNatureOfPossession(caerp_base):
+    __tablename__ = 'off_nature_of_possession'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    nature_of_possession = Column(String(200), nullable=False) 
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')

@@ -1,9 +1,15 @@
+from enum import Enum
 from pydantic import BaseModel, constr,validator
 from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 import re
 from datetime import date, datetime,time
 
+class AppointmentStatusConstants(str,Enum):
+    NEW = "NEW"
+    CANCELED = "CANCELED"
+    RESCHEDULED = "RESCHEDULED"
+    CLOSED = "CLOSED"
 
 
 
@@ -217,6 +223,7 @@ class AppointmentVisitDetailsSchema(BaseModel):
     appointment_visit_details_deleted_by: Optional[int]
     appointment_visit_details_deleted_on: Optional[date]   
 #------------------- swathy
+
 class OffViewServiceGoodsDetailsDisplay(BaseModel):
    
     service_goods_master_id: int
@@ -235,12 +242,14 @@ class OffViewServiceGoodsDetailsDisplay(BaseModel):
     hsn_sac_code : str
     hsn_sac_description : Optional[str]
     sku_code_id : int
-    unit_code : Optional[str]
+    stock_keeping_unit_code : Optional[str]
     has_consultation : str
     is_bundled_service : str
     bundled_service_goods_id : int
     display_order: Optional[int]
     
+
+
    
 
 
@@ -436,9 +445,13 @@ class PriceData(BaseModel):
     effective_to_date: date
    
     
+
 class OffDocumentDataMasterBase(BaseModel):
-    document_data_name : str
-    has_expiry : str    
+    id: int
+    document_data_name : str  
+    data_type: str
+    has_expiry : str
+      
     
     
     
