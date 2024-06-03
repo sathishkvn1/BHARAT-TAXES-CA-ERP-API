@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, BundleModelSchema, EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -719,50 +719,8 @@ def save_service_price_endpoint(price_data: List[PriceData],
     
 #---------------------------------------------------------------------------------------------------------------
  
-# @router.post("/add_price/", response_model=dict)
-# def add_price_to_service(
-#                         new_price: SetPriceModel,
-#                         service_id: int = Header(..., description="Service ID"),
-#                         db: Session = Depends(get_db),
-#                         token: str = Depends(oauth2.oauth2_scheme)):
-    
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-    
-#     try:
-#         # Retrieve the service's pricing history
-#         service = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == service_id).first()
 
-#         if not service:
-#             raise HTTPException(status_code=404, detail="Service not found")
 
-#         # Convert new_price to OffServiceGoodsPriceMaster model
-#         new_price_db = OffServiceGoodsPriceMaster(**new_price.dict())
-
-#         # Check if there is an existing price entry
-#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(
-#             OffServiceGoodsPriceMaster.service_goods_master_id == service_id,
-#             OffServiceGoodsPriceMaster.effective_to_date == None
-#         ).first()
-
-#         # If an existing price entry is found
-#         if existing_price:
-#             # Update the effective_to_date of the previous price entry
-#             existing_price.effective_to_date = new_price_db.effective_from_date - timedelta(days=1)
-
-#         # Insert the new price entry into the database
-#         db.add(new_price_db)
-#         db.commit()
-
-#         return {"success": True, "message": "Price added successfully"}
-
-#     except Exception as e:
-#         return {"success": False, "message": str(e)}
-
-#---------------------------------------------------------------------------------------------------------------
 
 import datetime
 @router.post("/add_price/", response_model=dict)
@@ -811,10 +769,48 @@ def add_price_to_service(
     except Exception as e:
         return {"success": False, "message": str(e)}
     
-    
+
+@router.get("/get_bundle_price_list/")
+def get_bundle_price_list():
+    # Static data for testing
+    bundle_service_data = {
+        "bundle": {
+            "service_id": 11,
+            "service_name": "Company Incorporation",
+            "service_charge": 4500,
+            "govt_agency_fee": 0,
+            "stamp_fee": 50,
+            "stamp_duty": 50
+        },
+        "items": [
+            {"id": 1, "name": "pan", "service_charge": 500, "govt_agency_fee": 0, "stamp_fee": 50, "stamp_duty": 50},
+            {"id": 5, "name": "din", "service_charge": 2500, "govt_agency_fee": 1000, "stamp_fee": 750, "stamp_duty": 750}
+        ],
+        "sub_item_total": {
+            "total_service_charge": 3000,
+            "total_govt_agency_fee": 1000,
+            "total_stamp_fee": 800,
+            "total_stamp_duty": 800
+        },
+        "grand_total": {
+            "total_service_charge": 7500,
+            "total_govt_agency_fee": 1000,
+            "total_stamp_fee": 850,
+            "total_stamp_duty": 850
+        }
+    }
+    return bundle_service_data
 #---------------------------------------------------------------------------------------------------------------
 
 
+# @router.get("/test/get_bundle_service_data/", response_model=BundleModelSchema)
+# def get_bundle_service_data_endpoint(bundle_service_id: int = Header(..., description="Bundle Service ID"), 
+#                                      db: Session = Depends(get_db)):
+#     # Call the function to get bundled service data
+#     bundle_service_data = db_office_master.get_bundle_service_data(bundle_service_id, db)
+#     if bundle_service_data is None:
+#         raise HTTPException(status_code=404, detail="Bundle service not found")
+#     return bundle_service_data
 
 
 
