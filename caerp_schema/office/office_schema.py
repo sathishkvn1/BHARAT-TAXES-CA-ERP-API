@@ -454,36 +454,36 @@ class OffDocumentDataMasterBase(BaseModel):
       
     
 # for bundled structure  price list
-# class ServiceItemModelSchema(BaseModel):
-#     id: int
-#     name: str
-#     service_charge: float
-#     govt_agency_fee: float
-#     stamp_fee: float
-#     stamp_duty: float
+class ServiceItemModelSchema(BaseModel):
+    id: int
+    name: str
+    service_charge: float
+    govt_agency_fee: float
+    stamp_fee: float
+    stamp_duty: float
 
-# class SubItemTotalModelSchema(BaseModel):
-#     total_service_charge: float
-#     total_govt_agency_fee: float
-#     total_stamp_fee: float
-#     total_stamp_duty: float
+class SubItemTotalModelSchema(BaseModel):
+    total_service_charge: float
+    total_govt_agency_fee: float
+    total_stamp_fee: float
+    total_stamp_duty: float
 
-# class GrandTotalModelSchema(BaseModel):
-#     total_service_charge: float
-#     total_govt_agency_fee: float
-#     total_stamp_fee: float
-#     total_stamp_duty: float
+class GrandTotalModelSchema(BaseModel):
+    total_service_charge: float
+    total_govt_agency_fee: float
+    total_stamp_fee: float
+    total_stamp_duty: float
 
-# class BundleModelSchema(BaseModel):
-#     bundle_service_id: int
-#     bundle_service_name: str
-#     bundle_service_charge: float
-#     bundle_govt_agency_fee: float
-#     bundle_stamp_fee: float
-#     bundle_stamp_duty: float
-#     items: List[ServiceItemModelSchema]
-#     sub_item_total: SubItemTotalModelSchema
-#     grand_total: GrandTotalModelSchema
+class BundleModelSchema(BaseModel):
+    bundle_service_id: int
+    bundle_service_name: str
+    bundle_service_charge: float
+    bundle_govt_agency_fee: float
+    bundle_stamp_fee: float
+    bundle_stamp_duty: float
+    items: List[ServiceItemModelSchema]
+    sub_item_total: SubItemTotalModelSchema
+    grand_total: GrandTotalModelSchema
     
     
 

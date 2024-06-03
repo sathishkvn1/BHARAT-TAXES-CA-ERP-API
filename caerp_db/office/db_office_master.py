@@ -860,88 +860,88 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
 
 #---------------------------------------------------------------------------------------------------------------
 
-# def get_bundle_service_data(bundle_service_id: int, db: Session) -> BundleModelSchema:
-#     # Fetch bundle details
-#     bundle_details = db.execute("""
-#         SELECT
-#             master.id AS service_id,
-#             master.service_goods_name AS service_name,
-#             price.service_charge,
-#             price.govt_agency_fee,
-#             price.stamp_fee,
-#             price.stamp_duty
-#         FROM
-#             off_service_goods_master AS master
-#         JOIN
-#             off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
-#         WHERE
-#             master.id = :bundle_service_id
-#             AND master.is_bundled_service = 'yes'
-#             AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
-#             AND price.effective_from_date <= CURRENT_DATE
-#     """, {"bundle_service_id": bundle_service_id}).fetchone()
+def get_bundle_service_data(bundle_service_id: int, db: Session) -> BundleModelSchema:
+    # Fetch bundle details
+    bundle_details = db.execute("""
+        SELECT
+            master.id AS service_id,
+            master.service_goods_name AS service_name,
+            price.service_charge,
+            price.govt_agency_fee,
+            price.stamp_fee,
+            price.stamp_duty
+        FROM
+            off_service_goods_master AS master
+        JOIN
+            off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
+        WHERE
+            master.id = :bundle_service_id
+            AND master.is_bundled_service = 'yes'
+            AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
+            AND price.effective_from_date <= CURRENT_DATE
+    """, {"bundle_service_id": bundle_service_id}).fetchone()
     
-#     if not bundle_details:
-#         return None
+    if not bundle_details:
+        return None
 
-#     # Fetch items in the bundle
-#     bundle_items = db.execute("""
-#         SELECT
-#             details.bundled_service_goods_id AS id,
-#             master.service_goods_name AS name,
-#             price.service_charge,
-#             price.govt_agency_fee,
-#             price.stamp_fee,
-#             price.stamp_duty
-#         FROM
-#             off_service_goods_details AS details
-#         JOIN
-#             off_service_goods_master AS master ON details.bundled_service_goods_id = master.id
-#         JOIN
-#             off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
-#         WHERE
-#             details.service_goods_master_id = :bundle_service_id
-#             AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
-#             AND price.effective_from_date <= CURRENT_DATE
-#         ORDER BY
-#             details.display_order
-#     """, {"bundle_service_id": bundle_service_id}).fetchall()
+    # Fetch items in the bundle
+    bundle_items = db.execute("""
+        SELECT
+            details.bundled_service_goods_id AS id,
+            master.service_goods_name AS name,
+            price.service_charge,
+            price.govt_agency_fee,
+            price.stamp_fee,
+            price.stamp_duty
+        FROM
+            off_service_goods_details AS details
+        JOIN
+            off_service_goods_master AS master ON details.bundled_service_goods_id = master.id
+        JOIN
+            off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
+        WHERE
+            details.service_goods_master_id = :bundle_service_id
+            AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
+            AND price.effective_from_date <= CURRENT_DATE
+        ORDER BY
+            details.display_order
+    """, {"bundle_service_id": bundle_service_id}).fetchall()
 
-#     # Calculate totals
-#     sub_item_total = SubItemTotalModelSchema(
-#         total_service_charge=sum(item.service_charge for item in bundle_items),
-#         total_govt_agency_fee=sum(item.govt_agency_fee for item in bundle_items),
-#         total_stamp_fee=sum(item.stamp_fee for item in bundle_items),
-#         total_stamp_duty=sum(item.stamp_duty for item in bundle_items)
-#     )
+    # Calculate totals
+    sub_item_total = SubItemTotalModelSchema(
+        total_service_charge=sum(item.service_charge for item in bundle_items),
+        total_govt_agency_fee=sum(item.govt_agency_fee for item in bundle_items),
+        total_stamp_fee=sum(item.stamp_fee for item in bundle_items),
+        total_stamp_duty=sum(item.stamp_duty for item in bundle_items)
+    )
 
-#     grand_total = GrandTotalModelSchema(
-#         total_service_charge=bundle_details.service_charge + sub_item_total.total_service_charge,
-#         total_govt_agency_fee=bundle_details.govt_agency_fee + sub_item_total.total_govt_agency_fee,
-#         total_stamp_fee=bundle_details.stamp_fee + sub_item_total.total_stamp_fee,
-#         total_stamp_duty=bundle_details.stamp_duty + sub_item_total.total_stamp_duty
-#     )
+    grand_total = GrandTotalModelSchema(
+        total_service_charge=bundle_details.service_charge + sub_item_total.total_service_charge,
+        total_govt_agency_fee=bundle_details.govt_agency_fee + sub_item_total.total_govt_agency_fee,
+        total_stamp_fee=bundle_details.stamp_fee + sub_item_total.total_stamp_fee,
+        total_stamp_duty=bundle_details.stamp_duty + sub_item_total.total_stamp_duty
+    )
 
-#     # Create the bundle model
-#     bundle_model = BundleModelSchema(
-#         bundle_service_id=bundle_details.service_id,
-#         bundle_service_name=bundle_details.service_name,
-#         bundle_service_charge=bundle_details.service_charge,
-#         bundle_govt_agency_fee=bundle_details.govt_agency_fee,
-#         bundle_stamp_fee=bundle_details.stamp_fee,
-#         bundle_stamp_duty=bundle_details.stamp_duty,
-#         items=[
-#             ServiceItemModelSchema(
-#                 id=item.id,
-#                 name=item.name,
-#                 service_charge=item.service_charge,
-#                 govt_agency_fee=item.govt_agency_fee,
-#                 stamp_fee=item.stamp_fee,
-#                 stamp_duty=item.stamp_duty
-#             ) for item in bundle_items
-#         ],
-#         sub_item_total=sub_item_total,
-#         grand_total=grand_total
-#     )
+    # Create the bundle model
+    bundle_model = BundleModelSchema(
+        bundle_service_id=bundle_details.service_id,
+        bundle_service_name=bundle_details.service_name,
+        bundle_service_charge=bundle_details.service_charge,
+        bundle_govt_agency_fee=bundle_details.govt_agency_fee,
+        bundle_stamp_fee=bundle_details.stamp_fee,
+        bundle_stamp_duty=bundle_details.stamp_duty,
+        items=[
+            ServiceItemModelSchema(
+                id=item.id,
+                name=item.name,
+                service_charge=item.service_charge,
+                govt_agency_fee=item.govt_agency_fee,
+                stamp_fee=item.stamp_fee,
+                stamp_duty=item.stamp_duty
+            ) for item in bundle_items
+        ],
+        sub_item_total=sub_item_total,
+        grand_total=grand_total
+    )
 
-#     return bundle_model
+    return bundle_model

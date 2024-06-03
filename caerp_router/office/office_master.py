@@ -803,14 +803,14 @@ def get_bundle_price_list():
 #---------------------------------------------------------------------------------------------------------------
 
 
-# @router.get("/test/get_bundle_service_data/", response_model=BundleModelSchema)
-# def get_bundle_service_data_endpoint(bundle_service_id: int = Header(..., description="Bundle Service ID"), 
-#                                      db: Session = Depends(get_db)):
-#     # Call the function to get bundled service data
-#     bundle_service_data = db_office_master.get_bundle_service_data(bundle_service_id, db)
-#     if bundle_service_data is None:
-#         raise HTTPException(status_code=404, detail="Bundle service not found")
-#     return bundle_service_data
+@router.get("/test/get_bundle_service_data/", response_model=BundleModelSchema)
+def get_bundle_service_data_endpoint(bundle_service_id: int = Header(..., description="Bundle Service ID"), 
+                                     db: Session = Depends(get_db)):
+    # Call the function to get bundled service data
+    bundle_service_data = db_office_master.get_bundle_service_data(bundle_service_id, db)
+    if bundle_service_data is None:
+        raise HTTPException(status_code=404, detail="Bundle service not found")
+    return bundle_service_data
 
 
 
