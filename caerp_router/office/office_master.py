@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, BundleModelSchema, EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -699,7 +699,16 @@ def get_service_data_endpoint(service_id: int = Header(..., description="Service
     # Call the function to get service data based on service_id
     service_data =db_office_master.get_service_data(service_id, db)
     return service_data
-#---------------------------------------------------------------------------------------------------------------      
+#---------------------------------------------------------------------------------------------------------------
+@router.get("/get_price_history/", response_model=List[ServiceModel])
+def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+                              db: Session = Depends(get_db)):
+    service_data = db_office_master.get_price_history(service_id, db)
+    if not service_data:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return service_data
+
+#-------------------------------------------------------------------------------  
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
                                 id: int,
@@ -770,59 +779,144 @@ def add_price_to_service(
         return {"success": False, "message": str(e)}
     
 
-@router.get("/get_bundle_price_list/")
-def get_bundle_price_list():
-    # Static data for testing
-    bundle_service_data = {
-        "bundle": {
-            "service_id": 11,
-            "service_name": "Company Incorporation",
-            "service_charge": 4500,
-            "govt_agency_fee": 0,
-            "stamp_fee": 50,
-            "stamp_duty": 50
-        },
-        "items": [
-            {"id": 1, "name": "pan", "service_charge": 500, "govt_agency_fee": 0, "stamp_fee": 50, "stamp_duty": 50},
-            {"id": 5, "name": "din", "service_charge": 2500, "govt_agency_fee": 1000, "stamp_fee": 750, "stamp_duty": 750}
-        ],
-        "sub_item_total": {
-            "total_service_charge": 3000,
-            "total_govt_agency_fee": 1000,
-            "total_stamp_fee": 800,
-            "total_stamp_duty": 800
-        },
-        "grand_total": {
-            "total_service_charge": 7500,
-            "total_govt_agency_fee": 1000,
-            "total_stamp_fee": 850,
-            "total_stamp_duty": 850
-        }
-    }
-    return bundle_service_data
+# @router.get("/get_bundle_price_list/")
+# def get_bundle_price_list():
+#     # Static data for testing
+#     bundle_service_data = {
+#         "bundle": {
+#             "service_id": 11,
+#             "service_name": "Company Incorporation",
+#             "service_charge": 4500,
+#             "govt_agency_fee": 0,
+#             "stamp_fee": 50,
+#             "stamp_duty": 50
+#         },
+#         "items": [
+#             {"id": 1, "name": "pan", "service_charge": 500, "govt_agency_fee": 0, "stamp_fee": 50, "stamp_duty": 50},
+#             {"id": 5, "name": "din", "service_charge": 2500, "govt_agency_fee": 1000, "stamp_fee": 750, "stamp_duty": 750}
+#         ],
+#         "sub_item_total": {
+#             "total_service_charge": 3000,
+#             "total_govt_agency_fee": 1000,
+#             "total_stamp_fee": 800,
+#             "total_stamp_duty": 800
+#         },
+#         "grand_total": {
+#             "total_service_charge": 7500,
+#             "total_govt_agency_fee": 1000,
+#             "total_stamp_fee": 850,
+#             "total_stamp_duty": 850
+#         }
+#     }
+#     return bundle_service_data
 #---------------------------------------------------------------------------------------------------------------
+# Endpoint to fetch bundled service details
 
+@router.get("/get_bundle_price_list/{bundle_id}", response_model=Bundle)
+def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
+    # Execute SQL query to fetch bundled service and items details
+    query = text("""
+        SELECT
+            a.id AS bundle_id,
+            a.service_goods_name AS service_name,
+            b.id AS goods_price_master_id,
+            b.service_goods_master_id,
+            b.constitution_id,
+            b.service_charge AS bundle_service_charge,
+            b.govt_agency_fee AS bundle_govt_agency_fee,
+            b.stamp_duty AS bundle_stamp_duty,
+            b.stamp_fee AS bundle_stamp_fee,
+            c.id AS service_goods_details_id,
+            c.service_goods_master_id AS item_id,
+            c.bundled_service_goods_id,
+            c.display_order,
+            a.service_goods_name AS item_name,
+            MAX(d.service_charge) AS item_service_charge,
+            MAX(d.govt_agency_fee) AS item_govt_agency_fee,
+            MAX(d.stamp_fee) AS item_stamp_fee,
+            MAX(d.stamp_duty) AS item_stamp_duty
+        FROM
+            off_service_goods_master AS a
+        JOIN
+            off_service_goods_price_master AS b ON a.id = b.service_goods_master_id
+        JOIN
+            off_service_goods_details AS c ON a.id = c.bundled_service_goods_id
+        JOIN
+            off_service_goods_price_master AS d ON c.service_goods_master_id = d.service_goods_master_id
+        WHERE
+            a.is_bundled_service = 'yes'
+            AND a.id = :bundle_id
+        GROUP BY
+            bundle_id, service_name, goods_price_master_id, service_goods_master_id, constitution_id, bundle_service_charge, bundle_govt_agency_fee, bundle_stamp_duty, bundle_stamp_fee, service_goods_details_id, item_id, bundled_service_goods_id, display_order, item_name
+    """)
+    query_result = db.execute(query, {"bundle_id": bundle_id}).fetchall()
+    
+    # Check if bundled service exists
+    if not query_result:
+        raise HTTPException(status_code=404, detail="Bundled service not found")
+    
+    # Process query result to organize it into the desired structure
+    bundle_data = {}
+    bundle_data['service_id'] = query_result[0]['bundle_id']
+    bundle_data['service_name'] = query_result[0]['service_name']
+    bundle_data['service_charge'] = query_result[0]['bundle_service_charge']
+    bundle_data['govt_agency_fee'] = query_result[0]['bundle_govt_agency_fee']
+    bundle_data['stamp_fee'] = query_result[0]['bundle_stamp_fee']
+    bundle_data['stamp_duty'] = query_result[0]['bundle_stamp_duty']
 
-@router.get("/test/get_bundle_service_data/", response_model=BundleModelSchema)
-def get_bundle_service_data_endpoint(bundle_service_id: int = Header(..., description="Bundle Service ID"), 
-                                     db: Session = Depends(get_db)):
-    # Call the function to get bundled service data
-    bundle_service_data = db_office_master.get_bundle_service_data(bundle_service_id, db)
-    if bundle_service_data is None:
-        raise HTTPException(status_code=404, detail="Bundle service not found")
-    return bundle_service_data
+    items = []
+    sub_item_total = {
+        'service_charge': 0,
+        'govt_agency_fee': 0,
+        'stamp_fee': 0,
+        'stamp_duty': 0
+    }
+    total_item_charge = {
+        'service_charge': 0,
+        'govt_agency_fee': 0,
+        'stamp_fee': 0,
+        'stamp_duty': 0
+    }
 
+    for row in query_result:
+        item = {
+            'id': row['service_goods_details_id'],
+            'name': row['item_name'],
+            'service_goods_master_id': row['item_id'],
+            'bundled_service_goods_id': row['bundled_service_goods_id'],
+            'display_order': row['display_order'],
+            'service_charge': row['item_service_charge'],
+            'govt_agency_fee': row['item_govt_agency_fee'],
+            'stamp_fee': row['item_stamp_fee'],
+            'stamp_duty': row['item_stamp_duty']
+        }
+        items.append(item)
+        
+        # Summing item-specific details
+        total_item_charge['service_charge'] += row['item_service_charge']
+        total_item_charge['govt_agency_fee'] += row['item_govt_agency_fee']
+        total_item_charge['stamp_fee'] += row['item_stamp_fee']
+        total_item_charge['stamp_duty'] += row['item_stamp_duty']
 
+    # Update sub_item_total with the sum of all item charges
+    sub_item_total['service_charge'] = total_item_charge['service_charge']
+    sub_item_total['govt_agency_fee'] = total_item_charge['govt_agency_fee']
+    sub_item_total['stamp_fee'] = total_item_charge['stamp_fee']
+    sub_item_total['stamp_duty'] = total_item_charge['stamp_duty']
 
+    bundle_data['items'] = items
 
+    # Calculate grand total
+    grand_total = {
+        'service_charge': bundle_data['service_charge'] + sub_item_total['service_charge'],
+        'govt_agency_fee': bundle_data['govt_agency_fee'] + sub_item_total['govt_agency_fee'],
+        'stamp_fee': bundle_data['stamp_fee'] + sub_item_total['stamp_fee'],
+        'stamp_duty': bundle_data['stamp_duty'] + sub_item_total['stamp_duty']
+    }
 
+    # Update sub_item_total and grand_total in the bundle
+    bundle_data['sub_item_total'] = sub_item_total
+    bundle_data['grand_total'] = grand_total
 
-
-
-
-
-
-
-
-
-
+    # Return the bundle data
+    return bundle_data

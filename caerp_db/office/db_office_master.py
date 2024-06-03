@@ -7,7 +7,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, BundleModelSchema, GrandTotalModelSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest, ServiceItemModelSchema, ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubItemTotalModelSchema
+from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -792,6 +792,7 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
 
 
 #---------------------------------------------------------------------------------------------------------------
+
 def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
     query_result = db.execute("""
         SELECT
@@ -820,10 +821,9 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
         return []
 
     service_name = query_result[0].service_goods_name
-    price_history = []
-    
+    service_models = []
     for row in query_result:
-        price_history.append(ServicePriceHistory(
+        price_history = PriceHistoryModel(
             constitution_id=row.constitution_id,
             business_constitution_name=row.business_constitution_name,
             service_charge=row.service_charge,
@@ -832,13 +832,17 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
             stamp_fee=row.stamp_fee,
             effective_from_date=row.price_master_effective_from_date,
             effective_to_date=row.price_master_effective_to_date
+        )
+        service_models.append(ServiceModel(
+            id=row.constitution_id,  # Assuming constitution_id is used as id
+            service_name=service_name,
+            constitution_id=row.constitution_id,
+            business_constitution_name=row.business_constitution_name,
+            business_constitution_code="",  # You might need to provide this value
+            price_history=[price_history]
         ))
-
-    return [ServiceModel(
-        service_name=service_name,
-        price_history=price_history
-    )]
-    
+    return service_models
+   
 #--------------------------------------------------------------------------------------------------------------   
 def save_price_data(price_data: PriceData, user_id: int, db: Session):
     new_price = OffServiceGoodsPriceMaster(
@@ -860,88 +864,3 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
 
 #---------------------------------------------------------------------------------------------------------------
 
-def get_bundle_service_data(bundle_service_id: int, db: Session) -> BundleModelSchema:
-    # Fetch bundle details
-    bundle_details = db.execute("""
-        SELECT
-            master.id AS service_id,
-            master.service_goods_name AS service_name,
-            price.service_charge,
-            price.govt_agency_fee,
-            price.stamp_fee,
-            price.stamp_duty
-        FROM
-            off_service_goods_master AS master
-        JOIN
-            off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
-        WHERE
-            master.id = :bundle_service_id
-            AND master.is_bundled_service = 'yes'
-            AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
-            AND price.effective_from_date <= CURRENT_DATE
-    """, {"bundle_service_id": bundle_service_id}).fetchone()
-    
-    if not bundle_details:
-        return None
-
-    # Fetch items in the bundle
-    bundle_items = db.execute("""
-        SELECT
-            details.bundled_service_goods_id AS id,
-            master.service_goods_name AS name,
-            price.service_charge,
-            price.govt_agency_fee,
-            price.stamp_fee,
-            price.stamp_duty
-        FROM
-            off_service_goods_details AS details
-        JOIN
-            off_service_goods_master AS master ON details.bundled_service_goods_id = master.id
-        JOIN
-            off_service_goods_price_master AS price ON master.id = price.service_goods_master_id
-        WHERE
-            details.service_goods_master_id = :bundle_service_id
-            AND (price.effective_to_date IS NULL OR price.effective_to_date >= CURRENT_DATE)
-            AND price.effective_from_date <= CURRENT_DATE
-        ORDER BY
-            details.display_order
-    """, {"bundle_service_id": bundle_service_id}).fetchall()
-
-    # Calculate totals
-    sub_item_total = SubItemTotalModelSchema(
-        total_service_charge=sum(item.service_charge for item in bundle_items),
-        total_govt_agency_fee=sum(item.govt_agency_fee for item in bundle_items),
-        total_stamp_fee=sum(item.stamp_fee for item in bundle_items),
-        total_stamp_duty=sum(item.stamp_duty for item in bundle_items)
-    )
-
-    grand_total = GrandTotalModelSchema(
-        total_service_charge=bundle_details.service_charge + sub_item_total.total_service_charge,
-        total_govt_agency_fee=bundle_details.govt_agency_fee + sub_item_total.total_govt_agency_fee,
-        total_stamp_fee=bundle_details.stamp_fee + sub_item_total.total_stamp_fee,
-        total_stamp_duty=bundle_details.stamp_duty + sub_item_total.total_stamp_duty
-    )
-
-    # Create the bundle model
-    bundle_model = BundleModelSchema(
-        bundle_service_id=bundle_details.service_id,
-        bundle_service_name=bundle_details.service_name,
-        bundle_service_charge=bundle_details.service_charge,
-        bundle_govt_agency_fee=bundle_details.govt_agency_fee,
-        bundle_stamp_fee=bundle_details.stamp_fee,
-        bundle_stamp_duty=bundle_details.stamp_duty,
-        items=[
-            ServiceItemModelSchema(
-                id=item.id,
-                name=item.name,
-                service_charge=item.service_charge,
-                govt_agency_fee=item.govt_agency_fee,
-                stamp_fee=item.stamp_fee,
-                stamp_duty=item.stamp_duty
-            ) for item in bundle_items
-        ],
-        sub_item_total=sub_item_total,
-        grand_total=grand_total
-    )
-
-    return bundle_model

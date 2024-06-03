@@ -353,37 +353,9 @@ class PriceListResponse(BaseModel):
     price_list: List[ServiceGoodsPrice]
     
     
-# class ServiceModel(BaseModel):
-#     id: int
-#     service_name: str
 
-#     constitution_id: int
-#     business_constitution_name: str
-#     business_constitution_code: str
-#     service_charge: Optional[int]  # Changed to Optional[int]
-#     govt_agency_fee: Optional[int]  # Changed to Optional[int]
-#     stamp_duty: Optional[int]  # Changed to Optional[int]
-#     stamp_fee: Optional[int]  # Changed to Optional[int]
-#     effective_from_date: Optional[date]
-#     effective_to_date: Optional[date]
-#     service_description: Optional[str] = None
-    
-# class PriceHistoryModel(BaseModel):
-#     service_charge: Optional[int]
-#     govt_agency_fee: Optional[int]
-#     stamp_duty: Optional[int]
-#     stamp_fee: Optional[int]
-#     effective_from_date: Optional[date]
-#     effective_to_date: Optional[date]
 
-class PriceHistoryModel(BaseModel):
-    service_goods_price_master_id: Optional[int]
-    service_charge: Optional[int]
-    govt_agency_fee: Optional[int]
-    stamp_duty: Optional[int]
-    stamp_fee: Optional[int]
-    effective_from_date: Optional[date]
-    effective_to_date: Optional[date]
+
     
 class SetPriceModel(BaseModel):
     service_goods_master_id:int
@@ -395,6 +367,16 @@ class SetPriceModel(BaseModel):
     effective_from_date: Optional[date]
     effective_to_date: Optional[date]
 
+class PriceHistoryModel(BaseModel):
+    constitution_id: int
+    business_constitution_name: str
+    service_charge: Optional[float]
+    govt_agency_fee: Optional[float]
+    stamp_duty: Optional[float]
+    stamp_fee: Optional[float]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+
 class ServiceModel(BaseModel):
     id: int
     service_name: str
@@ -402,7 +384,6 @@ class ServiceModel(BaseModel):
     business_constitution_name: str
     business_constitution_code: str
     price_history: List[PriceHistoryModel]
-    
     
 class ServiceModelSchema(BaseModel):
     constitution_id: int
@@ -453,37 +434,23 @@ class OffDocumentDataMasterBase(BaseModel):
     has_expiry : str
       
     
-# for bundled structure  price list
-class ServiceItemModelSchema(BaseModel):
+class Item(BaseModel):
     id: int
-    name: str
+    service_goods_master_id: int
+    bundled_service_goods_id: int
+    display_order: int
     service_charge: float
     govt_agency_fee: float
     stamp_fee: float
     stamp_duty: float
 
-class SubItemTotalModelSchema(BaseModel):
-    total_service_charge: float
-    total_govt_agency_fee: float
-    total_stamp_fee: float
-    total_stamp_duty: float
-
-class GrandTotalModelSchema(BaseModel):
-    total_service_charge: float
-    total_govt_agency_fee: float
-    total_stamp_fee: float
-    total_stamp_duty: float
-
-class BundleModelSchema(BaseModel):
-    bundle_service_id: int
-    bundle_service_name: str
-    bundle_service_charge: float
-    bundle_govt_agency_fee: float
-    bundle_stamp_fee: float
-    bundle_stamp_duty: float
-    items: List[ServiceItemModelSchema]
-    sub_item_total: SubItemTotalModelSchema
-    grand_total: GrandTotalModelSchema
-    
-    
-
+class Bundle(BaseModel):
+    service_id: int
+    service_name: str
+    service_charge: float
+    govt_agency_fee: float
+    stamp_fee: float
+    stamp_duty: float
+    items: List[Item]
+    sub_item_total: Dict[str, float]
+    grand_total: Dict[str, float]
