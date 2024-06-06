@@ -6,7 +6,7 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
@@ -244,39 +244,47 @@ def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
                                      action: AppointmentStatusConstants, 
                                      visit_master_id: int):
+    appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    # Fetch the status ID based on the action
+    status_name = ""
+    if action == AppointmentStatusConstants.RESCHEDULED:
+        status_name = "RESCHEDULED"
+    elif action == AppointmentStatusConstants.CANCELED:
+        status_name = "CANCELED"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    status = db.query(OffAppointmentStatus).filter(OffAppointmentStatus.appointment_status == status_name).first()
+    if not status:
+        raise HTTPException(status_code=404, detail=f"Status '{status_name}' not found")
+    status_id = status.id
+
     if action == AppointmentStatusConstants.RESCHEDULED:
         if not request_data.date or not request_data.time:
             raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
-        # Update appointment status to RESCHEDULED (ID: 3) and update date and time
-        appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
-        if appointment:
-            appointment.appointment_status_id = 3  # Assuming 3 is the appointment status ID for RESCHEDULED
-            appointment.appointment_date = request_data.date
-            appointment.appointment_time_from = request_data.time
-            if appointment.remarks:
-                appointment.remarks += f"\n{request_data.description}"
-            else:
-                appointment.remarks = request_data.description
-            db.commit()
-            return {"success": True, "message": "Appointment rescheduled successfully"}
+        # Update appointment status to RESCHEDULED and update date and time
+        appointment.appointment_status_id = status_id
+        appointment.appointment_date = request_data.date
+        appointment.appointment_time_from = request_data.time
+        if appointment.remarks:
+            appointment.remarks += f"\n{request_data.description}"
         else:
-            raise HTTPException(status_code=404, detail="Appointment not found")
+            appointment.remarks = request_data.description
+        db.commit()
+        return {"success": True, "message": "Appointment rescheduled successfully"}
+    
     elif action == AppointmentStatusConstants.CANCELED:
-        # Update appointment status to CANCELED (ID: 2)
-        appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
-        if appointment:
-            appointment.appointment_status_id = 2  # Assuming 2 is the appointment status ID for CANCELED
-            if appointment.remarks:
-                appointment.remarks += f"\n{request_data.description}"
-            else:
-                appointment.remarks = request_data.description
-            db.commit()
-            return {"success": True, "message": "Appointment canceled successfully"}
+        # Update appointment status to CANCELED
+        appointment.appointment_status_id = status_id
+        if appointment.remarks:
+            appointment.remarks += f"\n{request_data.description}"
         else:
-            raise HTTPException(status_code=404, detail="Appointment not found")
-    else:
-        raise HTTPException(status_code=400, detail="Invalid action")
-
+            appointment.remarks = request_data.description
+        db.commit()
+        return {"success": True, "message": "Appointment canceled successfully"}
     
 #-------------------------------get_appointment_info
 def get_appointment_info(db: Session, type: str) -> List[dict]:
