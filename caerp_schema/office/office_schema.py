@@ -279,6 +279,9 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     
     
 
+class OffDocumentDataBase(BaseModel):
+    document_data_name :str
+    has_expiry : str
 
 
     
@@ -454,3 +457,28 @@ class Bundle(BaseModel):
     items: List[Item]
     sub_item_total: Dict[str, float]
     grand_total: Dict[str, float]
+    
+    
+class OffServiceDocumentDataMasterDisplay(BaseModel):
+    service_goods_master_id : int
+    group_id : int
+    sub_group_id : int
+    category_id : int
+    sub_category_id : int
+    constitution_id : int
+  
+ 
+
+class OffServiceDocumentDataDetails(BaseModel):
+    document_data_id : int
+    nature_of_possession_id : int
+    display_order : int
+ 
+class OffServiceDocumentDataRequired(BaseModel):
+    document_data_category_id: int
+    details: List[OffServiceDocumentDataDetails]
+
+class SaveServiceDocumentDataMasterRequest(BaseModel):
+    Service: OffServiceDocumentDataMasterDisplay
+    Documents: List[OffServiceDocumentDataRequired]
+    

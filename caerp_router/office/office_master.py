@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -305,6 +305,35 @@ def search_off_document_data_master(
 
 
 #-------------------------------------------------------------------------------------------------------
+
+@router.post("/services/save_service_document_data_master/{id}")
+def save_service_document_data_master(
+    id: int,
+    data: List[SaveServiceDocumentDataMasterRequest], 
+    action_type: RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        result_message = ""
+        for service in data:
+            result = db_office_master.save_service_document_data_master(
+                db, id, service, user_id, action_type
+            )
+            result_message = result["message"]
+        
+        return {"success": True, "message": result_message}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 

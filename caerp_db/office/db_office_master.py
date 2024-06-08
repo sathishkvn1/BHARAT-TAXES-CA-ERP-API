@@ -1,13 +1,14 @@
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
+
 from caerp_db.common.models import Employee
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -517,7 +518,73 @@ def search_off_document_data_master(
 
 
 # #-----------------------
+def save_service_document_data_master(
+    db: Session,
+    id: int,
+    doc_data: SaveServiceDocumentDataMasterRequest, 
+    user_id: int,
+    action_type: RecordActionType
+):
+    if action_type == RecordActionType.INSERT_ONLY and id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
 
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            new_master_data = doc_data.Service.dict()
+            new_master = OffServiceDocumentDataMaster(**new_master_data)
+            db.add(new_master)
+            db.flush()  # Ensure new_master.id is available for details
+
+            for document in doc_data.Documents:
+                if not isinstance(document.details, list):
+                    raise HTTPException(status_code=400, detail="Details should be a list")
+
+                for detail in document.details:
+                    new_detail_data = detail.dict()
+                    new_detail_data.update({
+                        "document_data_category_id": document.document_data_category_id,
+                        "service_document_data_id": new_master.id,
+                        "is_deleted": 'no'
+                    })
+                    new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                    db.add(new_detail)
+
+            db.commit()
+            return {"success": True, "message": "Saved successfully", "action": "insert"}
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
+
+            for key, value in doc_data.Service.dict().items():
+                setattr(existing_master, key, value)
+
+            db.query(OffServiceDocumentDataDetails).filter(OffServiceDocumentDataDetails.service_document_data_id == id).delete()
+
+            for document in doc_data.Documents:
+                if not isinstance(document.details, list):
+                    raise HTTPException(status_code=400, detail="Details should be a list")
+
+                for detail in document.details:
+                    new_detail_data = detail.dict()
+                    new_detail_data.update({
+                        "document_data_category_id": document.document_data_category_id,
+                        "service_document_data_id": id
+                        
+                    })
+                    new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                    db.add(new_detail)
+
+            db.commit()
+            return {"success": True, "message": "Updated successfully", "action": "update"}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+#-------------------------------
 
 def save_off_document_master(
     db: Session,

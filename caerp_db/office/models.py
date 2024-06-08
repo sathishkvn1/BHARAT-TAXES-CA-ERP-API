@@ -620,3 +620,27 @@ class OffNatureOfPossession(caerp_base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     nature_of_possession = Column(String(200), nullable=False) 
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+    
+class OffServiceDocumentDataMaster(caerp_base):
+    __tablename__ = 'off_service_document_data_master'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_goods_master_id = Column(Integer, nullable=False)
+    group_id = Column(Integer, nullable=False)
+    sub_group_id = Column(Integer, nullable=False)
+    category_id = Column(Integer, nullable=False)
+    sub_category_id = Column(Integer, nullable=False)
+    constitution_id = Column(Integer, nullable=False)
+  
+ 
+
+class OffServiceDocumentDataDetails(caerp_base):
+    __tablename__ = 'off_service_document_data_details'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_data_category_id = Column(Integer, nullable=False)
+    service_document_data_id = Column(Integer, nullable=False)
+    document_data_id = Column(Integer, nullable=False)
+    nature_of_possession_id = Column(Integer, nullable=False)
+    display_order = Column(Integer, nullable=False,default=1)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
