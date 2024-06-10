@@ -703,6 +703,7 @@ def get_price_list(
     results = db.execute(base_query).fetchall()
     services_data = [
         ServiceGoodsPrice(
+            id=item.id,
             service_name=item.service_goods_name,
             service_type=item.hsn_sac_class,
             configuration_status="Configured" if item.configured_count >= 1 else "Not Configured",

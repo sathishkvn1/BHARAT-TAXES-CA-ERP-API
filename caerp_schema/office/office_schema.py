@@ -347,6 +347,7 @@ class EmployeeResponse(BaseModel):
     employees: List[dict]
     
 class ServiceGoodsPrice(BaseModel):
+    id: int
     service_name: str
     configuration_status: Optional[str] = None
     service_type: Optional[str] = None
