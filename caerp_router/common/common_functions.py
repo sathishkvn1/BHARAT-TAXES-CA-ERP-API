@@ -2,11 +2,13 @@ from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import Employee, Gender
+from caerp_db.common.models import AppDesignation, BloodGroupDB, Employee, Gender, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, MaritalStatus, NationalityDB
 from caerp_db.database import get_db
+from caerp_db.hr_and_payroll.model import PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
+
 
 from caerp_auth import oauth2
 
@@ -42,7 +44,18 @@ TABLE_MODEL_MAPPING = {
     "OffDocumentDataType":OffDocumentDataType,
     "Gender":Gender,
     "OffDocumentDataCategory":OffDocumentDataCategory,
-    "OffNatureOfPossession":OffNatureOfPossession
+    "OffNatureOfPossession":OffNatureOfPossession,
+    "PrlCalculationFrequency":PrlCalculationFrequency,
+    "PrlCalculationMethod":PrlCalculationMethod,
+    "PrlSalaryComponent":PrlSalaryComponent,
+    "MaritalStatus":MaritalStatus,
+    "AppDesignation":AppDesignation,
+    "NationalityDB":NationalityDB,
+    "BloodGroupDB":BloodGroupDB,
+    "HrDocumentMaster":HrDocumentMaster,
+    "HrDepartmentMaster":HrDepartmentMaster,
+    "HrDesignationMaster":HrDesignationMaster,
+    "HrEmployeeCategory":HrEmployeeCategory
 }
 
 # Define a function to get the model class based on the provided model name
