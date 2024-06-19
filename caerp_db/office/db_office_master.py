@@ -1,3 +1,4 @@
+import logging
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
@@ -7,8 +8,8 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentPlaceOfBusiness, OffAppointmentRecommendationMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -680,7 +681,7 @@ def get_all_employees(db: Session) -> List[Employee]:
 
 
 #---------------------------------------------------------------------------------------------------------------
-def get_all_services(db: Session) -> List[OffViewConsultantDetails]:
+def get_all_service(db: Session) -> List[OffViewConsultantDetails]:
 
     return db.query(OffViewConsultantDetails).all()
 
@@ -952,5 +953,152 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
     db.refresh(new_price)
     return new_price
 
-#---------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------
+def get_service_documents_details(
+    db: Session,
+    name: Optional[str] = None,
+    group_id: Optional[int] = None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    sub_category_id: Optional[int] = None,
+    constitution_id: Optional[int] = None
+) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
+    try:
+        search_conditions = []
 
+        if name:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_name == name)
+        if group_id is not None:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.group_id == group_id)
+        if sub_group_id is not None:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_group_id == sub_group_id)
+        if category_id is not None:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.category_id == category_id)
+        if sub_category_id is not None:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_category_id == sub_category_id)
+        if constitution_id is not None:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.constitution_id == constitution_id)
+
+        query = db.query(OffViewServiceDocumentsDataMaster, OffViewServiceDocumentsDataDetails).filter(
+            and_(*search_conditions),
+            OffViewServiceDocumentsDataMaster.group_id == OffViewServiceDocumentsDataDetails.group_id,
+            OffViewServiceDocumentsDataMaster.sub_group_id == OffViewServiceDocumentsDataDetails.sub_group_id,
+            OffViewServiceDocumentsDataMaster.category_id == OffViewServiceDocumentsDataDetails.category_id,
+            OffViewServiceDocumentsDataMaster.sub_category_id == OffViewServiceDocumentsDataDetails.sub_category_id,
+            OffViewServiceDocumentsDataMaster.constitution_id == OffViewServiceDocumentsDataDetails.constitution_id
+        )
+
+        results = query.all()
+        if not results:
+            return []
+
+        categories = {}
+        for master, detail in results:
+            category_key = (detail.document_data_category_id, detail.document_data_category_category_name)
+            if category_key not in categories:
+                categories[category_key] = []
+            categories[category_key].append(detail)
+
+        
+        response = [
+            OffViewServiceDocumentsDataDetailsDocCategory(
+                document_data_category_id=category_id,
+                document_data_category_category_name=category_name,
+                details=[
+                    OffViewServiceDocumentsDataDetailsSchema.from_orm(detail).dict()
+                    for detail in details
+                ]
+            )
+            for (category_id, category_name), details in categories.items()
+        ]
+
+        return response
+        
+
+    except OperationalError as e:
+        # logging.error(f"MySQL Connection error: {e}")
+        raise HTTPException(status_code=500, detail="Database connection error, please try again later.")
+    except Exception as e:
+        # logging.error(f"Error fetching service documents details: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+#-----------------------------------------------------------------------------------------------
+
+
+
+
+
+from sqlalchemy.orm import Query
+def save_off_appointment_recommendation(
+    db: Session,
+    id: int,
+    data: OffAppointmentRecommendationMasterCreate,
+    user_id: int,
+    action_type: RecordActionType
+):
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            if id != 0:
+                raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+
+            # Save master data
+            appointment_recommendation_master = OffAppointmentRecommendationMaster(
+                created_by=user_id,
+                created_on=datetime.utcnow(),
+                appointment_master_id=data.appointment_master_id,
+                visit_master_id=data.visit_master_id,
+                service_goods_master_id=data.service_goods_master_id,
+                constitution_id=data.constitution_id,
+                has_branches_or_godowns=data.has_branches_or_godowns,
+                number_of_branches_or_godowns=data.number_of_branches_or_godowns
+            )
+            db.add(appointment_recommendation_master)
+            db.flush()
+
+            # Save detail data
+            for place_data in data.places_of_business:
+                place_of_business = OffAppointmentPlaceOfBusiness(
+                    appointment_recommendation_master_id=appointment_recommendation_master.id,
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    nature_of_possession_id=place_data.nature_of_possession_id,
+                    utility_document_id=place_data.utility_document_id,
+                    business_place_type=place_data.business_place_type,
+                    is_main_office=place_data.is_main_office
+                )
+                db.add(place_of_business)
+
+            db.commit()
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            # Update OffAppointmentRecommendationMaster
+            existing_master = db.query(OffAppointmentRecommendationMaster).filter_by(id=id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Existing master record not found")
+
+            # Update master data
+            master_update_data = data.dict(exclude={'places_of_business'})
+            for key, value in master_update_data.items():
+                setattr(existing_master, key, value)
+            existing_master.modified_by = user_id
+            existing_master.modified_on = datetime.utcnow()
+
+            # Update OffAppointmentPlaceOfBusiness details
+            for place_data in data.places_of_business:
+                detail = db.query(OffAppointmentPlaceOfBusiness).filter_by(appointment_recommendation_master_id=id).first()
+                if not detail:
+                    raise HTTPException(status_code=404, detail="Detail not found for the appointment recommendation master")
+
+                for key, value in place_data.dict(exclude_unset=True).items():
+                    setattr(detail, key, value)
+                detail.modified_by = user_id
+                detail.modified_on = datetime.utcnow()
+
+        db.commit()
+
+    except HTTPException as http_error:
+        db.rollback()
+        raise http_error
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

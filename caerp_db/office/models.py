@@ -611,7 +611,7 @@ class OffDocumentDataType(caerp_base):
 class OffDocumentDataCategory(caerp_base):
     __tablename__ = 'off_document_data_category'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    document_data_type = Column(String(200), nullable=False) 
+    category_name = Column(String(200), nullable=False) 
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
@@ -643,4 +643,91 @@ class OffServiceDocumentDataDetails(caerp_base):
     nature_of_possession_id = Column(Integer, nullable=False)
     display_order = Column(Integer, nullable=False,default=1)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class OffViewServiceDocumentsDataDetails(caerp_base):
+    __tablename__ = 'off_view_service_documents_data_details'
+   
+    service_document_data_details_id = Column(Integer, primary_key=True, nullable=False)
+    document_data_category_id = Column(Integer, nullable=False)
+    document_data_category_category_name = Column(String(200), nullable=False)
+    service_document_data_id = Column(Integer, nullable=False)
+    group_id = Column(Integer, nullable=False)
+    group_name = Column(String(250))
+    sub_group_id = Column(Integer, nullable=False)
+    sub_group_name = Column(String(100))
+    category_id = Column(Integer, nullable=False)
+    category_name = Column(String(200))
+    sub_category_id = Column(Integer, nullable=False)
+    sub_category_name = Column(String(200))
+    constitution_id = Column(Integer, nullable=False)
+    business_constitution_name = Column(String(100), nullable=False)
+    business_constitution_code = Column(String(100), nullable=False)
+    description = Column(String(500))
+    document_data_id = Column(Integer, nullable=False)
+    document_data_type_id = Column(Integer, nullable=False)
+    document_data_type = Column(String(200), nullable=False)
+    document_data_name = Column(String(200), nullable=False)
+    has_expiry = Column(Enum('yes', 'no'), nullable=False)
+    nature_of_possession_id = Column(Integer)
+    nature_of_possession = Column(String(200), nullable=False)
+    display_order = Column(Integer, nullable=False)
+    service_document_data_details_is_deleted = Column(Enum('yes', 'no'), nullable=False) 
+    
+class OffViewServiceDocumentsDataMaster(caerp_base):
+    __tablename__ = 'off_view_service_documents_data_master'
+
+    service_document_data_master_id = Column(Integer, primary_key=True)
+    service_goods_master_id =Column(Integer, nullable=False)
+    service_goods_name = Column(String(500), nullable=False)
+    group_id = Column(Integer, nullable=False)
+    group_name = Column(String(250), nullable=True)
+    sub_group_id = Column(Integer, nullable=False)
+    sub_group_name = Column(String(100), nullable=True)
+    category_id = Column(Integer, nullable=False)
+    category_name = Column(String(200), nullable=True)
+    sub_category_id = Column(Integer, nullable=False)
+    sub_category_name = Column(String(200), nullable=True)
+    constitution_id = Column(Integer, nullable=False)
+    business_constitution_name = Column(String(100), nullable=False)
+    business_constitution_code = Column(String(100), nullable=False)
+    description = Column(String(500), nullable=True)
+   
+#--------------------aparna
+class OffAppointmentRecommendationMaster(caerp_base):
+    __tablename__ = 'off_appointment_recommendation_master'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    appointment_master_id = Column(Integer, nullable=False)
+    visit_master_id = Column(Integer,nullable=False)
+    service_goods_master_id = Column(Integer,nullable=False)
+    constitution_id = Column(Integer,nullable=False)
+    has_branches_or_godowns = Column(Enum('yes', 'no'), nullable=False, default='no')
+    number_of_branches_or_godowns = Column(Integer, nullable=False, default=0)
+    created_by = Column(Integer, default=None)
+    created_on = Column(Date, default=None)
+    modified_by = Column(Integer, default=None)
+    modified_on = Column(Date, default=None)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, default=None)
+    deleted_on = Column(Date, default=None)
+
+class OffAppointmentPlaceOfBusiness(caerp_base):
+    __tablename__ = 'off_appointment_place_of_business'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    appointment_recommendation_master_id = Column(Integer, nullable=False, default='MAIN OFFICE')
+    is_main_office = Column(Enum('yes', 'no'), nullable=False, default='no')
+    nature_of_possession_id = Column(Integer,  nullable=False)
+    utility_document_id = Column(Integer,  nullable=False)
+    business_place_type = Column(Enum('MAIN OFFICE', 'GODOWN' ,'BRANCH'), nullable=False, default='no')
+    created_by = Column(Integer, default=None)
+    created_on = Column(Date, default=None)
+    modified_by = Column(Integer, default=None)
+    modified_on = Column(Date, default=None)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, default=None)
+    deleted_on = Column(Date, default=None)
+
 

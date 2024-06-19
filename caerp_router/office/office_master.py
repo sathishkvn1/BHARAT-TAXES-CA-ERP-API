@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
@@ -7,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -493,7 +494,7 @@ def get_consultants_and_services(
     
     else:
         # Fetch all services from off_view_consultant_details table
-        services = db_office_master.get_all_services(db)
+        services = db_office_master.get_all_service(db)
         # Convert services to a list of dictionaries
         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
         return {"services": services_data}
@@ -524,7 +525,7 @@ def get_consultants(
         raise HTTPException(status_code=400, detail="Invalid service ID")
 
 
-#---------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------
 @router.get("/get_consultation_services/")
 def get_consultation_services(
     service_id: Optional[int] = Query(None, description="ID of the service to retrieve consultants for"),
@@ -1141,3 +1142,91 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
     bundle_data["grand_total"] = grand_total
 
     return bundle_data
+#-----------------------------------------------------------------------------------------
+
+@router.get('/services/get_service_documents_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
+def get_service_documents_details(
+    name: Optional[str] = None,
+    group_id: Optional[int] = None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    sub_category_id: Optional[int] = None,
+    constitution_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        results = db_office_master.get_service_documents_details(
+            db, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id
+        )
+
+        if not results:
+            return JSONResponse(status_code=200, content={"message": "No data present"})
+
+        return results
+
+    except Exception as e:
+        # logging.error(f"Error fetching service documents details: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+#-------------------------------------------------------
+
+
+@router.post("/save_off_appointment_recommendation/{id}")
+def save_off_appointment_recommendation(
+    id: int,
+    data: List[OffAppointmentRecommendationMasterCreate], 
+    action_type: RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+    
+):
+  
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        for appointment in data:
+            db_office_master.save_off_appointment_recommendation(
+                db, id, appointment, user_id, action_type
+            )
+
+        return {"success": True, "message": "Saved successfully"}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+# @router.post("/save_off_appointment_recommendation/{id}")
+# def save_off_appointment_recommendation(
+#     id: int,
+#     data: List[OffAppointmentRecommendationMasterCreate], 
+#     action_type: RecordActionType,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         results = []
+#         for appointment in data:
+#             result = db_office_master.save_off_appointment_recommendation(
+#                 db, id, appointment, user_id, action_type
+#             )
+#             results.append(result)
+
+#         return {"success": True, "message": "Saved successfully", "results": results}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

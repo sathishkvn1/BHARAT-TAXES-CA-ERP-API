@@ -483,3 +483,68 @@ class SaveServiceDocumentDataMasterRequest(BaseModel):
     Service: OffServiceDocumentDataMasterDisplay
     Documents: List[OffServiceDocumentDataRequired]
     
+class OffViewServiceDocumentsDataDetailsSchema(BaseModel):
+    service_document_data_details_id: int
+    service_document_data_id: int
+    constitution_id: int
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    document_data_id: int
+    document_data_type_id: int
+    document_data_type: str
+    document_data_name: str
+    has_expiry: str
+    nature_of_possession_id: Optional[int]
+    nature_of_possession: str
+    display_order: int
+    class Config:
+        from_attributes = True  
+   
+class OffViewServiceDocumentsDataDetailsDocCategory(BaseModel):
+    document_data_category_id: int
+    document_data_category_category_name: str
+    details: List[OffViewServiceDocumentsDataDetailsSchema]
+    class Config:
+        from_attributes = True  
+   
+class OffViewServiceDocumentsDataMasterSchema(BaseModel):
+    service_document_data_master_id: int
+    service_goods_master_id : int
+    service_goods_name: str
+    group_id: int
+    group_name: Optional[str]
+    sub_group_id: int
+    sub_group_name: Optional[str]
+    category_id : int
+    category_name :Optional[str]
+    sub_category_id: int
+    sub_category_name: Optional[str]
+    constitution_id: int
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    doc_data_status: Optional[str] = None 
+    details: List[OffViewServiceDocumentsDataDetailsDocCategory] = []
+
+    class Config:
+        from_attributes = True
+        
+    
+#---------------Aparna
+class OffAppointmentPlaceOfBusinessCreate(BaseModel):
+   
+    appointment_recommendation_master_id: int
+    nature_of_possession_id: int
+    utility_document_id: int
+    business_place_type: str
+    is_main_office: str
+
+class OffAppointmentRecommendationMasterCreate(BaseModel):
+    appointment_master_id:int
+    visit_master_id:int
+    service_goods_master_id: int
+    constitution_id: int
+    has_branches_or_godowns: str
+    number_of_branches_or_godowns: int
+    places_of_business: List[OffAppointmentPlaceOfBusinessCreate]
