@@ -2,7 +2,7 @@ from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import AppDesignation, BloodGroupDB, Employee, Gender, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, MaritalStatus, NationalityDB
+from caerp_db.common.models import AppDesignation, BloodGroupDB, Employee, EmployeeEducationalQualification, Gender, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, MaritalStatus, NationalityDB
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
@@ -55,7 +55,8 @@ TABLE_MODEL_MAPPING = {
     "HrDocumentMaster":HrDocumentMaster,
     "HrDepartmentMaster":HrDepartmentMaster,
     "HrDesignationMaster":HrDesignationMaster,
-    "HrEmployeeCategory":HrEmployeeCategory
+    "HrEmployeeCategory":HrEmployeeCategory,
+    "EmployeeEducationalQualification":EmployeeEducationalQualification
 }
 
 # Define a function to get the model class based on the provided model name
