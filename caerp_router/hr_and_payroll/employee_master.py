@@ -1,21 +1,19 @@
-from caerp_db.common.models import Employee
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactDetailSchema, EmployeeBankAccountDetailSchema, EmployeeMasterSchemaForGet
+from caerp_db.common.models import EmployeeMaster, EmployeeDocuments
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
-from fastapi.security.oauth2 import OAuth2PasswordRequestForm
-from caerp_db.hash import Hash
 from caerp_auth import oauth2
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List,Optional, Union,Dict
-from caerp_constants.caerp_constants import DeletedStatus,ActiveStatus, VerifiedStatus, ApprovedStatus
-from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,UploadFile,File,Response, Path, Query
+from typing import List, Optional
+from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Path, Query, File, UploadFile
 from caerp_auth.authentication import authenticate_user
-from caerp_auth.oauth2 import SECRET_KEY, ALGORITHM
-from jose import JWTError, jwt
 from datetime import date,datetime
-from caerp_constants.caerp_constants import DeletedStatus,ActionType, EmployeeActionType
+from caerp_constants.caerp_constants import RecordActionType, ActionType
 from collections import defaultdict
+# from jose import JWTError, jwt
+
+
 
 router = APIRouter(
     prefix ='/Employee',
@@ -23,52 +21,158 @@ router = APIRouter(
 )
 
 
+
 # #save employee master
-@router.post('/save_employee_master', response_model=EmployeeDetails)
+@router.post('/save_employee_master')
 def save_employee_master(
-        id: int = 0,
-        Action: EmployeeActionType = Query(...),
-        request: EmployeeDetails = Body(...),
-        db: Session = Depends(get_db),
-        token: str = Depends(oauth2.oauth2_scheme)):
+    employeeid: int = 0,
+    id: Optional[int] = Query(None,
+    description="ID used for Update only"),
+    Action: RecordActionType = Query(...),
+    schemas_to_add: Optional[str] = Query(None,
+    description="Comma-separated list of schemas to Update",
+    title="Schemas to Update"),
+    request: EmployeeDetails = Body(...),
+    # request: EmployeeDetails = Depends(),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+  ):
 
    """
     Creation or updation of Employee Master.
      
-    -**Request** : Data needed for creation/updation provided through schema "EmployeeMasterSchema".
+    -**Request** : Data needed for creation/updation of Employee Master provided as schema "EmployeeDetails".
 
-    -**id** : Integer parameter, which is the primary key.
-    - If id is 0, it indicates creation of new Employee.
-    - If id is not 0, it indicates updation of existing Employee.
+    -**employeeid** : Integer parameter, which is the primary key.
+    - If employeeid is 0, it indicates creation of new Employee.
+    - If employeeid is not 0, it indicates updation of existing Employee.
+
+    -**id** : Integer parameter, primary key of detail tables.
+    -  passed while updating detail tables.
+
+    -**Action** : a dropdown to choose the action to perform. Type of actions are:
+    -   INSERT_ONLY - to insert new Employee Master.
+    -   UPDATE_ONLY - to update master and detail tables.
+    -   INSERT_AND_UPDATE - to insert into detail tables.
+
+    -**schemas_to_add** : a listbox to add schemas for updation; and insertion into detail tables.
 
     -**db** : database session for adding and updating tables.
-
-    -**Exception** : If any error occurs during the execution of try: block, an exception will be raised.
-    - Returns HTTPException with status code = 500 with error details.
    """
    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
    auth_info = authenticate_user(token)
    user_id = auth_info["user_id"]
+
    try:
-     db_employee_master.save_employee_master(db, request, id, user_id, Action)
-     return {
+     db_employee_master.save_employee_master(db, request, employeeid, id, user_id, Action, schemas_to_add)
+
+     if Action == RecordActionType.INSERT_ONLY:
+       return {
+            "success": True,
+            "message": "Saved successfully",
+            }
+     elif Action == RecordActionType.UPDATE_ONLY or Action == RecordActionType.UPDATE_AND_INSERT:
+       return {
             "success": True,
             "message": "Saved /Updated successfully"
-    }
+         } 
    except Exception as e:    
-      raise HTTPException(status_code=500, detail=str(e))
-   
+     raise HTTPException(status_code=500, detail=str(e))
+ 
+
+
+
+@router.post('/upload_document')
+def upload_document(
+   id: int,
+   request: EmployeeDocumentsSchema = Depends(),
+   file: UploadFile = File(None),
+   db: Session = Depends(get_db),
+   token: str = Depends(oauth2.oauth2_scheme)
+  ):
+  """
+  For uploading documents for a particular employee.
+     
+    -**Request** : Data needed for uploading documents provided as schema "EmployeeDocumentsSchema".
+
+    -**id**      : Integer parameter, primary key of employee_documents table.
+    
+    -**file**    : for uploading file/document.
+
+    -**db**      : database session for uploading documentss.
+  """ 
+  if not token:
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+  auth_info = authenticate_user(token)
+  user_id = auth_info["user_id"] 
+
+  try:
+      db_employee_master.upload_employee_documents(db, request, id, user_id, file)
+      return {
+            "success": True,
+            "message": "Uploaded successfully",
+            }                  
+  except Exception as e:    
+     raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+#delete employee details by id
+@router.delete("/delete_employee_details")
+def delete_employee_details_by_id(
+    employeeid: int,
+    id: Optional[int] = Query(None,
+    description="ID used for deleting from detail tables"), 
+    Action: ActionType = Query(...),
+    schema_to_delete: str = Query(...,
+    description="Add schema to Delete/Undelete",
+    title="Schema to Delete"),
+    db: Session = Depends(get_db), 
+    token: str = Depends(oauth2.oauth2_scheme)
+  ):
+    """
+    -**Delete/Undelete employee details by id.**
+   """ 
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    try:
+      auth_info = authenticate_user(token)
+      user_id = auth_info["user_id"]
+      db_employee_master.delete_employee_details(db, employeeid, id, user_id, Action, schema_to_delete)
+      if Action == ActionType.DELETE:
+       return {
+            "success": True,
+            "message": "Deleted successfully"
+         }
+      elif Action == ActionType.UNDELETE:
+       return {
+            "success": True,
+            "message": "Undeleted successfully"
+         }
+    except Exception as e:    
+     raise HTTPException(status_code=500, detail=str(e)) 
+
+
 
 
 @router.get("/get_employee_details")
 def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
-    # include_master: bool = Query(False, description="Include employee master details"),
     include_present_address: bool = Query(False, description="Include present address details"),
     include_permanent_address: bool = Query(False, description="Include permanent address details"),
     include_contact_details: bool = Query(False, description="Include contact details"),
     include_bank_details: bool = Query(False, description="Include bank details"),
+    include_employement_details: bool = Query(False, description="Include employement details"),
+    include_salary_details: bool = Query(False, description="Include salary details"),
+    include_educational_qualification: bool = Query(False, description="Include educational qualification details"),
+    include_experience_details: bool = Query(False, description="Include experience details"),
+    include_documents: bool = Query(False, description="Include employee documents"),
+    include_emergency_contact: bool = Query(False, description="Include emergency contact details"),
+    include_dependent_details: bool = Query(False, description="Include employee dependent details"),
     ):
   """
     -**Retrieve employee master by id.**
@@ -78,10 +182,19 @@ def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db)
     
 
   employee_details = defaultdict(dict)
-    
-  employees = db_employee_master.get_employee_master_details(db)
-  for emp in employees:
-    employee_details[emp.employee_id]['employee_master'] = EmployeeMasterSchema(
+  
+  if id is not None:  
+    emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+    if not emp:
+      raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
+      detail = f"Employee with id {id} not found" )
+    employee_details[id]['employee_master'] = EmployeeMasterSchema(
+            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
+        )
+  else:
+    employees = db_employee_master.get_employee_master_details(db)
+    for emp in employees:
+      employee_details[emp.employee_id]['employee_master'] = EmployeeMasterSchema(
             **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
             )
     
@@ -103,27 +216,76 @@ def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db)
     contact_info = db_employee_master.get_contact_details(db)
     for contact in contact_info:
      employee_details[contact.employee_id].setdefault('contact_details', []).append(
-             EmployeeContactDetailSchema(**contact.__dict__)
+             EmployeeContactSchema(**contact.__dict__)
             )
 
   if include_bank_details:
     bank_info = db_employee_master.get_bank_details(db)
     for bank in bank_info:
      employee_details[bank.employee_id].setdefault('bank_details', []).append(
-             EmployeeBankAccountDetailSchema(**bank.__dict__)
+             EmployeeBankAccountSchema(**bank.__dict__)
             )
      
+  if include_employement_details:
+    employement_info = db_employee_master.get_employement_details(db)
+    for employement in employement_info:
+     employee_details[employement.employee_id].setdefault('employement_details', []).append(
+             EmployeeEmployementSchema(**employement.__dict__)
+            )   
+     
+  if include_salary_details:
+    salary_info = db_employee_master.get_salary_details(db)
+    for salary in salary_info:
+     employee_details[salary.employee_id].setdefault('employee_salary', []).append(
+             EmployeeSalarySchema(**salary.__dict__)
+            )   
+     
+  if include_educational_qualification:
+    edu_qual_info = db_employee_master.get_qualification_details(db)
+    for edu_qual in edu_qual_info:
+     employee_details[edu_qual.employee_id].setdefault('educational_qualification', []).append(
+             EmployeeEducationalQualficationSchema(**edu_qual.__dict__)
+            )   
+
+  if include_experience_details:
+    exp_info = db_employee_master.get_experience_details(db)
+    for exp in exp_info:
+     employee_details[exp.employee_id].setdefault('employee_experience', []).append(
+             EmployeeExperienceSchema(**exp.__dict__)
+            )   
+
+  if include_documents:
+    doc_info = db_employee_master.get_document_details(db)
+    for doc in doc_info:
+     employee_details[doc.employee_id].setdefault('employee_documents', []).append(
+             EmployeeDocumentsSchema(**doc.__dict__)
+            ) 
+
+  if include_emergency_contact:
+    emer_contact = db_employee_master.get_emergency_contact_details(db)
+    for emer in emer_contact:
+     employee_details[emer.employee_id].setdefault('emergency_contact_details', []).append(
+             EmployeeEmergencyContactSchema(**emer.__dict__)
+            )      
+
+  if include_dependent_details:
+    dep_details = db_employee_master.get_dependent_details(db)
+    for dep in dep_details:
+     employee_details[dep.employee_id].setdefault('dependent_details', []).append(
+             EmployeeDependentsSchema(**dep.__dict__)
+            )   
+
   if id is not None:
     return employee_details.get(id, {})
   else:
     return employee_details
   
 
-#get consultants
-@router.get("/get_consultants/" , response_model=List[EmployeeMasterSchema])
+# get consultants
+@router.get("/get_consultants/" , response_model=List[EmployeeEmployementSchema])
 def get_consultants(db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
     """
-    -**Retrieve employees who are consultants.**
+    -**Retrieve consultant employees.**
    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -131,18 +293,3 @@ def get_consultants(db: Session = Depends(get_db), token: str = Depends(oauth2.o
 
 
 
-@router.delete("/employee/delete/undelete/{id}")
-def delete_employee_master(
-    id: int,
-    Action: ActionType = Query(..., title="Select delete or undelete"),
-    token: str = Depends(oauth2.oauth2_scheme),
-    db: Session = Depends(get_db),
-):
-    """
-    Delete employee master by employee_id.
-    Set the 'is_deleted' flag to 'yes' to mark the employee master as deleted.
-    """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    return db_employee_master.delete_undelete_employee_master(db, id, Action)  
