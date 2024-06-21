@@ -39,9 +39,17 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
         # result = EmployeeMaster(**data)
         # db.add(result)
         # db.commit()
-        insert_stmt = insert(EmployeeMaster).values(**data).returning(EmployeeMaster.employee_id)
+        # insert_stmt = insert(EmployeeMaster).values(**data).returning(EmployeeMaster.employee_id)
+        # result = db.execute(insert_stmt)
+        # emp_id = result.scalar()
+        insert_stmt = insert(EmployeeMaster).values(**data)
         result = db.execute(insert_stmt)
-        emp_id = result.scalar()
+
+        # Commit the transaction (assuming you're using sessions)
+        db.commit()
+
+        # Fetch the last inserted ID (works for autoincrement primary keys)
+        emp_id = result.lastrowid
         
         employement_details_data = request.employement_details.dict()
 
