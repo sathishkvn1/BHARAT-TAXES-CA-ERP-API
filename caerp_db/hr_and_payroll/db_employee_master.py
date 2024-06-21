@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeDocumentsSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType
 from typing import Union, List, Optional
-from sqlalchemy import and_, func, insert
+from sqlalchemy import and_, func, insert, update
 import os
 import shutil
 
@@ -36,10 +36,32 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
         # data["created_on"] = datetime.utcnow()
         data["approved_by"] = user_id
         data["approved_on"] = datetime.utcnow()
-        result = EmployeeMaster(**data)
-        db.add(result)
+        # result = EmployeeMaster(**data)
+        # db.add(result)
+        # db.commit()
+        insert_stmt = insert(EmployeeMaster).values(**data).returning(EmployeeMaster.employee_id)
+        result = db.execute(insert_stmt)
+        emp_id = result.scalar()
+        
+        employement_details_data = request.employement_details.dict()
+
+        existing_employment = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == emp_id).order_by(EmployeeEmployementDetails.effective_from_date.desc()).first()
+        if existing_employment:
+          # Update the effective_to_date of the existing record
+          effective_to_date = employement_details_data["effective_from_date"] - timedelta(days=1)
+          
+          update_stmt = update(EmployeeEmployementDetails).where(EmployeeEmployementDetails.employee_id == existing_employment.employee_id).values(effective_to_date=effective_to_date)
+          db.execute(update_stmt)
+
+        employement_details_data["employee_id"] = emp_id
+        employement_details_data["created_by"] = user_id
+        employement_details_data["approved_by"] = user_id
+        employement_details_data["approved_on"] = datetime.utcnow()  
+
+        insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+        db.execute(insert_emp_det)
         db.commit()
-        # db.refresh(result)      
+             
     else:
       # updating existing employee master
       if Action == RecordActionType.UPDATE_ONLY:   
@@ -193,75 +215,79 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
           raise HTTPException(status_code=422, detail="Invalid selection")
         
         for option in valid_options:
-          new_effective_from_date = datetime.utcnow()
+          # new_effective_from_date = datetime.utcnow()
 
           if option == "present_address" and request.present_address:
             existing_present_address = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.employee_id == employeeid).first()
             if existing_present_address:
-              existing_present_address.effective_to_date = new_effective_from_date - timedelta(days=1)
+              # existing_present_address.effective_to_date = new_effective_from_date - timedelta(days=1)
               db.add(existing_present_address)
             
             new_present_address_data = request.present_address.dict()
 
             new_present_address_data["employee_id"] = employeeid
             new_present_address_data["created_by"] = user_id
-            new_present_address_data["effective_from_date"] = new_effective_from_date
+            # new_present_address_data["effective_from_date"] = new_effective_from_date
             new_present_address = EmployeePresentAddress(**new_present_address_data)
             db.add(new_present_address)
               
           if option == "permanent_address" and request.permanent_address:
             existing_permanent_address = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == employeeid).first()
             if existing_permanent_address:
-              existing_permanent_address.effective_to_date = new_effective_from_date - timedelta(days=1)
+              # existing_permanent_address.effective_to_date = new_effective_from_date - timedelta(days=1)
               db.add(existing_permanent_address)
 
             new_permanent_address_data = request.permanent_address.dict()
 
             new_permanent_address_data["employee_id"] = employeeid
             new_permanent_address_data["created_by"] = user_id
-            new_permanent_address_data["effective_from_date"] = new_effective_from_date
+            # new_permanent_address_data["effective_from_date"] = new_effective_from_date
             new_permanent_address = EmployeePermanentAddress(**new_permanent_address_data)
             db.add(new_permanent_address)  
              
           if option == "contact_details" and request.contact_details:
             existing_contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employeeid).first()
             if existing_contact_details:
-              existing_contact_details.effective_to_date = new_effective_from_date - timedelta(days=1)
+              # existing_contact_details.effective_to_date = new_effective_from_date - timedelta(days=1)
               db.add(existing_contact_details)
 
             new_contact_details_data = request.contact_details.dict()
             
             new_contact_details_data["employee_id"] = employeeid
             new_contact_details_data["created_by"] = user_id
-            new_contact_details_data["effective_from_date"] = new_effective_from_date
+            # new_contact_details_data["effective_from_date"] = new_effective_from_date
             new_contact_details = EmployeeContactDetails(**new_contact_details_data)
             db.add(new_contact_details) 
 
           if option == "bank_details" and request.bank_details:
             existing_bank_details = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == employeeid).first()
             if existing_bank_details:
-              existing_bank_details.effective_to_date = new_effective_from_date - timedelta(days=1)
+              # existing_bank_details.effective_to_date = new_effective_from_date - timedelta(days=1)
               db.add(existing_bank_details)
 
             new_bank_details_data = request.bank_details.dict()
             
             new_bank_details_data["employee_id"] = employeeid
             new_bank_details_data["created_by"] = user_id
-            new_bank_details_data["effective_from_date"] = new_effective_from_date
+            # new_bank_details_data["effective_from_date"] = new_effective_from_date
             new_bank_details = EmployeeBankDetails(**new_bank_details_data)
             db.add(new_bank_details) 
 
           if option == "employement_details" and request.employement_details:
+            new_emp_details_data = request.employement_details.dict()
             existing_emp_details = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == employeeid).first()
             if existing_emp_details:
-              existing_emp_details.effective_to_date = new_effective_from_date - timedelta(days=1)
-              db.add(existing_emp_details)
+              effective_to_date = new_emp_details_data["effective_from_date"]- timedelta(days=1)
+              print("to date",effective_to_date)
+              update_stmt = update(EmployeeEmployementDetails).where(EmployeeEmployementDetails.employee_id == existing_emp_details.employee_id).values(effective_to_date=effective_to_date)
+              db.execute(update_stmt)
+              # db.add(existing_emp_details)
 
-            new_emp_details_data = request.employement_details.dict()
+            
 
             new_emp_details_data["employee_id"] = employeeid
             new_emp_details_data["created_by"] = user_id
-            new_emp_details_data["effective_from_date"] = new_effective_from_date
+            # new_emp_details_data["effective_from_date"] = new_effective_from_date
             new_emp_details = EmployeeEmployementDetails(**new_emp_details_data)
             db.add(new_emp_details)  
 
@@ -283,7 +309,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
                  and_(
                       EmployeeSalaryDetails.employee_id == employeeid,
                       EmployeeSalaryDetails.component_id == request.employee_salary.component_id,
-                      EmployeeSalaryDetails.effective_to_date > new_effective_from_date
+                      # EmployeeSalaryDetails.effective_to_date > new_effective_from_date
                       )
                    ).first()
 
@@ -292,7 +318,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
             else:
               existing_salary_details = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.employee_id == employeeid).first()
               if existing_salary_details:
-                existing_salary_details.effective_to_date = new_effective_from_date - timedelta(days=1)
+                # existing_salary_details.effective_to_date = new_effective_from_date - timedelta(days=1)
                 db.add(existing_salary_details)  
 
             # Check calculation method and validate amount or percentage accordingly
@@ -304,35 +330,35 @@ def save_employee_master(db: Session, request: EmployeeDetails, employeeid: int,
           
             new_salary_details_data["employee_id"] = employeeid
             new_salary_details_data["created_by"] = user_id
-            new_salary_details_data["effective_from_date"] = new_effective_from_date
+            # new_salary_details_data["effective_from_date"] = new_effective_from_date
             new_salary_details = EmployeeSalaryDetails(**new_salary_details_data)
             db.add(new_salary_details)  
           
           if option == "emergency_contact_details" and request.emergency_contact_details:
             exist_emergency_con_details = db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.employee_id == employeeid).first()
             if exist_emergency_con_details:
-              exist_emergency_con_details.effective_date_to = new_effective_from_date - timedelta(days=1)
+              # exist_emergency_con_details.effective_date_to = new_effective_from_date - timedelta(days=1)
               db.add(exist_emergency_con_details)
 
             new_emergency_contact_data = request.emergency_contact_details.dict()
 
             new_emergency_contact_data["employee_id"] = employeeid
             new_emergency_contact_data["created_by"] = user_id
-            new_emergency_contact_data["effective_date_from"] = new_effective_from_date
+            # new_emergency_contact_data["effective_date_from"] = new_effective_from_date
             new_emergency_contact = EmployeeEmergencyContactDetails(**new_emergency_contact_data)
             db.add(new_emergency_contact)
 
           if option == "dependent_details" and request.dependent_details:
             existing_dep_details = db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.employee_id == employeeid).first()
             if existing_dep_details:
-              existing_dep_details.effective_date_to = new_effective_from_date - timedelta(days=1)
+              # existing_dep_details.effective_date_to = new_effective_from_date - timedelta(days=1)
               db.add(existing_dep_details)
 
             new_dependent_data = request.dependent_details.dict()
 
             new_dependent_data["employee_id"] = employeeid
             new_dependent_data["created_by"] = user_id
-            new_dependent_data["effective_date_from"] = new_effective_from_date
+            # new_dependent_data["effective_date_from"] = new_effective_from_date
             new_dependent = EmployeeDependentsDetails(**new_dependent_data)
             db.add(new_dependent)  
 
