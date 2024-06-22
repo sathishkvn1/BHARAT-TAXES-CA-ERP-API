@@ -6,7 +6,7 @@ from caerp_constants.caerp_constants import BooleanFlag
 
 
 class EmployeeMasterSchema(BaseModel):
-   employee_id : int
+   # employee_id : int
    employee_number : str
    first_name : str
    middle_name : Optional[str] = None
