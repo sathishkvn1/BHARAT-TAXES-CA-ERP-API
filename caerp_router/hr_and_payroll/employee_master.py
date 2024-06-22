@@ -14,7 +14,6 @@ from collections import defaultdict
 # from jose import JWTError, jwt
 
 
-
 router = APIRouter(
     prefix ='/Employee',
     tags=['Employee']
@@ -25,13 +24,13 @@ router = APIRouter(
 # #save employee master
 @router.post('/save_employee_master')
 def save_employee_master(
-    employeeid: int = 0,
+    employee_id: int = 0,
     id: Optional[int] = Query(None,
-    description="ID used for Update only"),
+    description="ID used for Update/Update and Insert"),
     Action: RecordActionType = Query(...),
-    schemas_to_add: Optional[str] = Query(None,
-    description="Comma-separated list of schemas to Update",
-    title="Schemas to Update"),
+    employee_profile_component: Optional[str] = Query(None,
+    description="Comma-separated list of components to Update",
+    title="Components to Update"),
     request: EmployeeDetails = Body(...),
     # request: EmployeeDetails = Depends(),
     db: Session = Depends(get_db),
@@ -55,7 +54,7 @@ def save_employee_master(
     -   UPDATE_ONLY - to update master and detail tables.
     -   INSERT_AND_UPDATE - to insert into detail tables.
 
-    -**schemas_to_add** : a listbox to add schemas for updation; and insertion into detail tables.
+    -**employee_profile_component** : a textfield to add components for updating master/detail tables and inserting into detail tables.
 
     -**db** : database session for adding and updating tables.
    """
@@ -66,7 +65,7 @@ def save_employee_master(
    user_id = auth_info["user_id"]
 
    try:
-     db_employee_master.save_employee_master(db, request, employeeid, id, user_id, Action, schemas_to_add)
+     db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
 
      if Action == RecordActionType.INSERT_ONLY:
        return {
@@ -120,18 +119,16 @@ def upload_document(
 
 
 
-
-
 #delete employee details by id
 @router.delete("/delete_employee_details")
 def delete_employee_details_by_id(
-    employeeid: int,
+    employee_id: int,
     id: Optional[int] = Query(None,
     description="ID used for deleting from detail tables"), 
     Action: ActionType = Query(...),
-    schema_to_delete: str = Query(...,
-    description="Add schema to Delete/Undelete",
-    title="Schema to Delete"),
+    employee_profile_component: str = Query(...,
+    description="Add profile component",
+    title="Component to Delete"),
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2.oauth2_scheme)
   ):
@@ -143,7 +140,7 @@ def delete_employee_details_by_id(
     try:
       auth_info = authenticate_user(token)
       user_id = auth_info["user_id"]
-      db_employee_master.delete_employee_details(db, employeeid, id, user_id, Action, schema_to_delete)
+      db_employee_master.delete_employee_details(db, employee_id, id, user_id, Action, employee_profile_component)
       if Action == ActionType.DELETE:
        return {
             "success": True,
