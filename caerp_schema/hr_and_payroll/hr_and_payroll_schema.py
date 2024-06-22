@@ -273,7 +273,7 @@ class EmployeeDetails(BaseModel):
    emergency_contact_details : Optional[EmployeeEmergencyContactSchema] = None
    dependent_details : Optional[EmployeeDependentsSchema] = None
    employee_salary : Optional[EmployeeSalarySchema] = None
-   educational_qualification : List[EmployeeEducationalQualficationSchema]
-   employee_experience : List[EmployeeExperienceSchema]
-   employee_documents : List[EmployeeDocumentsSchema]
-   professional_qualification : List[EmployeeProfessionalQualificationSchema]
+   educational_qualification : List[EmployeeEducationalQualficationSchema] = None
+   employee_experience : List[EmployeeExperienceSchema] = None
+   employee_documents : List[EmployeeDocumentsSchema] = None
+   professional_qualification : List[EmployeeProfessionalQualificationSchema] = None
