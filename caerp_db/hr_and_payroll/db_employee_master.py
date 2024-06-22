@@ -13,6 +13,17 @@ import shutil
 
 UPLOAD_EMP_DOCUMENTS = "uploads/employee_documents"
 
+def get_next_employee_number(db: Session) -> str:
+    # Get the maximum employee number
+    max_employee_number = db.query(func.max(EmployeeMaster.employee_number)).scalar()
+    if max_employee_number is None:
+        # If there are no employees yet, start with EMP001
+        next_employee_number = 100
+    else:
+        next_employee_number = int(max_employee_number) + 1
+        next_employee_number_str = str(next_employee_number)
+    return next_employee_number_str
+
 def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id: int, user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
   try:
     if (employee_id > 0 or employee_id < 0) and Action == RecordActionType.INSERT_ONLY:
@@ -36,6 +47,8 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         # data["created_on"] = datetime.utcnow()
         data["approved_by"] = user_id
         data["approved_on"] = datetime.utcnow()
+
+        data['employee_number'] = get_next_employee_number(db)
        
         insert_stmt = insert(EmployeeMaster).values(**data)
         result = db.execute(insert_stmt)
