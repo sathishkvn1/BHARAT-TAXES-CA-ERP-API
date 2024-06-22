@@ -54,7 +54,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         result = db.execute(insert_stmt)
         db.commit()
 
-        # Fetch the last inserted ID (works for autoincrement primary keys)
+        
         emp_id = result.lastrowid
         
         employement_details_data = request.employement_details.dict()
@@ -67,6 +67,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
         db.execute(insert_emp_det)
         db.commit()
+        return emp_id
              
     else:
       # updating existing employee master

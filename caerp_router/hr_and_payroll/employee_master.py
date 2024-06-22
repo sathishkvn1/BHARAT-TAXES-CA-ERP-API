@@ -25,8 +25,9 @@ router = APIRouter(
 @router.post('/save_employee_master')
 def save_employee_master(
     employee_id: int = 0,
-    id: Optional[int] = Query(None,
-    description="ID used for Update/Update and Insert"),
+    # id: Optional[int] = Query(None,
+    # description="ID used for Update/Update and Insert"),
+    id: Optional[List[int]] = Query(None, description="IDs used for Update/Update and Insert (comma-separated)"),
     Action: RecordActionType = Query(...),
     employee_profile_component: Optional[str] = Query(None,
     description="Comma-separated list of components to Update",
@@ -65,12 +66,13 @@ def save_employee_master(
    user_id = auth_info["user_id"]
 
    try:
-     db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
+     result = db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
 
      if Action == RecordActionType.INSERT_ONLY:
        return {
             "success": True,
             "message": "Saved successfully",
+            "employee_id" : result
             }
      elif Action == RecordActionType.UPDATE_ONLY or Action == RecordActionType.UPDATE_AND_INSERT:
        return {
