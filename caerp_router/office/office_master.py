@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1142,6 +1142,38 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
     bundle_data["grand_total"] = grand_total
 
     return bundle_data
+
+
+#---------------------------------------------------------------------------------------
+@router.get('/services/get_all_service_document_data_master', response_model=Union[List[OffViewServiceDocumentsDataMasterSchema], dict])
+def get_all_service_document_data_master(
+    db: Session = Depends(get_db),
+    deleted_status: Optional[str] = Query(None, title="Select deleted status", enum=['DELETED', 'NOT_DELETED']),
+    name: Optional[str] = None,
+    group_id: Union[int, str] = Query('ALL'),
+    sub_group_id: Union[int, str] = Query('ALL'),
+    category_id: Union[int, str] = Query('ALL'),
+    sub_category_id: Union[int, str] = Query('ALL'),
+    constitution_id: Union[int, str] = Query('ALL'),
+    doc_data_status: Optional[str] = Query(None, description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> Union[List[OffViewServiceDocumentsDataMasterSchema], Dict[str, Any]]:
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    try:
+        results = db_office_master.get_all_service_document_data_master(
+            db, deleted_status, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
+        )
+
+        if not results:
+            return {"message": "No data present"}
+
+        return results
+
+    except Exception as e:
+        # logging.error(f"Error fetching service document data master: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 #-----------------------------------------------------------------------------------------
 
 @router.get('/services/get_service_documents_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])

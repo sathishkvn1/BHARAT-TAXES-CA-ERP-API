@@ -478,10 +478,10 @@ class OffServiceDocumentDataDetails(BaseModel):
 class OffServiceDocumentDataRequired(BaseModel):
     document_data_category_id: int
     details: List[OffServiceDocumentDataDetails]
-
+    
 class SaveServiceDocumentDataMasterRequest(BaseModel):
     Service: OffServiceDocumentDataMasterDisplay
-    Documents: List[OffServiceDocumentDataRequired]
+    Documents: Optional[List[OffServiceDocumentDataRequired]] = None
     
 class OffViewServiceDocumentsDataDetailsSchema(BaseModel):
     service_document_data_details_id: int
@@ -530,7 +530,28 @@ class OffViewServiceDocumentsDataMasterSchema(BaseModel):
     class Config:
         from_attributes = True
         
-    
+class OffViewServiceDocumentsDataMasterSchema(BaseModel):
+    service_document_data_master_id: int
+    service_goods_master_id : int
+    service_goods_name: str
+    group_id: int
+    group_name: Optional[str]
+    sub_group_id: int
+    sub_group_name: Optional[str]
+    category_id : int
+    category_name :Optional[str]
+    sub_category_id: int
+    sub_category_name: Optional[str]
+    constitution_id: int
+    business_constitution_name: str
+    business_constitution_code: str
+    description: Optional[str]
+    doc_data_status: Optional[str] = None
+    details: Optional[List[OffViewServiceDocumentsDataDetailsDocCategory]] = None
+   
+    class Config:
+        from_attributes=True
+       
 #---------------Aparna
 class OffAppointmentPlaceOfBusinessCreate(BaseModel):
    

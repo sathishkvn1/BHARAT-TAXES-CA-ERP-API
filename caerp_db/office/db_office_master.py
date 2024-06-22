@@ -9,7 +9,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentPlaceOfBusiness, OffAppointmentRecommendationMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -522,7 +522,7 @@ def search_off_document_data_master(
 def save_service_document_data_master(
     db: Session,
     id: int,
-    doc_data: SaveServiceDocumentDataMasterRequest, 
+    doc_data: SaveServiceDocumentDataMasterRequest,
     user_id: int,
     action_type: RecordActionType
 ):
@@ -538,19 +538,20 @@ def save_service_document_data_master(
             db.add(new_master)
             db.flush()  # Ensure new_master.id is available for details
 
-            for document in doc_data.Documents:
-                if not isinstance(document.details, list):
-                    raise HTTPException(status_code=400, detail="Details should be a list")
+            if doc_data.Documents:
+                for document in doc_data.Documents:
+                    if not isinstance(document.details, list):
+                        raise HTTPException(status_code=400, detail="Details should be a list")
 
-                for detail in document.details:
-                    new_detail_data = detail.dict()
-                    new_detail_data.update({
-                        "document_data_category_id": document.document_data_category_id,
-                        "service_document_data_id": new_master.id,
-                        "is_deleted": 'no'
-                    })
-                    new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                    db.add(new_detail)
+                    for detail in document.details:
+                        new_detail_data = detail.dict()
+                        new_detail_data.update({
+                            "document_data_category_id": document.document_data_category_id,
+                            "service_document_data_id": new_master.id,
+                            "is_deleted": 'no'
+                        })
+                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                        db.add(new_detail)
 
             db.commit()
             return {"success": True, "message": "Saved successfully", "action": "insert"}
@@ -565,19 +566,19 @@ def save_service_document_data_master(
 
             db.query(OffServiceDocumentDataDetails).filter(OffServiceDocumentDataDetails.service_document_data_id == id).delete()
 
-            for document in doc_data.Documents:
-                if not isinstance(document.details, list):
-                    raise HTTPException(status_code=400, detail="Details should be a list")
+            if doc_data.Documents:
+                for document in doc_data.Documents:
+                    if not isinstance(document.details, list):
+                        raise HTTPException(status_code=400, detail="Details should be a list")
 
-                for detail in document.details:
-                    new_detail_data = detail.dict()
-                    new_detail_data.update({
-                        "document_data_category_id": document.document_data_category_id,
-                        "service_document_data_id": id
-                        
-                    })
-                    new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                    db.add(new_detail)
+                    for detail in document.details:
+                        new_detail_data = detail.dict()
+                        new_detail_data.update({
+                            "document_data_category_id": document.document_data_category_id,
+                            "service_document_data_id": id
+                        })
+                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                        db.add(new_detail)
 
             db.commit()
             return {"success": True, "message": "Updated successfully", "action": "update"}
@@ -952,6 +953,90 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
     db.commit()
     db.refresh(new_price)
     return new_price
+#-------------------------------------------------------------------------------------------------------
+def get_all_service_document_data_master(
+    db: Session,
+    deleted_status: Optional[str] = None,
+    name: Optional[str] = None,
+    group_id: Union[int, str] = 'ALL',
+    sub_group_id: Union[int, str] = 'ALL',
+    category_id: Union[int, str] = 'ALL',
+    sub_category_id: Union[int, str] = 'ALL',
+    constitution_id: Union[int, str] = 'ALL',
+    doc_data_status: Optional[str] = None  # New parameter
+) -> List[dict]:
+    try:
+        search_conditions = []
+
+        if deleted_status:
+            if deleted_status == 'DELETED':
+                search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_master_is_deleted == 'yes')
+            elif deleted_status == 'NOT_DELETED':
+                search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_master_is_deleted == 'no')
+
+        if name:
+            search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_name.ilike(f'%{name}%'))
+
+        if group_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.group_id == group_id)
+
+        if sub_group_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_group_id == sub_group_id)
+
+        if category_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.category_id == category_id)
+
+        if sub_category_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_category_id == sub_category_id)
+
+        if constitution_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.constitution_id == constitution_id)
+
+        query = db.query(OffViewServiceDocumentsDataMaster).filter(and_(*search_conditions))
+
+        master_dict = {}
+        for master in query.all():
+            master_data = OffViewServiceDocumentsDataMasterSchema.from_orm(master).dict()
+            details_query = db.query(OffViewServiceDocumentsDataDetails).filter(
+                OffViewServiceDocumentsDataDetails.service_document_data_id == master.service_document_data_master_id
+            ).all()
+
+            has_details = bool(details_query)
+            master_data['doc_data_status'] = 'CONFIGURED' if has_details else 'NOT CONFIGURED'
+            
+            master_dict[master.service_document_data_master_id] = master_data
+            master_dict[master.service_document_data_master_id]["details"] = {}
+
+            for detail in details_query:
+                category_id = detail.document_data_category_id
+                if category_id not in master_dict[master.service_document_data_master_id]["details"]:
+                    master_dict[master.service_document_data_master_id]["details"][category_id] = {
+                        "document_data_category_id": detail.document_data_category_id,
+                        "document_data_category_category_name": detail.document_data_category_category_name,
+                        "details": []
+                    }
+
+                master_dict[master.service_document_data_master_id]["details"][category_id]["details"].append(
+                    OffViewServiceDocumentsDataDetailsSchema.from_orm(detail)
+                )
+
+        results = [
+            {**value, "details": list(value["details"].values())}
+            for value in master_dict.values()
+        ]
+
+        # Apply doc_data_status filter
+        if doc_data_status and doc_data_status != 'ALL':
+            if doc_data_status == 'CONFIGURED':
+                results = [res for res in results if res.get('doc_data_status') == 'CONFIGURED' and res['details']]
+            elif doc_data_status == 'NOT CONFIGURED':
+                results = [res for res in results if res.get('doc_data_status') == 'NOT CONFIGURED']
+
+        return results
+
+    except Exception as e:
+        logging.error(f"Failed to retrieve data from database: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 #--------------------------------------------------------------------------------------------------------
 def get_service_documents_details(
