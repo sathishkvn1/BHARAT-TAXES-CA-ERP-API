@@ -4,9 +4,10 @@ from caerp_db.common.models import EmployeeMaster, EmployeeBankDetails, Employee
 from datetime import date,datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeDocumentsSchema
-from caerp_constants.caerp_constants import RecordActionType, ActionType
+from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update
+from caerp_db.common.models import HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory
 import os
 import shutil
 
@@ -24,7 +25,7 @@ def get_next_employee_number(db: Session) -> str:
         next_employee_number_str = str(next_employee_number)
     return next_employee_number_str
 
-def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id: int, user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
+def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id: List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
   try:
     if (employee_id > 0 or employee_id < 0) and Action == RecordActionType.INSERT_ONLY:
       raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
@@ -53,7 +54,6 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         insert_stmt = insert(EmployeeMaster).values(**data)
         result = db.execute(insert_stmt)
         db.commit()
-
         
         emp_id = result.lastrowid
         
@@ -67,12 +67,13 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
         db.execute(insert_emp_det)
         db.commit()
+
         return emp_id
              
     else:
       # updating existing employee master
       if Action == RecordActionType.UPDATE_ONLY:   
-        update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
+        update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id, EmployeeMaster.is_deleted == 'no').first()
         if update_emp is None:
           raise HTTPException(status_code=404, detail="Employee not found")
                 
@@ -82,7 +83,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         schema_names = EmployeeDetails.__fields__.keys()
         schemas_list = employee_profile_component.split(",")
         valid_options = [option for option in schemas_list if option in schema_names]
-        
+                       
         if not valid_options:
           raise HTTPException(status_code=422, detail="Invalid selection")
 
@@ -99,7 +100,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating present address detail table
           if option == "present_address" and request.present_address:  
-            update_present_addr = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id).first()
+            update_present_addr = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id, EmployeePresentAddress.is_deleted == 'no').first()
             if update_present_addr is None:
               raise HTTPException(status_code=404, detail=f"present address with employee id {id} not found")
             for field, value in request.present_address.dict(exclude={"effective_from_date"}).items():
@@ -108,17 +109,16 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating permanent address detail table
           if option == "permanent_address" and request.permanent_address: 
-            update_per_addr = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).first()
+            update_per_addr = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id, EmployeePermanentAddress.is_deleted == 'no').first()
             if update_per_addr is None:
               raise HTTPException(status_code=404, detail=f"permanent address with employee id {id} not found")
             for field, value in request.permanent_address.dict(exclude={"effective_from_date"}).items():
-              # update_per_addr.employee_id = id
               setattr(update_per_addr, field, value)
             updated_entities['permanent_address'] = update_per_addr
 
           # updating contact_details detail table
           if option == "contact_details" and request.contact_details:
-            update_contact = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id).first()
+            update_contact = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id, EmployeeContactDetails.is_deleted == 'no').first()
             if update_contact is None:
               raise HTTPException(status_code=404, detail=f"contact details with employee id {id} not found")
             for field, value in request.contact_details.dict(exclude={"effective_from_date"}).items():
@@ -128,27 +128,25 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating bank_details detail table
           if option == "bank_details" and request.bank_details: 
-            update_bank = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).first()
+            update_bank = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id, EmployeeBankDetails.is_deleted == 'no').first()
             if update_bank is None:
               raise HTTPException(status_code=404, detail=f"bank details with employee id {id} not found")
             for field, value in request.bank_details.dict(exclude={"effective_from_date"}).items():
-              # update_bank.employee_id = id
               setattr(update_bank, field, value)
             updated_entities['bank_details'] = update_bank
 
-          # updating educational qualification
           if option == "educational_qualification" and request.educational_qualification:
-            update_qualification = db.query(EmployeeEducationalQualification).filter(EmployeeEducationalQualification.id == id).first()   
-            if update_qualification is None:
-              raise HTTPException(status_code=404, detail=f"educational qualification details with employee id {id} not found") 
-            for edu_qual in request.educational_qualification:
+            for id_value, edu_qual in zip(id, request.educational_qualification):
+              update_qualification = db.query(EmployeeEducationalQualification).filter(EmployeeEducationalQualification.id == id_value, EmployeeEducationalQualification.is_deleted == 'no').first()
+              if update_qualification is None:
+                raise HTTPException(status_code=404, detail=f"Educational qualification with ID {id_value} not found")
               for field, value in edu_qual.dict(exclude={"effective_from_date"}).items():
                 setattr(update_qualification, field, value)
-              updated_entities['educational_qualification'] = update_qualification
-
+              updated_entities['educational_qualification'] = update_qualification  
+              
           # updating employement details
           if option == "employement_details" and request.employement_details:
-            update_employement = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.id == id).first()  
+            update_employement = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.id == id, EmployeeEmployementDetails.is_deleted == 'no').first()  
             if update_employement is None:
               raise HTTPException(status_code=404, detail=f"employement details with employee id {id} not found") 
             for field, value in request.employement_details.dict(exclude={"effective_from_date"}).items():
@@ -157,7 +155,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating salary details
           if option == "employee_salary" and request.employee_salary:
-            update_salary = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id).first()  
+            update_salary = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id, EmployeeSalaryDetails.is_deleted == 'no').first()  
             if update_salary is None:
               raise HTTPException(status_code=404, detail=f"salary details with employee id {id} not found") 
             for field, value in request.employee_salary.dict(exclude={"effective_from_date"}).items():
@@ -166,17 +164,27 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating employee experience details 
           if option == "employee_experience" and request.employee_experience:
-            update_experience = db.query(EmployeeExperience).filter(EmployeeExperience.id == id).first()  
-            if update_experience is None:
-              raise HTTPException(status_code=404, detail=f"experience details with employee id {id} not found")
-            for emp_exp in request.employee_experience: 
-              for field, value in emp_exp.dict(exclude={"effective_from_date"}).items():
+            for id_value, emp_experience in zip(id, request.employee_experience):
+              update_experience = db.query(EmployeeExperience).filter(EmployeeExperience.id == id_value, EmployeeExperience.is_deleted == 'no').first()
+              if update_experience is None:
+                raise HTTPException(status_code=404, detail=f"Employee experience details with ID {id_value} not found")
+              for field, value in emp_experience.dict(exclude={"effective_from_date"}).items():
                 setattr(update_experience, field, value)
               updated_entities['employee_experience'] = update_experience
 
+          #updating employee document details 
+          if option == "employee_documents" and request.employee_documents: 
+            for id_value, emp_document in zip(id, request.employee_documents):
+              update_doc = db.query(EmployeeDocuments).filter(EmployeeDocuments.id == id_value, EmployeeDocuments.is_deleted == 'no').first()
+              if update_doc is None:
+                raise HTTPException(status_code=404, detail=f"Employee document details with ID {id_value} not found")
+              for field, value in emp_document.dict(exclude={"effective_from_date"}).items():
+                setattr(update_doc, field, value)
+              updated_entities['employee_documents'] = update_doc
+
           # updating employee emergency contact details
           if option == "emergency_contact_details" and request.emergency_contact_details:
-            update_emergency_contact = db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.id == id).first()  
+            update_emergency_contact = db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.id == id, EmployeeEmergencyContactDetails.is_deleted == 'no').first()  
             if update_emergency_contact is None:
               raise HTTPException(status_code=404, detail=f"emergency contact details with employee id {id} not found") 
             for field, value in request.emergency_contact_details.dict(exclude={"effective_from_date"}).items():
@@ -185,7 +193,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating employee dependent details
           if option == "dependent_details" and request.dependent_details:
-            update_dependents = db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.id == id).first()  
+            update_dependents = db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.id == id, EmployeeDependentsDetails.is_deleted == 'no').first()  
             if update_dependents is None:
               raise HTTPException(status_code=404, detail=f"dependent details with employee id {id} not found") 
             for field, value in request.dependent_details.dict(exclude={"effective_from_date"}).items():
@@ -194,20 +202,20 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           # updating employee professional qualification
           if option == "professional_qualification" and request.professional_qualification:
-            update_pro_qual = db.query(EmployeeProfessionalQualification).filter(EmployeeProfessionalQualification.id == id).first()  
-            if update_pro_qual is None:
-              raise HTTPException(status_code=404, detail=f"professional qualification details with employee id {id} not found")
-            for pro_qual in request.professional_qualification: 
-              for field, value in pro_qual.dict(exclude={"effective_from_date"}).items():
+            for id_value, professional_qual in zip(id, request.professional_qualification):
+              update_pro_qual = db.query(EmployeeProfessionalQualification).filter(EmployeeProfessionalQualification.id == id_value, EmployeeProfessionalQualification.is_deleted == 'no').first()
+              if update_pro_qual is None:
+                raise HTTPException(status_code=404, detail=f"Professional Qualification details with ID {id_value} not found")
+              for field, value in professional_qual.dict(exclude={"effective_from_date"}).items():
                 setattr(update_pro_qual, field, value)
-              updated_entities['professional_qualification'] = update_pro_qual    
+              updated_entities['professional_qualification'] = update_pro_qual  
          
         db.commit() 
         # return updated_entities
       
       # inserting new record to detail tables
       elif Action == RecordActionType.UPDATE_AND_INSERT:  
-        update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
+        update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id, EmployeeMaster.is_deleted == 'no').first()
         if update_emp is None:
           raise HTTPException(status_code=404, detail="Employee not found")          
 
@@ -226,7 +234,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           if option == "present_address" and request.present_address:
             new_present_address_data = request.present_address.dict()
-            existing_present_address = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.employee_id == employee_id).first()
+            existing_present_address = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.employee_id == employee_id, EmployeePresentAddress.is_deleted == 'no').first()
             if existing_present_address:
               effective_to_date = new_present_address_data["effective_from_date"] - timedelta(days=1)
               pre_addr = update(EmployeePresentAddress).where(EmployeePresentAddress.employee_id == existing_present_address.employee_id).values(effective_to_date=effective_to_date)
@@ -239,7 +247,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
               
           if option == "permanent_address" and request.permanent_address:
             new_permanent_address_data = request.permanent_address.dict()
-            existing_permanent_address = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == employee_id).first()
+            existing_permanent_address = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == employee_id, EmployeePermanentAddress.is_deleted == 'no').first()
             if existing_permanent_address:
               effective_to_date = new_permanent_address_data["effective_from_date"] - timedelta(days=1)
               per_addr = update(EmployeePermanentAddress).where(EmployeePermanentAddress.employee_id == existing_permanent_address.employee_id).values(effective_to_date=effective_to_date)
@@ -252,7 +260,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
              
           if option == "contact_details" and request.contact_details:
             new_contact_details_data = request.contact_details.dict()
-            existing_contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employee_id).first()
+            existing_contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employee_id, EmployeeContactDetails.is_deleted == 'no').first()
             if existing_contact_details:
               effective_to_date = new_contact_details_data["effective_from_date"] - timedelta(days=1)
               contact_det = update(EmployeeContactDetails).where(EmployeeContactDetails.employee_id == existing_contact_details.employee_id).values(effective_to_date=effective_to_date)
@@ -265,7 +273,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           if option == "bank_details" and request.bank_details:
             new_bank_details_data = request.bank_details.dict()
-            existing_bank_details = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == employee_id).first()
+            existing_bank_details = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == employee_id, EmployeeBankDetails.is_deleted == 'no').first()
             if existing_bank_details:
               effective_to_date = new_bank_details_data["effective_from_date"] - timedelta(days=1)
               bank_det = update(EmployeeBankDetails).where(EmployeeBankDetails.employee_id == existing_bank_details.employee_id).values(effective_to_date=effective_to_date)
@@ -278,7 +286,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           if option == "employement_details" and request.employement_details:
             new_emp_details_data = request.employement_details.dict()
-            existing_emp_details = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == employee_id).first()
+            existing_emp_details = db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == employee_id, EmployeeEmployementDetails.is_deleted == 'no').first()
             if existing_emp_details:
               effective_to_date = new_emp_details_data["effective_from_date"]- timedelta(days=1)
               emp_det = update(EmployeeEmployementDetails).where(EmployeeEmployementDetails.employee_id == existing_emp_details.employee_id).values(effective_to_date=effective_to_date)
@@ -314,7 +322,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
               if existing_record:
                 raise HTTPException(status_code=400, detail="Salary component is already set for a future month")
             else:
-              existing_salary_details = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.employee_id == employee_id).first()
+              existing_salary_details = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.employee_id == employee_id, EmployeeSalaryDetails.is_deleted == 'no').first()
               if existing_salary_details:
                 effective_to_date = new_salary_details_data["effective_from_date"]- timedelta(days=1)
                 salary_det = update(EmployeeSalaryDetails).where(EmployeeSalaryDetails.employee_id == existing_salary_details.employee_id).values(effective_to_date=effective_to_date)
@@ -334,7 +342,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
           
           if option == "emergency_contact_details" and request.emergency_contact_details:
             new_emergency_contact_data = request.emergency_contact_details.dict()
-            exist_emergency_con_details = db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.employee_id == employee_id).first()
+            exist_emergency_con_details = db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.employee_id == employee_id, EmployeeEmergencyContactDetails.is_deleted == 'no').first()
             if exist_emergency_con_details:
               effective_to_date = new_emergency_contact_data["effective_from_date"]- timedelta(days=1)
               emergency_con_det = update(EmployeeEmergencyContactDetails).where(EmployeeEmergencyContactDetails.employee_id == exist_emergency_con_details.employee_id).values(effective_to_date=effective_to_date)
@@ -347,7 +355,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
 
           if option == "dependent_details" and request.dependent_details:
             new_dependent_data = request.dependent_details.dict()
-            existing_dep_details = db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.employee_id == employee_id).first()
+            existing_dep_details = db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.employee_id == employee_id, EmployeeDependentsDetails.is_deleted == 'no').first()
             if existing_dep_details:
               effective_to_date = new_dependent_data["effective_from_date"]- timedelta(days=1)
               dependent_det = update(EmployeeDependentsDetails).where(EmployeeDependentsDetails.employee_id == existing_dep_details.employee_id).values(effective_to_date=effective_to_date)
@@ -412,41 +420,41 @@ def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, id:
 
 
 
-def get_employee_master_details(db: Session):
-    return db.query(EmployeeMaster).all()
+# def get_employee_master_details(db: Session):
+#     return db.query(EmployeeMaster).all()
 
-def get_present_address_details(db: Session):
-    return db.query(EmployeePresentAddress).all()
+# def get_present_address_details(db: Session):
+#     return db.query(EmployeePresentAddress).all()
 
-def get_permanent_address_details(db: Session):
-    return db.query(EmployeePermanentAddress).all()
+# def get_permanent_address_details(db: Session):
+#     return db.query(EmployeePermanentAddress).all()
 
-def get_contact_details(db: Session):
-    return db.query(EmployeeContactDetails).all()
+# def get_contact_details(db: Session):
+#     return db.query(EmployeeContactDetails).all()
 
-def get_bank_details(db: Session):
-    return db.query(EmployeeBankDetails).all()
+# def get_bank_details(db: Session):
+#     return db.query(EmployeeBankDetails).all()
 
-def get_employement_details(db: Session):
-    return db.query(EmployeeEmployementDetails).all()
+# def get_employement_details(db: Session):
+#     return db.query(EmployeeEmployementDetails).all()
 
-def get_salary_details(db: Session):
-    return db.query(EmployeeSalaryDetails).all()
+# def get_salary_details(db: Session):
+#     return db.query(EmployeeSalaryDetails).all()
 
-def get_qualification_details(db: Session):
-    return db.query(EmployeeEducationalQualification).all()
+# def get_qualification_details(db: Session):
+#     return db.query(EmployeeEducationalQualification).all()
 
-def get_experience_details(db: Session):
-    return db.query(EmployeeExperience).all()
+# def get_experience_details(db: Session):
+#     return db.query(EmployeeExperience).all()
 
-def get_document_details(db: Session):
-    return db.query(EmployeeDocuments).all()
+# def get_document_details(db: Session):
+#     return db.query(EmployeeDocuments).all()
 
-def get_emergency_contact_details(db: Session):
-    return db.query(EmployeeEmergencyContactDetails).all()
+# def get_emergency_contact_details(db: Session):
+#     return db.query(EmployeeEmergencyContactDetails).all()
 
-def get_dependent_details(db: Session):
-    return db.query(EmployeeDependentsDetails).all()
+# def get_dependent_details(db: Session):
+#     return db.query(EmployeeDependentsDetails).all()
 
 
 
@@ -551,5 +559,43 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
       #  item_to_undelete.deleted_on = datetime.utcnow()
        db.commit()
      else:
-       raise HTTPException(status_code=400, detail=f"Invalid profile component: {employee_profile_component}")    
+       raise HTTPException(status_code=400, detail=f"Invalid profile component: {employee_profile_component}")   
+
+
+
+
+def get_employee_master_details(db: Session, approval_status: ApprovedStatus, category: Optional[str] = None, department: Optional[str] = None, designation: Optional[str] = None, is_consultant: Optional[str] = None):
+    query = db.query(
+        EmployeeMaster,
+        EmployeeEmployementDetails,
+        HrEmployeeCategory.category_name,
+        HrDepartmentMaster.department_name,
+        HrDesignationMaster.designation,
+        EmployeeContactDetails.personal_mobile_number
+    ).join(
+        EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id
+    ).join(
+        HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+    ).join(
+        HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+    ).join(
+        EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    )
+    
+    if category:
+        query = query.filter(HrEmployeeCategory.category_name == category)
+    if department:
+        query = query.filter(HrDepartmentMaster.department_name == department)
+    if designation:
+        query = query.filter(HrDesignationMaster.designation == designation)
+    # if status and status != ActiveStatus.ALL:
+    #     query = query.filter(EmployeeMaster.is_active == status.value)
+    if approval_status:
+        query = query.filter(EmployeeMaster.is_approved == approval_status.value)
+    if is_consultant is not None:
+        query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+    
+    return query.all()      
 
