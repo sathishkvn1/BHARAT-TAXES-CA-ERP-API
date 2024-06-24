@@ -1039,73 +1039,34 @@ def get_all_service_document_data_master(
         raise HTTPException(status_code=500, detail=str(e))
 
 #--------------------------------------------------------------------------------------------------------
-def get_service_documents_details(
-    db: Session,
-    name: Optional[str] = None,
-    group_id: Optional[int] = None,
-    sub_group_id: Optional[int] = None,
-    category_id: Optional[int] = None,
-    sub_category_id: Optional[int] = None,
-    constitution_id: Optional[int] = None
-) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
+
+def get_service_documents_data_details(db: Session, service_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
     try:
-        search_conditions = []
+        # Query to fetch service_document_data_master_id from master table
+        master_query = db.query(OffViewServiceDocumentsDataMaster). \
+            filter(OffViewServiceDocumentsDataMaster.service_goods_master_id == service_id). \
+            first()
 
-        if name:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_name == name)
-        if group_id is not None:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.group_id == group_id)
-        if sub_group_id is not None:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_group_id == sub_group_id)
-        if category_id is not None:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.category_id == category_id)
-        if sub_category_id is not None:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.sub_category_id == sub_category_id)
-        if constitution_id is not None:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.constitution_id == constitution_id)
+        if not master_query:
+            return []  # Return empty list if no master record found for the given service_id
 
-        query = db.query(OffViewServiceDocumentsDataMaster, OffViewServiceDocumentsDataDetails).filter(
-            and_(*search_conditions),
-            OffViewServiceDocumentsDataMaster.group_id == OffViewServiceDocumentsDataDetails.group_id,
-            OffViewServiceDocumentsDataMaster.sub_group_id == OffViewServiceDocumentsDataDetails.sub_group_id,
-            OffViewServiceDocumentsDataMaster.category_id == OffViewServiceDocumentsDataDetails.category_id,
-            OffViewServiceDocumentsDataMaster.sub_category_id == OffViewServiceDocumentsDataDetails.sub_category_id,
-            OffViewServiceDocumentsDataMaster.constitution_id == OffViewServiceDocumentsDataDetails.constitution_id
-        )
+        service_document_data_master_id = master_query.service_document_data_master_id
 
-        results = query.all()
-        if not results:
-            return []
+        # Query to fetch details based on service_document_data_master_id and document_category
+        details_query = db.query(OffViewServiceDocumentsDataDetails). \
+            filter(OffViewServiceDocumentsDataDetails.service_document_data_id == service_document_data_master_id)
 
-        categories = {}
-        for master, detail in results:
-            category_key = (detail.document_data_category_id, detail.document_data_category_category_name)
-            if category_key not in categories:
-                categories[category_key] = []
-            categories[category_key].append(detail)
+        if document_category:
+            details_query = details_query.filter(
+                OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category)
 
+        results = details_query.all()
         
-        response = [
-            OffViewServiceDocumentsDataDetailsDocCategory(
-                document_data_category_id=category_id,
-                document_data_category_category_name=category_name,
-                details=[
-                    OffViewServiceDocumentsDataDetailsSchema.from_orm(detail).dict()
-                    for detail in details
-                ]
-            )
-            for (category_id, category_name), details in categories.items()
-        ]
+        return results
 
-        return response
-        
-
-    except OperationalError as e:
-        # logging.error(f"MySQL Connection error: {e}")
-        raise HTTPException(status_code=500, detail="Database connection error, please try again later.")
     except Exception as e:
-        # logging.error(f"Error fetching service documents details: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        logging.error(f"Error fetching service documents details: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
 
 #-----------------------------------------------------------------------------------------------
 

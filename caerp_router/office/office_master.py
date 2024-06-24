@@ -16,6 +16,7 @@ from datetime import date
 from sqlalchemy import text
 
 from sqlalchemy import select, func
+from fastapi.encoders import jsonable_encoder
 
 
 from sqlalchemy import select, func, and_
@@ -1158,6 +1159,37 @@ def get_all_service_document_data_master(
     doc_data_status: Optional[str] = Query(None, description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
     token: str = Depends(oauth2.oauth2_scheme)
 ) -> Union[List[OffViewServiceDocumentsDataMasterSchema], Dict[str, Any]]:
+    
+    
+    """
+    Allows users to search and filter service document data master records by the following criteria:
+    
+    - **deleted_status**: Filter records based on their deletion status. Possible values are:
+      
+      - DeletedStatus.DELETED - retrieves only deleted records.
+      - DeletedStatus.NOT_DELETED - retrieves only non-deleted records.
+      - DeletedStatus.ALL - retrieves all records.
+
+    - **name**: Search for records that contain the provided name as a substring.
+    
+    - **group_id**: Filter records by group ID. Use 'ALL' to include all group IDs.
+    
+    - **sub_group_id**: Filter records by sub-group ID. Use 'ALL' to include all sub-group IDs.
+    
+    - **category_id**: Filter records by category ID. Use 'ALL' to include all category IDs.
+    
+    - **sub_category_id**: Filter records by sub-category ID. Use 'ALL' to include all sub-category IDs.
+    
+    - **constitution_id**: Filter records by constitution ID. Use 'ALL' to include all constitution IDs.
+    
+    - **doc_data_status**: Filter by document data status. Possible values are:
+      - 'CONFIGURED'
+      - 'NOT CONFIGURED'
+
+    Returns:
+        - A list of service document data master records matching the specified filters.
+        - If no records are found, a message indicating that no data is present.
+    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
@@ -1168,38 +1200,73 @@ def get_all_service_document_data_master(
 
         if not results:
             return {"message": "No data present"}
+        
+        # Remove 'details' attribute if doc_data_status is 'NOT CONFIGURED'
+        for result in results:
+            if result.get("doc_data_status") == "NOT CONFIGURED" and "details" in result:
+                del result["details"]
 
-        return results
+        # Ensure the response is correctly encoded as JSON
+        return JSONResponse(content=jsonable_encoder(results), status_code=200)
+        #return results
 
     except Exception as e:
         # logging.error(f"Error fetching service document data master: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
 #-----------------------------------------------------------------------------------------
 
-@router.get('/services/get_service_documents_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
-def get_service_documents_details(
-    name: Optional[str] = None,
-    group_id: Optional[int] = None,
-    sub_group_id: Optional[int] = None,
-    category_id: Optional[int] = None,
-    sub_category_id: Optional[int] = None,
-    constitution_id: Optional[int] = None,
+@router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory], responses={404: {"description": "No data found"}})
+def get_service_documents_data_details(
+    service_id: int,
+    document_category: Optional[str] = Query(None, title="Select document category", 
+                                            enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
     db: Session = Depends(get_db)
 ):
+    """
+    Retrieve service document details based on specified criteria.
+
+    Parameters:
+    - **service_id**: Required parameter to filter by service ID.
+    - **document_category**: Optional parameter to filter by document category.
+    - Return a list of documents details with the selected category for the specified service_id.
+    
+    Possible values for `document_category` include:
+    - 'PERSONAL DOC'
+    - 'CONSTITUTION DOC'
+    - 'PRINCIPAL PLACE DOC'
+    - 'UTILITY DOC'
+    - 'DATA TO BE SUBMITTED'
+
+    Returns:
+    - Returns all document details for the specified service_id and 'document_category'.
+    - If no records are found, return {'message': 'No data found'}.
+    """
     try:
-        results = db_office_master.get_service_documents_details(
-            db, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id
-        )
+        results = db_office_master.get_service_documents_data_details(db, service_id, document_category)
 
         if not results:
-            return JSONResponse(status_code=200, content={"message": "No data present"})
+            return JSONResponse(status_code=404, content={"message": "No data found"})
 
-        return results
+        # Group the results by document category
+        grouped_results = {}
+        for result in results:
+            if result.document_data_category_id not in grouped_results:
+                grouped_results[result.document_data_category_id] = {
+                    "document_data_category_id": result.document_data_category_id,
+                    "document_data_category_category_name": result.document_data_category_category_name,
+                    "details": []
+                }
+            grouped_results[result.document_data_category_id]["details"].append(result)
+
+        # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
+        final_results = list(grouped_results.values())
+
+        return final_results
 
     except Exception as e:
         # logging.error(f"Error fetching service documents details: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
 
 
 #-------------------------------------------------------
