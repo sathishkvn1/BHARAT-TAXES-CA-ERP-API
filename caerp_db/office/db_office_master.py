@@ -8,17 +8,14 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentPlaceOfBusiness, OffAppointmentRecommendationMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentPlaceOfBusiness, OffAppointmentRecommendationMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import AppointmentStatusConstants, ConsultantService, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
 from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
-
-
-
 
 
 def save_appointment_visit_master(
@@ -53,6 +50,18 @@ def save_appointment_visit_master(
             db.add(visit_master)
             db.flush()
 
+            visit_details_list = []
+            for detail_data in appointment_data.visit_details:
+                visit_detail = OffAppointmentVisitDetails(
+                    visit_master_id=visit_master.id,
+                    consultant_id=visit_master.consultant_id,
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    **detail_data.dict(exclude_unset=True)
+                )
+                db.add(visit_detail)
+                visit_details_list.append(visit_detail)
+
         elif action_type == RecordActionType.UPDATE_ONLY:
             # Fetch existing appointment master record
             appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
@@ -83,46 +92,55 @@ def save_appointment_visit_master(
             visit_master.modified_by = user_id
             visit_master.modified_on = datetime.utcnow()
 
-        # Update or insert visit details
-        for detail_data in appointment_data.visit_details:
-            if action_type == RecordActionType.UPDATE_ONLY:
-                # Check if the visit detail already exists
-                existing_visit_detail = db.query(OffAppointmentVisitDetails).filter(
-                    OffAppointmentVisitDetails.visit_master_id == visit_master.id,
-                    OffAppointmentVisitDetails.service_id == detail_data.service_id
-                ).first()
-                if existing_visit_detail:
-                    # Update existing visit detail if service ID is different
-                    if existing_visit_detail.service_id != detail_data.service_id:
-                        existing_visit_detail.service_id = detail_data.service_id
-                        existing_visit_detail.modified_by = user_id
-                        existing_visit_detail.modified_on = datetime.utcnow()
+            # Fetch existing visit details
+            existing_details = db.query(OffAppointmentVisitDetails).filter(
+                OffAppointmentVisitDetails.visit_master_id == visit_master.id
+            ).all()
+
+            existing_details_dict = {detail.service_id: detail for detail in existing_details}
+
+            # Mark all existing visit details as deleted
+            for detail in existing_details:
+                detail.is_deleted = "yes"
+                detail.deleted_by = user_id
+                detail.deleted_on = datetime.utcnow()
+                detail.modified_by = user_id
+                detail.modified_on = datetime.utcnow()
+
+            visit_details_list = []
+            for detail_data in appointment_data.visit_details:
+                detail_data_dict = detail_data.dict(exclude_unset=True)
+                service_id = detail_data_dict.get("service_id")
+
+                if service_id in existing_details_dict:
+                    # Update existing detail
+                    existing_detail = existing_details_dict[service_id]
+                    for key, value in detail_data_dict.items():
+                        setattr(existing_detail, key, value)
+                    existing_detail.is_deleted = "no"
+                    existing_detail.deleted_by = None
+                    existing_detail.deleted_on = None
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.utcnow()
+                    visit_details_list.append(existing_detail)
                 else:
-                    # Insert new visit detail
+                    # Insert new detail
                     visit_detail = OffAppointmentVisitDetails(
                         visit_master_id=visit_master.id,
                         consultant_id=visit_master.consultant_id,
                         created_by=user_id,
                         created_on=datetime.utcnow(),
-                        **detail_data.dict(exclude_unset=True)
-                    ) 
+                        **detail_data_dict
+                    )
                     db.add(visit_detail)
-            else:
-                # Insert new visit detail
-                visit_detail = OffAppointmentVisitDetails(
-                    visit_master_id=visit_master.id,
-                    consultant_id=visit_master.consultant_id,
-                    created_by=user_id,
-                    created_on=datetime.utcnow(),
-                    **detail_data.dict(exclude_unset=True)
-                )
-                db.add(visit_detail)
+                    visit_details_list.append(visit_detail)
 
-        db.commit()
+        db.commit()  # Commit all changes to the database
 
         return {
-            "success": True,
-            "message": "Saved successfully"
+            "appointment_master": appointment_master,
+            "visit_master": visit_master,
+            "visit_details": visit_details_list
         }
 
     except IntegrityError as e:
@@ -136,8 +154,10 @@ def save_appointment_visit_master(
             raise e
     except Exception as e:
         db.rollback()
-        raise e
-    
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 def save_services_goods_master(
     db: Session,
     id: int,
@@ -241,7 +261,7 @@ def save_services_goods_master(
         logger.error("Exception: %s", str(e))
         raise e
 
-#---------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------
 def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
                                      action: AppointmentStatusConstants, 
@@ -265,12 +285,13 @@ def reschedule_or_cancel_appointment(db: Session,
     status_id = status.id
 
     if action == AppointmentStatusConstants.RESCHEDULED:
-        if not request_data.date or not request_data.time:
+        if not request_data.date or not request_data.from_time or not request_data.to_time:
             raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
         # Update appointment status to RESCHEDULED and update date and time
         appointment.appointment_status_id = status_id
         appointment.appointment_date = request_data.date
-        appointment.appointment_time_from = request_data.time
+        appointment.appointment_time_from = request_data.from_time
+        appointment.appointment_time_to = request_data.to_time
         if appointment.remarks:
             appointment.remarks += f"\n{request_data.description}"
         else:
@@ -287,7 +308,7 @@ def reschedule_or_cancel_appointment(db: Session,
             appointment.remarks = request_data.description
         db.commit()
         return {"success": True, "message": "Appointment canceled successfully"}
-    
+
 #-------------------------------get_appointment_info
 def get_appointment_info(db: Session, type: str) -> List[dict]:
     if type == "cancellation_reasons":
@@ -310,7 +331,6 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 #-------------get_consultancy_services-------------------------------------------------------------------------
 
 
-#///////////
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -353,8 +373,8 @@ def get_appointments(
             # Filter search value from OffAppointmentVisitMasterView
             search_conditions.append(
                 or_(
-                    OffAppointmentVisitMasterView.mobile_number == search_value,
-                    OffAppointmentVisitMasterView.email_id == search_value
+                    OffAppointmentVisitMasterView.mobile_number.like(f"%{search_value}%"),
+                    OffAppointmentVisitMasterView.email_id.like(f"%{search_value}%")
                 )
             )
 
@@ -388,16 +408,17 @@ def get_appointments(
                 # Convert visit_details_data to schema
                 visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
 
-                if appointment_id not in appointment_dict:
-                    # Create new appointment entry in dictionary
-                    appointment_dict[appointment_id] = {
-                        "appointment_master": appointment_master_schema,
-                        "visit_master": appointment_master_schema,
-                        "visit_details": [visit_details_schema]
-                    }
-                else:
-                    # Append visit details to existing entry
-                    appointment_dict[appointment_id]["visit_details"].append(visit_details_schema)
+                if OffAppointmentVisitDetailsView.appointment_visit_details_is_deleted == "no":
+                    if appointment_id not in appointment_dict:
+                        # Create new appointment entry in dictionary
+                        appointment_dict[appointment_id] = {
+                            "appointment_master": appointment_master_schema,
+                            "visit_master": appointment_master_schema,
+                            "visit_details": [visit_details_schema]
+                        }
+                    else:
+                        # Append visit details to existing entry
+                        appointment_dict[appointment_id]["visit_details"].append(visit_details_schema)
 
         # Convert dictionary values to list of ResponseSchema objects
         appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
@@ -407,7 +428,7 @@ def get_appointments(
     except HTTPException as http_error:
         raise http_error
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+         raise HTTPException(status_code=500, detail=str(e))
 
 
 
@@ -1070,10 +1091,6 @@ def get_service_documents_data_details(db: Session, service_id: int, document_ca
 
 #-----------------------------------------------------------------------------------------------
 
-
-
-
-
 from sqlalchemy.orm import Query
 def save_off_appointment_recommendation(
     db: Session,
@@ -1148,3 +1165,132 @@ def save_off_appointment_recommendation(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    
+#--------------------------------------------------------------------------    
+
+def save_consultant_service_details_db(data: ConsultantService, user_id: int, id: int, action_type: RecordActionType, db: Session):
+    if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
+        # Check if a record with the given consultant_id and service_goods_master_id already exists
+        existing_record = db.query(OffConsultantServiceDetails).filter(
+            OffConsultantServiceDetails.consultant_id == data.consultant_id,
+            OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id
+        ).first()
+        
+        if existing_record:
+            # If the existing record's effective_to_date is None, update it
+            if existing_record.effective_to_date is None:
+                existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+                existing_record.modified_by = user_id
+                db.commit()
+        
+        # Prepare the data dictionary for the new record
+        new_record_data = {
+            key: getattr(data, key)
+            for key in [
+                "consultant_id",
+                "service_goods_master_id",
+                "consultation_fee",
+                "slot_duration_in_minutes",
+                "effective_from_date",
+                "effective_to_date"  # This can be None, which is acceptable
+            ]
+        }
+        new_record_data["created_by"] = user_id
+        new_record_data["created_on"] = datetime.now()
+
+        # Create a new instance of OffConsultantServiceDetails
+        new_record = OffConsultantServiceDetails(**new_record_data)
+        db.add(new_record)
+        db.commit()
+
+
+
+# def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id: int, id: int, action_type: RecordActionType, db: Session):
+#     """Save consultant schedule details."""
+#     try:
+#         if action_type == RecordActionType.INSERT_AND_UPDATE and id == 0:
+#             existing_schedule = db.query(OffConsultantSchedule).filter(
+#                 OffConsultantSchedule.consultant_id == schedule_data.consultant_id,
+#                 OffConsultantSchedule.day_of_week_id == schedule_data.day_of_week_id,
+#                 OffConsultantSchedule.consultation_mode_id == schedule_data.consultation_mode_id
+#             ).first()
+            
+#             if existing_schedule:
+#                 if existing_schedule.effective_to_date is None:
+#                     existing_schedule.effective_to_date = schedule_data.effective_from_date - timedelta(days=1)
+#                     existing_schedule.modified_by = user_id
+#                     db.commit()
+                
+#                 new_schedule = OffConsultantSchedule(
+#                     consultant_id=schedule_data.consultant_id,
+#                     day_of_week_id=schedule_data.day_of_week_id,
+#                     consultation_mode_id=schedule_data.consultation_mode_id,
+#                     morning_start_time=schedule_data.morning_start_time,
+#                     morning_end_time=schedule_data.morning_end_time,
+#                     afternoon_start_time=schedule_data.afternoon_start_time,
+#                     afternoon_end_time=schedule_data.afternoon_end_time,
+#                     is_normal_schedule=schedule_data.is_normal_schedule,
+#                     consultation_date=schedule_data.consultation_date,
+#                     effective_from_date=schedule_data.effective_from_date,
+#                     effective_to_date=schedule_data.effective_to_date,
+#                     created_by=user_id
+#                 )
+#                 db.add(new_schedule)
+#             else:
+#                 new_schedule = OffConsultantSchedule(
+#                     consultant_id=schedule_data.consultant_id,
+#                     day_of_week_id=schedule_data.day_of_week_id,
+#                     consultation_mode_id=schedule_data.consultation_mode_id,
+#                     morning_start_time=schedule_data.morning_start_time,
+#                     morning_end_time=schedule_data.morning_end_time,
+#                     afternoon_start_time=schedule_data.afternoon_start_time,
+#                     afternoon_end_time=schedule_data.afternoon_end_time,
+#                     is_normal_schedule=schedule_data.is_normal_schedule,
+#                     consultation_date=schedule_data.consultation_date,
+#                     effective_from_date=schedule_data.effective_from_date,
+#                     effective_to_date=schedule_data.effective_to_date,
+#                     created_by=user_id
+#                 )
+#                 db.add(new_schedule)
+#         else:
+#             # Handle other action types or id values
+#             pass
+        
+#         db.commit()
+#         return True
+#     except Exception as e:
+#         db.rollback()
+#         raise e
+
+
+def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id: int, id: int, action_type: RecordActionType, db: Session):
+    """Save consultant schedule details."""
+    try:
+        schedule_dict = schedule_data.dict()  # Convert the data object to a dictionary
+        if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
+            existing_schedule = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == schedule_dict['consultant_id'],
+                OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
+                OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id']
+            ).first()
+            
+            if existing_schedule and schedule_dict['is_normal_schedule'] == 'yes':
+                if existing_schedule.effective_to_date is None:
+                    existing_schedule.effective_to_date = schedule_dict['effective_from_date'] - timedelta(days=1)
+                    existing_schedule.modified_by = user_id
+                    db.commit()
+              
+                new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id,created_on=datetime.now())
+                db.add(new_schedule)
+            else:
+                new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id,created_on=datetime.now())
+                db.add(new_schedule)
+        else:
+            # Handle other action types or id values
+            pass
+        
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        raise e

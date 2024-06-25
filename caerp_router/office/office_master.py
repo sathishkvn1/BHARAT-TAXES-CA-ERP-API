@@ -7,14 +7,14 @@ from caerp_db.common.models import Employee, EmployeeContactDetails, EmployeeEmp
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
 from sqlalchemy import text
-
+from datetime import datetime
 from sqlalchemy import select, func
 from fastapi.encoders import jsonable_encoder
 
@@ -1303,35 +1303,7 @@ def save_off_appointment_recommendation(
 
 #------------------------------------------------------------------------------------------------
 ###################CONSULTANTS AND SERVICES####################################################
-from datetime import datetime
-# @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
-# def get_consultant_employees(db: Session = Depends(get_db)):
-#     current_date = datetime.utcnow().date()
-    
-#     query = db.query(
-#         EmployeeMaster.employee_id,
-#         func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
-#         EmployeeMaster.employee_number,
-#         EmployeeContactDetails.personal_email_id.label('personal_email'),
-#         EmployeeContactDetails.official_email_id.label('official_email'),
-#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
-#         EmployeeContactDetails.official_mobile_number.label('official_mobile')
-#     ).join(
-#         EmployeeEmployementDetails,
-#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
-#     ).join(
-#         EmployeeContactDetails,
-#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
-#     ).filter(
-#         EmployeeEmployementDetails.is_consultant == 'yes',
-#         EmployeeEmployementDetails.effective_from_date <= current_date,
-#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
-#         EmployeeMaster.is_deleted == 'no',
-#         EmployeeEmployementDetails.is_deleted == 'no',
-#         EmployeeContactDetails.is_deleted == 'no'
-#     ).all()
 
-#     return query
 
 
 @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
@@ -1378,4 +1350,101 @@ def get_consultant_employees(
 
     return query.all()
 
+
+
+@router.post("/save_consultant_service_details/")
+def save_consultant_service_details(consultant_service: List[ConsultantService], 
+                                id: int,
+                                action_type: RecordActionType,
+                                db: Session = Depends(get_db),
+                                token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Save or update consultant service details.
+
+    **Request Body:**
+    The request body should be a JSON array containing one or more objects with the following fields:
+
+    - `consultant_id` (integer, required): The ID of the consultant.
+    - `service_goods_master_id` (integer, required): The ID of the service or goods master.
+    - `consultation_fee` (float, required): The consultation fee.
+    - `slot_duration_in_minutes` (integer, required): The slot duration in minutes.
+    - `effective_from_date` (date, required): The date from which the record is effective.
+    - `effective_to_date` (date, optional): The date until which the record is effective.
+
+    **Request Parameters:**
+    - `id` (integer, required): The ID of the record to be updated. Use 0 for inserting a new record.
+    - `action_type` (string, required): The action to be performed. Supported value: `INSERT_AND_UPDATE`.
+
+    **Headers:**
+    - `Authorization` (string, required): Bearer token for authentication.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    try:
+        for data in consultant_service:
+           db_office_master.save_consultant_service_details_db(data, user_id, id, action_type, db)
+        return {"success": True, "detail": "Saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e), success=False)
+
 #------------------------------------------------------------------------------------------------
+
+
+@router.get("/get_all_consultant_service_details/", response_model=List[ConsultantServiceDetailsResponse])
+def get_all_consultant_service_details(db: Session = Depends(get_db)):
+    """
+    Retrieve all consultant service details.
+    """
+    results = db.query(OffConsultantServiceDetails).all()
+    
+    if not results:
+        raise HTTPException(status_code=404, detail="No records found")
+    
+    return results
+
+#------------------------------------------------------------------------------------------------
+
+@router.post("/save_consultant_schedule/")
+def save_consultant_schedule( schedules: List[OffConsultantScheduleCreate], 
+                                id: int,
+                                action_type: RecordActionType,
+                                db: Session = Depends(get_db),
+                                token: str = Depends(oauth2.oauth2_scheme)):
+   
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    try:
+        for data in schedules:
+           db_office_master.save_consultant_schedule(data, user_id, id, action_type, db)
+        return {"success": True, "detail": "Saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+from fastapi import Query
+
+@router.get("/get_time_slots/")
+def get_time_slots(slot: str = Query(..., description="Type of time slots to fetch: 'normal' or 'special'"),db: Session = Depends(get_db)):
+    try:
+        if slot.lower() == 'normal':
+            # Retrieve Normal Time Slots
+            time_slots = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.is_normal_schedule == 'yes'
+            ).all()
+        elif slot.lower() == 'special':
+            # Retrieve Special Time Slots
+            time_slots = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.is_normal_schedule == 'no'
+            ).all()
+        else:
+            raise HTTPException(status_code=400, detail="Invalid slot type. Please specify 'normal' or 'special'.")
+
+        # Return the retrieved time slots
+        return {"time_slots": time_slots}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

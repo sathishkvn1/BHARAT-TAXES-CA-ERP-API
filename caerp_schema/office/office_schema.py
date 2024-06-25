@@ -29,16 +29,17 @@ class OffAppointmentMasterSchema(BaseModel):
     state_id: Optional[int]
 
 class OffAppointmentVisitMasterSchema(BaseModel):
-    # id: Optional[int]
+ 
     financial_year_id: Optional[int]
     voucher_number: Optional[str]
-    # appointment_master_id : int
     appointment_date : Optional[date]
     appointment_time_from: Optional[str] 
     appointment_time_to: Optional[str]
     source_of_enquiry_id : Optional[int]
     appointment_status_id: Optional[int]
     consultant_id: Optional[int]
+    consultation_mode_id: Optional[int]
+    consultation_tool_id: Optional[int]
     gross_amount: Optional[int]
     discount_percentage: Optional[int]
     special_discount_percentage: Optional[int]
@@ -49,6 +50,9 @@ class OffAppointmentVisitMasterSchema(BaseModel):
     cgst_amount : Optional[int]
     bill_amount : Optional[int]
     remarks: Optional[str]
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class OffAppointmentVisitDetailsSchema(BaseModel):
   
@@ -67,9 +71,11 @@ class OffAppointmentDetails(BaseModel):
 class RescheduleOrCancelRequest(BaseModel):
     consultant_id: Optional[int] = None
     appointment_master_id: Optional[int] = None
-    date: Optional[str] = None
-    time: Optional[str] = None
+    date: Optional[str] = None 
+    from_time: Optional[str] = None
+    to_time: Optional[str] = None
     description: str
+
 
     
 class OffAppointmentCancellationReasonSchema(BaseModel):
@@ -139,6 +145,8 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_status_id: Optional[int]
     appointment_status: Optional[str]
     appointment_visit_master_consultant_id: Optional[int]
+    appointment_visit_master_consultation_mode_id: Optional[int]
+    appointment_visit_master_consultation_tool_id: Optional[int]
     employee_master_employee_number: Optional[str]
     employee_master_first_name: Optional[str]
     employee_master_middle_name: Optional[str]
@@ -156,7 +164,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
-        
+             
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
     
     service_id: Optional[int]
@@ -584,5 +592,38 @@ class ConsultantEmployee(BaseModel):
     official_email: str
     personal_mobile: str
     official_mobile: str
+    
+class ConsultantService(BaseModel):
+    consultant_id:int
+    service_goods_master_id:int
+    consultation_fee:float
+    slot_duration_in_minutes:int
+    effective_from_date: date
+    effective_to_date: Optional[date] = None
+    
+class ConsultantServiceDetailsResponse(BaseModel):
+    id: int
+    consultant_id: int
+    service_goods_master_id: int
+    consultation_fee: float
+    slot_duration_in_minutes: int
+    effective_from_date: date
+    effective_to_date: Optional[date]
+
+
+
+class OffConsultantScheduleCreate(BaseModel):
+    consultant_id: int
+    day_of_week_id: int
+    consultation_mode_id: int
+    morning_start_time: Optional[time] = None
+    morning_end_time: Optional[time] = None
+    afternoon_start_time: Optional[time] = None
+    afternoon_end_time: Optional[time] = None
+    is_normal_schedule: str
+    consultation_date: Optional[date] = None
+    effective_from_date: Optional[date] = None
+    effective_to_date: Optional[date] = None
+
 
 #------------------------------------------------------------------------------------------------

@@ -44,6 +44,8 @@ class OffAppointmentVisitMaster(caerp_base):
     source_of_enquiry_id = Column(Integer, nullable=False)
     appointment_status_id = Column(Integer, nullable=False)
     consultant_id = Column(Integer, nullable=False)
+    consultation_mode_id= Column(Integer, nullable=False)
+    consultation_tool_id= Column(Integer, nullable=False)
     gross_amount = Column(Float, nullable=False)
     discount_percentage = Column(Float, nullable=False)
     special_discount_percentage = Column(Float, nullable=False)
@@ -61,7 +63,6 @@ class OffAppointmentVisitMaster(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
-
 
 
 
@@ -106,7 +107,9 @@ class OffAppointmentVisitMasterView(caerp_base):
     source= Column(String(100), nullable=True)
     appointment_status_id= Column(Integer, nullable=True)
     appointment_status= Column(String(100), nullable=True)
-    appointment_visit_master_consultant_id= Column(Integer, nullable=True)
+    appointment_visit_master_consultant_id= Column(Integer)
+    appointment_visit_master_consultation_mode_id= Column(Integer)
+    appointment_visit_master_consultation_tool_id= Column(Integer)
     employee_master_employee_number=Column(String(50), nullable=True)
     employee_master_first_name=Column(String(50), nullable=True)
     employee_master_middle_name=Column(String(50), nullable=True)
@@ -121,6 +124,7 @@ class OffAppointmentVisitMasterView(caerp_base):
     cgst_amount=Column(Float, nullable=True)
     bill_amount=Column(Float, nullable=True)
     remarks= Column(String(2000), nullable=True)
+
 
 
 
@@ -729,5 +733,38 @@ class OffAppointmentPlaceOfBusiness(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by = Column(Integer, default=None)
     deleted_on = Column(Date, default=None)
+    
+
+class OffConsultantServiceDetails(caerp_base):
+    __tablename__ = "off_consultant_service_details"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultant_id = Column(Integer, default=0)
+    service_goods_master_id = Column(Integer,  nullable=False)
+    consultation_fee = Column(Float, nullable=False)
+    slot_duration_in_minutes = Column(Integer, nullable=False)
+    effective_from_date = Column(Date, nullable=False)
+    effective_to_date = Column(Date, default=None)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
 
 
+class OffConsultantSchedule(caerp_base):
+    __tablename__ = "off_consultant_schedule"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultant_id = Column(Integer,nullable=False)
+    day_of_week_id = Column(Integer,nullable=False)
+    consultation_mode_id = Column(Integer, nullable=False)
+    morning_start_time = Column(Time, default=None)
+    morning_end_time = Column(Time, default=None)
+    afternoon_start_time = Column(Time, default=None)
+    afternoon_end_time = Column(Time, default=None)
+    is_normal_schedule = Column(Enum('yes', 'no'), nullable=False, default='no')
+    consultation_date = Column(Date, default=None)
+    effective_from_date = Column(Date, default=None)
+    effective_to_date = Column(Date, default=None)
+    created_by = Column(Integer, nullable=False)
+    created_on = Column(DateTime, nullable=False)
+    modified_by = Column(Integer, default=None)
+    modified_on = Column(DateTime, default=None)
