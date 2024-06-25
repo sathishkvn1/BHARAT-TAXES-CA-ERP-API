@@ -3,12 +3,12 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
-from caerp_db.common.models import Employee
+from caerp_db.common.models import Employee, EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, EmployeeResponse, OffAppointmentDetails, OffAppointmentRecommendationMasterCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1301,31 +1301,81 @@ def save_off_appointment_recommendation(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-# @router.post("/save_off_appointment_recommendation/{id}")
-# def save_off_appointment_recommendation(
-#     id: int,
-#     data: List[OffAppointmentRecommendationMasterCreate], 
-#     action_type: RecordActionType,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#------------------------------------------------------------------------------------------------
+###################CONSULTANTS AND SERVICES####################################################
+from datetime import datetime
+# @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+# def get_consultant_employees(db: Session = Depends(get_db)):
+#     current_date = datetime.utcnow().date()
     
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
+#     query = db.query(
+#         EmployeeMaster.employee_id,
+#         func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+#         EmployeeMaster.employee_number,
+#         EmployeeContactDetails.personal_email_id.label('personal_email'),
+#         EmployeeContactDetails.official_email_id.label('official_email'),
+#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+#         EmployeeContactDetails.official_mobile_number.label('official_mobile')
+#     ).join(
+#         EmployeeEmployementDetails,
+#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+#     ).join(
+#         EmployeeContactDetails,
+#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+#     ).filter(
+#         EmployeeEmployementDetails.is_consultant == 'yes',
+#         EmployeeEmployementDetails.effective_from_date <= current_date,
+#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+#         EmployeeMaster.is_deleted == 'no',
+#         EmployeeEmployementDetails.is_deleted == 'no',
+#         EmployeeContactDetails.is_deleted == 'no'
+#     ).all()
 
-#     try:
-#         results = []
-#         for appointment in data:
-#             result = db_office_master.save_off_appointment_recommendation(
-#                 db, id, appointment, user_id, action_type
-#             )
-#             results.append(result)
+#     return query
 
-#         return {"success": True, "message": "Saved successfully", "results": results}
-    
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+def get_consultant_employees(
+    db: Session = Depends(get_db),
+    search_query: str = Query(None, description="Search query to filter consultant employees")
+):
+    current_date = datetime.utcnow().date()
+    query = db.query(
+        EmployeeMaster.employee_id,
+        func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+        EmployeeMaster.employee_number,
+        EmployeeContactDetails.personal_email_id.label('personal_email'),
+        EmployeeContactDetails.official_email_id.label('official_email'),
+        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+        EmployeeContactDetails.official_mobile_number.label('official_mobile')
+    ).join(
+        EmployeeEmployementDetails,
+        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        EmployeeContactDetails,
+        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).filter(
+        EmployeeEmployementDetails.is_consultant == 'yes',
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeMaster.is_deleted == 'no',
+        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeContactDetails.is_deleted == 'no'
+    )
+
+    if search_query:
+        search_filter = (
+            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+        )
+        query = query.filter(search_filter)
+
+    return query.all()
+
+#------------------------------------------------------------------------------------------------

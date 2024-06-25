@@ -569,3 +569,20 @@ class OffAppointmentRecommendationMasterCreate(BaseModel):
     has_branches_or_godowns: str
     number_of_branches_or_godowns: int
     places_of_business: List[OffAppointmentPlaceOfBusinessCreate]
+    
+    
+#------------------------------------------------------------------------------------------------
+###################CONSULTANTS AND SERVICES####################################################
+
+
+    
+class ConsultantEmployee(BaseModel):
+    employee_id: int
+    employee_name: str
+    employee_number: str
+    personal_email: str
+    official_email: str
+    personal_mobile: str
+    official_mobile: str
+
+#------------------------------------------------------------------------------------------------
