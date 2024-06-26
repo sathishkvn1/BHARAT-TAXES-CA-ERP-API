@@ -1393,18 +1393,31 @@ def save_consultant_service_details(consultant_service: List[ConsultantService],
 #------------------------------------------------------------------------------------------------
 
 
+
 @router.get("/get_all_consultant_service_details/", response_model=List[ConsultantServiceDetailsResponse])
 def get_all_consultant_service_details(db: Session = Depends(get_db)):
     """
     Retrieve all consultant service details.
     """
-    results = db.query(OffConsultantServiceDetails).all()
+    results = db.query(
+        OffConsultantServiceDetails.id,
+        OffConsultantServiceDetails.consultant_id,
+        OffConsultantServiceDetails.service_goods_master_id,
+        OffServiceGoodsMaster.service_goods_name,
+        OffConsultantServiceDetails.consultation_fee,
+        OffConsultantServiceDetails.slot_duration_in_minutes,
+        OffConsultantServiceDetails.effective_from_date,
+        OffConsultantServiceDetails.effective_to_date
+       
+    ).join(
+        OffServiceGoodsMaster,
+        OffConsultantServiceDetails.service_goods_master_id == OffServiceGoodsMaster.id
+    ).all()
     
     if not results:
         raise HTTPException(status_code=404, detail="No records found")
-    
-    return results
 
+    return [ConsultantServiceDetailsResponse.from_orm(result) for result in results]
 #------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_schedule/")

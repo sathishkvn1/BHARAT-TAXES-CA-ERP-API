@@ -605,10 +605,14 @@ class ConsultantServiceDetailsResponse(BaseModel):
     id: int
     consultant_id: int
     service_goods_master_id: int
+    service_goods_name: str
     consultation_fee: float
     slot_duration_in_minutes: int
     effective_from_date: date
     effective_to_date: Optional[date]
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 
 
