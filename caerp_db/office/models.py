@@ -128,6 +128,7 @@ class OffAppointmentVisitMasterView(caerp_base):
 
 
 
+
 class OffAppointmentVisitDetails(caerp_base):
     __tablename__ = 'off_appointment_visit_details'
 
@@ -699,41 +700,7 @@ class OffViewServiceDocumentsDataMaster(caerp_base):
     description = Column(String(500), nullable=True)
    
 #--------------------aparna
-class OffAppointmentRecommendationMaster(caerp_base):
-    __tablename__ = 'off_appointment_recommendation_master'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    appointment_master_id = Column(Integer, nullable=False)
-    visit_master_id = Column(Integer,nullable=False)
-    service_goods_master_id = Column(Integer,nullable=False)
-    constitution_id = Column(Integer,nullable=False)
-    has_branches_or_godowns = Column(Enum('yes', 'no'), nullable=False, default='no')
-    number_of_branches_or_godowns = Column(Integer, nullable=False, default=0)
-    created_by = Column(Integer, default=None)
-    created_on = Column(Date, default=None)
-    modified_by = Column(Integer, default=None)
-    modified_on = Column(Date, default=None)
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by = Column(Integer, default=None)
-    deleted_on = Column(Date, default=None)
-
-class OffAppointmentPlaceOfBusiness(caerp_base):
-    __tablename__ = 'off_appointment_place_of_business'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    appointment_recommendation_master_id = Column(Integer, nullable=False, default='MAIN OFFICE')
-    is_main_office = Column(Enum('yes', 'no'), nullable=False, default='no')
-    nature_of_possession_id = Column(Integer,  nullable=False)
-    utility_document_id = Column(Integer,  nullable=False)
-    business_place_type = Column(Enum('MAIN OFFICE', 'GODOWN' ,'BRANCH'), nullable=False, default='no')
-    created_by = Column(Integer, default=None)
-    created_on = Column(Date, default=None)
-    modified_by = Column(Integer, default=None)
-    modified_on = Column(Date, default=None)
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by = Column(Integer, default=None)
-    deleted_on = Column(Date, default=None)
-    
+ 
 
 class OffConsultantServiceDetails(caerp_base):
     __tablename__ = "off_consultant_service_details"

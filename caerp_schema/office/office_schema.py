@@ -105,7 +105,6 @@ class OffAppointmentMasterViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_master_id: int
     full_name: str
@@ -164,7 +163,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
-             
+
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
     
     service_id: Optional[int]
@@ -560,23 +559,7 @@ class OffViewServiceDocumentsDataMasterSchema(BaseModel):
     class Config:
         from_attributes=True
        
-#---------------Aparna
-class OffAppointmentPlaceOfBusinessCreate(BaseModel):
-   
-    appointment_recommendation_master_id: int
-    nature_of_possession_id: int
-    utility_document_id: int
-    business_place_type: str
-    is_main_office: str
 
-class OffAppointmentRecommendationMasterCreate(BaseModel):
-    appointment_master_id:int
-    visit_master_id:int
-    service_goods_master_id: int
-    constitution_id: int
-    has_branches_or_godowns: str
-    number_of_branches_or_godowns: int
-    places_of_business: List[OffAppointmentPlaceOfBusinessCreate]
     
     
 #------------------------------------------------------------------------------------------------

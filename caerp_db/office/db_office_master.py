@@ -8,8 +8,8 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentPlaceOfBusiness, OffAppointmentRecommendationMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, ConsultantService, OffAppointmentDetails, OffAppointmentMasterViewSchema, OffAppointmentRecommendationMasterCreate, OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import AppointmentStatusConstants, ConsultantService, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -328,8 +328,7 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 
-#-------------get_consultancy_services-------------------------------------------------------------------------
-
+#-------------get_consultancy_services-------------------------------------------------------------------
 
 def get_appointments(
     db: Session,
@@ -384,6 +383,8 @@ def get_appointments(
             OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
         ).filter(and_(*search_conditions)).all()
 
+  
+
         if not query_result:
             raise HTTPException(status_code=404, detail="Appointment not found")
 
@@ -392,23 +393,23 @@ def get_appointments(
 
         # Iterate over query result
         for visit_details_data in query_result:
-            appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
+            if visit_details_data.appointment_visit_details_is_deleted == "no":  # Correctly check the is_deleted field
+                appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
 
-            # Get the appointment master corresponding to the visit details
-            appointment_master_data = db.query(OffAppointmentVisitMasterView).filter_by(
-                appointment_master_id=appointment_id
-            ).first()
+                # Get the appointment master corresponding to the visit details
+                appointment_master_data = db.query(OffAppointmentVisitMasterView).filter_by(
+                    appointment_master_id=appointment_id
+                ).first()
 
-            if appointment_master_data:
-                # Convert appointment_master_data to schema
-                appointment_master_schema = OffAppointmentVisitMasterViewSchema(
-                    **appointment_master_data.__dict__
-                )
+                if appointment_master_data:
+                    # Convert appointment_master_data to schema
+                    appointment_master_schema = OffAppointmentVisitMasterViewSchema(
+                        **appointment_master_data.__dict__
+                    )
 
-                # Convert visit_details_data to schema
-                visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
+                    # Convert visit_details_data to schema
+                    visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
 
-                if OffAppointmentVisitDetailsView.appointment_visit_details_is_deleted == "no":
                     if appointment_id not in appointment_dict:
                         # Create new appointment entry in dictionary
                         appointment_dict[appointment_id] = {
@@ -423,14 +424,14 @@ def get_appointments(
         # Convert dictionary values to list of ResponseSchema objects
         appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
 
+       
+
         return appointments
 
     except HTTPException as http_error:
         raise http_error
     except Exception as e:
-         raise HTTPException(status_code=500, detail=str(e))
-
-
+        raise HTTPException(status_code=500, detail=str(e))
 
 #---service-goods-master  swathy---------------------------
 
@@ -1091,82 +1092,7 @@ def get_service_documents_data_details(db: Session, service_id: int, document_ca
 
 #-----------------------------------------------------------------------------------------------
 
-from sqlalchemy.orm import Query
-def save_off_appointment_recommendation(
-    db: Session,
-    id: int,
-    data: OffAppointmentRecommendationMasterCreate,
-    user_id: int,
-    action_type: RecordActionType
-):
-    try:
-        if action_type == RecordActionType.INSERT_ONLY:
-            if id != 0:
-                raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
 
-            # Save master data
-            appointment_recommendation_master = OffAppointmentRecommendationMaster(
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                appointment_master_id=data.appointment_master_id,
-                visit_master_id=data.visit_master_id,
-                service_goods_master_id=data.service_goods_master_id,
-                constitution_id=data.constitution_id,
-                has_branches_or_godowns=data.has_branches_or_godowns,
-                number_of_branches_or_godowns=data.number_of_branches_or_godowns
-            )
-            db.add(appointment_recommendation_master)
-            db.flush()
-
-            # Save detail data
-            for place_data in data.places_of_business:
-                place_of_business = OffAppointmentPlaceOfBusiness(
-                    appointment_recommendation_master_id=appointment_recommendation_master.id,
-                    created_by=user_id,
-                    created_on=datetime.utcnow(),
-                    nature_of_possession_id=place_data.nature_of_possession_id,
-                    utility_document_id=place_data.utility_document_id,
-                    business_place_type=place_data.business_place_type,
-                    is_main_office=place_data.is_main_office
-                )
-                db.add(place_of_business)
-
-            db.commit()
-
-        elif action_type == RecordActionType.UPDATE_ONLY:
-            # Update OffAppointmentRecommendationMaster
-            existing_master = db.query(OffAppointmentRecommendationMaster).filter_by(id=id).first()
-            if not existing_master:
-                raise HTTPException(status_code=404, detail="Existing master record not found")
-
-            # Update master data
-            master_update_data = data.dict(exclude={'places_of_business'})
-            for key, value in master_update_data.items():
-                setattr(existing_master, key, value)
-            existing_master.modified_by = user_id
-            existing_master.modified_on = datetime.utcnow()
-
-            # Update OffAppointmentPlaceOfBusiness details
-            for place_data in data.places_of_business:
-                detail = db.query(OffAppointmentPlaceOfBusiness).filter_by(appointment_recommendation_master_id=id).first()
-                if not detail:
-                    raise HTTPException(status_code=404, detail="Detail not found for the appointment recommendation master")
-
-                for key, value in place_data.dict(exclude_unset=True).items():
-                    setattr(detail, key, value)
-                detail.modified_by = user_id
-                detail.modified_on = datetime.utcnow()
-
-        db.commit()
-
-    except HTTPException as http_error:
-        db.rollback()
-        raise http_error
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
-    
-#--------------------------------------------------------------------------    
 
 def save_consultant_service_details_db(data: ConsultantService, user_id: int, id: int, action_type: RecordActionType, db: Session):
     if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
