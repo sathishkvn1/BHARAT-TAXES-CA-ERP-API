@@ -559,7 +559,53 @@ class OffViewServiceDocumentsDataMasterSchema(BaseModel):
     class Config:
         from_attributes=True
        
+class SubGroup(BaseModel):
+    id: int
+    sub_group_name: str
 
+class Category(BaseModel):
+    id: int
+    category_name: str
+
+class SubCategory(BaseModel):
+    id: int
+    sub_category_name: str
+    
+class Service_Group(BaseModel):
+    id: int
+    group_name: str
+    
+
+class ServiceDocumentsList_Group(BaseModel):
+    group: Optional[Service_Group] =None
+    sub_group: Optional[List[SubGroup]] =None
+    category:Optional[List[Category]]=None
+    sub_category:Optional[List[SubCategory]]=None
+
+class TimeSlotResponse(BaseModel):
+    id: int
+    consultant_id: int
+    day_of_week_id: int
+    day_long_name: str
+    consultation_mode_id: int
+    consultation_mode: str
+    morning_start_time: Optional[time]
+    morning_end_time: Optional[time]
+    afternoon_start_time: Optional[time]
+    afternoon_end_time: Optional[time]
+    is_normal_schedule: str
+    consultation_date: Optional[date]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+    created_by: int
+    created_on: datetime
+    modified_by: Optional[int]
+    modified_on: Optional[datetime]
+    
+   
+
+    class Config:
+        orm_mode = True
     
     
 #------------------------------------------------------------------------------------------------
@@ -614,3 +660,126 @@ class OffConsultantScheduleCreate(BaseModel):
 
 
 #------------------------------------------------------------------------------------------------
+###################ENQUIRY####################################################
+#------------------------------------------------------------------------------------------------
+class OffEnquiryMasterSchema(BaseModel):
+
+    customer_number:Optional[str] 
+    first_name: str
+    middle_name: Optional[str] 
+    last_name: Optional[str] 
+    gender_id:Optional[int]
+    date_of_birth:Optional[date]
+    mobile_number: Optional[str]
+    whatsapp_number: Optional[str]
+    email_id: Optional[str]
+    house_or_building_name: Optional[str]
+    road_or_street_name: Optional[str]
+    locality : Optional[str]
+    pin_code : Optional[str]
+    post_office_id: Optional[int]
+    lsg_type_id: Optional[int]
+    lsg_id: Optional[int]
+    taluk_id: Optional[int]
+    district_id: Optional[int]
+    state_id: Optional[int]
+    country_id: Optional[int]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+class OffEnquiryDetailsSchema(BaseModel):
+ 
+    financial_year_id: Optional[int]
+    enquiry_number: Optional[str]
+    enquiry_date : Optional[date]
+    source_of_enquiry_id : Optional[int]
+    enquiry_status_id: Optional[int]
+    enquirer_type_id: Optional[int]
+    company_or_business_name: Optional[str]
+    remarks: Optional[str]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class OffEnquiryResponseSchema(BaseModel):
+    enquiry_master: OffEnquiryMasterSchema
+    enquiry_details: List[OffEnquiryDetailsSchema]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+#get
+class OffViewEnquiryMasterSchema(BaseModel):
+    enquiry_master_id:int
+    customer_number:Optional[str] 
+    first_name: str
+    middle_name: Optional[str] 
+    customer_number: Optional[str] 
+    first_name 	 : Optional[str] 
+    middle_name 	: Optional[str] 
+    last_name 	 : Optional[str] 
+    gender_id: Optional[int] 
+    gender: Optional[str] 
+    date_of_birth: Optional[date] 
+    mobile_number : Optional[str] 
+    whatsapp_number: Optional[str] 
+    email_id  : Optional[str] 
+    house_or_building_name: Optional[str] 
+    road_or_street_name: Optional[str] 
+    locality: Optional[str] 
+    pin_code: Optional[str] 
+    post_office_id: Optional[int] 
+    post_office_name : Optional[str] 
+    lsg_type_id: Optional[int] 
+    lsg_type: Optional[str] 
+    lsg_id: Optional[int] 
+    lsg_name: Optional[str] 
+    taluk_id: Optional[int] 
+    taluk_name: Optional[str] 
+    district_id: Optional[int] 
+    district_name: Optional[str] 
+    state_id: Optional[int] 
+    state_name: Optional[str] 
+    country_id: Optional[int] 
+    country_name_english: Optional[str] 
+    country_name_arabic: Optional[str] 
+
+class OffViewEnquiryDetailsSchema(BaseModel):
+    financial_year_id: Optional[int]
+    financial_year: Optional[str]
+    enquiry_number: Optional[str]
+    enquiry_date : Optional[date]
+    source_of_enquiry_id : Optional[int]
+    enquiry_status_id: Optional[int]
+    enquirer_type_id: Optional[int]
+    company_or_business_name: Optional[str]
+    remarks: Optional[str]
+
+
+class OffViewEnquiryResponseSchema(BaseModel):
+    enquiry_master: OffViewEnquiryMasterSchema
+    enquiry_details: List[OffViewEnquiryDetailsSchema]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        
+        
+class ConsultationToolSchema(BaseModel):
+    id: int
+    consultation_mode_id: int
+    consultation_tool: str
+    is_deleted: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class ConsultationModeSchema(BaseModel):
+    id: int
+    consultation_mode: str
+    is_deleted: str
+    tools: List[ConsultationToolSchema] = []
+
+    class Config:
+        orm_mode = True
+        from_attributes = True

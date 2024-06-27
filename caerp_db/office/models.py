@@ -735,3 +735,205 @@ class OffConsultantSchedule(caerp_base):
     created_on = Column(DateTime, nullable=False)
     modified_by = Column(Integer, default=None)
     modified_on = Column(DateTime, default=None)
+
+
+class OffConsultationMode(caerp_base):
+    __tablename__ = 'off_consultation_mode'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultation_mode = Column(String(50), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+class AppDayOfWeek(caerp_base):
+    __tablename__ = 'app_day_of_week'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    day_short_name = Column(String(4), nullable=False)
+    day_long_name = Column(String(10), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class OffEnquiryStatus(caerp_base):
+    __tablename__ = 'off_enquiry_status'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    enquiry_status = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class OffSourceOfEnquiry(caerp_base):
+    __tablename__  =  "off_source_of_enquiry"
+    
+    id      = Column(Integer, primary_key=True, autoincrement=True)
+    source 	 = Column(String(100), nullable=False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')   
+
+
+
+class OffEnquirerType(caerp_base):
+    __tablename__ = 'off_enquirer_type'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    person_type = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+class OffConsultationTool(caerp_base):
+    __tablename__ = 'off_consultation_tool'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    consultation_mode_id = Column(Integer, nullable=False)
+    consultation_tool = Column(String(50), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+#=------------------------Enquiry--------------------
+
+class OffEnquiryMaster(caerp_base): 
+    __tablename__ = 'off_enquiry_master'
+
+ 	
+    id     = Column(Integer, primary_key=True, autoincrement=True)
+    customer_number=Column(String(100), nullable=True)
+    first_name 	 = Column(String(200), nullable=False)
+    middle_name 	 = Column(String(200), nullable=True)
+    last_name 	 = Column(String(200), nullable=True)
+    gender_id= Column(Integer, nullable=True)
+    date_of_birth=Column(Date, nullable=True)
+    mobile_number  = Column(String(20), nullable=True)
+    whatsapp_number=Column(String(20), nullable=True)
+    email_id  = Column(String(50), nullable=True)
+    house_or_building_name=Column(String(100), nullable=True)
+    road_or_street_name=Column(String(100), nullable=True)
+    locality=Column(String(100), nullable=True)
+    pin_code=Column(String(50), nullable=True)
+    post_office_id= Column(Integer, nullable=True)
+    lsg_type_id= Column(Integer, nullable=True)
+    lsg_id= Column(Integer, nullable=True)
+    taluk_id= Column(Integer, nullable=True)
+    district_id= Column(Integer, nullable=True)
+    state_id= Column(Integer, nullable=True)
+    country_id= Column(Integer, nullable=True)
+    created_by = Column(Integer, nullable=True)
+    created_on = Column(Date, nullable=True)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(Date, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(Date, nullable=True)
+
+
+class OffEnquiryDetails(caerp_base):
+    __tablename__ = 'off_enquiry_details'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id = Column(Integer, nullable=True)
+    enquiry_master_id = Column(Integer, nullable=False)
+    enquiry_date = Column(Date, nullable=True)
+    enquiry_number= Column(String(100), nullable=True) 
+    source_of_enquiry_id = Column(Integer, nullable=False)
+    enquirer_type_id= Column(Integer, nullable=False)
+    company_or_business_name= Column(String(100), nullable=True)
+    enquiry_status_id=Column(Integer, nullable=False)
+    remarks= Column(String(2000), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    created_on = Column(Date, nullable=True)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(Date, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(Date, nullable=True)
+#view
+
+
+class OffViewEnquiryMaster(caerp_base): 
+    __tablename__ = 'off_view_enquiry_master'
+
+ 	
+    enquiry_master_id     = Column(Integer, primary_key=True, autoincrement=True)
+    customer_number=Column(String(100), nullable=True)
+    first_name 	 = Column(String(200), nullable=False)
+    middle_name 	 = Column(String(200), nullable=True)
+    last_name 	 = Column(String(200), nullable=True)
+    gender_id= Column(Integer, nullable=True)
+    gender= Column(String(200))
+    date_of_birth=Column(Date, nullable=True)
+    mobile_number  = Column(String(20), nullable=True)
+    whatsapp_number=Column(String(20), nullable=True)
+    email_id  = Column(String(50), nullable=True)
+    house_or_building_name=Column(String(100), nullable=True)
+    road_or_street_name=Column(String(100), nullable=True)
+    locality=Column(String(100), nullable=True)
+    pin_code=Column(String(50), nullable=True)
+    post_office_id= Column(Integer, nullable=True)
+    post_office_name = Column(String(255), nullable=True)
+    lsg_type_id= Column(Integer, nullable=True)
+    lsg_type= Column(String(255), nullable=True)
+    lsg_id= Column(Integer, nullable=True)
+    lsg_name= Column(String(255), nullable=True)
+    taluk_id= Column(Integer, nullable=True)
+    taluk_name=Column(String(255), nullable=True)
+    district_id= Column(Integer, nullable=True)
+    district_name=Column(String(255), nullable=True)
+    state_id= Column(Integer, nullable=True)
+    state_name=Column(String(255), nullable=True)
+    country_id= Column(Integer, nullable=True)
+    country_name_english=Column(String(255), nullable=True)
+    country_name_arabic=Column(String(255), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    created_on = Column(Date, nullable=True)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(Date, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(Date, nullable=True)
+
+
+class OffViewEnquiryDetails(caerp_base): 
+    __tablename__ = 'off_view_enquiry_details'
+
+ 	
+    enquiry_details_id     = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id = Column(Integer, nullable=True)
+    financial_year= Column(String(100), nullable=True) 
+    enquiry_master_id = Column(Integer, nullable=False)
+    customer_number=Column(String(100), nullable=True)
+    first_name 	 = Column(String(200), nullable=False)
+    middle_name 	 = Column(String(200), nullable=True)
+    last_name 	 = Column(String(200), nullable=True)
+    gender_id= Column(Integer, nullable=True)
+    gender= Column(String(200))
+    date_of_birth=Column(Date, nullable=True)
+    mobile_number  = Column(String(20), nullable=True)
+    whatsapp_number=Column(String(20), nullable=True)
+    email_id  = Column(String(50), nullable=True)
+    house_or_building_name=Column(String(100), nullable=True)
+    road_or_street_name=Column(String(100), nullable=True)
+    locality=Column(String(100), nullable=True)
+    pin_code=Column(String(50), nullable=True)
+    post_office_id= Column(Integer, nullable=True)
+    post_office_name = Column(String(255), nullable=True)
+    lsg_type_id= Column(Integer, nullable=True)
+    lsg_type= Column(String(255), nullable=True)
+    lsg_id= Column(Integer, nullable=True)
+    lsg_name= Column(String(255), nullable=True)
+    taluk_id= Column(Integer, nullable=True)
+    taluk_name=Column(String(255), nullable=True)
+    district_id= Column(Integer, nullable=True)
+    district_name=Column(String(255), nullable=True)
+    state_id= Column(Integer, nullable=True)
+    state_name=Column(String(255), nullable=True)
+    country_id= Column(Integer, nullable=True)
+    country_name_english=Column(String(255), nullable=True)
+    country_name_arabic=Column(String(255), nullable=True)
+    enquiry_date = Column(Date, nullable=True)
+    enquiry_number= Column(String(100), nullable=True) 
+    source_of_enquiry_id = Column(Integer, nullable=False)
+    source=Column(String(255), nullable=True)
+    enquirer_type_id= Column(Integer, nullable=False)
+    person_type=Column(String(255), nullable=True)
+    company_or_business_name= Column(String(100), nullable=True)
+    enquiry_status_id=Column(Integer, nullable=False)
+    enquiry_status=Column(String(255), nullable=True)
+    remarks= Column(String(2000), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    created_on = Column(Date, nullable=True)
+    modified_by = Column(Integer, nullable=True)
+    modified_on = Column(Date, nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by = Column(Integer, nullable=True)
+    deleted_on = Column(Date, nullable=True)

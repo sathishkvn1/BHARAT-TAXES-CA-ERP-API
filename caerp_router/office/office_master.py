@@ -7,14 +7,14 @@ from caerp_db.common.models import Employee, EmployeeContactDetails, EmployeeEmp
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, EmployeeResponse, OffAppointmentDetails,  OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails,  OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
 from sqlalchemy import text
-from datetime import datetime
+# from datetime import datetime
 from sqlalchemy import select, func
 from fastapi.encoders import jsonable_encoder
 
@@ -1215,8 +1215,43 @@ def get_all_service_document_data_master(
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 #-----------------------------------------------------------------------------------------
+@router.get('/services/get_service_documents_list_by_group_category', response_model=List[ServiceDocumentsList_Group])
+def get_service_documents_list_by_group_category(
+    group_id:  Optional[int] = None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        results = db_office_master.get_service_documents_list_by_group_category(
+            db,group_id,sub_group_id,category_id)
+            
+       
 
-@router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory], responses={404: {"description": "No data found"}})
+        if not results:
+           
+            return JSONResponse(status_code=404, content={"message": "No data found"})
+        # Filter out null fields from each ServiceDocumentsList_Group object
+        filtered_results = []
+        for result in results:
+            filtered_result = {
+                k: v for k, v in result.dict().items() if v is not None
+            }
+            filtered_results.append(filtered_result)
+
+        # Ensure the response is a list of dictionaries matching the schema
+        return JSONResponse(status_code=200, content=filtered_results)
+
+
+    except Exception as e:
+       
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+
+#------------------------------------------------------------------------------------
+@router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
     service_id: int,
     document_category: Optional[str] = Query(None, title="Select document category", 
@@ -1275,8 +1310,9 @@ def get_service_documents_data_details(
 
 #------------------------------------------------------------------------------------------------
 ###################CONSULTANTS AND SERVICES####################################################
+#------------------------------------------------------------------------------------------------
 
-
+from datetime import datetime
 
 @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 def get_consultant_employees(
@@ -1410,24 +1446,136 @@ def save_consultant_schedule( schedules: List[OffConsultantScheduleCreate],
         raise HTTPException(status_code=400, detail=str(e))
 from fastapi import Query
 
-@router.get("/get_time_slots/")
-def get_time_slots(slot: str = Query(..., description="Type of time slots to fetch: 'normal' or 'special'"),db: Session = Depends(get_db)):
+
+
+
+@router.get("/get_time_slots/", response_model=List[TimeSlotResponse])
+def get_time_slots(
+    slot: str = Query(..., description="Type of time slots to fetch: 'NORMAL' or 'SPECIAL'"),
+    db: Session = Depends(get_db)
+):
     try:
-        if slot.lower() == 'normal':
+        slot = slot.upper()  # Convert slot to uppercase for comparison
+
+        if slot == 'NORMAL':
             # Retrieve Normal Time Slots
-            time_slots = db.query(OffConsultantSchedule).filter(
+            time_slots = db.query(
+                OffConsultantSchedule,
+                AppDayOfWeek.day_long_name,
+                OffConsultationMode.consultation_mode
+            ).join(
+                AppDayOfWeek, OffConsultantSchedule.day_of_week_id == AppDayOfWeek.id
+            ).join(
+                OffConsultationMode, OffConsultantSchedule.consultation_mode_id == OffConsultationMode.id
+            ).filter(
                 OffConsultantSchedule.is_normal_schedule == 'yes'
             ).all()
-        elif slot.lower() == 'special':
+        elif slot == 'SPECIAL':
             # Retrieve Special Time Slots
-            time_slots = db.query(OffConsultantSchedule).filter(
+            time_slots = db.query(
+                OffConsultantSchedule,
+                AppDayOfWeek.day_long_name,
+                OffConsultationMode.consultation_mode
+            ).join(
+                AppDayOfWeek, OffConsultantSchedule.day_of_week_id == AppDayOfWeek.id
+            ).join(
+                OffConsultationMode, OffConsultantSchedule.consultation_mode_id == OffConsultationMode.id
+            ).filter(
                 OffConsultantSchedule.is_normal_schedule == 'no'
             ).all()
         else:
-            raise HTTPException(status_code=400, detail="Invalid slot type. Please specify 'normal' or 'special'.")
+            raise HTTPException(status_code=400, detail="Invalid slot type. Please specify 'NORMAL' or 'SPECIAL'.")
 
-        # Return the retrieved time slots
-        return {"time_slots": time_slots}
+        result = []
+        for slot, day_long_name, consultation_mode in time_slots:
+            slot_dict = slot.__dict__.copy()
+            slot_dict['day_long_name'] = day_long_name
+            slot_dict['consultation_mode'] = consultation_mode
+            result.append(TimeSlotResponse(**slot_dict))
+
+        return result
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+    
+#------------------------------------------------------------------------------------------------
+###################ENQUIRY####################################################
+#------------------------------------------------------------------------------------------------
+@router.post("/enquiry/save_enquiry_details/{id}")
+def save_enquiry_details(
+    id: int,
+    enquiry_data: OffEnquiryResponseSchema,
+    action_type: RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+   - Save or create enquiry details for a specific ID.
+    - **enquiry_data**: Data for the enquiry master and details, provided as parameters of type OffEnquiryResponseSchema.
+    - **id**: An optional integer parameter with a default value of 0, indicating the enquiry master's identifier.
+    - **action_type (RecordActionType)**: The action type to be performed, indicating whether to insert or update the enquiry details.
+
+    - If enquiry_master id is 0, it indicates the creation of a new enquiry.
+    - Returns: The newly created enquiry details as the response.
+    - If enquiry_master id is not 0, it indicates the update of an existing enquiry.
+    - Returns: The updated enquiry details as the response.
+    - If action_type is INSERT_ONLY, the id parameter should be 0.
+    - If action_type is UPDATE_ONLY, the id parameter should be greater than 0.
+    """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        result = db_office_master.save_enquiry_master(
+            db, id, enquiry_data, user_id, action_type
+        )
+
+        return {"success": True, "message": "Saved successfully"}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+#----------------get
+
+
+@router.get("/enquiry/get_enquiries", response_model=List[OffViewEnquiryResponseSchema])
+def get_and_search_enquiries(
+    search_value: Union[str, int] = "ALL",
+    status_id: Optional[str] = "ALL",
+    from_date: Optional[date] = date.today(),
+    to_date: Optional[date] = date.today(),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve Enquiry based on Parameters.
+
+    Parameters:
+    - **search_value**: Search value Can be 'mobile_number',and other are default 
+    - **status_id**: Status ID.
+    - **effective_from_date**: Effective from date (default: today's date).
+    - **effective_to_date**: Effective to date (default: today's date).
+    - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
+    """
+    return db_office_master.get_enquiries(
+        db,
+        search_value=search_value,
+        status_id=status_id,
+        from_date=from_date,
+        to_date=to_date
+    )
+    
+@router.get("/consultation_modes/{mode_id}", response_model=Union[List[ConsultationModeSchema], ConsultationModeSchema])
+def read_consultation_modes_with_tools(
+    mode_id: int = 0,
+    db: Session = Depends(get_db)
+):
+    result = db_office_master.get_consultation_modes_with_tools(db, mode_id)
+    if mode_id != 0 and not result:
+        raise HTTPException(status_code=404, detail=f"Consultation mode with id {mode_id} not found")
+    return result

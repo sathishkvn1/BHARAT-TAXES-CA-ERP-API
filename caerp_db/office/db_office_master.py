@@ -8,8 +8,8 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffDocumentDataMaster, OffDocumentDataType, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsDetails, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, ConsultantService, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot
+from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_schema.office.office_schema import AppointmentStatusConstants, Category, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
 from sqlalchemy import and_,or_
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -289,6 +289,7 @@ def reschedule_or_cancel_appointment(db: Session,
             raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
         # Update appointment status to RESCHEDULED and update date and time
         appointment.appointment_status_id = status_id
+        appointment.consultant_id = request_data.consultant_id
         appointment.appointment_date = request_data.date
         appointment.appointment_time_from = request_data.from_time
         appointment.appointment_time_to = request_data.to_time
@@ -1061,22 +1062,114 @@ def get_all_service_document_data_master(
         raise HTTPException(status_code=500, detail=str(e))
 
 #--------------------------------------------------------------------------------------------------------
+def get_service_documents_list_by_group_category(
+    db: Session,
+    group_id: Optional[int] =None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None
+) -> List[ServiceDocumentsList_Group]:
+    try:
+        results = []
+        
+        if group_id is None and sub_group_id is None and category_id is None or group_id == 0:  # If all are None or group_id is 0
+            groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
+            results = [
+                ServiceDocumentsList_Group(
+                    group=Service_Group(id=group.id, group_name=group.group_name),
+                    sub_group=None,
+                    category=None,
+                    sub_category=None
+                ) for group in groups
+            ]
+            return results
+
+        if group_id is not None:
+            group = db.query(OffServiceGoodsGroup).filter_by(id=group_id, is_deleted='no').first()
+            if not group:
+                return []
+
+            sub_groups = db.query(OffServiceGoodsSubGroup).filter_by(group_id=group_id, is_deleted='no').all()
+            sub_group_ids = [SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name) for sub_group in sub_groups]
+
+            category_ids = []
+            for sub_group in sub_groups:
+                categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group.id, is_deleted='no').all()
+                category_ids.extend([Category(id=category.id, category_name=category.category_name) for category in categories])
+
+            sub_category_ids = []
+            for category in category_ids:
+                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
+                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories])
+
+            results.append(ServiceDocumentsList_Group(
+                group=Service_Group(id=group.id, group_name=group.group_name),
+                sub_group=sub_group_ids,
+                category=category_ids,
+                sub_category=sub_category_ids
+            ))
+
+        if sub_group_id is not None:
+            sub_group = db.query(OffServiceGoodsSubGroup).filter_by(id=sub_group_id, is_deleted='no').first()
+            if not sub_group:
+                return []
+
+            categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group_id, is_deleted='no').all()
+            category_ids = [Category(id=category.id, category_name=category.category_name) for category in categories]
+
+            sub_category_ids = []
+            for category in categories:
+                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
+                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories])
+
+            results.append(ServiceDocumentsList_Group(
+                group=None,
+                sub_group=[SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name)],
+                category=category_ids,
+                sub_category=sub_category_ids
+            ))
+
+        if category_id is not None:
+            category = db.query(OffServiceGoodsCategory).filter_by(id=category_id, is_deleted='no').first()
+            if not category:
+                return []
+
+            sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category_id, is_deleted='no').all()
+            sub_category_ids = [SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories]
+
+            results.append(ServiceDocumentsList_Group(
+                group=None,
+                sub_group=None,
+                category=[Category(id=category.id, category_name=category.category_name)],
+                sub_category=sub_category_ids
+            ))
+
+
+        return results
+
+   
+
+    except Exception as e:
+     
+        raise e
+
+#--------------------------------------------------------------------------------------------------------
 
 def get_service_documents_data_details(db: Session, service_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
     try:
-        # Query to fetch service_document_data_master_id from master table
-        master_query = db.query(OffViewServiceDocumentsDataMaster). \
+        # Query to fetch all records from master table for the given service_id
+        master_queries = db.query(OffViewServiceDocumentsDataMaster). \
             filter(OffViewServiceDocumentsDataMaster.service_goods_master_id == service_id). \
-            first()
+            all()
 
-        if not master_query:
+        if not master_queries:
             return []  # Return empty list if no master record found for the given service_id
 
-        service_document_data_master_id = master_query.service_document_data_master_id
+        # Collect all service_document_data_master_id
+        service_document_data_master_ids = [master.service_document_data_master_id for master in master_queries]
 
-        # Query to fetch details based on service_document_data_master_id and document_category
+        # Query to fetch details based on the collected service_document_data_master_ids and optional document_category
         details_query = db.query(OffViewServiceDocumentsDataDetails). \
-            filter(OffViewServiceDocumentsDataDetails.service_document_data_id == service_document_data_master_id)
+            filter(OffViewServiceDocumentsDataDetails.service_document_data_id.in_(service_document_data_master_ids))
 
         if document_category:
             details_query = details_query.filter(
@@ -1087,8 +1180,10 @@ def get_service_documents_data_details(db: Session, service_id: int, document_ca
         return results
 
     except Exception as e:
-        logging.error(f"Error fetching service documents details: {e}")
+        # logging.error(f"Error fetching service documents details: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
+
+
 
 #-----------------------------------------------------------------------------------------------
 
@@ -1220,3 +1315,220 @@ def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id
     except Exception as e:
         db.rollback()
         raise e
+
+#------------------------------------------------------------------------------------------------
+###################ENQUIRY####################################################
+#------------------------------------------------------------------------------------------------
+def save_enquiry_master(
+    db: Session,
+    enquiry_master_id: int,
+    enquiry_data: OffEnquiryResponseSchema,
+    user_id: int,
+    action_type: RecordActionType  # Default action is INSERT_ONLY
+) -> Dict[str, Union[OffEnquiryMasterSchema, List[OffEnquiryDetailsSchema]]]:
+    # Validate action_type and enquiry_master_id combination
+    if action_type == RecordActionType.INSERT_ONLY and enquiry_master_id != 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, enquiry_master_id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and enquiry_master_id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, enquiry_master_id should be greater than 0")
+
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+            # Insert new enquiry master record
+            enquiry_master = OffEnquiryMaster(
+                created_by=user_id,
+                created_on=datetime.utcnow(),
+                **enquiry_data.enquiry_master.dict(exclude_unset=True)
+            )
+            db.add(enquiry_master)
+            db.flush()
+
+            # Insert related enquiry details
+            enquiry_details_list = []
+            for detail_data in enquiry_data.enquiry_details:
+                enquiry_detail = OffEnquiryDetails(
+                    enquiry_master_id=enquiry_master.id,
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    **detail_data.dict(exclude_unset=True)
+                )
+                db.add(enquiry_detail)
+                enquiry_details_list.append(enquiry_detail)
+
+        elif action_type == RecordActionType.UPDATE_ONLY:
+            # Fetch existing enquiry master record
+            enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
+            if not enquiry_master:
+                raise HTTPException(status_code=404, detail="Enquiry master not found")
+
+            # Update enquiry master fields
+            enquiry_master_data = enquiry_data.enquiry_master.dict(exclude_unset=True)
+            for field, value in enquiry_master_data.items():
+                if field == "remarks" and enquiry_master.remarks:
+                    setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
+                else:
+                    setattr(enquiry_master, field, value)
+            enquiry_master.modified_by = user_id
+            enquiry_master.modified_on = datetime.utcnow()
+
+            enquiry_details_list = []
+            for detail_data in enquiry_data.enquiry_details:
+                detail_data_dict = detail_data.dict(exclude_unset=True)
+                detail_id = detail_data_dict.get("id")
+
+                if not detail_id:
+                    # If detail_id is not provided, attempt to fetch it from the database based on unique constraints
+                    existing_detail = db.query(OffEnquiryDetails).filter_by(
+                        enquiry_master_id=enquiry_master_id,
+                        enquiry_number=detail_data_dict.get("enquiry_number"),
+                        enquiry_date=detail_data_dict.get("enquiry_date")
+                    ).first()
+                    if not existing_detail:
+                        raise HTTPException(status_code=404, detail="Enquiry detail not found for update")
+                    detail_id = existing_detail.id
+
+                # Update existing detail
+                existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
+                if existing_detail:
+                    for key, value in detail_data_dict.items():
+                        if key == "remarks" and existing_detail.remarks:
+                            setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
+                        else:
+                            setattr(existing_detail, key, value)
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.utcnow()
+                    enquiry_details_list.append(existing_detail)
+                else:
+                    raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
+
+        db.commit()  # Commit all changes to the database
+
+        # Convert to schema objects for response
+        enquiry_master_schema = OffEnquiryMasterSchema.from_orm(enquiry_master)
+        enquiry_details_schema = [OffEnquiryDetailsSchema.from_orm(detail) for detail in enquiry_details_list]
+
+        return {
+            "enquiry_master": enquiry_master_schema,
+            "enquiry_details": enquiry_details_schema
+        }
+
+    except HTTPException as http_error:
+        db.rollback()
+        raise http_error
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+#------------------------------------------------------------------------------------------------
+###################ENQUIRY####################################################
+#------------------------------------------------------------------------------------------------
+def get_enquiries(
+    db: Session,
+    search_value: Union[str, int] = "ALL",
+    status_id: Optional[str] = "ALL",
+    from_date: Optional[date] = date.today(),
+    to_date: Optional[date] = date.today()
+) -> List[OffViewEnquiryResponseSchema]:
+    try:
+        enquiries = []
+
+        # Initialize search conditions
+        search_conditions = [OffViewEnquiryDetails.is_deleted == "no"]
+
+        # Add condition for status ID if provided
+        if status_id != "ALL":
+            search_conditions.append(OffViewEnquiryDetails.enquiry_status_id == status_id)
+
+        # Add conditions for enquiry date range
+        search_conditions.append(OffViewEnquiryDetails.enquiry_date.between(from_date, to_date))
+
+        # Add condition for search value if it's not 'ALL'
+        if search_value != "ALL":
+            # Filter search value from OffEnquiryMaster
+            search_conditions.append(
+                or_(
+                    OffViewEnquiryMaster.mobile_number.like(f"%{search_value}%"),
+                    OffViewEnquiryMaster.email_id.like(f"%{search_value}%")
+                )
+            )
+
+        # Execute the query
+        query_result = db.query(OffViewEnquiryDetails).join(
+            OffViewEnquiryMaster,
+            OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
+        ).filter(and_(*search_conditions)).all()
+
+        if not query_result:
+            raise HTTPException(status_code=404, detail="Enquiry not found")
+
+        # Dictionary to store enquiries by ID
+        enquiry_dict = {}
+
+        # Iterate over query result
+        for enquiry_details_data in query_result:
+            enquiry_id = enquiry_details_data.enquiry_master_id
+
+            # Get the enquiry master corresponding to the enquiry details
+            enquiry_master_data = db.query(OffViewEnquiryMaster).filter_by(
+                enquiry_master_id=enquiry_id
+            ).first()
+
+            if enquiry_master_data:
+                # Convert enquiry_master_data to schema
+                enquiry_master_schema = OffViewEnquiryMasterSchema(
+                    **enquiry_master_data.__dict__
+                )
+
+                # Convert enquiry_details_data to schema
+                enquiry_details_schema = OffViewEnquiryDetailsSchema(**enquiry_details_data.__dict__)
+
+                if enquiry_id not in enquiry_dict:
+                    # Create new enquiry entry in dictionary
+                    enquiry_dict[enquiry_id] = {
+                        "enquiry_master": enquiry_master_schema,
+                        "enquiry_details": [enquiry_details_schema]
+                    }
+                else:
+                    # Append enquiry details to existing entry
+                    enquiry_dict[enquiry_id]["enquiry_details"].append(enquiry_details_schema)
+
+        # Convert dictionary values to list of OffViewEnquiryResponseSchema objects
+        enquiries = [OffViewEnquiryResponseSchema(**enquiry_data) for enquiry_data in enquiry_dict.values()]
+
+        return enquiries
+
+    except HTTPException as http_error:
+        raise http_error
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+ 
+    
+    
+def get_consultation_modes_with_tools(db: Session, mode_id: int = 0) -> Union[List[ConsultationModeSchema], ConsultationModeSchema]:
+    if mode_id == 0:
+        # Fetch all consultation modes
+        consultation_modes = db.query(OffConsultationMode).filter(OffConsultationMode.is_deleted == "no").all()
+        # Convert SQLAlchemy models to Pydantic models
+        return [ConsultationModeSchema.from_orm(mode) for mode in consultation_modes]
+    else:
+        # Fetch specific consultation mode by mode_id and its tools
+        consultation_mode = db.query(OffConsultationMode).filter(
+            OffConsultationMode.id == mode_id,
+            OffConsultationMode.is_deleted == "no"
+        ).first()
+        
+        if not consultation_mode:
+            return None
+        
+        tools = db.query(OffConsultationTool).filter(
+            OffConsultationTool.consultation_mode_id == mode_id,
+            OffConsultationTool.is_deleted == "no"
+        ).all()
+        
+        # Convert SQLAlchemy models to Pydantic models
+        tools_schema = [ConsultationToolSchema.from_orm(tool) for tool in tools]
+        consultation_mode_schema = ConsultationModeSchema.from_orm(consultation_mode)
+        
+        # Combine the mode and its tools into a single schema
+        consultation_mode_schema.tools = tools_schema
+        
+        return consultation_mode_schema
