@@ -384,7 +384,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             for pro_qual in request.professional_qualification:
               pro_qual_data = pro_qual.dict()
               pro_qual_data["employee_id"] = employee_id
-              pro_qual_data["created_by"] = user_id
+             
               db.add(EmployeeProfessionalQualification(**pro_qual_data))    
 
         db.commit()
