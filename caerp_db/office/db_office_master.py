@@ -546,7 +546,7 @@ def save_service_document_data_master(
     db: Session,
     id: int,
     doc_data: SaveServiceDocumentDataMasterRequest,
-    user_id: int,
+    service_document_master_id: Optional[int],
     action_type: RecordActionType
 ):
     if action_type == RecordActionType.INSERT_ONLY and id != 0:
@@ -556,28 +556,58 @@ def save_service_document_data_master(
 
     try:
         if action_type == RecordActionType.INSERT_ONLY:
-            new_master_data = doc_data.Service.dict()
-            new_master = OffServiceDocumentDataMaster(**new_master_data)
-            db.add(new_master)
-            db.flush()  # Ensure new_master.id is available for details
+            if service_document_master_id:
+                # Only insert details for the given master ID
+                if doc_data.Documents:
+                    for document_group in doc_data.Documents:
+                        document_dict = document_group.dict()
+                        for doc_type, docs in document_dict.items():
+                            if docs:
+                                if not isinstance(docs, list):
+                                    raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
+                                for doc in docs:
+                                    if not isinstance(doc['details'], list):
+                                        raise HTTPException(status_code=400, detail="Details should be a list")
+                                    for detail in doc['details']:
+                                        new_detail_data = detail
+                                        new_detail_data.update({
+                                            "document_data_category_id": doc['document_data_category_id'],
+                                            "service_document_data_id": service_document_master_id,
+                                            "is_deleted": 'no'
+                                        })
+                                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                                        db.add(new_detail)
+                db.commit()
+                return {"success": True, "message": "Details saved successfully", "action": "insert"}
+            else:
+                # Create a new master and insert details
+                new_master_data = doc_data.Service.dict()
+                new_master = OffServiceDocumentDataMaster(**new_master_data)
+                db.add(new_master)
+                db.flush()  # Ensure new_master.id is available for details
 
-            if doc_data.Documents:
-                for document in doc_data.Documents:
-                    if not isinstance(document.details, list):
-                        raise HTTPException(status_code=400, detail="Details should be a list")
+                if doc_data.Documents:
+                    for document_group in doc_data.Documents:
+                        document_dict = document_group.dict()
+                        for doc_type, docs in document_dict.items():
+                            if docs:
+                                if not isinstance(docs, list):
+                                    raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
+                                for doc in docs:
+                                    if not isinstance(doc['details'], list):
+                                        raise HTTPException(status_code=400, detail="Details should be a list")
+                                    for detail in doc['details']:
+                                        new_detail_data = detail
+                                        new_detail_data.update({
+                                            "document_data_category_id": doc['document_data_category_id'],
+                                            "service_document_data_id": new_master.id,
+                                            "is_deleted": 'no'
+                                        })
+                                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                                        db.add(new_detail)
 
-                    for detail in document.details:
-                        new_detail_data = detail.dict()
-                        new_detail_data.update({
-                            "document_data_category_id": document.document_data_category_id,
-                            "service_document_data_id": new_master.id,
-                            "is_deleted": 'no'
-                        })
-                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                        db.add(new_detail)
-
-            db.commit()
-            return {"success": True, "message": "Saved successfully", "action": "insert"}
+                db.commit()
+                return {"success": True, "message": "Saved successfully", "action": "insert"}
 
         elif action_type == RecordActionType.UPDATE_ONLY:
             existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
@@ -590,18 +620,24 @@ def save_service_document_data_master(
             db.query(OffServiceDocumentDataDetails).filter(OffServiceDocumentDataDetails.service_document_data_id == id).delete()
 
             if doc_data.Documents:
-                for document in doc_data.Documents:
-                    if not isinstance(document.details, list):
-                        raise HTTPException(status_code=400, detail="Details should be a list")
-
-                    for detail in document.details:
-                        new_detail_data = detail.dict()
-                        new_detail_data.update({
-                            "document_data_category_id": document.document_data_category_id,
-                            "service_document_data_id": id
-                        })
-                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                        db.add(new_detail)
+                for document_group in doc_data.Documents:
+                    document_dict = document_group.dict()
+                    for doc_type, docs in document_dict.items():
+                        if docs:
+                            if not isinstance(docs, list):
+                                raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
+                            for doc in docs:
+                                if not isinstance(doc['details'], list):
+                                    raise HTTPException(status_code=400, detail="Details should be a list")
+                                for detail in doc['details']:
+                                    new_detail_data = detail
+                                    new_detail_data.update({
+                                        "document_data_category_id": doc['document_data_category_id'],
+                                        "service_document_data_id": id,
+                                        "is_deleted": 'no'
+                                    })
+                                    new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                                    db.add(new_detail)
 
             db.commit()
             return {"success": True, "message": "Updated successfully", "action": "update"}
@@ -609,6 +645,7 @@ def save_service_document_data_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 #-------------------------------
 
 def save_off_document_master(
@@ -979,24 +1016,18 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
 #-------------------------------------------------------------------------------------------------------
 def get_all_service_document_data_master(
     db: Session,
-    deleted_status: Optional[str] = None,
     name: Optional[str] = None,
     group_id: Union[int, str] = 'ALL',
     sub_group_id: Union[int, str] = 'ALL',
     category_id: Union[int, str] = 'ALL',
     sub_category_id: Union[int, str] = 'ALL',
     constitution_id: Union[int, str] = 'ALL',
-    doc_data_status: Optional[str] = None  # New parameter
+    doc_data_status: Optional[str] = None  
 ) -> List[dict]:
     try:
         search_conditions = []
 
-        if deleted_status:
-            if deleted_status == 'DELETED':
-                search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_master_is_deleted == 'yes')
-            elif deleted_status == 'NOT_DELETED':
-                search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_master_is_deleted == 'no')
-
+        
         if name:
             search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_name.ilike(f'%{name}%'))
 
@@ -1058,99 +1089,8 @@ def get_all_service_document_data_master(
         return results
 
     except Exception as e:
-        logging.error(f"Failed to retrieve data from database: {e}")
+      #  logging.error(f"Failed to retrieve data from database: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-#--------------------------------------------------------------------------------------------------------
-def get_service_documents_list_by_group_category(
-    db: Session,
-    group_id: Optional[int] =None,
-    sub_group_id: Optional[int] = None,
-    category_id: Optional[int] = None
-) -> List[ServiceDocumentsList_Group]:
-    try:
-        results = []
-        
-        if group_id is None and sub_group_id is None and category_id is None or group_id == 0:  # If all are None or group_id is 0
-            groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
-            results = [
-                ServiceDocumentsList_Group(
-                    group=Service_Group(id=group.id, group_name=group.group_name),
-                    sub_group=None,
-                    category=None,
-                    sub_category=None
-                ) for group in groups
-            ]
-            return results
-
-        if group_id is not None:
-            group = db.query(OffServiceGoodsGroup).filter_by(id=group_id, is_deleted='no').first()
-            if not group:
-                return []
-
-            sub_groups = db.query(OffServiceGoodsSubGroup).filter_by(group_id=group_id, is_deleted='no').all()
-            sub_group_ids = [SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name) for sub_group in sub_groups]
-
-            category_ids = []
-            for sub_group in sub_groups:
-                categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group.id, is_deleted='no').all()
-                category_ids.extend([Category(id=category.id, category_name=category.category_name) for category in categories])
-
-            sub_category_ids = []
-            for category in category_ids:
-                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
-                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories])
-
-            results.append(ServiceDocumentsList_Group(
-                group=Service_Group(id=group.id, group_name=group.group_name),
-                sub_group=sub_group_ids,
-                category=category_ids,
-                sub_category=sub_category_ids
-            ))
-
-        if sub_group_id is not None:
-            sub_group = db.query(OffServiceGoodsSubGroup).filter_by(id=sub_group_id, is_deleted='no').first()
-            if not sub_group:
-                return []
-
-            categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group_id, is_deleted='no').all()
-            category_ids = [Category(id=category.id, category_name=category.category_name) for category in categories]
-
-            sub_category_ids = []
-            for category in categories:
-                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
-                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories])
-
-            results.append(ServiceDocumentsList_Group(
-                group=None,
-                sub_group=[SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name)],
-                category=category_ids,
-                sub_category=sub_category_ids
-            ))
-
-        if category_id is not None:
-            category = db.query(OffServiceGoodsCategory).filter_by(id=category_id, is_deleted='no').first()
-            if not category:
-                return []
-
-            sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category_id, is_deleted='no').all()
-            sub_category_ids = [SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name) for sub_category in sub_categories]
-
-            results.append(ServiceDocumentsList_Group(
-                group=None,
-                sub_group=None,
-                category=[Category(id=category.id, category_name=category.category_name)],
-                sub_category=sub_category_ids
-            ))
-
-
-        return results
-
-   
-
-    except Exception as e:
-     
-        raise e
 
 #--------------------------------------------------------------------------------------------------------
 
@@ -1183,6 +1123,93 @@ def get_service_documents_data_details(db: Session, service_id: int, document_ca
         # logging.error(f"Error fetching service documents details: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
 
+#---------------------------------------------------------------------------------------------
+def get_service_documents_list_by_group_category(
+    db: Session,
+    group_id: Optional[int] = None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None
+) -> List[ServiceDocumentsList_Group]:
+    try:
+        results = []
+        
+        if group_id is None and sub_group_id is None and category_id is None or group_id == 0:  # If all are None or group_id is 0
+            groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
+            results = [
+                ServiceDocumentsList_Group(
+                    group=Service_Group(id=group.id, group_name=group.group_name or ""),
+                    # sub_group=None,
+                    # category=None,
+                    # sub_category=None
+                ) for group in groups
+            ]
+            return results
+
+        if group_id is not None:
+            group = db.query(OffServiceGoodsGroup).filter_by(id=group_id, is_deleted='no').first()
+            if not group:
+                return []
+
+            sub_groups = db.query(OffServiceGoodsSubGroup).filter_by(group_id=group_id, is_deleted='no').all()
+            sub_group_ids = [SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name or "") for sub_group in sub_groups]
+
+            category_ids = []
+            for sub_group in sub_groups:
+                categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group.id, is_deleted='no').all()
+                category_ids.extend([Category(id=category.id, category_name=category.category_name or "") for category in categories])
+
+            sub_category_ids = []
+            for category in category_ids:
+                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
+                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name or "") for sub_category in sub_categories])
+
+            results.append(ServiceDocumentsList_Group(
+                group=Service_Group(id=group.id, group_name=group.group_name or ""),
+                sub_group=sub_group_ids,
+                category=category_ids,
+                sub_category=sub_category_ids
+            ))
+
+        if sub_group_id is not None:
+            sub_group = db.query(OffServiceGoodsSubGroup).filter_by(id=sub_group_id, is_deleted='no').first()
+            if not sub_group:
+                return []
+
+            categories = db.query(OffServiceGoodsCategory).filter_by(sub_group_id=sub_group_id, is_deleted='no').all()
+            category_ids = [Category(id=category.id, category_name=category.category_name or "") for category in categories]
+
+            sub_category_ids = []
+            for category in categories:
+                sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
+                sub_category_ids.extend([SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name or "") for sub_category in sub_categories])
+
+            results.append(ServiceDocumentsList_Group(
+                # group=None,
+                sub_group=[SubGroup(id=sub_group.id, sub_group_name=sub_group.sub_group_name or "")],
+                category=category_ids,
+                sub_category=sub_category_ids
+            ))
+
+        if category_id is not None:
+            category = db.query(OffServiceGoodsCategory).filter_by(id=category_id, is_deleted='no').first()
+            if not category:
+                return []
+
+            sub_categories = db.query(OffServiceGoodsSubCategory).filter_by(category_id=category.id, is_deleted='no').all()
+            sub_category_ids = [SubCategory(id=sub_category.id, sub_category_name=sub_category.sub_category_name or "") for sub_category in sub_categories]
+
+            results.append(ServiceDocumentsList_Group(
+                # group=None,
+                # sub_group=None,
+                 category=[Category(id=category.id, category_name=category.category_name or "")],
+                 sub_category=sub_category_ids
+            ))
+
+        return results
+
+    except Exception as e:
+        # logging.error(f"Unexpected error: {str(e)}")
+        raise e
 
 
 #-----------------------------------------------------------------------------------------------

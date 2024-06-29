@@ -478,6 +478,7 @@ class OffServiceDocumentDataMasterDisplay(BaseModel):
  
 
 class OffServiceDocumentDataDetails(BaseModel):
+    #service_document_data_id : int
     document_data_id : int
     nature_of_possession_id : int
     display_order : int
@@ -485,10 +486,18 @@ class OffServiceDocumentDataDetails(BaseModel):
 class OffServiceDocumentDataRequired(BaseModel):
     document_data_category_id: int
     details: List[OffServiceDocumentDataDetails]
-    
+ 
+class ServiceDocuments(BaseModel):
+    personal_doc: Optional[List[OffServiceDocumentDataRequired]] = None
+    constitution_doc: Optional[List[OffServiceDocumentDataRequired]] = None
+    principal_place_doc: Optional[List[OffServiceDocumentDataRequired]] = None
+    utility_doc: Optional[List[OffServiceDocumentDataRequired]] = None
+    data_to_be_submitted_doc: Optional[List[OffServiceDocumentDataRequired]] = None
+
+   
 class SaveServiceDocumentDataMasterRequest(BaseModel):
-    Service: OffServiceDocumentDataMasterDisplay
-    Documents: Optional[List[OffServiceDocumentDataRequired]] = None
+    Service: Optional[OffServiceDocumentDataMasterDisplay] = None
+    Documents: Optional[List[ServiceDocuments]] = None
     
 class OffViewServiceDocumentsDataDetailsSchema(BaseModel):
     service_document_data_details_id: int
@@ -783,3 +792,36 @@ class ConsultationModeSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+        
+        
+        
+
+#----------------------------------------------
+       
+# class DocumentDetail(BaseModel):
+#     document_data_id: int
+#     nature_of_possession_id: int
+#     display_order: int
+
+# class DocumentCategory(BaseModel):
+#     document_data_category_id: int
+#     details: List[DocumentDetail]
+
+# class ServiceDocuments(BaseModel):
+#     personal_doc: Optional[List[DocumentCategory]] = None
+#     constitution_doc: Optional[List[DocumentCategory]] = None
+#     principal_place_doc: Optional[List[DocumentCategory]] = None
+#     utility_doc: Optional[List[DocumentCategory]] = None
+#     data_to_be_submitted_doc: Optional[List[DocumentCategory]] = None
+
+# class Service(BaseModel):
+#     service_goods_master_id: int
+#     group_id: int
+#     sub_group_id: int
+#     category_id: int
+#     sub_category_id: int
+#     constitution_id: int
+
+# class ServiceDocumentRequest(BaseModel):
+#     service: Service
+#     documents: ServiceDocuments

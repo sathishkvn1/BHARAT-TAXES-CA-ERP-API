@@ -313,20 +313,36 @@ def save_service_document_data_master(
     id: int,
     data: List[SaveServiceDocumentDataMasterRequest], 
     action_type: RecordActionType,
+    service_document_master_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
+    """
+    Save service document data master.
+
+    Parameters:
+    - **id**: The ID of the service document data master record. This parameter is required and should be an integer.
+    - **data**: A list of `SaveServiceDocumentDataMasterRequest` objects containing the service document data to be saved.
+    - **action_type**: The type of action to be performed. Possible values are `INSERT_ONLY` and `UPDATE_ONLY`.
+    - **service_document_master_id**: An optional query parameter that specifies the master ID if only details need to be inserted.
+    - **db**: A database session dependency injected by FastAPI.
+    - **token**: An authentication token dependency injected by FastAPI using OAuth2.
+
+    Returns:
+    - A success message after processing all service document data.
+    
+    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")
+ #   user_id = auth_info.get("user_id")
 
     try:
         result_message = ""
         for service in data:
             result = db_office_master.save_service_document_data_master(
-                db, id, service, user_id, action_type
+                db, id, service, service_document_master_id, action_type
             )
             result_message = result["message"]
         
@@ -336,7 +352,6 @@ def save_service_document_data_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 
 
@@ -1149,7 +1164,6 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
 @router.get('/services/get_all_service_document_data_master', response_model=Union[List[OffViewServiceDocumentsDataMasterSchema], dict])
 def get_all_service_document_data_master(
     db: Session = Depends(get_db),
-    deleted_status: Optional[str] = Query(None, title="Select deleted status", enum=['DELETED', 'NOT_DELETED']),
     name: Optional[str] = None,
     group_id: Union[int, str] = Query('ALL'),
     sub_group_id: Union[int, str] = Query('ALL'),
@@ -1164,12 +1178,6 @@ def get_all_service_document_data_master(
     """
     Allows users to search and filter service document data master records by the following criteria:
     
-    - **deleted_status**: Filter records based on their deletion status. Possible values are:
-      
-      - DeletedStatus.DELETED - retrieves only deleted records.
-      - DeletedStatus.NOT_DELETED - retrieves only non-deleted records.
-      - DeletedStatus.ALL - retrieves all records.
-
     - **name**: Search for records that contain the provided name as a substring.
     
     - **group_id**: Filter records by group ID. Use 'ALL' to include all group IDs.
@@ -1195,7 +1203,7 @@ def get_all_service_document_data_master(
 
     try:
         results = db_office_master.get_all_service_document_data_master(
-            db, deleted_status, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
+            db, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
         )
 
         if not results:
@@ -1211,7 +1219,7 @@ def get_all_service_document_data_master(
         #return results
 
     except Exception as e:
-        # logging.error(f"Error fetching service document data master: {e}")
+       # logging.error(f"Error fetching service document data master: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 #-----------------------------------------------------------------------------------------
@@ -1221,16 +1229,29 @@ def get_service_documents_list_by_group_category(
     sub_group_id: Optional[int] = None,
     category_id: Optional[int] = None,
     db: Session = Depends(get_db)
-):
+):  
+    """
+    Retrieve a list of service documents filtered by group, sub-group, and category.
+
+    Parameters:
+    - **group_id**: Optional query parameter to filter documents by group ID.
+    - **sub_group_id**: Optional query parameter to filter documents by sub-group ID.
+    - **category_id**: Optional query parameter to filter documents by category ID.
+    **   if all arguments are null or group_id == 0,then get all groups
+
+    Returns:
+    - A list of filtered service documents that match the provided criteria.
+    - If no matching documents are found, returns a 404 status code with a message "No data found".
+    - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
+
+    """
     try:
         results = db_office_master.get_service_documents_list_by_group_category(
-            db,group_id,sub_group_id,category_id)
+            db, group_id, sub_group_id, category_id)
             
-       
-
         if not results:
-           
             return JSONResponse(status_code=404, content={"message": "No data found"})
+
         # Filter out null fields from each ServiceDocumentsList_Group object
         filtered_results = []
         for result in results:
@@ -1242,11 +1263,9 @@ def get_service_documents_list_by_group_category(
         # Ensure the response is a list of dictionaries matching the schema
         return JSONResponse(status_code=200, content=filtered_results)
 
-
     except Exception as e:
-       
+        print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
 
 
 
@@ -1302,7 +1321,6 @@ def get_service_documents_data_details(
     except Exception as e:
         # logging.error(f"Error fetching service documents details: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
 
 
 
@@ -1584,32 +1602,3 @@ def read_consultation_modes_with_tools(
 
 
 
-# @router.post("/test/save_service_document_data_master/{id}")
-# def save_service_document_data_master(
-#     data: List[SaveServiceDocumentDataMasterRequest],
-#     id: int,
-#     action_type: RecordActionType,
-#     service_document_master_id: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-
-#     try:
-#         result_message = ""
-#         for service in data:
-#             result = db_office_master.save_service_document_data_masters(
-#                 db, id, service_document_master_id, service, user_id, action_type
-#             )
-#             result_message = result["message"]
-        
-#         return {"success": True, "message": result_message}
-    
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
