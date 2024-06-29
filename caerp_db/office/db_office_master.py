@@ -1425,25 +1425,29 @@ def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
     status_id: Optional[str] = "ALL",
-    from_date: Optional[date] = date.today(),
-    to_date: Optional[date] = date.today()
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None
 ) -> List[OffViewEnquiryResponseSchema]:
     try:
         enquiries = []
 
         # Initialize search conditions
         search_conditions = [OffViewEnquiryDetails.is_deleted == "no"]
+        
+        # Add conditions for enquiry date range if provided
+        if from_date and to_date:
+            search_conditions.append(OffViewEnquiryDetails.enquiry_date.between(from_date, to_date))
+        elif from_date:
+            search_conditions.append(OffViewEnquiryDetails.enquiry_date >= from_date)
+        elif to_date:
+            search_conditions.append(OffViewEnquiryDetails.enquiry_date <= to_date)
 
         # Add condition for status ID if provided
         if status_id != "ALL":
             search_conditions.append(OffViewEnquiryDetails.enquiry_status_id == status_id)
 
-        # Add conditions for enquiry date range
-        search_conditions.append(OffViewEnquiryDetails.enquiry_date.between(from_date, to_date))
-
         # Add condition for search value if it's not 'ALL'
         if search_value != "ALL":
-            # Filter search value from OffEnquiryMaster
             search_conditions.append(
                 or_(
                     OffViewEnquiryMaster.mobile_number.like(f"%{search_value}%"),
@@ -1500,6 +1504,9 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
  
     
     
@@ -1532,3 +1539,73 @@ def get_consultation_modes_with_tools(db: Session, mode_id: int = 0) -> Union[Li
         consultation_mode_schema.tools = tools_schema
         
         return consultation_mode_schema
+
+#----------------------------------------------------------
+# def save_service_document_data_masters(
+#     db: Session,
+#     id: int,
+#     service_document_master_id: Optional[int],
+#     doc_data: SaveServiceDocumentDataMasterRequest,
+#     user_id: int,
+#     action_type: RecordActionType
+# ):
+#     if action_type == RecordActionType.INSERT_ONLY and (id != 0 or service_document_master_id is not None):
+#         raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0 and service_document_master_id should be None")
+#     elif action_type == RecordActionType.UPDATE_ONLY and (id <= 0 or service_document_master_id is None):
+#         raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0 and service_document_master_id should be provided")
+
+#     try:
+#         if action_type == RecordActionType.INSERT_ONLY:
+#             new_master_data = doc_data.Service.dict()
+#             new_master = OffServiceDocumentDataMaster(**new_master_data)
+#             db.add(new_master)
+#             db.flush()  # Ensure new_master.id is available for details
+
+#             if doc_data.Documents:
+#                 for document in doc_data.Documents:
+#                     if not isinstance(document.details, list):
+#                         raise HTTPException(status_code=400, detail="Details should be a list")
+
+#                     for detail in document.details:
+#                         new_detail_data = detail.dict()
+#                         new_detail_data.update({
+#                             "document_data_category_id": document.document_data_category_id,
+#                             "service_document_data_id": new_master.id,
+#                             "is_deleted": 'no'
+#                         })
+#                         new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+#                         db.add(new_detail)
+
+#             db.commit()
+#             return {"success": True, "message": "Saved successfully", "action": "insert"}
+
+#         elif action_type == RecordActionType.UPDATE_ONLY:
+#             existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == service_document_master_id).first()
+#             if not existing_master:
+#                 raise HTTPException(status_code=404, detail="Master record not found")
+
+#             for key, value in doc_data.Service.dict().items():
+#                 setattr(existing_master, key, value)
+
+#             db.query(OffServiceDocumentDataDetails).filter(OffServiceDocumentDataDetails.service_document_data_id == service_document_master_id).delete()
+
+#             if doc_data.Documents:
+#                 for document in doc_data.Documents:
+#                     if not isinstance(document.details, list):
+#                         raise HTTPException(status_code=400, detail="Details should be a list")
+
+#                     for detail in document.details:
+#                         new_detail_data = detail.dict()
+#                         new_detail_data.update({
+#                             "document_data_category_id": document.document_data_category_id,
+#                             "service_document_data_id": service_document_master_id
+#                         })
+#                         new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+#                         db.add(new_detail)
+
+#             db.commit()
+#             return {"success": True, "message": "Updated successfully", "action": "update"}
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))

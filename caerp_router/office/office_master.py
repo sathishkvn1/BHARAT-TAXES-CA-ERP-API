@@ -1250,7 +1250,7 @@ def get_service_documents_list_by_group_category(
 
 
 
-#------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
     service_id: int,
@@ -1548,8 +1548,8 @@ def save_enquiry_details(
 def get_and_search_enquiries(
     search_value: Union[str, int] = "ALL",
     status_id: Optional[str] = "ALL",
-    from_date: Optional[date] = date.today(),
-    to_date: Optional[date] = date.today(),
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -1569,7 +1569,9 @@ def get_and_search_enquiries(
         from_date=from_date,
         to_date=to_date
     )
-    
+
+
+
 @router.get("/consultation_modes/{mode_id}", response_model=Union[List[ConsultationModeSchema], ConsultationModeSchema])
 def read_consultation_modes_with_tools(
     mode_id: int = 0,
@@ -1579,3 +1581,35 @@ def read_consultation_modes_with_tools(
     if mode_id != 0 and not result:
         raise HTTPException(status_code=404, detail=f"Consultation mode with id {mode_id} not found")
     return result
+
+
+
+# @router.post("/test/save_service_document_data_master/{id}")
+# def save_service_document_data_master(
+#     data: List[SaveServiceDocumentDataMasterRequest],
+#     id: int,
+#     action_type: RecordActionType,
+#     service_document_master_id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         result_message = ""
+#         for service in data:
+#             result = db_office_master.save_service_document_data_masters(
+#                 db, id, service_document_master_id, service, user_id, action_type
+#             )
+#             result_message = result["message"]
+        
+#         return {"success": True, "message": result_message}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
