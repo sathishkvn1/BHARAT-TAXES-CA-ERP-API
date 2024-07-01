@@ -232,6 +232,19 @@ class UserRole(caerp_base):
     is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_on      = Column(DateTime, default=None)
     deleted_by      = Column(Integer, nullable=True)
+    
+class UsersRole(caerp_base):
+    __tablename__ = "users_role"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    role            = Column(String, nullable=True)
+    created_on      = Column(DateTime, nullable=False, default=func.now())
+    created_by      = Column(Integer, nullable=True)
+    modified_on     = Column(DateTime, default=None)
+    modified_by     = Column(Integer, nullable=True)
+    is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_on      = Column(DateTime, default=None)
+    deleted_by      = Column(Integer, nullable=True)
 
 
 
