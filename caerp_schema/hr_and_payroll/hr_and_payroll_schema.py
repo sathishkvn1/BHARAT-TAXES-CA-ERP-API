@@ -5,6 +5,8 @@ from datetime import date, datetime
 from caerp_constants.caerp_constants import BooleanFlag
 
 
+
+    
 class EmployeeMasterSchema(BaseModel):
    # employee_id : int
    employee_number : Optional[str] = None
@@ -16,24 +18,7 @@ class EmployeeMasterSchema(BaseModel):
    marital_status_id : int
    date_of_birth : date
    joining_date : date
-   next_increment_date : date
-   nationality_id : int
-    
-   class config():
-      orm_mode=True
-    
-class EmployeeMasterSchemaNew(BaseModel):
-   # employee_id : int
-   employee_number : Optional[str] = None
-   first_name : str
-   middle_name : Optional[str] = None
-   last_name : str
-   gender_id : int
-   blood_group : Optional[str] = None
-   marital_status_id : int
-   date_of_birth : date
-   joining_date : date
-   next_increment_date : date
+   next_increment_date : Optional[date]=None
    nationality_id : int
    # personal_mobile_number : Optional[str] = None
    # personal_email_id : Optional[str] = None
@@ -177,17 +162,10 @@ class EmployeeEmployementSchema(BaseModel):
    designation_id : int
    employee_category_id : int
    is_consultant : str = 'no'
-   effective_from_date : date
+   effective_from_date : Optional[date]= None
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
-#    created_by : int
-#    created_on : datetime
-#    is_approved : str = 'no'
-#    approved_by : int
-#    approved_on : datetime
-#    is_deleted : str = 'no'
-#    deleted_by : Optional[int] = None
-#    deleted_on : Optional[datetime] = None
+
 
    class config():
       orm_mode=True
@@ -296,25 +274,11 @@ class EmployeeUserRoles(BaseModel):
     
     role_id            : list[int] 
 
-class EmployeeDetails(BaseModel):
-   employee_master :   Optional[EmployeeMasterSchema] = None
-   present_address :   Optional[EmployeePresentAddressSchema] = None
-   permanent_address : Optional[EmployeePermanentAddressSchema] = None
-   contact_details :   Optional[EmployeeContactSchema] = None
-   bank_details :      Optional[EmployeeBankAccountSchema] = None
-   employement_details : Optional[EmployeeEmployementSchema] = None
-   emergency_contact_details : Optional[EmployeeEmergencyContactSchema] = None
-   dependent_details : Optional[EmployeeDependentsSchema] = None
-   employee_salary : Optional[EmployeeSalarySchema] = None
-   educational_qualification : List[EmployeeEducationalQualficationSchema] = None
-   employee_experience : List[EmployeeExperienceSchema] = None
-   employee_documents : List[EmployeeDocumentsSchema] = None
-   professional_qualification : List[EmployeeProfessionalQualificationSchema] = None
 
    
 
-class EmployeeDetailsNew(BaseModel):
-   employee_master :   Optional[EmployeeMasterSchemaNew] = None
+class EmployeeDetails(BaseModel):
+   employee_master :   Optional[EmployeeMasterSchema] = None
    present_address :   Optional[EmployeePresentAddressSchema] = None
    permanent_address : Optional[EmployeePermanentAddressSchema] = None
    contact_details :   Optional[EmployeeContactSchema] = None

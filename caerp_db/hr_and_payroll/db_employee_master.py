@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from caerp_db.common.models import EmployeeMaster,UserBaseNew,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDetailsNew, EmployeeDocumentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text
@@ -28,7 +28,7 @@ def get_next_employee_number(db: Session) -> str:
     return next_employee_number_str
 
 
-def save_employee_master(db: Session, request: EmployeeDetailsNew, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
+def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
   try:
     if (employee_id > 0 or employee_id < 0) and Action == RecordActionType.INSERT_ONLY:
       raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
@@ -80,13 +80,7 @@ def save_employee_master(db: Session, request: EmployeeDetailsNew, employee_id: 
         insert_user_log_stmt = insert(UserBaseNew).values(**users_new_data)
         db.execute(insert_user_log_stmt)
         db.commit()
-         # Insert into UserRole table for each role ID
-        # for role_id in users_new_dict['role_ids']:
-        #     user_role_data = {
-        #         "employee_id": emp_id,
-        #         "role_id": role_id
-        #     }
-        # users_role_dict = request.user_roles.dict()
+
         for role_id in request.user_roles.role_id :
             user_role_data = {
                 "employee_id": emp_id,
@@ -99,6 +93,7 @@ def save_employee_master(db: Session, request: EmployeeDetailsNew, employee_id: 
         employement_details_data = request.employement_details.dict()
 
         employement_details_data["employee_id"] = emp_id
+        employement_details_data['effective_from_date'] = datetime.utcnow().date()
         employement_details_data["created_by"] = user_id
         employement_details_data["approved_by"] = user_id
         employement_details_data["approved_on"] = datetime.utcnow()  
@@ -119,7 +114,7 @@ def save_employee_master(db: Session, request: EmployeeDetailsNew, employee_id: 
         if employee_profile_component is None:
           raise ValueError("employee profile component is required for updation")
       
-        schema_names = EmployeeDetailsNew.__fields__.keys()
+        schema_names = EmployeeDetails.__fields__.keys()
         schemas_list = employee_profile_component.split(",")
         valid_options = [option for option in schemas_list if option in schema_names]
                        
