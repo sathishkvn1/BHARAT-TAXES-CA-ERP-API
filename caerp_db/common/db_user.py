@@ -1,7 +1,7 @@
 
 
 from caerp_schema.common.common_schema import UserCreateSchema
-from caerp_db.common.models import UserBase,Employee,SmsTemplates
+from caerp_db.common.models import UserBase,EmployeeMaster,SmsTemplates
 from fastapi import HTTPException , status     
 from caerp_db.hash import Hash
 from datetime import datetime,timedelta
@@ -47,12 +47,12 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
 
 
 def get_user_by_mobile(db: Session, mobile: str):
-    return db.query(Employee).filter(Employee.mobile_phone == mobile).first()
+    return db.query(EmployeeMaster).filter(EmployeeMaster.mobile_phone == mobile).first()
 
 def get_user_by_id(db: Session, id: int):
     return db.query(UserBase).filter(UserBase.employee_id == id).first()
 def get_employee_by_id(db: Session, id: int):
-    return db.query(Employee).filter(Employee.employee_id == id).first()
+    return db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
 def get_user_by_user_name(db: Session,username: str):    
     return  db.query(UserBase).filter(UserBase.user_name == username).first()
     

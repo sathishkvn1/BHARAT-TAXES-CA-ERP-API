@@ -2,7 +2,7 @@
 
 
 from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, StateDB, TalukDB
+from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
@@ -256,8 +256,8 @@ def get_query_manager_query_by_id(db: Session, id: int):
     return db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).first()
 
 
-def get_queries_by_id(db: Session, id: int):
-    return db.query(QueryView).filter(QueryView.id == id).first()
+# def get_queries_by_id(db: Session, id: int):
+#     return db.query(QueryView).filter(QueryView.id == id).first()
 
 #-----------------------------------------------------------
 

@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
-from caerp_db.common.models import Employee, EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster
+from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
@@ -1332,7 +1332,7 @@ def get_service_documents_data_details(
 
 from datetime import datetime
 
-@router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+@router.get("/test/consultant_employees", response_model=List[ConsultantEmployee])
 def get_consultant_employees(
     db: Session = Depends(get_db),
     search_query: str = Query(None, description="Search query to filter consultant employees")
@@ -1352,6 +1352,59 @@ def get_consultant_employees(
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).filter(
+        EmployeeEmployementDetails.is_consultant == 'yes',
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeMaster.is_deleted == 'no',
+        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeContactDetails.is_deleted == 'no'
+    )
+
+    if search_query:
+        search_filter = (
+            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+        )
+        query = query.filter(search_filter)
+
+    return query.all()
+
+
+@router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+def get_consultant_employees(
+    db: Session = Depends(get_db),
+    search_query: str = Query(None, description="Search query to filter consultant employees")
+):
+    current_date = datetime.utcnow().date()
+    query = db.query(
+        EmployeeMaster.employee_id,
+        func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+        EmployeeMaster.employee_number,
+        EmployeeContactDetails.personal_email_id.label('personal_email'),
+        EmployeeContactDetails.official_email_id.label('official_email'),
+        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+        EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+        HrDepartmentMaster.department_name,
+        HrDesignationMaster.designation
+    ).join(
+        EmployeeEmployementDetails,
+        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        EmployeeContactDetails,
+        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).join(
+        HrDepartmentMaster,
+        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+    ).join(
+        HrDesignationMaster,
+        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
     ).filter(
         EmployeeEmployementDetails.is_consultant == 'yes',
         EmployeeEmployementDetails.effective_from_date <= current_date,
@@ -1418,8 +1471,13 @@ def save_consultant_service_details(consultant_service: List[ConsultantService],
 
 #------------------------------------------------------------------------------------------------
 
-@router.get("/get_all_consultant_service_details/", response_model=List[ConsultantServiceDetailsResponse])
-def get_all_consultant_service_details(db: Session = Depends(get_db)):
+
+
+@router.get("/get_service_details_by_consultant/", response_model=List[ConsultantServiceDetailsResponse])
+def get_all_consultant_service_details(
+    consultant_id: int = Header(..., description="Consultant ID"),
+    db: Session = Depends(get_db)
+):
     """
     Retrieve all consultant service details.
     """
@@ -1432,16 +1490,18 @@ def get_all_consultant_service_details(db: Session = Depends(get_db)):
         OffConsultantServiceDetails.slot_duration_in_minutes,
         OffConsultantServiceDetails.effective_from_date,
         OffConsultantServiceDetails.effective_to_date
-       
     ).join(
         OffServiceGoodsMaster,
         OffConsultantServiceDetails.service_goods_master_id == OffServiceGoodsMaster.id
+    ).filter(
+        OffConsultantServiceDetails.consultant_id == consultant_id
     ).all()
     
     if not results:
         raise HTTPException(status_code=404, detail="No records found")
 
     return [ConsultantServiceDetailsResponse.from_orm(result) for result in results]
+
 #------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_schedule/")

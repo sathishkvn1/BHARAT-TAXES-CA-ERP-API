@@ -3,7 +3,7 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
 
-from caerp_db.common.models import Employee
+# from caerp_db.common.models import Employee
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
@@ -715,29 +715,29 @@ def save_off_document_master(
 
 
 
-def get_consultants(db: Session) -> List[Employee]:
-    """
-    Fetches all consultants from the database.
+# def get_consultants(db: Session) -> List[Employee]:
+#     """
+#     Fetches all consultants from the database.
 
-    Args:
-        db (Session): Database session.
+#     Args:
+#         db (Session): Database session.
 
-    Returns:
-        List[Employee]: List of consultants.
-    """
-    return db.query(Employee).filter(Employee.is_consultant == 'yes').all()
+#     Returns:
+#         List[Employee]: List of consultants.
+#     """
+#     return db.query(Employee).filter(Employee.is_consultant == 'yes').all()
 
-def get_all_employees(db: Session) -> List[Employee]:
-    """
-    Fetches all employees (non-consultants) from the database.
+# def get_all_employees(db: Session) -> List[Employee]:
+#     """
+#     Fetches all employees (non-consultants) from the database.
 
-    Args:
-        db (Session): Database session.
+#     Args:
+#         db (Session): Database session.
 
-    Returns:
-        List[Employee]: List of employees.
-    """
-    return db.query(Employee).filter(Employee.is_consultant == 'no').all()
+#     Returns:
+#         List[Employee]: List of employees.
+#     """
+#     return db.query(Employee).filter(Employee.is_consultant == 'no').all()
 
 
 

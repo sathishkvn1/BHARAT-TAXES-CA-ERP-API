@@ -205,6 +205,36 @@ class UserBase(caerp_base):
     modified_by   = Column(Integer, default=None)
     modified_on   = Column(DateTime, default=None)
 
+class UserBaseNew(caerp_base):
+    __tablename__ = "users_new"
+
+    id            = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id   = Column(Integer, nullable=True)
+    user_name    = Column(String(50), nullable=True)
+    login_password      = Column(String(200), nullable=True)
+    edit_password   = Column(String(200), nullable=True)
+    delete_password =  Column(String(200), nullable=True)
+    security_password =  Column(String(200), nullable=True)
+    is_active     = Column(Enum('yes', 'no'), nullable=False, default='yes')
+    is_first_login   = Column(DateTime, default=None)
+    locked_upto   = Column(DateTime, default=None)
+
+class UserRole(caerp_base):
+    __tablename__ = "user_roles"
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id     = Column(Integer, nullable=True)
+    role_id         = Column(Integer, nullable=True)
+    created_on      = Column(DateTime, nullable=False, default=func.now())
+    created_by      = Column(Integer, nullable=True)
+    modified_on     = Column(DateTime, default=None)
+    modified_by     = Column(Integer, nullable=True)
+    is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_on      = Column(DateTime, default=None)
+    deleted_by      = Column(Integer, nullable=True)
+
+
+
 class CountryDB(caerp_base):
     __tablename__ = "app_countries"
 
@@ -449,30 +479,30 @@ class QueryManager(caerp_base):
    
    
     
-class QueryView(caerp_base):
-    __tablename__ = 'view_user_queries'
+# class QueryView(caerp_base):
+#     __tablename__ = 'view_user_queries'
 
-    id = Column(Integer, primary_key=True)
-    query_id = Column(Integer)
-    query_description=Column(String)
-    query = Column(String)
-    is_deleted = Column(String)
-    queried_by = Column(Integer)
-    query_on = Column(DateTime)
-    is_resolved = Column(String)
-    resolved_by = Column(Integer)
-    resolved_on = Column(DateTime)
-    user_id = Column(Integer)
-    user_name = Column(String)
-    role_id = Column(Integer)
-    role = Column(String)
-    employee_number = Column(String)
-    first_name = Column(String)
-    last_name = Column(String)
-    gender_id = Column(Integer)
-    gender = Column(String)
-    designation_id = Column(Integer)
-    designation = Column(String)
+#     id = Column(Integer, primary_key=True)
+#     query_id = Column(Integer)
+#     query_description=Column(String)
+#     query = Column(String)
+#     is_deleted = Column(String)
+#     queried_by = Column(Integer)
+#     query_on = Column(DateTime)
+#     is_resolved = Column(String)
+#     resolved_by = Column(Integer)
+#     resolved_on = Column(DateTime)
+#     user_id = Column(Integer)
+#     user_name = Column(String)
+#     role_id = Column(Integer)
+#     role = Column(String)
+#     employee_number = Column(String)
+#     first_name = Column(String)
+#     last_name = Column(String)
+#     gender_id = Column(Integer)
+#     gender = Column(String)
+#     designation_id = Column(Integer)
+#     designation = Column(String)
     
 
 # class ConsultancyService(caerp_base):
@@ -660,29 +690,29 @@ class RefundReason(caerp_base):
 
 
 #--------------------------------Aparna--------------------------------------------------------------
-class Employee(caerp_base):
-    __tablename__ = "employee_master"
+# class Employee(caerp_base):
+#     __tablename__ = "employee_master"
 
-    employee_id           = Column(Integer, primary_key=True, autoincrement=True)
-    employee_number       = Column(String(50), nullable=False)
-    first_name            = Column(String(50), nullable=False)
-    middle_name           = Column(String(50), nullable=False)
-    last_name             = Column(String(50), nullable=False)
-    gender_id             = Column(Integer, nullable=False)
-    date_of_birth         = Column(Date, default=None)
-    nationality_id        = Column(Integer, nullable=False)
-    marital_status_id     = Column(Integer, nullable=False)
-    designation_id        = Column(Integer, nullable=False)
-    is_consultant         = Column(Enum('yes', 'no'), nullable=False, default='no') 
-    effective_from_date   = Column(Date, nullable=False)
-    effective_to_date     = Column(Date, default=None)
-    created_by            = Column(Integer, nullable=False, default=0)
-    created_on            = Column(DateTime, nullable=False, default=func.now())
-    modified_by           = Column(Integer, default=None)
-    modified_on           = Column(DateTime, default=None)
-    is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by            = Column(Integer, default=None)
-    deleted_on            = Column(DateTime, default=None)
+#     employee_id           = Column(Integer, primary_key=True, autoincrement=True)
+#     employee_number       = Column(String(50), nullable=False)
+#     first_name            = Column(String(50), nullable=False)
+#     middle_name           = Column(String(50), nullable=False)
+#     last_name             = Column(String(50), nullable=False)
+#     gender_id             = Column(Integer, nullable=False)
+#     date_of_birth         = Column(Date, default=None)
+#     nationality_id        = Column(Integer, nullable=False)
+#     marital_status_id     = Column(Integer, nullable=False)
+#     designation_id        = Column(Integer, nullable=False)
+#     is_consultant         = Column(Enum('yes', 'no'), nullable=False, default='no') 
+#     effective_from_date   = Column(Date, nullable=False)
+#     effective_to_date     = Column(Date, default=None)
+#     created_by            = Column(Integer, nullable=False, default=0)
+#     created_on            = Column(DateTime, nullable=False, default=func.now())
+#     modified_by           = Column(Integer, default=None)
+#     modified_on           = Column(DateTime, default=None)
+#     is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by            = Column(Integer, default=None)
+#     deleted_on            = Column(DateTime, default=None)
 
 
 # class EmployeePermanentAddress(caerp_base):
@@ -753,7 +783,7 @@ class Employee(caerp_base):
 
 #--------------------------------vipin--------------------------------------------------------------
 class EmployeeMaster(caerp_base):
-    __tablename__ = "employee_master_new"
+    __tablename__ = "employee_master"
 
     employee_id          = Column(Integer, primary_key=True, autoincrement=True)
     employee_number      = Column(String(50), nullable=False)

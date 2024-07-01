@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDetailsNew, EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
@@ -62,10 +62,72 @@ def save_employee_master(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
    auth_info = authenticate_user(token)
+  #  print(auth_info)
+   user_id = auth_info["user_id"]
+   print("USer id .............",user_id)
+   try:
+     result = db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
+
+     if Action == RecordActionType.INSERT_ONLY:
+       return {
+            "success": True,
+            "message": "Saved successfully",
+            "employee_id" : result
+            }
+     elif Action == RecordActionType.UPDATE_ONLY or Action == RecordActionType.UPDATE_AND_INSERT:
+       return {
+            "success": True,
+            "message": "Saved /Updated successfully"
+         } 
+   except Exception as e:    
+     raise HTTPException(status_code=500, detail=str(e))
+ 
+
+
+@router.post('/save_employee_master_new')
+def save_employee_master_new(
+    employee_id: int = 0,
+    id: List[int] = Query(None,
+    description="ID used for Update"),
+    Action: RecordActionType = Query(...),
+    employee_profile_component: Optional[str] = Query(None,
+    description="Comma-separated list of components to Update",
+    title="Components to Update"),
+    request: EmployeeDetailsNew = Body(...),
+    # request: EmployeeDetails = Depends(),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+  ):
+
+   """
+    Creation or updation of Employee Master.
+     
+    -**Request** : Data needed for creation/updation of Employee Master provided as schema "EmployeeDetails".
+
+    -**employeeid** : Integer parameter, the Employee Master identifier. 
+    - If employeeid is 0, it indicates creation of new Employee.
+    - If employeeid is not 0, it indicates updation of existing Employee.
+
+    -**id** : Integer parameter, primary key of detail tables to identify Employee profiles.
+    -  passed while updating detail tables.
+
+    -**Action** : a dropdown to choose the action to perform. Type of actions are:
+    -   INSERT_ONLY - to insert new Employee Master.
+    -   UPDATE_ONLY - to update master and detail tables.
+    -   INSERT_AND_UPDATE - to insert into detail tables.
+
+    -**employee_profile_component** : a textfield to add components for updating master/detail tables and inserting into detail tables.
+
+    -**db** : database session for adding and updating tables.
+   """
+   if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+   auth_info = authenticate_user(token)
    user_id = auth_info["user_id"]
 
    try:
-     result = db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
+     result = db_employee_master.save_employee_master_new(db, request, employee_id, id, user_id, Action, employee_profile_component)
 
      if Action == RecordActionType.INSERT_ONLY:
        return {
