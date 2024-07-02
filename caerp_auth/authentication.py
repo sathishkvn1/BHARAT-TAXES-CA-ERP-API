@@ -250,8 +250,9 @@ def get_token(
     request: Request = None,
     db: Session = Depends(get_db)):
     
-     
-    user = db.query(models.UserBaseNew).filter(models.UserBaseNew.user_name == request_data.username).first()
+    # user = db.query(models.UserBaseNew).filter(models.UserBaseNew.user_name == request_data.username).first()
+
+    user = db.query(models.UserBase).filter(models.UserBase.user_name == request_data.username).first()
     if not user:
         print("no.of attempts....",no_of_attempts)
         login_attempt = 3 - no_of_attempts

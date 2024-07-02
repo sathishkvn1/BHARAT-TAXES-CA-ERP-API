@@ -1,9 +1,9 @@
 from fastapi import HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import EmployeeMaster,UserBaseNew,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import UserBase,EmployeeMaster,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeDocumentsSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text
@@ -32,10 +32,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
   try:
     if (employee_id > 0 or employee_id < 0) and Action == RecordActionType.INSERT_ONLY:
       raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
-    
-    # if (employee_id <= 0 or employee_id is None) and (Action == RecordActionType.UPDATE_ONLY or Action == RecordActionType.UPDATE_AND_INSERT):
-    #   raise HTTPException(status_code=400, detail="Please provide the employee ID to Update")
-            
+     
     updated_entities = {}
     # new employee master creation
     if employee_id == 0: 
@@ -44,6 +41,9 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         existing_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_number == request.employee_master.employee_number).first()
         if existing_employee:
           raise HTTPException(status_code=400, detail="employee number exists! Please give a different number")
+        existing_user = db.query(UserBase).filter(UserBase.user_name == request.employee_security_credentials.user_name).first()
+        if existing_employee:
+          raise HTTPException(status_code=400, detail="user name exists! Please give a different name")
       
         data = request.employee_master.dict()
       
@@ -77,10 +77,10 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             "security_password": log_password,
             "is_active": 'yes'
         }
-        insert_user_log_stmt = insert(UserBaseNew).values(**users_new_data)
+        insert_user_log_stmt = insert(UserBase).values(**users_new_data)
         db.execute(insert_user_log_stmt)
         db.commit()
-
+       
         for role_id in request.user_roles.role_id :
             user_role_data = {
                 "employee_id": emp_id,
@@ -296,7 +296,8 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         
           
           if option == "employee_security_credentials" and request.employee_security_credentials:
-            existing_credential = db.query(UserBaseNew).filter(UserBaseNew.employee_id == employee_id).first()  
+            existing_credential = db.query(UserBase).filter(UserBase.employee_id == employee_id).first()  
+
             if existing_credential is None:
               raise HTTPException(status_code=404, detail=f"Security credentials with  id {id} not found") 
             credential_data = request.employee_security_credentials.dict()
@@ -323,7 +324,6 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
                 existing_roles = db.query(UserRole).filter(UserRole.employee_id == employee_id,
                                     UserRole.role_id == role_id
                 ).first()  
-                print("existing roles.......", existing_roles)
                 if existing_roles:
                   user_role_data = {
                       "employee_id": employee_id,

@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
@@ -22,8 +22,6 @@ router = APIRouter(
 
 
 # #save employee master
-
-
 @router.post('/save_employee_master')
 def save_employee_master(
     employee_id: int = 0,
@@ -64,8 +62,9 @@ def save_employee_master(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
    auth_info = authenticate_user(token)
+  #  print(auth_info)
    user_id = auth_info["user_id"]
-
+   print("USer id .............",user_id)
    try:
      result = db_employee_master.save_employee_master(db, request, employee_id, id, user_id, Action, employee_profile_component)
 

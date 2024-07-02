@@ -114,7 +114,7 @@ def user_password_reset(db: Session, user_id: int, password: str):
     existing_user = db.query(UserBase).filter(UserBase.employee_id == user_id).first()
     print("Existing user : ",existing_user)
   
-    existing_user.password= hashed_password
+    existing_user.login_password= hashed_password
    
     try:
         db.commit()  # Commit changes to the database

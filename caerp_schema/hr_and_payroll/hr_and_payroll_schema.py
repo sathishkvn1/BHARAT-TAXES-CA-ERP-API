@@ -5,8 +5,6 @@ from datetime import date, datetime
 from caerp_constants.caerp_constants import BooleanFlag
 
 
-
-    
 class EmployeeMasterSchema(BaseModel):
    # employee_id : int
    employee_number : Optional[str] = None
@@ -20,11 +18,7 @@ class EmployeeMasterSchema(BaseModel):
    joining_date : date
    next_increment_date : Optional[date]=None
    nationality_id : int
-   # personal_mobile_number : Optional[str] = None
-   # personal_email_id : Optional[str] = None
-   # user_name: str
-   # login_password: str
-   # role_ids  :  List[int]
+
     
    class config():
       orm_mode=True
@@ -273,9 +267,6 @@ class EmployeeSecurityCredentials(BaseModel):
 class EmployeeUserRoles(BaseModel):
     
     role_id            : list[int] 
-
-
-   
 
 class EmployeeDetails(BaseModel):
    employee_master :   Optional[EmployeeMasterSchema] = None

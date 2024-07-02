@@ -1,5 +1,5 @@
 from fastapi import APIRouter,Depends,HTTPException,status
-from caerp_db.common.models import UserBase
+from caerp_db.common.models import UserBase,EmployeeContactDetails,EmployeeMaster
 from caerp_schema.common.common_schema import UserCreateSchema
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
@@ -83,8 +83,12 @@ def forgot_password(
     if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Please Check your user name")
     else:
-        if user.role_id == 1:
-            employee_data = db_employee_master.get_employee_master_by_id(db, user.employee_id)
+        # if user.role_id == 1:
+            # employee_data = db_employee_master.get_employee_master_by_id(db, user.employee_id)
+            employee_data = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == user.employee_id).first()
+                
+            employee_contact_data =  db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == user.employee_id).first()
+               
             mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
             new_otp = db_otp.create_otp(db, mobile_otp_value,user.employee_id)
             
@@ -102,7 +106,7 @@ def forgot_password(
             
            
             try:
-                send_message.send_sms_otp(employee_data.mobile_phone,template_message,temp_id,db)
+                send_message.send_sms_otp(employee_contact_data.personal_mobile_number,template_message,temp_id,db)
                 data = {
                     'user_id': user.employee_id,
                     'role_id': user.role_id,
@@ -123,8 +127,8 @@ def forgot_password(
             except Exception as e:
                 # Handle sms sending failure
                 print(f"Failed to send message: {str(e)}")
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
+        # else:
+        #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
  
  
 @router.get("/password_reset")

@@ -191,21 +191,21 @@ class SmsTemplates(caerp_base):
 
 
     
+# class UserBase(caerp_base):
+#     __tablename__ = "users"
+
+#     id            = Column(Integer, primary_key=True, autoincrement=True)
+#     employee_id   = Column(Integer, nullable=True)
+#     user_name    = Column(String(50), nullable=True)
+#     password      = Column(String(200), nullable=True)
+#     role_id       = Column(Integer, nullable=True)
+#     designation_id=Column(Integer, nullable=True)
+#     is_active     = Column(Enum('yes', 'no'), nullable=False, default='yes')
+#     locked_upto   = Column(DateTime, default=None)
+#     modified_by   = Column(Integer, default=None)
+#     modified_on   = Column(DateTime, default=None)
+
 class UserBase(caerp_base):
-    __tablename__ = "users"
-
-    id            = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id   = Column(Integer, nullable=True)
-    user_name    = Column(String(50), nullable=True)
-    password      = Column(String(200), nullable=True)
-    role_id       = Column(Integer, nullable=True)
-    designation_id=Column(Integer, nullable=True)
-    is_active     = Column(Enum('yes', 'no'), nullable=False, default='yes')
-    locked_upto   = Column(DateTime, default=None)
-    modified_by   = Column(Integer, default=None)
-    modified_on   = Column(DateTime, default=None)
-
-class UserBaseNew(caerp_base):
     __tablename__ = "users_new"
 
     id            = Column(Integer, primary_key=True, autoincrement=True)
@@ -232,7 +232,7 @@ class UserRole(caerp_base):
     is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_on      = Column(DateTime, default=None)
     deleted_by      = Column(Integer, nullable=True)
-    
+
 class UsersRole(caerp_base):
     __tablename__ = "users_role"
 
@@ -245,6 +245,7 @@ class UsersRole(caerp_base):
     is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_on      = Column(DateTime, default=None)
     deleted_by      = Column(Integer, nullable=True)
+
 
 
 
