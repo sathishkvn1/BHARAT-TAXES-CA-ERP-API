@@ -361,6 +361,12 @@ def get_employee_details(
 
 
 
+@router.get("/get_user_roles")
+def get_user_roles(employee_id: int, db:Session =Depends(get_db)):
+  """
+    Retrieve roles of an employee.
+  """
+  return db_employee_master.get_user_roles(db,employee_id)
 
 
 # get consultants

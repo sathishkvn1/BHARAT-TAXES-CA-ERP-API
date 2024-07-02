@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
 
 # from caerp_db.common.models import Employee
+from caerp_db.common.models import EmployeeEmployementDetails, EmployeeMaster
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
@@ -11,7 +12,8 @@ from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_schema.office.office_schema import AppointmentStatusConstants, Category, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
-from sqlalchemy import and_,or_
+from sqlalchemy import and_,or_, func
+
 # from caerp_constants.caerp_constants import SearchCriteria
 from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
@@ -351,15 +353,15 @@ def get_appointments(
         if id != 0:
             search_conditions.append(OffAppointmentVisitMasterView.appointment_master_id == id)
 
-        # Add condition for consultant ID
+        # Add condition for consultant ID if provided
         if consultant_id != "ALL":
             search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
 
-        # Add condition for service ID
+        # Add condition for service ID if provided
         if service_id != "ALL":
             search_conditions.append(OffAppointmentVisitDetailsView.service_id == service_id)
 
-        # Add condition for status ID
+        # Add condition for status ID if provided
         if status_id != "ALL":
             search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status_id)
 
@@ -378,13 +380,28 @@ def get_appointments(
                 )
             )
 
+        # Add condition to check consultant status in employee_employment_details
+        current_date = date.today()
+        consultant_conditions = [
+            EmployeeEmployementDetails.is_consultant == "yes",
+            EmployeeEmployementDetails.effective_from_date <= current_date,
+            or_(
+                EmployeeEmployementDetails.effective_to_date.is_(None),
+                EmployeeEmployementDetails.effective_to_date >= current_date
+            )
+        ]
+
         # Execute the query
         query_result = db.query(OffAppointmentVisitDetailsView).join(
             OffAppointmentVisitMasterView,
             OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
-        ).filter(and_(*search_conditions)).all()
-
-  
+        ).join(
+            EmployeeEmployementDetails,
+            OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
+        ).filter(
+            and_(*search_conditions),
+            and_(*consultant_conditions)
+        ).all()
 
         if not query_result:
             raise HTTPException(status_code=404, detail="Appointment not found")
@@ -394,7 +411,7 @@ def get_appointments(
 
         # Iterate over query result
         for visit_details_data in query_result:
-            if visit_details_data.appointment_visit_details_is_deleted == "no":  # Correctly check the is_deleted field
+            if visit_details_data.appointment_visit_details_is_deleted == "no":
                 appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
 
                 # Get the appointment master corresponding to the visit details
@@ -424,8 +441,6 @@ def get_appointments(
 
         # Convert dictionary values to list of ResponseSchema objects
         appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
-
-       
 
         return appointments
 
@@ -715,17 +730,35 @@ def save_off_document_master(
 
 
 
-# def get_consultants(db: Session) -> List[Employee]:
-#     """
-#     Fetches all consultants from the database.
+from sqlalchemy.sql import text
+def get_consultants(db: Session):
+    sql = text("""
+    SELECT 
+        em.employee_id,
+        em.first_name,
+        em.middle_name,
+        em.last_name
+    FROM 
+        employee_master em
+    INNER JOIN 
+        employee_employement_details eed
+    ON 
+        em.employee_id = eed.employee_id
+    WHERE 
+        eed.is_consultant = 'yes'
+        AND eed.effective_from_date = (
+            SELECT MAX(eed_inner.effective_from_date)
+            FROM employee_employement_details eed_inner
+            WHERE eed_inner.employee_id = eed.employee_id
+        )
+        AND eed.effective_from_date <= CURDATE()
+        AND (eed.effective_to_date IS NULL OR eed.effective_to_date >= CURDATE())
+        AND em.is_deleted = 'no'
+        AND eed.is_deleted = 'no';
+    """)
+    result = db.execute(sql)
+    return result.fetchall()
 
-#     Args:
-#         db (Session): Database session.
-
-#     Returns:
-#         List[Employee]: List of consultants.
-#     """
-#     return db.query(Employee).filter(Employee.is_consultant == 'yes').all()
 
 # def get_all_employees(db: Session) -> List[Employee]:
 #     """
@@ -739,20 +772,37 @@ def save_off_document_master(
 #     """
 #     return db.query(Employee).filter(Employee.is_consultant == 'no').all()
 
-
+def get_all_non_consultant_employees(db: Session):
+    query = (
+        db.query(EmployeeMaster)
+        .join(EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id)
+        .filter(
+            EmployeeEmployementDetails.is_consultant == 'no',
+            EmployeeMaster.is_deleted == 'no',
+            EmployeeEmployementDetails.is_deleted == 'no'
+        )
+    )
+    return query.all()
 
 #---------------------------------------------------------------------------------------------------------------
-def get_all_service(db: Session) -> List[OffViewConsultantDetails]:
+# def get_all_service(db: Session) -> List[OffViewConsultantDetails]:
 
-    return db.query(OffViewConsultantDetails).all()
+#     return db.query(OffViewConsultantDetails).all()
 
 
+def get_all_service(db: Session) -> List[Dict[str, any]]:
+    """
+    Fetch all services from the off_service_goods_master table.
+    """
+    services = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.is_deleted == 'no').all()
+    services_data = [{"id": service.id, "name": service.service_goods_name} for service in services]
+    return services_data
 #---------------------------------------------------------------------------------------------------------------
 
-def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
-    # Query the database to get consultants for the given service_id
-    consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
-    return consultants
+# def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
+#     # Query the database to get consultants for the given service_id
+#     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
+#     return consultants
 
 
 #---------------------------------------------------------------------------------------------------------------
