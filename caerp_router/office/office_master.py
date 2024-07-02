@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails,  OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails,  OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1199,13 +1199,13 @@ def get_all_service_document_data_master(
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 #-----------------------------------------------------------------------------------------
-@router.get('/services/get_service_documents_list_by_group_category', response_model=List[ServiceDocumentsList_Group])
+@router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
 def get_service_documents_list_by_group_category(
-    group_id:  Optional[int] = None,
+    group_id: Optional[int] = None,
     sub_group_id: Optional[int] = None,
     category_id: Optional[int] = None,
     db: Session = Depends(get_db)
-):  
+):
     """
     Retrieve a list of service documents filtered by group, sub-group, and category.
 
@@ -1213,13 +1213,12 @@ def get_service_documents_list_by_group_category(
     - **group_id**: Optional query parameter to filter documents by group ID.
     - **sub_group_id**: Optional query parameter to filter documents by sub-group ID.
     - **category_id**: Optional query parameter to filter documents by category ID.
-    **   if all arguments are null or group_id == 0,then get all groups
+      If all arguments are null or group_id == 0, then get all groups.
 
     Returns:
     - A list of filtered service documents that match the provided criteria.
     - If no matching documents are found, returns a 404 status code with a message "No data found".
     - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
-
     """
     try:
         results = db_office_master.get_service_documents_list_by_group_category(
@@ -1227,14 +1226,16 @@ def get_service_documents_list_by_group_category(
             
         if not results:
             return JSONResponse(status_code=404, content={"message": "No data found"})
+        
+        # If the results are a list of Service_Group objects
+        if isinstance(results[0], Service_Group):
+            return JSONResponse(status_code=200, content={"group": [result.dict() for result in results]})
 
         # Filter out null fields from each ServiceDocumentsList_Group object
-        filtered_results = []
-        for result in results:
-            filtered_result = {
-                k: v for k, v in result.dict().items() if v is not None
-            }
-            filtered_results.append(filtered_result)
+        filtered_results = [
+            {k: v for k, v in result.dict().items() if v is not None}
+            for result in results
+        ]
 
         # Ensure the response is a list of dictionaries matching the schema
         return JSONResponse(status_code=200, content=filtered_results)
@@ -1242,6 +1243,7 @@ def get_service_documents_list_by_group_category(
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 
 
 
@@ -1308,51 +1310,6 @@ def get_service_documents_data_details(
 
 from datetime import datetime
 
-@router.get("/test/consultant_employees", response_model=List[ConsultantEmployee])
-def get_consultant_employees(
-    db: Session = Depends(get_db),
-    search_query: str = Query(None, description="Search query to filter consultant employees")
-):
-    current_date = datetime.utcnow().date()
-    query = db.query(
-        EmployeeMaster.employee_id,
-        func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
-        EmployeeMaster.employee_number,
-        EmployeeContactDetails.personal_email_id.label('personal_email'),
-        EmployeeContactDetails.official_email_id.label('official_email'),
-        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
-        EmployeeContactDetails.official_mobile_number.label('official_mobile')
-    ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
-    ).join(
-        EmployeeContactDetails,
-        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
-    ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
-        EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
-        EmployeeContactDetails.is_deleted == 'no'
-    )
-
-    if search_query:
-        search_filter = (
-            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
-        )
-        query = query.filter(search_filter)
-
-    return query.all()
-
-
 @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 def get_consultant_employees(
     db: Session = Depends(get_db),
@@ -1407,43 +1364,72 @@ def get_consultant_employees(
 
 
 
+# @router.post("/save_consultant_service_details/")
+# def save_consultant_service_details(consultant_service: List[ConsultantService], 
+#                                 id: int,
+#                                 action_type: RecordActionType,
+#                                 db: Session = Depends(get_db),
+#                                 token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Save or update consultant service details.
+
+#     **Request Body:**
+#     The request body should be a JSON array containing one or more objects with the following fields:
+
+#     - `consultant_id` (integer, required): The ID of the consultant.
+#     - `service_goods_master_id` (integer, required): The ID of the service or goods master.
+#     - `consultation_fee` (float, required): The consultation fee.
+#     - `slot_duration_in_minutes` (integer, required): The slot duration in minutes.
+#     - `effective_from_date` (date, required): The date from which the record is effective.
+#     - `effective_to_date` (date, optional): The date until which the record is effective.
+
+#     **Request Parameters:**
+#     - `id` (integer, required): The ID of the record to be updated. Use 0 for inserting a new record.
+#     - `action_type` (string, required): The action to be performed. Supported value: `INSERT_AND_UPDATE`.
+
+#     **Headers:**
+#     - `Authorization` (string, required): Bearer token for authentication.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+#     try:
+#         for data in consultant_service:
+#            db_office_master.save_consultant_service_details_db(data, user_id, id, action_type, db)
+#         return {"success": True, "detail": "Saved successfully"}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e), success=False)
+
+
 @router.post("/save_consultant_service_details/")
-def save_consultant_service_details(consultant_service: List[ConsultantService], 
-                                id: int,
-                                action_type: RecordActionType,
-                                db: Session = Depends(get_db),
-                                token: str = Depends(oauth2.oauth2_scheme)):
+def save_consultant_service_details(
+    consultant_service: List[ConsultantService],
+    consultant_id: int,  # Add consultant_id as a parameter
+    id: int,
+    action_type: RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
     """
     Save or update consultant service details.
-
-    **Request Body:**
-    The request body should be a JSON array containing one or more objects with the following fields:
-
-    - `consultant_id` (integer, required): The ID of the consultant.
-    - `service_goods_master_id` (integer, required): The ID of the service or goods master.
-    - `consultation_fee` (float, required): The consultation fee.
-    - `slot_duration_in_minutes` (integer, required): The slot duration in minutes.
-    - `effective_from_date` (date, required): The date from which the record is effective.
-    - `effective_to_date` (date, optional): The date until which the record is effective.
-
-    **Request Parameters:**
-    - `id` (integer, required): The ID of the record to be updated. Use 0 for inserting a new record.
-    - `action_type` (string, required): The action to be performed. Supported value: `INSERT_AND_UPDATE`.
-
-    **Headers:**
-    - `Authorization` (string, required): Bearer token for authentication.
     """
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+        raise HTTPException(status_code=401, detail="Token is missing")
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
+    
     try:
         for data in consultant_service:
-           db_office_master.save_consultant_service_details_db(data, user_id, id, action_type, db)
+            db_office_master.save_consultant_service_details_db(data, consultant_id, user_id, id, action_type, db)
+        
         return {"success": True, "detail": "Saved successfully"}
+    
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e), success=False)
+
 
 #------------------------------------------------------------------------------------------------
 

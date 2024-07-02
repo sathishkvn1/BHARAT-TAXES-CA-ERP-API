@@ -1179,22 +1179,14 @@ def get_service_documents_list_by_group_category(
     group_id: Optional[int] = None,
     sub_group_id: Optional[int] = None,
     category_id: Optional[int] = None
-) -> List[ServiceDocumentsList_Group]:
+) -> Union[List[ServiceDocumentsList_Group], List[Service_Group]]:
+ 
     try:
         results = []
         
         if group_id is None and sub_group_id is None and category_id is None or group_id == 0:  # If all are None or group_id is 0
-            groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
-            results = [
-                ServiceDocumentsList_Group(
-                    group=Service_Group(id=group.id, group_name=group.group_name or ""),
-                    # sub_group=None,
-                    # category=None,
-                    # sub_category=None
-                ) for group in groups
-            ]
-            return results
-
+            return _get_all_groups(db)  
+         
         if group_id is not None:
             group = db.query(OffServiceGoodsGroup).filter_by(id=group_id, is_deleted='no').first()
             if not group:
@@ -1258,19 +1250,66 @@ def get_service_documents_list_by_group_category(
         return results
 
     except Exception as e:
-        # logging.error(f"Unexpected error: {str(e)}")
         raise e
+        
+
+
+def _get_all_groups(db: Session) -> List[Service_Group]:
+    groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
+    return [Service_Group(id=group.id, group_name=group.group_name or "") for group in groups]
 
 
 #-----------------------------------------------------------------------------------------------
 
 
 
-def save_consultant_service_details_db(data: ConsultantService, user_id: int, id: int, action_type: RecordActionType, db: Session):
+# def save_consultant_service_details_db(data: ConsultantService, user_id: int, id: int, action_type: RecordActionType, db: Session):
+#     if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
+#         # Check if a record with the given consultant_id and service_goods_master_id already exists
+#         existing_record = db.query(OffConsultantServiceDetails).filter(
+#             OffConsultantServiceDetails.consultant_id == data.consultant_id,
+#             OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id
+#         ).first()
+        
+#         if existing_record:
+#             # If the existing record's effective_to_date is None, update it
+#             if existing_record.effective_to_date is None:
+#                 existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+#                 existing_record.modified_by = user_id
+#                 db.commit()
+        
+#         # Prepare the data dictionary for the new record
+#         new_record_data = {
+#             key: getattr(data, key)
+#             for key in [
+#                 "consultant_id",
+#                 "service_goods_master_id",
+#                 "consultation_fee",
+#                 "slot_duration_in_minutes",
+#                 "effective_from_date",
+#                 "effective_to_date"  # This can be None, which is acceptable
+#             ]
+#         }
+#         new_record_data["created_by"] = user_id
+#         new_record_data["created_on"] = datetime.now()
+
+#         # Create a new instance of OffConsultantServiceDetails
+#         new_record = OffConsultantServiceDetails(**new_record_data)
+#         db.add(new_record)
+#         db.commit()
+
+def save_consultant_service_details_db(
+    data: ConsultantService,
+    consultant_id: int,
+    user_id: int,
+    id: int,
+    action_type: RecordActionType,
+    db: Session
+):
     if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
         # Check if a record with the given consultant_id and service_goods_master_id already exists
         existing_record = db.query(OffConsultantServiceDetails).filter(
-            OffConsultantServiceDetails.consultant_id == data.consultant_id,
+            OffConsultantServiceDetails.consultant_id == consultant_id,
             OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id
         ).first()
         
@@ -1285,7 +1324,6 @@ def save_consultant_service_details_db(data: ConsultantService, user_id: int, id
         new_record_data = {
             key: getattr(data, key)
             for key in [
-                "consultant_id",
                 "service_goods_master_id",
                 "consultation_fee",
                 "slot_duration_in_minutes",
@@ -1293,6 +1331,7 @@ def save_consultant_service_details_db(data: ConsultantService, user_id: int, id
                 "effective_to_date"  # This can be None, which is acceptable
             ]
         }
+        new_record_data["consultant_id"] = consultant_id  # Add consultant_id to new record data
         new_record_data["created_by"] = user_id
         new_record_data["created_on"] = datetime.now()
 
@@ -1300,8 +1339,6 @@ def save_consultant_service_details_db(data: ConsultantService, user_id: int, id
         new_record = OffConsultantServiceDetails(**new_record_data)
         db.add(new_record)
         db.commit()
-
-
 
 # def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id: int, id: int, action_type: RecordActionType, db: Session):
 #     """Save consultant schedule details."""

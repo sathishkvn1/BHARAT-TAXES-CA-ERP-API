@@ -622,17 +622,34 @@ class TimeSlotResponse(BaseModel):
 
 
     
+
+
+# class ConsultantEmployee(BaseModel):
+#     employee_id: int
+#     employee_name: str
+#     employee_number: str
+#     personal_email: str
+#     official_email: str
+#     personal_mobile: str
+#     official_mobile: str
+#     department_name: str
+#     designation_name: str
+
+
+
 class ConsultantEmployee(BaseModel):
     employee_id: int
     employee_name: str
     employee_number: str
     personal_email: str
-    official_email: str
+    official_email: Optional[str]
     personal_mobile: str
-    official_mobile: str
+    official_mobile: Optional[str]
+    department_name: str
+    designation: Optional[str]
     
 class ConsultantService(BaseModel):
-    consultant_id:int
+    # consultant_id:int
     service_goods_master_id:int
     consultation_fee:float
     slot_duration_in_minutes:int
