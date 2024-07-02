@@ -519,6 +519,19 @@ def get_consultants_and_services(
     service_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
+    """
+    Retrieve consultants, non-consultant employees, or all services based on the provided category.
+
+    Parameters:
+    - category (str, optional): Selection category ('consultant', 'all').
+    - service_id (int, optional): Identifier for filtering services by ID.
+
+    Returns:
+    - EmployeeResponse or dict: Depending on the category:
+        - For 'consultant': JSON response containing a list of consultants.
+        - For 'all': JSON response containing a list of non-consultant employees.
+        - Otherwise: JSON response containing all services available.
+    """
     if category == "consultant":
         # Fetch consultants from the database
         consultants = db_office_master.get_consultants(db)

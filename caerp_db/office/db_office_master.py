@@ -799,10 +799,10 @@ def get_all_service(db: Session) -> List[Dict[str, any]]:
     return services_data
 #---------------------------------------------------------------------------------------------------------------
 
-# def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
-#     # Query the database to get consultants for the given service_id
-#     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
-#     return consultants
+def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
+    # Query the database to get consultants for the given service_id
+    consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
+    return consultants
 
 
 #---------------------------------------------------------------------------------------------------------------
