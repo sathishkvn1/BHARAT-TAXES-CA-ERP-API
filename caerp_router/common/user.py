@@ -66,6 +66,7 @@ def update_active_status(
     return db_user.update_user_active_status(db,active_status,user_name)
 
 
+
 @router.post('/forgot_password')
 def forgot_password(
     user_name: str,
@@ -129,5 +130,23 @@ def forgot_password(
              else:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=" Only an ADMIN or Super Admin can change their password.")
  
+ 
+@router.get("/password_reset")
+def password_reset(
+                     password: str,
+
+                     db: Session = Depends(get_db),
+                    token: str = Depends(oauth2.oauth2_scheme)
+                    ):
+    
+    
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+   
+    user_id = payload.get("user_id")
+   
+    return db_user.user_password_reset(db, user_id, password)       
+           
+
+
 
 
