@@ -2,11 +2,11 @@
 
 
 from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
+from caerp_db.common.models import AppEducationalQualificationsMaster, AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -561,6 +561,30 @@ def delete_refund_reason(db: Session,
 
 
 
+
+def get_villages_data(db: Session, pincode: str) -> VillageResponse:
+    result = db.query(AppViewVillages).filter(AppViewVillages.pincode == pincode).all()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No villages found for the given pincode")
+
+    villages = [
+        Village(
+            id=row.app_village_id,
+            village_name=row.village_name,
+            lsg_type=row.lsg_type,
+            lsg_sub_type=row.lsg_sub_type,
+            lsg_name=row.lsg_name
+        ) for row in result
+    ]
+
+    first_row = result[0]
+    return VillageResponse(
+        villages=villages,
+        block=first_row.block_name,
+        taluk=first_row.taluk_name,
+        country="India"
+    )
 
 
 

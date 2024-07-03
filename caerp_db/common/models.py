@@ -1063,4 +1063,26 @@ class EmployeeEducationalQualification(caerp_base):
     deleted_by = Column(Integer, default=None)
     deleted_on = Column(DateTime, default=None)
     
+class AppViewVillages(caerp_base):
+    __tablename__ = "app_view_villages"
+    
+    app_village_id = Column(Integer, primary_key=True, index=True)
+    village_name = Column(String)
+    village_code = Column(String)
+    post_office_name = Column(String)
+    pincode = Column(String)
+    lsg_id = Column(Integer)
+    lsg_name = Column(String)
+    lsg_code = Column(String)
+    lsg_type_id = Column(Integer)
+    lsg_type = Column(String)
+    lsg_sub_type_id = Column(Integer)
+    lsg_sub_type = Column(String)
+    block_id = Column(Integer)
+    block_code = Column(String)
+    block_name = Column(String)
+    taluk_id = Column(Integer)
+    taluk_name = Column(String)
+    taluk_code = Column(String)
+
     

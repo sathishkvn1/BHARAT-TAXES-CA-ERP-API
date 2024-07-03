@@ -1812,7 +1812,6 @@ def crud_nationality(crud_operation: CRUD, nationality_id: int = None, nationali
     else:
         raise HTTPException(status_code=400, detail="Invalid CRUD operation")
     
-    
 
 @router.get("/get/villages_by_pincode/", response_model=VillageResponse)
 def get_villages(pincode: str, db: Session = Depends(get_db)):
