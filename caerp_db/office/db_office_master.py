@@ -10,7 +10,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, Category, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultantScheduleCreate, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
+from caerp_schema.office.office_schema import AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
 from sqlalchemy import and_,or_, func
 
@@ -1260,15 +1260,23 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 
 
 #-----------------------------------------------------------------------------------------------
-
-
-
-# def save_consultant_service_details_db(data: ConsultantService, user_id: int, id: int, action_type: RecordActionType, db: Session):
-#     if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
+# def save_consultant_service_details_db(
+#     data: ConsultantService,
+#     consultant_id: Optional[int],
+#     user_id: int,
+#     id: Optional[int],
+#     action_type: RecordActionType,
+#     db: Session
+# ):
+#     if action_type == RecordActionType.UPDATE_AND_INSERT:
+#         if consultant_id is None:
+#             raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+        
 #         # Check if a record with the given consultant_id and service_goods_master_id already exists
 #         existing_record = db.query(OffConsultantServiceDetails).filter(
-#             OffConsultantServiceDetails.consultant_id == data.consultant_id,
-#             OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id
+#             OffConsultantServiceDetails.consultant_id == consultant_id,
+#             OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id,
+#             OffConsultantServiceDetails.effective_to_date.is_(None)
 #         ).first()
         
 #         if existing_record:
@@ -1276,13 +1284,13 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 #             if existing_record.effective_to_date is None:
 #                 existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
 #                 existing_record.modified_by = user_id
+#                 existing_record.modified_on = datetime.now()
 #                 db.commit()
         
 #         # Prepare the data dictionary for the new record
 #         new_record_data = {
 #             key: getattr(data, key)
 #             for key in [
-#                 "consultant_id",
 #                 "service_goods_master_id",
 #                 "consultation_fee",
 #                 "slot_duration_in_minutes",
@@ -1290,6 +1298,7 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 #                 "effective_to_date"  # This can be None, which is acceptable
 #             ]
 #         }
+#         new_record_data["consultant_id"] = consultant_id  # Add consultant_id to new record data
 #         new_record_data["created_by"] = user_id
 #         new_record_data["created_on"] = datetime.now()
 
@@ -1297,135 +1306,173 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 #         new_record = OffConsultantServiceDetails(**new_record_data)
 #         db.add(new_record)
 #         db.commit()
+    
+#     elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+        
+        
+#         # Find the existing record by id
+#         existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
+        
+#         if existing_record:
+            
+#         # Update existing record with new data
+#             for key, value in data.dict().items():
+#                 if value is not None:
+#                     setattr(existing_record, key, value)
+#             existing_record.modified_by = user_id
+#             existing_record.modified_on = datetime.now()
+#             db.commit()
+
+#         else:
+#             raise ValueError("Invalid action type provided.")
+#     else:
+#         raise ValueError("Invalid action type or ID provided.")
+    
+    
 
 def save_consultant_service_details_db(
     data: ConsultantService,
-    consultant_id: int,
+    consultant_id: Optional[int],
     user_id: int,
-    id: int,
+    id: Optional[int],
     action_type: RecordActionType,
     db: Session
 ):
-    if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
-        # Check if a record with the given consultant_id and service_goods_master_id already exists
-        existing_record = db.query(OffConsultantServiceDetails).filter(
-            OffConsultantServiceDetails.consultant_id == consultant_id,
-            OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id
-        ).first()
-        
-        if existing_record:
-            # If the existing record's effective_to_date is None, update it
-            if existing_record.effective_to_date is None:
-                existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
-                existing_record.modified_by = user_id
-                db.commit()
-        
-        # Prepare the data dictionary for the new record
-        new_record_data = {
-            key: getattr(data, key)
-            for key in [
-                "service_goods_master_id",
-                "consultation_fee",
-                "slot_duration_in_minutes",
-                "effective_from_date",
-                "effective_to_date"  # This can be None, which is acceptable
-            ]
-        }
-        new_record_data["consultant_id"] = consultant_id  # Add consultant_id to new record data
-        new_record_data["created_by"] = user_id
-        new_record_data["created_on"] = datetime.now()
-
-        # Create a new instance of OffConsultantServiceDetails
-        new_record = OffConsultantServiceDetails(**new_record_data)
-        db.add(new_record)
-        db.commit()
-
-# def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id: int, id: int, action_type: RecordActionType, db: Session):
-#     """Save consultant schedule details."""
-#     try:
-#         if action_type == RecordActionType.INSERT_AND_UPDATE and id == 0:
-#             existing_schedule = db.query(OffConsultantSchedule).filter(
-#                 OffConsultantSchedule.consultant_id == schedule_data.consultant_id,
-#                 OffConsultantSchedule.day_of_week_id == schedule_data.day_of_week_id,
-#                 OffConsultantSchedule.consultation_mode_id == schedule_data.consultation_mode_id
-#             ).first()
-            
-#             if existing_schedule:
-#                 if existing_schedule.effective_to_date is None:
-#                     existing_schedule.effective_to_date = schedule_data.effective_from_date - timedelta(days=1)
-#                     existing_schedule.modified_by = user_id
-#                     db.commit()
-                
-#                 new_schedule = OffConsultantSchedule(
-#                     consultant_id=schedule_data.consultant_id,
-#                     day_of_week_id=schedule_data.day_of_week_id,
-#                     consultation_mode_id=schedule_data.consultation_mode_id,
-#                     morning_start_time=schedule_data.morning_start_time,
-#                     morning_end_time=schedule_data.morning_end_time,
-#                     afternoon_start_time=schedule_data.afternoon_start_time,
-#                     afternoon_end_time=schedule_data.afternoon_end_time,
-#                     is_normal_schedule=schedule_data.is_normal_schedule,
-#                     consultation_date=schedule_data.consultation_date,
-#                     effective_from_date=schedule_data.effective_from_date,
-#                     effective_to_date=schedule_data.effective_to_date,
-#                     created_by=user_id
-#                 )
-#                 db.add(new_schedule)
-#             else:
-#                 new_schedule = OffConsultantSchedule(
-#                     consultant_id=schedule_data.consultant_id,
-#                     day_of_week_id=schedule_data.day_of_week_id,
-#                     consultation_mode_id=schedule_data.consultation_mode_id,
-#                     morning_start_time=schedule_data.morning_start_time,
-#                     morning_end_time=schedule_data.morning_end_time,
-#                     afternoon_start_time=schedule_data.afternoon_start_time,
-#                     afternoon_end_time=schedule_data.afternoon_end_time,
-#                     is_normal_schedule=schedule_data.is_normal_schedule,
-#                     consultation_date=schedule_data.consultation_date,
-#                     effective_from_date=schedule_data.effective_from_date,
-#                     effective_to_date=schedule_data.effective_to_date,
-#                     created_by=user_id
-#                 )
-#                 db.add(new_schedule)
-#         else:
-#             # Handle other action types or id values
-#             pass
-        
-#         db.commit()
-#         return True
-#     except Exception as e:
-#         db.rollback()
-#         raise e
-
-
-def save_consultant_schedule(schedule_data: OffConsultantScheduleCreate, user_id: int, id: int, action_type: RecordActionType, db: Session):
-    """Save consultant schedule details."""
     try:
-        schedule_dict = schedule_data.dict()  # Convert the data object to a dictionary
-        if action_type == RecordActionType.UPDATE_AND_INSERT and id == 0:
-            existing_schedule = db.query(OffConsultantSchedule).filter(
-                OffConsultantSchedule.consultant_id == schedule_dict['consultant_id'],
-                OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
-                OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id']
+        if action_type == RecordActionType.UPDATE_AND_INSERT:
+            if consultant_id is None:
+                raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+            
+            # Check if a record with the given consultant_id and service_goods_master_id already exists
+            existing_record = db.query(OffConsultantServiceDetails).filter(
+                OffConsultantServiceDetails.consultant_id == consultant_id,
+                OffConsultantServiceDetails.service_goods_master_id == data.service_goods_master_id,
+                OffConsultantServiceDetails.effective_to_date.is_(None)
             ).first()
             
-            if existing_schedule and schedule_dict['is_normal_schedule'] == 'yes':
-                if existing_schedule.effective_to_date is None:
-                    existing_schedule.effective_to_date = schedule_dict['effective_from_date'] - timedelta(days=1)
-                    existing_schedule.modified_by = user_id
+            if existing_record:
+                # If the existing record's effective_to_date is None, update it
+                if existing_record.effective_to_date is None:
+                    existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+                    existing_record.modified_by = user_id
+                    existing_record.modified_on = datetime.now()
                     db.commit()
-              
-                new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id,created_on=datetime.now())
-                db.add(new_schedule)
-            else:
-                new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id,created_on=datetime.now())
-                db.add(new_schedule)
-        else:
-            # Handle other action types or id values
-            pass
+            
+            # Prepare the data dictionary for the new record
+            new_record_data = {
+                key: getattr(data, key)
+                for key in [
+                    "service_goods_master_id",
+                    "consultation_fee",
+                    "slot_duration_in_minutes",
+                    "effective_from_date",
+                    "effective_to_date"  # This can be None, which is acceptable
+                ]
+            }
+            new_record_data["consultant_id"] = consultant_id  # Add consultant_id to new record data
+            new_record_data["created_by"] = user_id
+            new_record_data["created_on"] = datetime.now()
+
+            # Create a new instance of OffConsultantServiceDetails
+            new_record = OffConsultantServiceDetails(**new_record_data)
+            db.add(new_record)
+            db.commit()
         
-        db.commit()
-        return True
+        elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+            # Find the existing record by id
+            existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
+            
+            if existing_record:
+                # Log the existing record before updating
+                print(f"Existing record before update: {existing_record.__dict__}")
+                
+                # Update existing record with new data
+                for key, value in data.dict().items():
+                    if value is not None:
+                        setattr(existing_record, key, value)
+                
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.now()
+                db.commit()
+
+                # Log the existing record after updating
+                print(f"Existing record after update: {existing_record.__dict__}")
+
+            else:
+                raise ValueError(f"Record with ID {id} not found.")
+        else:
+            raise ValueError("Invalid action type or ID provided.")
+    
+    except Exception as e:
+        db.rollback()
+        raise e
+
+
+
+
+
+
+
+
+from datetime import timedelta
+
+def save_consultant_schedule(
+    schedule_data: ConsultantScheduleCreate,
+    consultant_id: Optional[int],
+    user_id: int,
+    id: Optional[int],
+    action_type: RecordActionType,
+    db: Session
+):
+    try:
+        schedule_dict = schedule_data.dict()
+
+        if action_type == RecordActionType.UPDATE_AND_INSERT:
+            if consultant_id is None:
+                raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+            
+            schedule_dict['consultant_id'] = consultant_id
+
+            # Query existing active schedule
+            existing_schedule = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
+                OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
+                OffConsultantSchedule.effective_to_date.is_(None)
+            ).first()
+
+            if existing_schedule:
+                # Calculate new effective_to_date
+                new_effective_to_date = schedule_dict['effective_from_date'] - timedelta(days=1)
+
+                # Update existing schedule
+                existing_schedule.effective_to_date = new_effective_to_date
+                existing_schedule.modified_by = user_id
+                existing_schedule.modified_on = datetime.now()
+                db.commit()
+
+            # Create new schedule
+            new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id, created_on=datetime.now())
+            db.add(new_schedule)
+            db.commit()
+            return True
+
+        elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+            # Handle UPDATE_ONLY case
+            existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+            if existing_schedule:
+                for key, value in schedule_dict.items():
+                    setattr(existing_schedule, key, value)
+                existing_schedule.modified_by = user_id
+                existing_schedule.modified_on = datetime.now()
+                db.commit()
+                return True
+            else:
+                raise ValueError(f"Schedule with ID {id} not found.")
+        
+        else:
+            raise ValueError("Invalid action type or ID provided.")
+
     except Exception as e:
         db.rollback()
         raise e

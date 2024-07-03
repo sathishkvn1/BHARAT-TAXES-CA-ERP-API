@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry
+from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry
 
 
 from caerp_auth import oauth2
@@ -61,7 +61,8 @@ TABLE_MODEL_MAPPING = {
     "OffSourceOfEnquiry":OffSourceOfEnquiry,
     "OffEnquirerType":OffEnquirerType,
     "OffConsultationMode":OffConsultationMode,
-    "UsersRole":UsersRole
+    "UsersRole":UsersRole,
+    "AppDayOfWeek":AppDayOfWeek
 }
 
 # Define a function to get the model class based on the provided model name

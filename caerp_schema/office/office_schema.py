@@ -671,8 +671,8 @@ class ConsultantServiceDetailsResponse(BaseModel):
 
 
 
-class OffConsultantScheduleCreate(BaseModel):
-    consultant_id: int
+class ConsultantScheduleCreate(BaseModel):
+    # consultant_id: int
     day_of_week_id: int
     consultation_mode_id: int
     morning_start_time: Optional[time] = None

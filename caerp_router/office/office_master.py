@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails,  OffConsultantScheduleCreate, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1364,41 +1364,32 @@ def get_consultant_employees(
 
 
 
+
 # @router.post("/save_consultant_service_details/")
-# def save_consultant_service_details(consultant_service: List[ConsultantService], 
-#                                 id: int,
-#                                 action_type: RecordActionType,
-#                                 db: Session = Depends(get_db),
-#                                 token: str = Depends(oauth2.oauth2_scheme)):
+# def save_consultant_service_details(
+#     consultant_service: List[ConsultantService],
+#     consultant_id: int,  # Add consultant_id as a parameter
+#     # id: int,
+#     action_type: RecordActionType,
+#     id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
 #     """
 #     Save or update consultant service details.
-
-#     **Request Body:**
-#     The request body should be a JSON array containing one or more objects with the following fields:
-
-#     - `consultant_id` (integer, required): The ID of the consultant.
-#     - `service_goods_master_id` (integer, required): The ID of the service or goods master.
-#     - `consultation_fee` (float, required): The consultation fee.
-#     - `slot_duration_in_minutes` (integer, required): The slot duration in minutes.
-#     - `effective_from_date` (date, required): The date from which the record is effective.
-#     - `effective_to_date` (date, optional): The date until which the record is effective.
-
-#     **Request Parameters:**
-#     - `id` (integer, required): The ID of the record to be updated. Use 0 for inserting a new record.
-#     - `action_type` (string, required): The action to be performed. Supported value: `INSERT_AND_UPDATE`.
-
-#     **Headers:**
-#     - `Authorization` (string, required): Bearer token for authentication.
 #     """
 #     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#         raise HTTPException(status_code=401, detail="Token is missing")
     
 #     auth_info = authenticate_user(token)
 #     user_id = auth_info.get("user_id")
+    
 #     try:
 #         for data in consultant_service:
-#            db_office_master.save_consultant_service_details_db(data, user_id, id, action_type, db)
+#             db_office_master.save_consultant_service_details_db(data, consultant_id, user_id, id, action_type, db)
+        
 #         return {"success": True, "detail": "Saved successfully"}
+    
 #     except Exception as e:
 #         raise HTTPException(status_code=400, detail=str(e), success=False)
 
@@ -1406,9 +1397,10 @@ def get_consultant_employees(
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
     consultant_service: List[ConsultantService],
-    consultant_id: int,  # Add consultant_id as a parameter
-    id: int,
+    
     action_type: RecordActionType,
+    consultant_id: Optional[int] = None,  
+    id: Optional[int] = None,  
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1429,6 +1421,7 @@ def save_consultant_service_details(
     
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e), success=False)
+
 
 
 #------------------------------------------------------------------------------------------------
@@ -1467,31 +1460,38 @@ def get_all_consultant_service_details(
 #------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_schedule/")
-def save_consultant_schedule( schedules: List[OffConsultantScheduleCreate], 
-                                id: int,
-                                action_type: RecordActionType,
-                                db: Session = Depends(get_db),
-                                token: str = Depends(oauth2.oauth2_scheme)):
-   
+def save_consultant_schedule(
+    schedules: List[ConsultantScheduleCreate], 
+    action_type: RecordActionType,
+    id: Optional[int] = None,
+    consultant_id: Optional[int] = None,  # Make consultant_id optional
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
+    
     try:
         for data in schedules:
-           db_office_master.save_consultant_schedule(data, user_id, id, action_type, db)
+            db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
         return {"success": True, "detail": "Saved successfully"}
+    
     except Exception as e:
+        print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+    
+    
+    
+        
 from fastapi import Query
-
-
-
-
 @router.get("/get_time_slots/", response_model=List[TimeSlotResponse])
 def get_time_slots(
     slot: str = Query(..., description="Type of time slots to fetch: 'NORMAL' or 'SPECIAL'"),
+    consultant_id: int = Header(..., description="Consultant ID"),
     db: Session = Depends(get_db)
 ):
     try:
@@ -1508,7 +1508,8 @@ def get_time_slots(
             ).join(
                 OffConsultationMode, OffConsultantSchedule.consultation_mode_id == OffConsultationMode.id
             ).filter(
-                OffConsultantSchedule.is_normal_schedule == 'yes'
+                OffConsultantSchedule.is_normal_schedule == 'yes',
+                OffConsultantSchedule.consultant_id == consultant_id
             ).all()
         elif slot == 'SPECIAL':
             # Retrieve Special Time Slots
@@ -1521,7 +1522,8 @@ def get_time_slots(
             ).join(
                 OffConsultationMode, OffConsultantSchedule.consultation_mode_id == OffConsultationMode.id
             ).filter(
-                OffConsultantSchedule.is_normal_schedule == 'no'
+                OffConsultantSchedule.is_normal_schedule == 'no',
+                OffConsultantSchedule.consultant_id == consultant_id
             ).all()
         else:
             raise HTTPException(status_code=400, detail="Invalid slot type. Please specify 'NORMAL' or 'SPECIAL'.")
@@ -1537,7 +1539,7 @@ def get_time_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
     
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
