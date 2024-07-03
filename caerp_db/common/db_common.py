@@ -573,8 +573,11 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
             id=row.app_village_id,
             village_name=row.village_name,
             lsg_type=row.lsg_type,
+            lsg_type_id =row.lsg_type_id,
             lsg_sub_type=row.lsg_sub_type,
-            lsg_name=row.lsg_name
+            lsg_sub_type_id=row.lsg_sub_type_id,
+            lsg_name=row.lsg_name,
+            lsg_id=row.lsg_id
         ) for row in result
     ]
 
@@ -583,6 +586,8 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
         villages=villages,
         block=first_row.block_name,
         taluk=first_row.taluk_name,
+        block_id =first_row.block_id,
+        taluk_id =first_row.taluk_id,
         country="India"
     )
 

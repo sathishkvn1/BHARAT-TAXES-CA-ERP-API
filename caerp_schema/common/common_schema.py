@@ -1758,13 +1758,18 @@ class Village(BaseModel):
     id: int
     village_name: str
     lsg_type: Optional[str]
+    lsg_type_id :Optional[int]
     lsg_sub_type: Optional[str]
+    lsg_sub_type_id :Optional[int]
     lsg_name: Optional[str]
-
+    lsg_id:Optional[int]
+  
 class VillageResponse(BaseModel):
     villages: List[Village]
     block: Optional[str]
+    block_id : Optional[int]
     taluk: Optional[str]
+    taluk_id : Optional[int]
     district: str=""
     state: str = "kerala"
     country: str = "India"
