@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1579,14 +1579,15 @@ def save_enquiry_details(
 
 
 
-@router.get("/consultation_modes/{mode_id}", response_model=Union[List[ConsultationModeSchema], ConsultationModeSchema])
+
+@router.get("/get/consultation_tools/{mode_id}", response_model=Union[List[ConsultationModeSchema], List[ConsultationToolSchema]])
 def get_consultation_modes_with_tools(
     mode_id: int = 0,
     db: Session = Depends(get_db)
 ):
-    result = db_office_master.get_consultation_modes_with_tools(db, mode_id)
+    result = db_office_master.get_consultation_tools(db, mode_id)
     if mode_id != 0 and not result:
-        raise HTTPException(status_code=404, detail=f"Consultation mode with id {mode_id} not found")
+        raise HTTPException(status_code=404, detail=f"Consultation tools for mode id {mode_id} not found")
     return result
 
 

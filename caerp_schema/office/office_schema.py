@@ -797,9 +797,8 @@ class OffViewEnquiryResponseSchema(BaseModel):
         
 class ConsultationToolSchema(BaseModel):
     id: int
-    consultation_mode_id: int
     consultation_tool: str
-    is_deleted: str
+
 
     class Config:
         orm_mode = True
@@ -809,11 +808,11 @@ class ConsultationModeSchema(BaseModel):
     id: int
     consultation_mode: str
     is_deleted: str
-    tools: List[ConsultationToolSchema] = []
-
+    
     class Config:
         orm_mode = True
         from_attributes = True
+       
         
         
 class OffConsultationTaskDetailsSchema(BaseModel):

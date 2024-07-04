@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import EmployeeMaster,UserBaseNew,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import EmployeeMaster,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema
@@ -70,7 +70,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             "security_password": log_password,
             "is_active": 'yes'
         }
-        insert_user_log_stmt = insert(UserBaseNew).values(**users_new_data)
+        insert_user_log_stmt = insert(UserBase).values(**users_new_data)
         db.execute(insert_user_log_stmt)
         db.commit()
 
@@ -152,7 +152,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             if option == "professional_qualification" and request.professional_qualification:
               update_multiple_detail_records(db, EmployeeProfessionalQualification, request.professional_qualification, id, updated_entities, "professional_qualification")  
             if option == "employee_security_credentials" and request.employee_security_credentials:
-              existing_credential = db.query(UserBaseNew).filter(UserBaseNew.employee_id == employee_id).first()  
+              existing_credential = db.query(UserBase).filter(UserBase.employee_id == employee_id).first()  
               if existing_credential is None:
                 raise HTTPException(status_code=404, detail=f"Security credentials with  id {id} not found") 
               credential_data = request.employee_security_credentials.dict()

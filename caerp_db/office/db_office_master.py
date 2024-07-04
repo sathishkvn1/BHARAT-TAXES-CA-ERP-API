@@ -1504,22 +1504,14 @@ def get_all_consultation_task_master_details(
 
     return results
 
-def get_consultation_modes_with_tools(db: Session, mode_id: int = 0) -> Union[List[ConsultationModeSchema], ConsultationModeSchema]:
+def get_consultation_tools(db: Session, mode_id: int = 0):
     if mode_id == 0:
-        # Fetch all consultation modes
+        # Fetch all consultation modes that are not deleted
         consultation_modes = db.query(OffConsultationMode).filter(OffConsultationMode.is_deleted == "no").all()
         # Convert SQLAlchemy models to Pydantic models
         return [ConsultationModeSchema.from_orm(mode) for mode in consultation_modes]
     else:
-        # Fetch specific consultation mode by mode_id and its tools
-        consultation_mode = db.query(OffConsultationMode).filter(
-            OffConsultationMode.id == mode_id,
-            OffConsultationMode.is_deleted == "no"
-        ).first()
-        
-        if not consultation_mode:
-            return None
-        
+        # Fetch consultation tools for a specific mode_id that are not deleted
         tools = db.query(OffConsultationTool).filter(
             OffConsultationTool.consultation_mode_id == mode_id,
             OffConsultationTool.is_deleted == "no"
@@ -1527,12 +1519,7 @@ def get_consultation_modes_with_tools(db: Session, mode_id: int = 0) -> Union[Li
         
         # Convert SQLAlchemy models to Pydantic models
         tools_schema = [ConsultationToolSchema.from_orm(tool) for tool in tools]
-        consultation_mode_schema = ConsultationModeSchema.from_orm(consultation_mode)
-        
-        # Combine the mode and its tools into a single schema
-        consultation_mode_schema.tools = tools_schema
-        
-        return consultation_mode_schema
+        return tools_schema
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
 #------------------------------------------------------------------------------------------------
