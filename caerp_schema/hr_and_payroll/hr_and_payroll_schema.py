@@ -4,7 +4,7 @@ from typing import List,Optional, Union,Dict
 from datetime import date, datetime
 from caerp_constants.caerp_constants import BooleanFlag
 
-
+   
 class EmployeeMasterSchema(BaseModel):
    # employee_id : int
    employee_number : Optional[str] = None
@@ -18,7 +18,11 @@ class EmployeeMasterSchema(BaseModel):
    joining_date : date
    next_increment_date : Optional[date]=None
    nationality_id : int
-
+   # personal_mobile_number : Optional[str] = None
+   # personal_email_id : Optional[str] = None
+   # user_name: str
+   # login_password: str
+   # role_ids  :  List[int]
     
    class config():
       orm_mode=True
@@ -66,7 +70,7 @@ class EmployeePresentAddressSchema(BaseModel):
    present_district_id : int
    present_state_id : int
    present_country_id : int
-   effective_from_date : date
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
@@ -94,7 +98,7 @@ class EmployeePermanentAddressSchema(BaseModel):
    permanent_district_id : int
    permanent_state_id : int
    permanent_country_id : int     
-   effective_from_date : date
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
@@ -116,7 +120,7 @@ class EmployeeContactSchema(BaseModel):
    official_mobile_number : Optional[str] = None
    official_whatsapp_number : Optional[str] = None
    official_email_id : Optional[str] = None
-   effective_from_date : Optional[date] =None
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
@@ -136,7 +140,7 @@ class EmployeeBankAccountSchema(BaseModel):
    bank_name :  Optional[str] = None
    bank_branch_name : Optional[str] = None
    ifsc_code : Optional[str] = None
-   effective_from_date : date
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
@@ -156,7 +160,7 @@ class EmployeeEmployementSchema(BaseModel):
    designation_id : int
    employee_category_id : int
    is_consultant : str = 'no'
-   effective_from_date : Optional[date]= None
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 
@@ -191,7 +195,7 @@ class EmployeeSalarySchema(BaseModel):
    amount : float
    percentage_of_component_id : Optional[int] = None
    percentage : float
-   effective_from_date : date
+   # effective_from_date : date
    effective_to_date : Optional[date] = None
    next_increment_date : Optional[date] = None
 
@@ -217,6 +221,7 @@ class EmployeeDocumentsSchema(BaseModel):
    document_number : Optional[str] = None
    issue_date : date
    expiry_date : Optional[date] = None
+   issued_by : Optional[str] = None
    remarks : Optional[str] = None
 
    class config():
@@ -229,7 +234,7 @@ class EmployeeEmergencyContactSchema(BaseModel):
    relation_id : int
    gender_id : int
    mobile_number : str
-   effective_date_from : date
+   # effective_date_from : date
    effective_date_to : Optional[date] = None
 
    class config():
@@ -242,14 +247,13 @@ class EmployeeDependentsSchema(BaseModel):
    relation_id : int
    gender_id : int
    date_of_birth : Optional[date] = None
-   effective_date_from : date
+   # effective_date_from : date
    effective_date_to : Optional[date] = None
 
    class config():
       orm_mode=True
 
 class EmployeeProfessionalQualificationSchema(BaseModel):
-   id: Optional[int]
    qualification_id : int
    membership_number : Optional[str] = None
    enrollment_date : date      
@@ -267,6 +271,9 @@ class EmployeeSecurityCredentials(BaseModel):
 class EmployeeUserRoles(BaseModel):
     
     role_id            : list[int] 
+
+
+   
 
 class EmployeeDetails(BaseModel):
    employee_master :   Optional[EmployeeMasterSchema] = None

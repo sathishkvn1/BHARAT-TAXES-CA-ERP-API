@@ -561,35 +561,52 @@ def delete_refund_reason(db: Session,
 
 
 
-
 def get_villages_data(db: Session, pincode: str) -> VillageResponse:
     result = db.query(AppViewVillages).filter(AppViewVillages.pincode == pincode).all()
 
     if not result:
         raise HTTPException(status_code=404, detail="No villages found for the given pincode")
 
-    villages = [
-        Village(
-            id=row.app_village_id,
-            village_name=row.village_name,
-            lsg_type=row.lsg_type,
-            lsg_type_id =row.lsg_type_id,
-            lsg_sub_type=row.lsg_sub_type,
-            lsg_sub_type_id=row.lsg_sub_type_id,
-            lsg_name=row.lsg_name,
-            lsg_id=row.lsg_id
-        ) for row in result
-    ]
+    villages = []
+    block = None
+    taluk = None
+  
 
-    first_row = result[0]
+    for row in result:
+        try:
+            village_name = str(row.village_name) if row.village_name is not None else ""
+            villages.append(
+                Village(
+                    id=row.app_village_id,
+                    village_name=village_name,
+                    lsg_type=row.lsg_type,
+                    lsg_type_id=row.lsg_type_id,
+                    lsg_sub_type=row.lsg_sub_type,
+                    lsg_sub_type_id=row.lsg_sub_type_id,
+                    lsg_name=row.lsg_name,
+                    lsg_id=row.lsg_id
+                )
+            )
+            if block is None:
+                block = {"name": row.block_name, "id": row.block_id}
+            if taluk is None:
+                taluk = {"name": row.taluk_name, "id": row.taluk_id}
+            # if district is None:
+            #     district = {"name": row.district_name, "id": row.district_id}
+
+        except Exception as e:
+            print(f"Error processing row {row}: {e}")
+            continue
+
     return VillageResponse(
         villages=villages,
-        block=first_row.block_name,
-        taluk=first_row.taluk_name,
-        block_id =first_row.block_id,
-        taluk_id =first_row.taluk_id,
+        block=block,
+        taluk=taluk,
+        district="",
+        state="kerala",
         country="India"
     )
+
 
 
 

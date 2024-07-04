@@ -650,7 +650,7 @@ class ConsultantEmployee(BaseModel):
     
 class ConsultantService(BaseModel):
     # consultant_id:int
-    service_goods_master_id:int
+    service_goods_master_id:Optional[int]=None
     consultation_fee:float
     slot_duration_in_minutes:int
     effective_from_date: date
@@ -665,9 +665,9 @@ class ConsultantServiceDetailsResponse(BaseModel):
     slot_duration_in_minutes: int
     effective_from_date: date
     effective_to_date: Optional[date]
-    class Config:
-        orm_mode = True
-        from_attributes = True
+
+class ConsultantServiceDetailsListResponse(BaseModel):
+    services: List[ConsultantServiceDetailsResponse]
 
 
 
@@ -703,6 +703,7 @@ class OffEnquiryMasterSchema(BaseModel):
     road_or_street_name: Optional[str]
     locality : Optional[str]
     pin_code : Optional[str]
+    village_id  : Optional[int] 
     post_office_id: Optional[int]
     lsg_type_id: Optional[int]
     lsg_id: Optional[int]
@@ -713,6 +714,8 @@ class OffEnquiryMasterSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+
 class OffEnquiryDetailsSchema(BaseModel):
  
     financial_year_id: Optional[int]
@@ -754,6 +757,8 @@ class OffViewEnquiryMasterSchema(BaseModel):
     road_or_street_name: Optional[str] 
     locality: Optional[str] 
     pin_code: Optional[str] 
+    village_id  : Optional[int] 
+    village_name:Optional[str] 
     post_office_id: Optional[int] 
     post_office_name : Optional[str] 
     lsg_type_id: Optional[int] 
@@ -769,7 +774,7 @@ class OffViewEnquiryMasterSchema(BaseModel):
     country_id: Optional[int] 
     country_name_english: Optional[str] 
     country_name_arabic: Optional[str] 
-
+    
 class OffViewEnquiryDetailsSchema(BaseModel):
     financial_year_id: Optional[int]
     financial_year: Optional[str]
@@ -811,7 +816,85 @@ class ConsultationModeSchema(BaseModel):
         from_attributes = True
         
         
-        
+class OffConsultationTaskDetailsSchema(BaseModel):
+   # task_master_id: int
+    service_id: int
+    is_main_service: str
+
+    class Config:
+        orm_mode = True
+
+
+class OffConsultationTaskMasterSchema(BaseModel):
+    task_date: Optional[datetime]
+    consultant_id: int
+    appointment_master_id: int
+    visit_master_id : int
+    task_status_id: int
+    task_priority_id: int
+    remarks: Optional[str]
+    details: List[OffConsultationTaskDetailsSchema]
+
+    class Config:
+        orm_mode = True
+
+
+
+
+class OffViewConsultationTaskMasterSchema(BaseModel):
+    consultation_task_master_id: int
+    task_date: datetime
+    consultant_id: int
+    employee_number: str
+    employee_first_name: str
+    employee_middle_name: Optional[str]
+    employee_last_name: str
+    appointment_master_id: int
+    appointee_full_name: str
+    appointee_gender_id: int
+    appointee_gender: str
+    customer_number: Optional[str]
+    business_name: Optional[str]
+    appointee_mobile_number: Optional[str]
+    appointee_whatsapp_number: Optional[str]
+    appointee_email_id: Optional[str]
+    visit_master_id: int
+    visit_master_appointment_time_from: str
+    visit_master_appointment_time_to: Optional[str]
+    consultation_mode_id: int
+    consultation_mode: str
+    consultation_tool_id: int
+    consultation_tool: str
+    task_status_id: int
+    task_status: Optional[str]
+    task_priority_id: int
+    task_priority: Optional[str]
+    remarks: Optional[str]
+    consultation_task_details_id: Optional[int]
+    task_master_id: Optional[int]
+    service_id: Optional[int]
+    hsn_sac_class_id: int
+    hsn_sac_class: str
+    has_consultation: str
+    group_id: int
+    group_name: Optional[str]
+    sub_group_id: int
+    sub_group_name: Optional[str]
+    category_id: int
+    category_name: Optional[str]
+    sub_category_id: int
+    sub_category_name: Optional[str]
+    service_goods_name: str
+    hsn_sac_id: int
+    hsn_sac_code: str
+    sku_code_id: int
+    unit_code: Optional[str]
+    is_bundled_service: str
+    is_main_service: Optional[str]
+
+    class Config:
+        orm_mode = True
+       
 
 #----------------------------------------------
        

@@ -1754,22 +1754,21 @@ class RefundReasonSchemaForGet(BaseModel):
     refund_reason: str
     is_deleted: str
 
+
 class Village(BaseModel):
     id: int
     village_name: str
     lsg_type: Optional[str]
-    lsg_type_id :Optional[int]
+    lsg_type_id: Optional[int]
     lsg_sub_type: Optional[str]
-    lsg_sub_type_id :Optional[int]
+    lsg_sub_type_id: Optional[int]
     lsg_name: Optional[str]
-    lsg_id:Optional[int]
-  
+    lsg_id: Optional[int]
+
 class VillageResponse(BaseModel):
     villages: List[Village]
-    block: Optional[str]
-    block_id : Optional[int]
-    taluk: Optional[str]
-    taluk_id : Optional[int]
-    district: str=""
+    block: Optional[Dict[str, Union[str, int]]]
+    taluk: Optional[Dict[str, Union[str, int]]]
+    district: str = ""
     state: str = "kerala"
     country: str = "India"

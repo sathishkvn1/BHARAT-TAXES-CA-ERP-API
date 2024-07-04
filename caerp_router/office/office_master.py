@@ -8,14 +8,14 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, EmployeeResponse, OffAppointmentDetails, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
 from sqlalchemy import text
 # from datetime import datetime
-from sqlalchemy import select, func
+from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
 
 
@@ -1365,42 +1365,14 @@ def get_consultant_employees(
 
 
 
-# @router.post("/save_consultant_service_details/")
-# def save_consultant_service_details(
-#     consultant_service: List[ConsultantService],
-#     consultant_id: int,  # Add consultant_id as a parameter
-#     # id: int,
-#     action_type: RecordActionType,
-#     id: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     """
-#     Save or update consultant service details.
-#     """
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-    
-#     try:
-#         for data in consultant_service:
-#             db_office_master.save_consultant_service_details_db(data, consultant_id, user_id, id, action_type, db)
-        
-#         return {"success": True, "detail": "Saved successfully"}
-    
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=str(e), success=False)
-
 
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
-    consultant_service: List[ConsultantService],
-    
+    data: List[ConsultantService],
     action_type: RecordActionType,
-    consultant_id: Optional[int] = None,  
-    id: Optional[int] = None,  
+    consultant_id: Optional[int] = None,
+    service_id: Optional[int] = None,
+    id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1414,49 +1386,72 @@ def save_consultant_service_details(
     user_id = auth_info.get("user_id")
     
     try:
-        for data in consultant_service:
-            db_office_master.save_consultant_service_details_db(data, consultant_id, user_id, id, action_type, db)
+        for item in data:
+            db_office_master.save_consultant_service_details_db(
+                item, consultant_id, service_id, user_id, action_type, db, id
+            )
         
         return {"success": True, "detail": "Saved successfully"}
     
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e), success=False)
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-
+    
 #------------------------------------------------------------------------------------------------
-
-
-
-@router.get("/get_service_details_by_consultant/", response_model=List[ConsultantServiceDetailsResponse])
-def get_all_consultant_service_details(
+@router.get("/get_service_details_by_consultant/", response_model=ConsultantServiceDetailsListResponse)
+def get_service_details_by_consultant(
     consultant_id: int = Header(..., description="Consultant ID"),
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve all consultant service details.
+    Retrieve the currently active consultant service details.
     """
-    results = db.query(
-        OffConsultantServiceDetails.id,
-        OffConsultantServiceDetails.consultant_id,
-        OffConsultantServiceDetails.service_goods_master_id,
-        OffServiceGoodsMaster.service_goods_name,
-        OffConsultantServiceDetails.consultation_fee,
-        OffConsultantServiceDetails.slot_duration_in_minutes,
-        OffConsultantServiceDetails.effective_from_date,
-        OffConsultantServiceDetails.effective_to_date
-    ).join(
-        OffServiceGoodsMaster,
-        OffConsultantServiceDetails.service_goods_master_id == OffServiceGoodsMaster.id
-    ).filter(
-        OffConsultantServiceDetails.consultant_id == consultant_id
-    ).all()
-    
-    if not results:
-        raise HTTPException(status_code=404, detail="No records found")
+    current_date = datetime.now().date()
 
-    return [ConsultantServiceDetailsResponse.from_orm(result) for result in results]
 
+    query = """
+    SELECT
+        a.id,
+        a.consultant_id,
+        a.service_goods_master_id,
+        b.service_goods_name,
+        a.consultation_fee,
+        a.slot_duration_in_minutes,
+        a.effective_from_date,
+        a.effective_to_date
+    FROM 
+        off_consultant_service_details AS a
+    JOIN 
+        off_service_goods_master AS b ON a.service_goods_master_id = b.id
+    WHERE 
+        a.consultant_id = :consultant_id
+        AND a.effective_from_date <= CURDATE()
+        AND (a.effective_to_date IS NULL OR a.effective_to_date >= CURDATE());
+    """
+
+    result = db.execute(text(query), {"consultant_id": consultant_id}).fetchall()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No active records found")
+
+    services = [
+        ConsultantServiceDetailsResponse(
+            id=row.id,
+            consultant_id=row.consultant_id,
+            service_goods_master_id=row.service_goods_master_id,
+            service_goods_name=row.service_goods_name,
+            consultation_fee=row.consultation_fee,
+            slot_duration_in_minutes=row.slot_duration_in_minutes,
+            effective_from_date=row.effective_from_date,
+            effective_to_date=row.effective_to_date
+        )
+        for row in result
+    ]
+
+    return ConsultantServiceDetailsListResponse(services=services)
 #------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_schedule/")
@@ -1548,7 +1543,7 @@ def get_time_slots(
 def save_enquiry_details(
     id: int,
     enquiry_data: OffEnquiryResponseSchema,
-    action_type: RecordActionType,
+    
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1556,14 +1551,12 @@ def save_enquiry_details(
    - Save or create enquiry details for a specific ID.
     - **enquiry_data**: Data for the enquiry master and details, provided as parameters of type OffEnquiryResponseSchema.
     - **id**: An optional integer parameter with a default value of 0, indicating the enquiry master's identifier.
-    - **action_type (RecordActionType)**: The action type to be performed, indicating whether to insert or update the enquiry details.
-
+    
     - If enquiry_master id is 0, it indicates the creation of a new enquiry.
     - Returns: The newly created enquiry details as the response.
     - If enquiry_master id is not 0, it indicates the update of an existing enquiry.
     - Returns: The updated enquiry details as the response.
-    - If action_type is INSERT_ONLY, the id parameter should be 0.
-    - If action_type is UPDATE_ONLY, the id parameter should be greater than 0.
+    
     """
 
     if not token:
@@ -1574,7 +1567,7 @@ def save_enquiry_details(
 
     try:
         result = db_office_master.save_enquiry_master(
-            db, id, enquiry_data, user_id, action_type
+            db, id, enquiry_data, user_id
         )
 
         return {"success": True, "message": "Saved successfully"}
@@ -1583,39 +1576,11 @@ def save_enquiry_details(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-#----------------get
-
-
-@router.get("/enquiry/get_enquiries", response_model=List[OffViewEnquiryResponseSchema])
-def get_and_search_enquiries(
-    search_value: Union[str, int] = "ALL",
-    status_id: Optional[str] = "ALL",
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve Enquiry based on Parameters.
-
-    Parameters:
-    - **search_value**: Search value Can be 'mobile_number',and other are default 
-    - **status_id**: Status ID.
-    - **effective_from_date**: Effective from date (default: today's date).
-    - **effective_to_date**: Effective to date (default: today's date).
-    - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
-    """
-    return db_office_master.get_enquiries(
-        db,
-        search_value=search_value,
-        status_id=status_id,
-        from_date=from_date,
-        to_date=to_date
-    )
 
 
 
 @router.get("/consultation_modes/{mode_id}", response_model=Union[List[ConsultationModeSchema], ConsultationModeSchema])
-def read_consultation_modes_with_tools(
+def get_consultation_modes_with_tools(
     mode_id: int = 0,
     db: Session = Depends(get_db)
 ):
@@ -1623,6 +1588,85 @@ def read_consultation_modes_with_tools(
     if mode_id != 0 and not result:
         raise HTTPException(status_code=404, detail=f"Consultation mode with id {mode_id} not found")
     return result
+
+
+#-----------------------------------------------------------------------------------------------------
+#    TASK LIST
+
+#-------------------------------------------------------------------------------------------------------
+@router.post("/services/save_off_consultation_task_master/{id}")
+def save_off_consultation_task_master(
+    id: int,
+    data: OffConsultationTaskMasterSchema,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save or update consultation task master and its details.
+
+    Parameters:
+    - **id**: ID of the task master. Should be 0 for insert and greater than 0 for update.
+    - **data**: OffConsultationTaskMasterSchema containing task master and its details.
+    
+    Returns:
+    - Success message indicating the operation (save/update) was successful.
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        result = db_office_master.save_off_consultation_task_master(
+            db, id, data, user_id
+        )
+
+        return {"success": True, "message": result["message"]}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+#-----------------------------------------------------------------------------------------
+
+
+@router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
+def get_all_consultation_task_master_details(
+    db: Session = Depends(get_db),
+    service_id: Union[int, str] = Query("ALL"),
+    task_status: Union[int, str] = Query("ALL"),
+    consultation_mode: Union[int, str] = Query("ALL"),
+    tool: Union[int, str] = Query("ALL"),
+    consultant_id: Union[int, str] = Query("ALL"),
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> Union[List[OffViewConsultationTaskMasterSchema], dict]:
+    """
+    Retrieve consultation task master details with optional filters.
+    
+    - `service_id`: Filter by service_id or 'ALL' for all services.
+    - `task_status`: Filter by task status or 'ALL' for all statuses.
+    - `consultation_mode`: Filter by consultation mode or 'ALL' for all modes.
+    - `tool`: Filter by consultation tool or 'ALL' for all tools.
+    - `consultant_id`: Filter by consultant ID or 'ALL' for all consultants.
+    - `from_date`: Optional. Filter tasks from this date onwards.(default None)
+    - `to_date`: Optional. Filter tasks up to this date.(default None)
+    
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    results = db_office_master.get_all_consultation_task_master_details(
+        db, service_id, task_status, consultation_mode, tool, consultant_id, from_date, to_date
+    )
+
+    if not results:
+        return {"message": "No data present"}
+    
+    return results
 
 
 
