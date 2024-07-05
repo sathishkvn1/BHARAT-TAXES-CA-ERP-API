@@ -206,7 +206,7 @@ class SmsTemplates(caerp_base):
 #     modified_on   = Column(DateTime, default=None)
 
 class UserBase(caerp_base):
-    __tablename__ = "users_new"
+    __tablename__ = "users"
 
     id            = Column(Integer, primary_key=True, autoincrement=True)
     employee_id   = Column(Integer, nullable=True)
@@ -216,8 +216,9 @@ class UserBase(caerp_base):
     delete_password =  Column(String(200), nullable=True)
     security_password =  Column(String(200), nullable=True)
     is_active     = Column(Enum('yes', 'no'), nullable=False, default='yes')
-    is_first_login   = Column(DateTime, default=None)
+    is_first_login   = Column(Enum('yes', 'no'), nullable=False, default='yes')
     locked_upto   = Column(DateTime, default=None)
+    password_reset_date = Column(Date,default=None)
 
 class UserRole(caerp_base):
     __tablename__ = "user_roles"

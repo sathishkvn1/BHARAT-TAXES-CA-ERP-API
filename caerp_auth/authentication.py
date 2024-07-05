@@ -340,7 +340,9 @@ def get_token(
                 pass  # Handle error if needed
             
             try:
-
+                if user.is_first_login == 'yes':                     
+                    update_query = text("UPDATE users SET is_first_login= 'no' WHERE user_name = :user_name ")
+                    db.execute(update_query, {'user_name':  request_data.username})
                 # Insert login details into app_admin_log table
                 result = db.execute(
                 text("INSERT INTO users_log (user_id, logged_in_ip, browser_type, browser_family, browser_version, operating_system, os_family, os_version, referrer,location) "
@@ -402,6 +404,11 @@ def get_token(
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User has no assigned roles")
 
                 role_ids = [role.role_id for role in roles]
+                password_reset_date = user.password_reset_date
+                if datetime.today() == password_reset_date:
+                     password_reset_status = 'yes'  
+                else: 
+                     password_reset_status = 'no'   
 
                     
                 # Add the log_id to the data dictionary
@@ -410,13 +417,11 @@ def get_token(
                     'role_id': role_ids,
                     'log_id': log_id,
                     'mobile_otp_id':mobile_otp_id,
-                
+                    'is_password_reset': password_reset_status                
                     
                 }
                 
-                access_token = oauth2.create_access_token(data=data)
-
-                
+                access_token = oauth2.create_access_token(data=data)               
             
 
                 # Return a JSON response with the access token and additional information

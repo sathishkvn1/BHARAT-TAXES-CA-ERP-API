@@ -2,6 +2,7 @@ from fastapi import HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from caerp_db.common.models import EmployeeMaster,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
@@ -36,6 +37,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
       if Action == RecordActionType.INSERT_ONLY:
         if employee_id != 0:
           raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
+        
             
         data = request.employee_master.dict()
         data["created_by"] = user_id
@@ -60,6 +62,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         users_new_dict = request.employee_security_credentials.dict()
         # Insert into users_new table
         log_password  = Hash.bcrypt(users_new_dict['login_password'])
+        password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
 
         users_new_data = {
             "employee_id": emp_id,
@@ -68,7 +71,8 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             "edit_password":  log_password,
             "delete_password": log_password,
             "security_password": log_password,
-            "is_active": 'yes'
+            "is_active": 'yes',
+            "password_reset_date" :password_reset_date
         }
         insert_user_log_stmt = insert(UserBase).values(**users_new_data)
         db.execute(insert_user_log_stmt)
@@ -156,12 +160,15 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
               if existing_credential is None:
                 raise HTTPException(status_code=404, detail=f"Security credentials with  id {id} not found") 
               credential_data = request.employee_security_credentials.dict()
+              # password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
             
               new_credential_data = {
                         "login_password" : Hash.bcrypt(credential_data["login_password"]),
                         "edit_password"   : Hash.bcrypt(credential_data["edit_password"]),
                         "delete_password"   : Hash.bcrypt(credential_data["delete_password"]),
-                        "security_password"   : Hash.bcrypt(credential_data["security_password"])
+                        "security_password"   : Hash.bcrypt(credential_data["security_password"]),
+                        # "password_reset_date" : password_reset_date
+
                }
               for field, value in new_credential_data.items():
                 setattr(existing_credential, field, value)
@@ -176,7 +183,6 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
               for role_id in request.user_roles.role_id:
                 existing_roles = db.query(UserRole).filter(UserRole.employee_id == employee_id,
                                    UserRole.role_id == role_id).first()  
-                print("existing roles.......", existing_roles)
                 if existing_roles:
                   user_role_data = {
                       "employee_id": employee_id,

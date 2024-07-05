@@ -4,7 +4,8 @@ from caerp_schema.common.common_schema import UserCreateSchema
 from caerp_db.common.models import UserBase,EmployeeMaster,SmsTemplates
 from fastapi import HTTPException , status     
 from caerp_db.hash import Hash
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import ActiveStatus
 
@@ -113,8 +114,10 @@ def user_password_reset(db: Session, user_id: int, password: str):
     hashed_password =Hash.bcrypt(password)
     existing_user = db.query(UserBase).filter(UserBase.employee_id == user_id).first()
     print("Existing user : ",existing_user)
-  
+    password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+
     existing_user.login_password= hashed_password
+    existing_user.password_reset_date = password_reset_date
    
     try:
         db.commit()  # Commit changes to the database
