@@ -1583,6 +1583,33 @@ def save_enquiry_details(
 
 
 
+@router.get("/enquiry/get_enquiries", response_model=List[OffViewEnquiryResponseSchema])
+def get_and_search_enquiries(
+    search_value: Union[str, int] = "ALL",
+    status_id: Optional[str] = "ALL",
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve Enquiry based on Parameters.
+
+    Parameters:
+    - **search_value**: Search value Can be 'mobile_number',and other are default 
+    - **status_id**: Status ID.
+    - **effective_from_date**: Effective from date (default: today's date).
+    - **effective_to_date**: Effective to date (default: today's date).
+    - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
+    """
+    return db_office_master.get_enquiries(
+        db,
+        search_value=search_value,
+        status_id=status_id,
+        from_date=from_date,
+        to_date=to_date
+    )
+
+
 
 @router.get("/get/consultation_tools/{mode_id}", response_model=Union[List[ConsultationModeSchema], List[ConsultationToolSchema]])
 def get_consultation_modes_with_tools(

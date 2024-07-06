@@ -172,11 +172,11 @@ def get_employee_details(
     # id: Optional[int] = None, 
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2.oauth2_scheme),
-    category: Optional[Union[str,int]] = Query(None, description="Filter by category"),
-    department: Optional[Union[str,int]] = Query(None, description="Filter by department"),
-    designation: Optional[Union[str,int]] = Query(None, description="Filter by designation"),
+    category: Optional[Union[str,int]] = Query("ALL", description="Filter by category"),
+    department: Optional[Union[str,int]] = Query("ALL", description="Filter by department"),
+    designation: Optional[Union[str,int]] = Query("ALL", description="Filter by designation"),
     # status: Optional[ActiveStatus] = Query(None, description="Filter by status (ACTIVE/NOT_ACTIVE/ALL)"),
-    approval_status: Optional[ApprovedStatus] = Query(None, description="Filter by approval status (APPROVED/NOT_APPROVED)"),
+    approval_status: Optional[ApprovedStatus] = Query("ALL", description="Filter by approval status (yes/no)"),
     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
     search: Optional[str] = Query(None, description="Search by employee details")
 ):

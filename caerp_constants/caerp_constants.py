@@ -26,9 +26,7 @@ class VerifiedStatus(str, Enum):
     VERIFIED      = 'yes'
     NOT_VERIFIED  = 'no'
 
-class ApprovedStatus(str, Enum):
-    APPROVED      = 'yes'
-    NOT_APPROVED  = 'no'    
+ 
     
 class ActionType(str, Enum):
     DELETE      = 'DELETE'
@@ -81,3 +79,10 @@ class RecordActionType(str, Enum):
     UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'  
     DELETE      = 'DELETE'
     UNDELETE ='UNDELETE'
+
+
+class ApprovedStatus(str, Enum):
+    ALL = 'ALL'
+    APPROVED      = 'yes'
+    NOT_APPROVED  = 'no'    
+    

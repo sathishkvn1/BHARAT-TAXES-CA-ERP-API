@@ -421,7 +421,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 
 
 
-def get_employee_master_details(db: Session, approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = None, department: Optional[Union[str,int]] = None, designation: Optional[Union[str,int]] = None, is_consultant: Optional[str] = None, search: Optional[str] = None):
+def get_employee_master_details(db: Session, approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
     query = db.query(
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
@@ -444,24 +444,24 @@ def get_employee_master_details(db: Session, approval_status: Optional[ApprovedS
     )
 
     # Applying filters at the end of the join statements
-    if category:
+    if category and category != "ALL":
       query = query.filter(or_(
                            HrEmployeeCategory.id == category,
                            HrEmployeeCategory.category_name == category
                          ))
-    if department:
+    if department and department != "ALL":
       query = query.filter(or_(
                             HrDepartmentMaster.id == department,
                             HrDepartmentMaster.department_name == department
                          ))
-    if designation:
+    if designation and designation != "ALL":
       query = query.filter(or_(
                             HrDesignationMaster.id == designation,
                             HrDesignationMaster.designation == designation
                           ))
     # if status and status != ActiveStatus.ALL:
     #     query = query.filter(EmployeeMaster.is_active == status.value)
-    if approval_status:
+    if approval_status and approval_status != ApprovedStatus.ALL:
       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
     if is_consultant:
       query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
