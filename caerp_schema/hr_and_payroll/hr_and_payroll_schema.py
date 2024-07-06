@@ -254,6 +254,7 @@ class EmployeeDependentsSchema(BaseModel):
       orm_mode=True
 
 class EmployeeProfessionalQualificationSchema(BaseModel):
+   
    qualification_id : int
    membership_number : Optional[str] = None
    enrollment_date : date      
