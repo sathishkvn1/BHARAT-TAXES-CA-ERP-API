@@ -216,16 +216,28 @@ def get_all_service_goods_master(
 
 
 
-#---------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------
 
 @router.post("/services/save_services_goods_master/{id}")
 def save_services_goods_master(
     id: int,
     data: List[SaveServicesGoodsMasterRequest], 
-    action_type: RecordActionType,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-):
+):  
+    """
+    Save or update service and goods master records.
+
+    This endpoint allows the user to save or update records in the service and goods master table.
+    If the `id` is 0, it will insert new records; otherwise, it will update the existing records with the specified `id`.
+
+    - **id**: The ID of the master record. Use 0 for new records.
+    - **data**: A list of `SaveServicesGoodsMasterRequest` objects containing the master and detail data to be saved or updated.
+    
+    **Returns**:
+    - A JSON object indicating the success status and a message detailing the action performed (insert or update).
+
+    """  
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -236,7 +248,7 @@ def save_services_goods_master(
         result_message = ""
         for service in data:
             result = db_office_master.save_services_goods_master(
-                db, id, service, user_id, action_type
+                db, id, service, user_id
             )
             result_message = result["message"]
         
@@ -248,14 +260,11 @@ def save_services_goods_master(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
 #-------------------------------------------------------------------------------------------------------
-
 @router.post("/services/save_off_document_master/{id}")
 def save_off_document_master(
     id: int,
     data: OffDocumentDataBase, 
-    action_type: RecordActionType,
     document_type: str = Query(enum=["DOCUMENT", "DATA"]),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -265,7 +274,7 @@ def save_off_document_master(
     
     try:
         result = db_office_master.save_off_document_master(
-            db, id, data, document_type,action_type
+            db, id, data, document_type
         )
         
         # Return the message from the database function
@@ -280,6 +289,7 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 #-------------------------------------------------------------------------------------------------------
 
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
@@ -307,12 +317,10 @@ def search_off_document_data_master(
 
 
 #-------------------------------------------------------------------------------------------------------
-
 @router.post("/services/save_service_document_data_master/{id}")
 def save_service_document_data_master(
     id: int,
     data: List[SaveServiceDocumentDataMasterRequest], 
-    action_type: RecordActionType,
     service_document_master_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -323,7 +331,6 @@ def save_service_document_data_master(
     Parameters:
     - **id**: The ID of the service document data master record. This parameter is required and should be an integer.
     - **data**: A list of `SaveServiceDocumentDataMasterRequest` objects containing the service document data to be saved.
-    - **action_type**: The type of action to be performed. Possible values are `INSERT_ONLY` and `UPDATE_ONLY`.
     - **service_document_master_id**: An optional query parameter that specifies the master ID if only details need to be inserted.
     - **db**: A database session dependency injected by FastAPI.
     - **token**: An authentication token dependency injected by FastAPI using OAuth2.
@@ -342,7 +349,7 @@ def save_service_document_data_master(
         result_message = ""
         for service in data:
             result = db_office_master.save_service_document_data_master(
-                db, id, service, service_document_master_id, action_type
+                db, id, service, service_document_master_id
             )
             result_message = result["message"]
         
@@ -352,9 +359,6 @@ def save_service_document_data_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-
 
 
 ###......................test

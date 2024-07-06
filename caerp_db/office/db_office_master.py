@@ -164,16 +164,10 @@ def save_services_goods_master(
     db: Session,
     id: int,
     data: SaveServicesGoodsMasterRequest,
-    user_id: int,
-    action_type: RecordActionType
+    user_id: int
 ):
-    if action_type == RecordActionType.INSERT_ONLY and id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
-
     try:
-        if action_type == RecordActionType.INSERT_ONLY:
+        if id == 0:
             for master_data in data.master:
                 new_master_data = master_data.dict()
                 new_master_data.update({
@@ -198,12 +192,11 @@ def save_services_goods_master(
             db.commit()
             return {"success": True, "message": "Saved successfully", "action": "insert"}
 
-        elif action_type == RecordActionType.UPDATE_ONLY:
+        else:
             existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
             if not existing_master:
                 raise HTTPException(status_code=404, detail="Master record not found")
 
-            # Use the first item from data.master for update
             master_update_data = data.master[0].dict()
             for key, value in master_update_data.items():
                 setattr(existing_master, key, value)
@@ -216,10 +209,8 @@ def save_services_goods_master(
                 ).all()
 
                 existing_detail_dict = {detail.service_goods_master_id: detail for detail in existing_details}
-
                 incoming_detail_dict = {detail.service_goods_master_id: detail for detail in data.details}
 
-                # Update or add new details
                 for detail_data in data.details:
                     detail_data_dict = detail_data.dict()
                     existing_detail = existing_detail_dict.get(detail_data.service_goods_master_id)
@@ -239,7 +230,6 @@ def save_services_goods_master(
                         new_detail = OffServiceGoodsDetails(**new_detail_data)
                         db.add(new_detail)
 
-                # Remove details that are no longer in the update request
                 for service_goods_master_id, existing_detail in existing_detail_dict.items():
                     if service_goods_master_id not in incoming_detail_dict:
                         db.delete(existing_detail)
@@ -247,21 +237,15 @@ def save_services_goods_master(
             db.commit()
             return {"success": True, "message": "Updated successfully", "action": "update"}
 
-    except IntegrityError as e:
-        db.rollback()
-        logger.error("IntegrityError: %s", str(e))
-        if 'Duplicate entry' in str(e):
-            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
-        else:
-            raise e
     except OperationalError as e:
         db.rollback()
-        logger.error("OperationalError: %s", str(e))
         raise HTTPException(status_code=500, detail="Database connection error.")
     except Exception as e:
         db.rollback()
-        logger.error("Exception: %s", str(e))
         raise e
+
+
+
 
 #--------------------------------------------------------------------------------------------------------
 def reschedule_or_cancel_appointment(db: Session,
@@ -561,16 +545,11 @@ def save_service_document_data_master(
     db: Session,
     id: int,
     doc_data: SaveServiceDocumentDataMasterRequest,
-    service_document_master_id: Optional[int],
-    action_type: RecordActionType
+    service_document_master_id: Optional[int]
 ):
-    if action_type == RecordActionType.INSERT_ONLY and id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
-
+    
     try:
-        if action_type == RecordActionType.INSERT_ONLY:
+        if id == 0:
             if service_document_master_id:
                 # Only insert details for the given master ID
                 if doc_data.Documents:
@@ -624,7 +603,7 @@ def save_service_document_data_master(
                 db.commit()
                 return {"success": True, "message": "Saved successfully", "action": "insert"}
 
-        elif action_type == RecordActionType.UPDATE_ONLY:
+        else:
             existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
             if not existing_master:
                 raise HTTPException(status_code=404, detail="Master record not found")
@@ -667,17 +646,8 @@ def save_off_document_master(
     db: Session,
     id: int,
     data: OffDocumentDataMasterBase,
-    type: str,
-    action_type: RecordActionType
+    type: str
 ):
-    if action_type == RecordActionType.INSERT_ONLY:
-        if id != 0:
-            raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY:
-        if id <= 0:
-            raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
-    else:
-        raise HTTPException(status_code=400, detail="Invalid action type")
     
     try:
         # Retrieve the document type record based on the provided type
@@ -690,7 +660,7 @@ def save_off_document_master(
         
         document_data_type_id = document_type_record.id
         
-        if action_type == RecordActionType.INSERT_ONLY:
+        if id == 0:
             document_master = OffDocumentDataMaster(
                 **data.dict(),
                 document_data_type_id=document_data_type_id
@@ -699,7 +669,8 @@ def save_off_document_master(
             db.commit()
             db.refresh(document_master)
             return {"success": True, "message": "Saved successfully"}
-        elif action_type == RecordActionType.UPDATE_ONLY:
+        
+        else:
             document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
             if not document:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
@@ -715,9 +686,6 @@ def save_off_document_master(
             db.commit()
             db.refresh(document)
             return {"success": True, "message": "Updated successfully"}
-    except IntegrityError as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Integrity error: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
@@ -1476,7 +1444,8 @@ def get_all_consultation_task_master_details(
     from_date: Optional[date] = None,
     to_date: Optional[date] = None  
 ) -> List[OffViewConsultationTaskMaster]:
-    search_conditions = []
+    
+    search_conditions = [OffViewConsultationTaskMaster.is_deleted == 'no']
 
     if service_id != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.service_id == service_id)
