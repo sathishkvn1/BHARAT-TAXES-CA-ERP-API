@@ -1508,7 +1508,12 @@ def get_time_slots(
                 OffConsultationMode, OffConsultantSchedule.consultation_mode_id == OffConsultationMode.id
             ).filter(
                 OffConsultantSchedule.is_normal_schedule == 'yes',
-                OffConsultantSchedule.consultant_id == consultant_id
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.effective_from_date <= datetime.utcnow().date(),
+                or_(
+                    OffConsultantSchedule.effective_to_date >= datetime.utcnow().date(),
+                    OffConsultantSchedule.effective_to_date.is_(None)
+                )
             ).all()
         elif slot == 'SPECIAL':
             # Retrieve Special Time Slots
@@ -1539,7 +1544,6 @@ def get_time_slots(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
 #------------------------------------------------------------------------------------------------
