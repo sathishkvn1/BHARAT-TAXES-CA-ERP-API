@@ -421,7 +421,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 
 
 
-def get_employee_master_details(db: Session, approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
+def search_employee_master_details(db: Session, approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
     query = db.query(
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
@@ -485,4 +485,41 @@ def get_employee_master_details(db: Session, approval_status: Optional[ApprovedS
 
 
 
+def get_employee_master_details(db: Session):
+    return db.query(EmployeeMaster).all()
 
+def get_present_address_details(db: Session):
+    return db.query(EmployeePresentAddress).all()
+
+def get_permanent_address_details(db: Session):
+    return db.query(EmployeePermanentAddress).all()
+
+def get_contact_details(db: Session):
+    return db.query(EmployeeContactDetails).all()
+
+def get_bank_details(db: Session):
+    return db.query(EmployeeBankDetails).all()
+
+def get_employement_details(db: Session):
+    return db.query(EmployeeEmployementDetails).all()
+
+def get_salary_details(db: Session):
+    return db.query(EmployeeSalaryDetails).all()
+
+def get_qualification_details(db: Session):
+    return db.query(EmployeeEducationalQualification).all()
+
+def get_experience_details(db: Session):
+    return db.query(EmployeeExperience).all()
+
+def get_document_details(db: Session):
+    return db.query(EmployeeDocuments).all()
+
+def get_emergency_contact_details(db: Session):
+    return db.query(EmployeeEmergencyContactDetails).all()
+
+def get_dependent_details(db: Session):
+    return db.query(EmployeeDependentsDetails).all()
+
+def get_professional_qualification_details(db: Session):
+    return db.query(EmployeeProfessionalQualification).all()

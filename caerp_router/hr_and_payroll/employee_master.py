@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
@@ -167,8 +167,8 @@ def delete_employee_details_by_id(
   
 
 
-@router.get("/get_employee_details")
-def get_employee_details(
+@router.get("/search_employee_details")
+def search_employee_details(
     # id: Optional[int] = None, 
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2.oauth2_scheme),
@@ -186,7 +186,7 @@ def get_employee_details(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
-    employees = db_employee_master.get_employee_master_details(db, approval_status, category, department, designation, is_consultant, search)
+    employees = db_employee_master.search_employee_master_details(db, approval_status, category, department, designation, is_consultant, search)
        
     if not employees:
       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No employees found with the given filters")
@@ -208,4 +208,130 @@ def get_employee_details(
     return employee_details
 
 
+@router.get("/get_employee_details")
+def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
+    include_present_address: bool = Query(False, description="Include present address details"),
+    include_permanent_address: bool = Query(False, description="Include permanent address details"),
+    include_contact_details: bool = Query(False, description="Include contact details"),
+    include_bank_details: bool = Query(False, description="Include bank details"),
+    include_employement_details: bool = Query(False, description="Include employement details"),
+    include_salary_details: bool = Query(False, description="Include salary details"),
+    include_educational_qualification: bool = Query(False, description="Include educational qualification details"),
+    include_experience_details: bool = Query(False, description="Include experience details"),
+    include_documents: bool = Query(False, description="Include employee documents"),
+    include_emergency_contact: bool = Query(False, description="Include emergency contact details"),
+    include_dependent_details: bool = Query(False, description="Include employee dependent details"),
+    include_professional_qualification: bool = Query(False, description="Include professional qualification details")
+    ):
+  """
+    -**Retrieve employee master by id.**
+   """
+  if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
 
+  employee_details = defaultdict(dict)
+  
+  if id is not None:  
+    emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+    if not emp:
+      raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
+      detail = f"Employee with id {id} not found" )
+    employee_details[id]['employee_master'] = EmployeeMasterSchema(
+            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
+        )
+  else:
+    employees = db_employee_master.get_employee_master_details(db)
+    for emp in employees:
+      employee_details[emp.employee_id]['employee_master'] = EmployeeMasterSchema(
+            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
+            )
+    
+  if include_present_address:
+    present_addresses = db_employee_master.get_present_address_details(db)
+    for present in present_addresses:
+      employee_details[present.employee_id].setdefault('present_address', []).append(
+                EmployeePresentAddressSchema(**present.__dict__)
+            )
+      
+  if include_permanent_address:
+    permanent_addresses = db_employee_master.get_permanent_address_details(db)
+    for permanent in permanent_addresses:
+      employee_details[permanent.employee_id].setdefault('permanent_address', []).append(
+                EmployeePermanentAddressSchema(**permanent.__dict__)
+            )    
+    
+  if include_contact_details:
+    contact_info = db_employee_master.get_contact_details(db)
+    for contact in contact_info:
+     employee_details[contact.employee_id].setdefault('contact_details', []).append(
+             EmployeeContactSchema(**contact.__dict__)
+            )
+
+  if include_bank_details:
+    bank_info = db_employee_master.get_bank_details(db)
+    for bank in bank_info:
+     employee_details[bank.employee_id].setdefault('bank_details', []).append(
+             EmployeeBankAccountSchema(**bank.__dict__)
+            )
+     
+  if include_employement_details:
+    employement_info = db_employee_master.get_employement_details(db)
+    for employement in employement_info:
+     employee_details[employement.employee_id].setdefault('employement_details', []).append(
+             EmployeeEmployementSchema(**employement.__dict__)
+            )   
+     
+  if include_salary_details:
+    salary_info = db_employee_master.get_salary_details(db)
+    for salary in salary_info:
+     employee_details[salary.employee_id].setdefault('employee_salary', []).append(
+             EmployeeSalarySchema(**salary.__dict__)
+            )   
+     
+  if include_educational_qualification:
+    edu_qual_info = db_employee_master.get_qualification_details(db)
+    for edu_qual in edu_qual_info:
+     employee_details[edu_qual.employee_id].setdefault('educational_qualification', []).append(
+             EmployeeEducationalQualficationSchema(**edu_qual.__dict__)
+            )   
+
+  if include_experience_details:
+    exp_info = db_employee_master.get_experience_details(db)
+    for exp in exp_info:
+     employee_details[exp.employee_id].setdefault('employee_experience', []).append(
+             EmployeeExperienceSchema(**exp.__dict__)
+            )   
+
+  if include_documents:
+    doc_info = db_employee_master.get_document_details(db)
+    for doc in doc_info:
+     employee_details[doc.employee_id].setdefault('employee_documents', []).append(
+             EmployeeDocumentsSchema(**doc.__dict__)
+            ) 
+
+  if include_emergency_contact:
+    emer_contact = db_employee_master.get_emergency_contact_details(db)
+    for emer in emer_contact:
+     employee_details[emer.employee_id].setdefault('emergency_contact_details', []).append(
+             EmployeeEmergencyContactSchema(**emer.__dict__)
+            )      
+
+  if include_dependent_details:
+    dep_details = db_employee_master.get_dependent_details(db)
+    for dep in dep_details:
+     employee_details[dep.employee_id].setdefault('dependent_details', []).append(
+             EmployeeDependentsSchema(**dep.__dict__)
+            )   
+     
+  if include_professional_qualification:
+    prof_qual_info = db_employee_master.get_professional_qualification_details(db)
+    for prof_qual in prof_qual_info:
+     employee_details[prof_qual.employee_id].setdefault('professional_qualification', []).append(
+             EmployeeProfessionalQualificationSchema(**prof_qual.__dict__)
+            )   
+
+  if id is not None:
+    return employee_details.get(id, {})
+  else:
+    return employee_details
