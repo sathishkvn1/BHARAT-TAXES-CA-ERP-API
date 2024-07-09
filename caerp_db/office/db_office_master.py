@@ -10,7 +10,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
-from caerp_schema.office.office_schema import AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
 from sqlalchemy import and_,or_, func
 
@@ -1442,12 +1442,11 @@ def get_all_consultation_task_master_details(
     consultant_id: Union[int, str] = 'ALL',
     from_date: Optional[date] = None,
     to_date: Optional[date] = None  
-) -> List[OffViewConsultationTaskMaster]:
-    
+) -> List[OffViewConsultationTaskMasterSchema]:
     search_conditions = [OffViewConsultationTaskMaster.is_deleted == 'no']
 
     if service_id != 'ALL':
-        search_conditions.append(OffViewConsultationTaskMaster.service_id == service_id)
+        search_conditions.append(OffConsultationTaskDetails.service_id == service_id)
 
     if task_status != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.task_status_id == task_status)
@@ -1467,10 +1466,40 @@ def get_all_consultation_task_master_details(
     if to_date is not None:
         search_conditions.append(func.date(OffViewConsultationTaskMaster.task_date) <= to_date)
 
-    query = db.query(OffViewConsultationTaskMaster).filter(and_(*search_conditions))
-    results = query.all()
+    # Query all tasks from the view
+    tasks_query = db.query(OffViewConsultationTaskMaster).filter(and_(*search_conditions)).all()
+    
+    # Query the additional services
+    additional_services_query = db.query(
+        OffConsultationTaskDetails.task_master_id,
+        OffConsultationTaskDetails.service_id,
+        OffViewServiceGoodsMaster.service_goods_name
+    ).join(
+        OffViewServiceGoodsMaster,
+        OffViewServiceGoodsMaster.service_goods_master_id == OffConsultationTaskDetails.service_id
+    ).filter(
+        OffConsultationTaskDetails.is_main_service == 'no'
+    ).all()
 
-    return results
+    # Create a dictionary to store the additional services by task_master_id
+    additional_services_dict = {}
+    for task_master_id, service_id, service_goods_name in additional_services_query:
+        if task_master_id not in additional_services_dict:
+            additional_services_dict[task_master_id] = []
+        additional_services_dict[task_master_id].append(
+            AdditionalServices(service_id=service_id, service_name=service_goods_name)
+        )
+
+    # Merge the results
+    task_master_details = []
+   
+    for task in tasks_query:
+        
+        task_dict = task.__dict__.copy()
+        task_dict["additional_services"] = additional_services_dict.get(task.consultation_task_master_id, [])
+        task_master_details.append(OffViewConsultationTaskMasterSchema(**task_dict))
+
+    return task_master_details
 
 def get_consultation_tools(db: Session, mode_id: int = 0):
     if mode_id == 0:

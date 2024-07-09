@@ -837,8 +837,9 @@ class OffConsultationTaskMasterSchema(BaseModel):
     class Config:
         orm_mode = True
 
-
-
+class AdditionalServices(BaseModel):
+    service_id: int
+    service_name:str
 
 class OffViewConsultationTaskMasterSchema(BaseModel):
     consultation_task_master_id: int
@@ -874,7 +875,9 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     service_id: Optional[int]
     hsn_sac_class_id: int
     hsn_sac_class: str
-    has_consultation: str
+    hsn_sac_id: int
+    hsn_sac_code: str
+   # has_consultation: str
     group_id: int
     group_name: Optional[str]
     sub_group_id: int
@@ -884,15 +887,15 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     sub_category_id: int
     sub_category_name: Optional[str]
     service_goods_name: str
-    hsn_sac_id: int
-    hsn_sac_code: str
     sku_code_id: int
     unit_code: Optional[str]
-    is_bundled_service: str
+    #is_bundled_service: str
     is_main_service: Optional[str]
+    additional_services:Optional[List[AdditionalServices]]
 
     class Config:
         orm_mode = True
+
        
 
 #----------------------------------------------

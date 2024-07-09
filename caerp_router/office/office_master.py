@@ -1667,7 +1667,6 @@ def save_off_consultation_task_master(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 #-----------------------------------------------------------------------------------------
 
-
 @router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
 def get_all_consultation_task_master_details(
     db: Session = Depends(get_db),
@@ -1692,17 +1691,31 @@ def get_all_consultation_task_master_details(
     - `to_date`: Optional. Filter tasks up to this date.(default None)
     
     """
-    if not token:
-        raise HTTPException(status_code=401, detail="Token is missing")
-
-    results = db_office_master.get_all_consultation_task_master_details(
-        db, service_id, task_status, consultation_mode, tool, consultant_id, from_date, to_date
-    )
-
-    if not results:
-        return {"message": "No data present"}
     
-    return results
+    try:
+        if not token:
+            raise HTTPException(status_code=401, detail="Token is missing")
+
+        results = db_office_master.get_all_consultation_task_master_details(
+            db, service_id, task_status, consultation_mode, tool, consultant_id, from_date, to_date
+        )
+
+        if not results:
+            return {"message": "No data present"}
+        
+        # Filter out null fields and convert datetime objects to strings
+        filtered_results = [
+            {
+                attribute_name: value.isoformat() if isinstance(value, datetime) else value 
+                for attribute_name, value in result.dict().items() if value not in [None, [], {}]
+            }
+            for result in results
+        ]
+
+        return JSONResponse(status_code=200, content=filtered_results)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 
