@@ -88,7 +88,6 @@ def save_employee_master(
  
 
 
-
 @router.post('/upload_document')
 def upload_document(
    employee_id: int,
@@ -221,6 +220,8 @@ def search_employee_details(
        employee_details.append(emp_detail)
    
     return employee_details
+
+
 
 
 

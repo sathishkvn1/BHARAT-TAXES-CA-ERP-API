@@ -39,69 +39,69 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
           raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
         
         try:    
-           data = request.employee_master.dict()
-           data["created_by"] = user_id
-           data["is_approved"] = 'yes'
-           data["approved_by"] = user_id
-           data["approved_on"] = datetime.utcnow()
-           data['employee_number'] = get_next_employee_number(db)
+          data = request.employee_master.dict()
+          data["created_by"] = user_id
+          data["is_approved"] = 'yes'
+          data["approved_by"] = user_id
+          data["approved_on"] = datetime.utcnow()
+          data['employee_number'] = get_next_employee_number(db)
 
-           with db.begin():
-              insert_stmt = insert(EmployeeMaster).values(**data)
-              result = db.execute(insert_stmt)
-              db.commit()
-        
-              emp_id = result.lastrowid         
+          #  with db.begin():
+          insert_stmt = insert(EmployeeMaster).values(**data)
+          result = db.execute(insert_stmt)
+          db.commit()
+    
+          emp_id = result.lastrowid         
 
-              contact_details_data = request.contact_details.dict()
-              contact_details_data['effective_from_date'] = datetime.utcnow().date()
-              contact_details_data['employee_id'] = emp_id
+          contact_details_data = request.contact_details.dict()
+          contact_details_data['effective_from_date'] = datetime.utcnow().date()
+          contact_details_data['employee_id'] = emp_id
 
-              insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
-              db.execute(insert_contact_stmt)
-              db.commit()
+          insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
+          db.execute(insert_contact_stmt)
+          db.commit()
 
-              users_new_dict = request.employee_security_credentials.dict()
-              # Insert into users_new table
-              log_password  = Hash.bcrypt(users_new_dict['login_password'])
-              password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+          users_new_dict = request.employee_security_credentials.dict()
+          # Insert into users_new table
+          log_password  = Hash.bcrypt(users_new_dict['login_password'])
+          password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
 
-              users_new_data = {
-                 "employee_id": emp_id,
-                 "user_name": users_new_dict['user_name'],
-                 "login_password": log_password,  # Ensure this is securely hashed before storage
-                 "edit_password":  log_password,
-                 "delete_password": log_password,
-                 "security_password": log_password,
-                 "is_active": 'yes',
-                 "password_reset_date" :password_reset_date
-                }
-              insert_user_log_stmt = insert(UserBase).values(**users_new_data)
-              db.execute(insert_user_log_stmt)
-              db.commit()
+          users_new_data = {
+              "employee_id": emp_id,
+              "user_name": users_new_dict['user_name'],
+              "login_password": log_password,  # Ensure this is securely hashed before storage
+              "edit_password":  log_password,
+              "delete_password": log_password,
+              "security_password": log_password,
+              "is_active": 'yes',
+              "password_reset_date" :password_reset_date
+            }
+          insert_user_log_stmt = insert(UserBase).values(**users_new_data)
+          db.execute(insert_user_log_stmt)
+          db.commit()
 
-              for role_id in request.user_roles.role_id :
-                user_role_data = {
-                  "employee_id": emp_id,
-                  "role_id": role_id
-                 }
-                insert_user_role_stmt = insert(UserRole).values(**user_role_data)
-                db.execute(insert_user_role_stmt)
-              db.commit()
+          for role_id in request.user_roles.role_id :
+            user_role_data = {
+              "employee_id": emp_id,
+              "role_id": role_id
+              }
+            insert_user_role_stmt = insert(UserRole).values(**user_role_data)
+            db.execute(insert_user_role_stmt)
+          db.commit()
 
-              employement_details_data = request.employement_details.dict()
+          employement_details_data = request.employement_details.dict()
 
-              employement_details_data["employee_id"] = emp_id
-              employement_details_data['effective_from_date'] = datetime.utcnow().date()
-              employement_details_data["created_by"] = user_id
-              employement_details_data["approved_by"] = user_id
-              employement_details_data["approved_on"] = datetime.utcnow()  
+          employement_details_data["employee_id"] = emp_id
+          employement_details_data['effective_from_date'] = datetime.utcnow().date()
+          employement_details_data["created_by"] = user_id
+          employement_details_data["approved_by"] = user_id
+          employement_details_data["approved_on"] = datetime.utcnow()  
 
-              insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
-              db.execute(insert_emp_det)
-              db.commit()
+          insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+          db.execute(insert_emp_det)
+          db.commit()
 
-           return emp_id
+          return emp_id
         except SQLAlchemyError as e:
           db.rollback()
           raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
