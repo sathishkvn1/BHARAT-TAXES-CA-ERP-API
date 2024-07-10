@@ -237,14 +237,14 @@ def add_employee_detail(employee_details, employee_id, key, value, db):
         employee.setdefault(key, []).append(value)
     
 @router.get("/get_employee_details")
-def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
+def get_employee_details(employee_id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
     employee_profile_component: Optional[str] = Query(None,
     description="Comma-separated list of components to view employee details")                     
     ):
     """
-    -**Retrieve employee master profile by id.**
+    -**Retrieve employee master profile by employee_id.**
 
-    -**id** : Integer parameter, the Employee Master identifier.
+    -**employee_id** : Integer parameter, the Employee Master identifier.
     - If id is 0, all the employees will be retrieved.
 
     -**employee_profile_component** : a textfield to add components for retrieving employee profiles. Following are the components:
@@ -256,10 +256,10 @@ def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db)
     employee_details = []
 
     if employee_profile_component is None: 
-        if id is not None:  
-            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+        if employee_id is not None:  
+            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
             if not emp:
-                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
+                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {employee_id} not found" )
             employee_details.append({
                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
             })
@@ -271,10 +271,10 @@ def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db)
                 })
         return employee_details    
     else: 
-        if id is not None:  
-            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+        if employee_id is not None:  
+            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
             if not emp:
-                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
+                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {employee_id} not found" )
             employee_details.append({
                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
             })
@@ -364,8 +364,8 @@ def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db)
                 for role in user_role:
                     add_employee_detail(employee_details, role.employee_id, 'user_roles', EmployeeUserRolesGet(**role.__dict__),db)
 
-        if id is not None:
-            return next((emp for emp in employee_details if emp['employee_master'].employee_id == id), None)
+        if employee_id is not None:
+            return next((emp for emp in employee_details if emp['employee_master'].employee_id == employee_id), None)
         else:
             return employee_details
 
