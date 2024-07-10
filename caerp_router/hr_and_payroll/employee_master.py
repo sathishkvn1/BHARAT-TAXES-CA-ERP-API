@@ -1,5 +1,6 @@
 from caerp_db.common.models import EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
@@ -11,7 +12,9 @@ from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ApprovedStatus, ActiveStatus
 from collections import defaultdict
-# from jose import JWTError, jwt
+import os
+from typing import List, Dict
+from settings import BASE_URL
 
 
 router = APIRouter(
@@ -20,7 +23,10 @@ router = APIRouter(
 )
 
 
-# #save employee master
+UPLOAD_EMP_DOCUMENTS = "uploads/employee_documents"
+
+
+#save employee master
 @router.post('/save_employee_master')
 def save_employee_master(
     employee_id: int = 0,
@@ -85,7 +91,7 @@ def save_employee_master(
 
 @router.post('/upload_document')
 def upload_document(
-   id: int,
+   employee_id: int,
    request: EmployeeDocumentsSchema = Depends(),
    file: UploadFile = File(None),
    db: Session = Depends(get_db),
@@ -109,7 +115,7 @@ def upload_document(
   user_id = auth_info["user_id"] 
 
   try:
-      db_employee_master.upload_employee_documents(db, request, id, user_id, file)
+      db_employee_master.upload_employee_documents(db, request, employee_id, user_id, file)
       return {
             "success": True,
             "message": "Uploaded successfully",
@@ -173,7 +179,7 @@ def search_employee_details(
     category: Optional[Union[str,int]] = Query("ALL", description="Filter by category"),
     department: Optional[Union[str,int]] = Query("ALL", description="Filter by department"),
     designation: Optional[Union[str,int]] = Query("ALL", description="Filter by designation"),
-    # status: Optional[ActiveStatus] = Query(None, description="Filter by status (ACTIVE/NOT_ACTIVE/ALL)"),
+    status: Optional[ActiveStatus] = Query("ALL", description="Filter by status (yes/no)"),
     approval_status: Optional[ApprovedStatus] = Query("ALL", description="Filter by approval status (yes/no)"),
     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
     search: Optional[str] = Query(None, description="Search by employee details")
@@ -184,6 +190,7 @@ def search_employee_details(
     -**category** : retrieve employees with category filter.
     -**department** : retrieve employees with department filter.
     -**designation** : retrieve employees with designation filter.
+    -**status** : filter employees by status(yes/no).
     -**approval_status** : filter employees by approval status(yes/no).
     -**is_consultant** : to check whether the employee is a consultant or not(yes/no).
 
@@ -193,7 +200,7 @@ def search_employee_details(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
-    employees = db_employee_master.search_employee_master_details(db, approval_status, category, department, designation, is_consultant, search)
+    employees = db_employee_master.search_employee_master_details(db, status, approval_status, category, department, designation, is_consultant, search)
        
     if not employees:
       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No employees found with the given filters")
@@ -202,13 +209,14 @@ def search_employee_details(
 
     for emp in employees:
        emp_detail = {
+                "employee_id": emp.employee_id,
                 "employee_name": f"{emp.first_name} {emp.middle_name} {emp.last_name}",
                 "category" : emp.category_name,
                 "department": emp.department_name,
                 "designation": emp.designation,
                 "contact_number": emp.personal_mobile_number,
-                "is_consultant": emp.is_consultant
-                # "status": "ACTIVE" if emp_details.is_active else "NOT_ACTIVE"
+                "is_consultant": emp.is_consultant,
+                "status": emp.is_active
        }
        employee_details.append(emp_detail)
    
@@ -217,148 +225,190 @@ def search_employee_details(
 
 
 
+
+def add_employee_detail(employee_details, employee_id, key, value, db):
+    employee = next((emp for emp in employee_details if emp['employee_master'].employee_id == employee_id), None)
+    if not employee:
+        emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
+        if emp:
+            employee = {'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})}
+            employee_details.append(employee)
+    if employee:
+        employee.setdefault(key, []).append(value)
+    
 @router.get("/get_employee_details")
 def get_employee_details(id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
     employee_profile_component: Optional[str] = Query(None,
     description="Comma-separated list of components to view employee details")                     
     ):
-  """
+    """
     -**Retrieve employee master profile by id.**
 
     -**id** : Integer parameter, the Employee Master identifier.
     - If id is 0, all the employees will be retrieved.
 
-     -**employee_profile_component** : a textfield to add components for retrieving employee profiles.
-   """
-  if not token:
+    -**employee_profile_component** : a textfield to add components for retrieving employee profiles. Following are the components:
+    - present_address,permanent_address,bank_details,contact_details,employement_details,emergency_contact_details,dependent_details,employee_salary, educational_qualification, employee_experience, employee_documents, professional_qualification
+    """
+    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-  
-  employee_details = defaultdict(dict)
 
-  if employee_profile_component is None: 
-    if id is not None:  
-      emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
-      if not emp:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
-      employee_details[id]['employee_master'] = EmployeeMasterSchema(
-            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
-        )
-    else:
-      employees = db_employee_master.get_employee_master_details(db)
-      for emp in employees:
-        employee_details[emp.employee_id]['employee_master'] = EmployeeMasterSchema(
-            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
-            )
-    return employee_details    
-  else: 
-    if id is not None:  
-      emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
-      if not emp:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
-      employee_details[id]['employee_master'] = EmployeeMasterSchema(
-            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
-        )
-    else:
-      employees = db_employee_master.get_employee_master_details(db)
-      for emp in employees:
-        employee_details[emp.employee_id]['employee_master'] = EmployeeMasterSchema(
-            **{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()}
-            ) 
+    employee_details = []
+
+    if employee_profile_component is None: 
+        if id is not None:  
+            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+            if not emp:
+                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
+            employee_details.append({
+                'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+            })
+        else:
+            employees = db_employee_master.get_employee_master_details(db)
+            for emp in employees:
+                employee_details.append({
+                    'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+                })
+        return employee_details    
+    else: 
+        if id is not None:  
+            emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
+            if not emp:
+                raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {id} not found" )
+            employee_details.append({
+                'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+            })
+        else:
+            employees = db_employee_master.get_employee_master_details(db)
+            for emp in employees:
+                employee_details.append({
+                    'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+                })
         
-    schema_names = EmployeeDetails.__fields__.keys()
-    schemas_list = employee_profile_component.split(",")
-    valid_options = [option for option in schemas_list if option in schema_names]
+        schema_names = EmployeeDetailsGet.__fields__.keys()
+        schemas_list = employee_profile_component.split(",")
+        valid_options = [option for option in schemas_list if option in schema_names]
 
-    if not valid_options:
-      raise HTTPException(status_code=422, detail="Invalid employee profile component")
+        if not valid_options:
+            raise HTTPException(status_code=422, detail="Invalid employee profile component")
   
-    for option in valid_options:
+        for option in valid_options:
 
-      if option == "present_address":
-        present_addresses = db_employee_master.get_present_address_details(db)
-        for present in present_addresses:
-          employee_details[present.employee_id].setdefault('present_address', []).append(
-                EmployeePresentAddressSchema(**present.__dict__)
-           )
+            if option == "present_address":
+                present_addresses = db_employee_master.get_present_address_details(db)
+                for present in present_addresses:
+                    add_employee_detail(employee_details, present.employee_id, 'present_address', EmployeePresentAddressGet(**present.__dict__),db)
       
-      if option == "permanent_address":
-        permanent_addresses = db_employee_master.get_permanent_address_details(db)
-        for permanent in permanent_addresses:
-          employee_details[permanent.employee_id].setdefault('permanent_address', []).append(
-                EmployeePermanentAddressSchema(**permanent.__dict__)
-           )    
+            if option == "permanent_address":
+                permanent_addresses = db_employee_master.get_permanent_address_details(db)
+                for permanent in permanent_addresses:
+                    add_employee_detail(employee_details, permanent.employee_id, 'permanent_address', EmployeePermanentAddressGet(**permanent.__dict__),db)    
     
-      if option == "contact_details":
-        contact_info = db_employee_master.get_contact_details(db)
-        for contact in contact_info:
-          employee_details[contact.employee_id].setdefault('contact_details', []).append(
-             EmployeeContactSchema(**contact.__dict__)
-           )
+            if option == "contact_details":
+                contact_info = db_employee_master.get_contact_details(db)
+                for contact in contact_info:
+                    add_employee_detail(employee_details, contact.employee_id, 'contact_details', EmployeeContactGet(**contact.__dict__),db)
 
-      if option == "bank_details":
-        bank_info = db_employee_master.get_bank_details(db)
-        for bank in bank_info:
-          employee_details[bank.employee_id].setdefault('bank_details', []).append(
-             EmployeeBankAccountSchema(**bank.__dict__)
-           )
+            if option == "bank_details":
+                bank_info = db_employee_master.get_bank_details(db)
+                for bank in bank_info:
+                    add_employee_detail(employee_details, bank.employee_id, 'bank_details', EmployeeBankAccountGet(**bank.__dict__),db)
      
-      if option == "employement_details":
-        employement_info = db_employee_master.get_employement_details(db)
-        for employement in employement_info:
-          employee_details[employement.employee_id].setdefault('employement_details', []).append(
-             EmployeeEmployementSchema(**employement.__dict__)
-           )   
+            if option == "employement_details":
+                employement_info = db_employee_master.get_employement_details(db)
+                for employement in employement_info:
+                    add_employee_detail(employee_details, employement.employee_id, 'employement_details', EmployeeEmployementGet(**employement.__dict__),db)
      
-      if option == "employee_salary":
-        salary_info = db_employee_master.get_salary_details(db)
-        for salary in salary_info:
-          employee_details[salary.employee_id].setdefault('employee_salary', []).append(
-             EmployeeSalarySchema(**salary.__dict__)
-           )   
+            if option == "employee_salary":
+                salary_info = db_employee_master.get_salary_details(db)
+                for salary in salary_info:
+                    add_employee_detail(employee_details, salary.employee_id, 'employee_salary', EmployeeSalaryGet(**salary.__dict__),db)
      
-      if option == "educational_qualification":
-        edu_qual_info = db_employee_master.get_qualification_details(db)
-        for edu_qual in edu_qual_info:
-          employee_details[edu_qual.employee_id].setdefault('educational_qualification', []).append(
-             EmployeeEducationalQualficationSchema(**edu_qual.__dict__)
-           )   
+            if option == "educational_qualification":
+                edu_qual_info = db_employee_master.get_qualification_details(db)
+                for edu_qual in edu_qual_info:
+                    add_employee_detail(employee_details, edu_qual.employee_id, 'educational_qualification', EmployeeEducationalQualficationGet(**edu_qual.__dict__),db)
 
-      if option == "employee_experience":
-        exp_info = db_employee_master.get_experience_details(db)
-        for exp in exp_info:
-          employee_details[exp.employee_id].setdefault('employee_experience', []).append(
-             EmployeeExperienceSchema(**exp.__dict__)
-           )   
+            if option == "employee_experience":
+                exp_info = db_employee_master.get_experience_details(db)
+                for exp in exp_info:
+                    add_employee_detail(employee_details, exp.employee_id, 'employee_experience', EmployeeExperienceGet(**exp.__dict__),db)
 
-      if option == "employee_documents":
-        doc_info = db_employee_master.get_document_details(db)
-        for doc in doc_info:
-          employee_details[doc.employee_id].setdefault('employee_documents', []).append(
-             EmployeeDocumentsSchema(**doc.__dict__)
-           ) 
+            if option == "employee_documents":
+                doc_info = db_employee_master.get_document_details(db)
+                for doc in doc_info:
+                    add_employee_detail(employee_details, doc.employee_id, 'employee_documents', EmployeeDocumentsGet(**doc.__dict__),db)
 
-      if option == "emergency_contact_details":
-        emer_contact = db_employee_master.get_emergency_contact_details(db)
-        for emer in emer_contact:
-          employee_details[emer.employee_id].setdefault('emergency_contact_details', []).append(
-             EmployeeEmergencyContactSchema(**emer.__dict__)
-           )      
+            if option == "emergency_contact_details":
+                emer_contact = db_employee_master.get_emergency_contact_details(db)
+                for emer in emer_contact:
+                    add_employee_detail(employee_details, emer.employee_id, 'emergency_contact_details', EmployeeEmergencyContactGet(**emer.__dict__),db)
 
-      if option == "dependent_details":
-        dep_details = db_employee_master.get_dependent_details(db)
-        for dep in dep_details:
-          employee_details[dep.employee_id].setdefault('dependent_details', []).append(
-             EmployeeDependentsSchema(**dep.__dict__)
-           )   
+            if option == "dependent_details":
+                dep_details = db_employee_master.get_dependent_details(db)
+                for dep in dep_details:
+                    add_employee_detail(employee_details, dep.employee_id, 'dependent_details', EmployeeDependentsGet(**dep.__dict__),db)
      
-      if option == "professional_qualification":
-        prof_qual_info = db_employee_master.get_professional_qualification_details(db)
-        for prof_qual in prof_qual_info:
-          employee_details[prof_qual.employee_id].setdefault('professional_qualification', []).append(
-             EmployeeProfessionalQualificationSchema(**prof_qual.__dict__)
-           )   
+            if option == "professional_qualification":
+                prof_qual_info = db_employee_master.get_professional_qualification_details(db)
+                for prof_qual in prof_qual_info:
+                    add_employee_detail(employee_details, prof_qual.employee_id, 'professional_qualification', EmployeeProfessionalQualificationGet(**prof_qual.__dict__),db)
 
-    if id is not None:
-      return employee_details.get(id, {})
-    else:
-      return employee_details
+            if option == "employee_security_credentials":
+                sec_credentials = db_employee_master.get_security_credentials(db)
+                for sec in sec_credentials:
+                    add_employee_detail(employee_details, sec.employee_id, 'employee_security_credentials', EmployeeSecurityCredentialsGet(**sec.__dict__),db)
+          
+            if option == "user_roles":
+                user_role = db_employee_master.get_user_roles(db)
+                for role in user_role:
+                    add_employee_detail(employee_details, role.employee_id, 'user_roles', EmployeeUserRolesGet(**role.__dict__),db)
+
+        if id is not None:
+            return next((emp for emp in employee_details if emp['employee_master'].employee_id == id), None)
+        else:
+            return employee_details
+
+
+
+
+@router.get('/view_documents/{employee_id}', response_model=List[Dict[str, str]])
+def view_documents(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Fetch uploaded documents for a particular employee.
+    
+    - **employee_id**: Integer parameter, employee identifier.
+    - **db**: Database session.
+    - **token**: Authentication token.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"]
+
+    try:
+        documents = db.query(EmployeeDocuments).filter(
+            EmployeeDocuments.employee_id == employee_id,
+            EmployeeDocuments.is_deleted == 'no'
+        ).all()
+
+        if not documents:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found for the given employee id")
+
+        document_urls = []
+        for doc in documents:
+          filename_prefix = f"{doc.id}"
+
+          for filename in os.listdir(UPLOAD_EMP_DOCUMENTS):
+              if filename.startswith(filename_prefix):
+                 document_urls.append({"document": f"{BASE_URL}/Employee/upload_document/{filename}"})
+        
+        return document_urls
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

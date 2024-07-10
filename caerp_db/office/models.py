@@ -37,6 +37,7 @@ class OffAppointmentVisitMaster(caerp_base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     financial_year_id = Column(Integer, nullable=True)
+    appointment_number= Column(String(50), nullable=True)
     voucher_number = Column(String(50), nullable=True)
     appointment_master_id = Column(Integer, nullable=False)
     appointment_date = Column(Date, nullable=True)
@@ -74,6 +75,7 @@ class OffAppointmentVisitMasterView(caerp_base):
     appointment_master_id= Column(Integer,  primary_key=True,nullable=False)
     full_name 	 = Column(String(200), nullable=False)
     gender_id= Column(Integer, nullable=False)
+    appointment_number=Column(String(50), nullable=True)
     customer_number=Column(String(100), nullable=True)
     mobile_number  = Column(String(20), nullable=True)
     whatsapp_number=Column(String(20), nullable=True)
@@ -129,7 +131,6 @@ class OffAppointmentVisitMasterView(caerp_base):
 
 
 
-
 class OffAppointmentVisitDetails(caerp_base):
     __tablename__ = 'off_appointment_visit_details'
 
@@ -151,6 +152,7 @@ class OffAppointmentVisitDetailsView(caerp_base):
 
     appointment_visit_details_id= Column(Integer, primary_key=True, nullable=False)
     visit_master_id= Column(Integer, nullable=False)
+    appointment_number=Column(String(50), nullable=True)
     appointment_visit_master_financial_year_id= Column(Integer, nullable=True)
     appointment_visit_master_voucher_number=Column(String(50), nullable=True)
     appointment_visit_master_appointment_master_id= Column(Integer, nullable=True)
@@ -185,6 +187,9 @@ class OffAppointmentVisitDetailsView(caerp_base):
     appointment_visit_details_deleted_by= Column(Integer, nullable=True)
     appointment_visit_details_deleted_on= Column(Date, nullable=True)
     
+
+
+
 class OffAppointmentCancellationReason(caerp_base):
     __tablename__ = 'off_appointment_cancellation_reason'
 

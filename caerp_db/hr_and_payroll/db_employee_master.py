@@ -38,69 +38,73 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         if employee_id != 0:
           raise HTTPException(status_code=400, detail="ID should be 0 for inserting new employee master")
         
-            
-        data = request.employee_master.dict()
-        data["created_by"] = user_id
-        data["approved_by"] = user_id
-        data["approved_on"] = datetime.utcnow()
-        data['employee_number'] = get_next_employee_number(db)
+        try:    
+           data = request.employee_master.dict()
+           data["created_by"] = user_id
+           data["is_approved"] = 'yes'
+           data["approved_by"] = user_id
+           data["approved_on"] = datetime.utcnow()
+           data['employee_number'] = get_next_employee_number(db)
 
-        insert_stmt = insert(EmployeeMaster).values(**data)
-        result = db.execute(insert_stmt)
-        db.commit()
+           with db.begin():
+              insert_stmt = insert(EmployeeMaster).values(**data)
+              result = db.execute(insert_stmt)
+              db.commit()
         
-        emp_id = result.lastrowid         
+              emp_id = result.lastrowid         
 
-        contact_details_data = request.contact_details.dict()
-        contact_details_data['effective_from_date'] = datetime.utcnow().date()
-        contact_details_data['employee_id'] = emp_id
+              contact_details_data = request.contact_details.dict()
+              contact_details_data['effective_from_date'] = datetime.utcnow().date()
+              contact_details_data['employee_id'] = emp_id
 
-        insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
-        db.execute(insert_contact_stmt)
-        db.commit()
+              insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
+              db.execute(insert_contact_stmt)
+              db.commit()
 
-        users_new_dict = request.employee_security_credentials.dict()
-        # Insert into users_new table
-        log_password  = Hash.bcrypt(users_new_dict['login_password'])
-        password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+              users_new_dict = request.employee_security_credentials.dict()
+              # Insert into users_new table
+              log_password  = Hash.bcrypt(users_new_dict['login_password'])
+              password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
 
-        users_new_data = {
-            "employee_id": emp_id,
-            "user_name": users_new_dict['user_name'],
-            "login_password": log_password,  # Ensure this is securely hashed before storage
-            "edit_password":  log_password,
-            "delete_password": log_password,
-            "security_password": log_password,
-            "is_active": 'yes',
-            "password_reset_date" :password_reset_date
-        }
-        insert_user_log_stmt = insert(UserBase).values(**users_new_data)
-        db.execute(insert_user_log_stmt)
-        db.commit()
+              users_new_data = {
+                 "employee_id": emp_id,
+                 "user_name": users_new_dict['user_name'],
+                 "login_password": log_password,  # Ensure this is securely hashed before storage
+                 "edit_password":  log_password,
+                 "delete_password": log_password,
+                 "security_password": log_password,
+                 "is_active": 'yes',
+                 "password_reset_date" :password_reset_date
+                }
+              insert_user_log_stmt = insert(UserBase).values(**users_new_data)
+              db.execute(insert_user_log_stmt)
+              db.commit()
 
-        for role_id in request.user_roles.role_id :
-          user_role_data = {
-                "employee_id": emp_id,
-                "role_id": role_id
-          }
-          insert_user_role_stmt = insert(UserRole).values(**user_role_data)
-          db.execute(insert_user_role_stmt)
-        db.commit()
+              for role_id in request.user_roles.role_id :
+                user_role_data = {
+                  "employee_id": emp_id,
+                  "role_id": role_id
+                 }
+                insert_user_role_stmt = insert(UserRole).values(**user_role_data)
+                db.execute(insert_user_role_stmt)
+              db.commit()
 
-        employement_details_data = request.employement_details.dict()
+              employement_details_data = request.employement_details.dict()
 
-        employement_details_data["employee_id"] = emp_id
-        employement_details_data['effective_from_date'] = datetime.utcnow().date()
-        employement_details_data["created_by"] = user_id
-        employement_details_data["approved_by"] = user_id
-        employement_details_data["approved_on"] = datetime.utcnow()  
+              employement_details_data["employee_id"] = emp_id
+              employement_details_data['effective_from_date'] = datetime.utcnow().date()
+              employement_details_data["created_by"] = user_id
+              employement_details_data["approved_by"] = user_id
+              employement_details_data["approved_on"] = datetime.utcnow()  
 
-        insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
-        db.execute(insert_emp_det)
-        db.commit()
+              insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+              db.execute(insert_emp_det)
+              db.commit()
 
-        return emp_id
-
+           return emp_id
+        except SQLAlchemyError as e:
+          db.rollback()
+          raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
       elif Action in {RecordActionType.UPDATE_ONLY, RecordActionType.UPDATE_AND_INSERT}:
         if employee_id <= 0:
           raise HTTPException(status_code=400, detail="Please provide the employee ID to Update")
@@ -291,31 +295,54 @@ def insert_multiple_detail_records(db, model, request_data_list, employee_id, us
        insert_detail["created_by"] = user_id
      db.add(model(**insert_detail))
 
-
-
   
-def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, id: int, user_id: int, file: UploadFile = None):
-  try: 
-    emp_documents_data = request.dict()
-    emp_documents_data["employee_id"] = id
-    emp_documents_data["created_by"] = user_id
+# def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, id: int, user_id: int, file: UploadFile = None):
+#   try: 
+#     emp_documents_data = request.dict()
+#     emp_documents_data["employee_id"] = id
+#     emp_documents_data["created_by"] = user_id
     
-    result = EmployeeDocuments(**emp_documents_data)
-    db.add(result)
-    db.commit() 
-    db.refresh(result)
+#     result = EmployeeDocuments(**emp_documents_data)
+#     db.add(result)
+#     db.commit() 
+#     db.refresh(result)
 
-    # Handle file upload
-    if file:
-        file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, f"{result.id}_{file.filename}")
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        # result.document_number = file_path
+#     # Handle file upload
+#     if file:
+#         file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, {result.id})
+#         with open(file_path, "wb") as buffer:
+#             shutil.copyfileobj(file.file, buffer)
+#         # result.document_number = file_path
+#         db.commit()
+#     # return result         
+#   except Exception as e:
+#      db.rollback()
+#      raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}") 
+
+
+
+def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
+    try:
+        emp_documents_data = request.dict()
+        emp_documents_data["employee_id"] = employee_id
+        emp_documents_data["created_by"] = user_id
+
+        result = EmployeeDocuments(**emp_documents_data)
+        db.add(result)
         db.commit()
-    # return result         
-  except Exception as e:
-     db.rollback()
-     raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}") 
+        db.refresh(result)
+
+        # Handle file upload
+        if file:
+            file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, str(result.id))
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            db.commit()
+        return result
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
 
 
 
@@ -390,8 +417,6 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
          item_to_delete.is_deleted = 'yes'
          item_to_delete.deleted_by = user_id
          item_to_delete.deleted_on = datetime.utcnow()
-      #  else:
-      #    raise HTTPException(status_code=400, detail=f"Invalid profile component: {employee_profile_component}")
      db.commit()  
    elif Action == ActionType.UNDELETE:
      schema_mappings = {
@@ -421,8 +446,9 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 
 
 
-def search_employee_master_details(db: Session, approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
+def search_employee_master_details(db: Session, status: Optional[ActiveStatus], approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
     query = db.query(
+        EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
         EmployeeMaster.last_name,
@@ -430,7 +456,8 @@ def search_employee_master_details(db: Session, approval_status: Optional[Approv
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation,
         EmployeeContactDetails.personal_mobile_number,
-        EmployeeEmployementDetails.is_consultant
+        EmployeeEmployementDetails.is_consultant,
+        UserBase.is_active
     ).join(
         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
     ).join(
@@ -439,6 +466,8 @@ def search_employee_master_details(db: Session, approval_status: Optional[Approv
         HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
     ).join(
         HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+    ).join(
+       UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter = True
     ).join(
         EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id, isouter=True
     )
@@ -459,8 +488,8 @@ def search_employee_master_details(db: Session, approval_status: Optional[Approv
                             HrDesignationMaster.id == designation,
                             HrDesignationMaster.designation == designation
                           ))
-    # if status and status != ActiveStatus.ALL:
-    #     query = query.filter(EmployeeMaster.is_active == status.value)
+    if status and status != ActiveStatus.ALL:
+      query = query.filter(UserBase.is_active == status.value)
     if approval_status and approval_status != ApprovedStatus.ALL:
       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
     if is_consultant:
@@ -523,3 +552,11 @@ def get_dependent_details(db: Session):
 
 def get_professional_qualification_details(db: Session):
     return db.query(EmployeeProfessionalQualification).all()
+
+def get_security_credentials(db: Session):
+    return db.query(UserBase).all()
+
+def get_user_roles(db: Session):
+    return db.query(UserRole).all()
+
+

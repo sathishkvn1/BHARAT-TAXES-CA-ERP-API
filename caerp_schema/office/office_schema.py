@@ -109,6 +109,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_master_id: int
     full_name: str
     gender_id: int
+    appointment_number: Optional[str]
     customer_number: Optional[str]
     mobile_number: Optional[str]
     whatsapp_number: Optional[str]
@@ -673,7 +674,7 @@ class ConsultantServiceDetailsListResponse(BaseModel):
 
 class ConsultantScheduleCreate(BaseModel):
     # consultant_id: int
-    day_of_week_id: int
+    day_of_week_id: Optional[int]=None
     consultation_mode_id: int
     morning_start_time: Optional[time] = None
     morning_end_time: Optional[time] = None

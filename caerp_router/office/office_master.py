@@ -33,7 +33,6 @@ router = APIRouter(
 def save_appointment_details(
     id: int,
     appointment_data: List[OffAppointmentDetails], 
-    action_type: RecordActionType,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
     
@@ -61,7 +60,7 @@ def save_appointment_details(
     try:
         for appointment in appointment_data:
             db_office_master.save_appointment_visit_master(
-                db, id, appointment, user_id, action_type
+                db, id, appointment, user_id
             )
 
         return {"success": True, "message": "Saved successfully"}

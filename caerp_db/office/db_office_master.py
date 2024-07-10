@@ -10,6 +10,7 @@ from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
 from sqlalchemy import and_,or_, func
@@ -24,126 +25,124 @@ def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
     appointment_data: OffAppointmentDetails,
-    user_id: int,
-    action_type: RecordActionType  # Default action is INSERT_ONLY
+    user_id: int
 ):
-    # Validate action_type and appointment_master_id combination
-    if action_type == RecordActionType.INSERT_ONLY and appointment_master_id != 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, appointment_master_id should be 0")
-    elif action_type == RecordActionType.UPDATE_ONLY and appointment_master_id <= 0:
-        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, appointment_master_id should be greater than 0")
-
     try:
-        if action_type == RecordActionType.INSERT_ONLY:
-            appointment_master = OffAppointmentMaster(
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                **appointment_data.appointment_master.dict(exclude_unset=True)
-            )
-            db.add(appointment_master)
-            db.flush()
-
-            visit_master = OffAppointmentVisitMaster(
-                appointment_master_id=appointment_master.id,
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                **appointment_data.visit_master.dict(exclude_unset=True)
-            )
-            db.add(visit_master)
-            db.flush()
-
-            visit_details_list = []
-            for detail_data in appointment_data.visit_details:
-                visit_detail = OffAppointmentVisitDetails(
-                    visit_master_id=visit_master.id,
-                    consultant_id=visit_master.consultant_id,
+        with db.begin():
+            if appointment_master_id == 0:
+                # Insert operation
+                # Generate appointment_number
+                appointment_number = generate_book_number(db, OffAppointmentVisitMaster.appointment_number)
+                
+                appointment_master = OffAppointmentMaster(
                     created_by=user_id,
                     created_on=datetime.utcnow(),
-                    **detail_data.dict(exclude_unset=True)
+                    **appointment_data.appointment_master.dict(exclude_unset=True)
                 )
-                db.add(visit_detail)
-                visit_details_list.append(visit_detail)
+                db.add(appointment_master)
+                db.flush()
 
-        elif action_type == RecordActionType.UPDATE_ONLY:
-            # Fetch existing appointment master record
-            appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
-            if not appointment_master:
-                raise HTTPException(status_code=404, detail="Appointment master not found")
+                visit_master = OffAppointmentVisitMaster(
+                    appointment_master_id=appointment_master.id,
+                    appointment_number=appointment_number,  # Assign the generated appointment number
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    **appointment_data.visit_master.dict(exclude_unset=True)
+                )
+                db.add(visit_master)
+                db.flush()
 
-            # Update appointment master fields
-            for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
-                setattr(appointment_master, field, value)
-            appointment_master.modified_by = user_id
-            appointment_master.modified_on = datetime.utcnow()
-
-            # Fetch existing visit master record
-            visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
-            if not visit_master:
-                raise HTTPException(status_code=404, detail="Visit master not found")
-
-            # Update visit master fields
-            for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
-                # Append new remarks with newline separation
-                if field == "remarks":
-                    if visit_master.remarks:
-                        setattr(visit_master, field, visit_master.remarks + "\n" + value)
-                    else:
-                        setattr(visit_master, field, value)
-                else:
-                    setattr(visit_master, field, value)
-            visit_master.modified_by = user_id
-            visit_master.modified_on = datetime.utcnow()
-
-            # Fetch existing visit details
-            existing_details = db.query(OffAppointmentVisitDetails).filter(
-                OffAppointmentVisitDetails.visit_master_id == visit_master.id
-            ).all()
-
-            existing_details_dict = {detail.service_id: detail for detail in existing_details}
-
-            # Mark all existing visit details as deleted
-            for detail in existing_details:
-                detail.is_deleted = "yes"
-                detail.deleted_by = user_id
-                detail.deleted_on = datetime.utcnow()
-                detail.modified_by = user_id
-                detail.modified_on = datetime.utcnow()
-
-            visit_details_list = []
-            for detail_data in appointment_data.visit_details:
-                detail_data_dict = detail_data.dict(exclude_unset=True)
-                service_id = detail_data_dict.get("service_id")
-
-                if service_id in existing_details_dict:
-                    # Update existing detail
-                    existing_detail = existing_details_dict[service_id]
-                    for key, value in detail_data_dict.items():
-                        setattr(existing_detail, key, value)
-                    existing_detail.is_deleted = "no"
-                    existing_detail.deleted_by = None
-                    existing_detail.deleted_on = None
-                    existing_detail.modified_by = user_id
-                    existing_detail.modified_on = datetime.utcnow()
-                    visit_details_list.append(existing_detail)
-                else:
-                    # Insert new detail
+                visit_details_list = []
+                for detail_data in appointment_data.visit_details:
                     visit_detail = OffAppointmentVisitDetails(
                         visit_master_id=visit_master.id,
                         consultant_id=visit_master.consultant_id,
                         created_by=user_id,
                         created_on=datetime.utcnow(),
-                        **detail_data_dict
+                        **detail_data.dict(exclude_unset=True)
                     )
                     db.add(visit_detail)
                     visit_details_list.append(visit_detail)
 
-        db.commit()  # Commit all changes to the database
+            elif appointment_master_id > 0:
+                # Update operation
+                # Fetch existing appointment master record
+                appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
+                if not appointment_master:
+                    raise HTTPException(status_code=404, detail="Appointment master not found")
 
-        return {
-            "appointment_master": appointment_master,
-            "visit_master": visit_master,
-            "visit_details": visit_details_list
-        }
+                # Update appointment master fields
+                for field, value in appointment_data.appointment_master.dict(exclude_unset=True).items():
+                    setattr(appointment_master, field, value)
+                appointment_master.modified_by = user_id
+                appointment_master.modified_on = datetime.utcnow()
+
+                # Fetch existing visit master record
+                visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
+                if not visit_master:
+                    raise HTTPException(status_code=404, detail="Visit master not found")
+
+                # Update visit master fields
+                for field, value in appointment_data.visit_master.dict(exclude_unset=True).items():
+                    # Append new remarks with newline separation
+                    if field == "remarks":
+                        if visit_master.remarks:
+                            setattr(visit_master, field, visit_master.remarks + "\n" + value)
+                        else:
+                            setattr(visit_master, field, value)
+                    else:
+                        setattr(visit_master, field, value)
+                visit_master.modified_by = user_id
+                visit_master.modified_on = datetime.utcnow()
+
+                # Fetch existing visit details
+                existing_details = db.query(OffAppointmentVisitDetails).filter(
+                    OffAppointmentVisitDetails.visit_master_id == visit_master.id
+                ).all()
+
+                existing_details_dict = {detail.service_id: detail for detail in existing_details}
+
+                # Mark all existing visit details as deleted
+                for detail in existing_details:
+                    detail.is_deleted = "yes"
+                    detail.deleted_by = user_id
+                    detail.deleted_on = datetime.utcnow()
+                    detail.modified_by = user_id
+                    detail.modified_on = datetime.utcnow()
+
+                visit_details_list = []
+                for detail_data in appointment_data.visit_details:
+                    detail_data_dict = detail_data.dict(exclude_unset=True)
+                    service_id = detail_data_dict.get("service_id")
+
+                    if service_id in existing_details_dict:
+                        # Update existing detail
+                        existing_detail = existing_details_dict[service_id]
+                        for key, value in detail_data_dict.items():
+                            setattr(existing_detail, key, value)
+                        existing_detail.is_deleted = "no"
+                        existing_detail.deleted_by = None
+                        existing_detail.deleted_on = None
+                        existing_detail.modified_by = user_id
+                        existing_detail.modified_on = datetime.utcnow()
+                        visit_details_list.append(existing_detail)
+                    else:
+                        # Insert new detail
+                        visit_detail = OffAppointmentVisitDetails(
+                            visit_master_id=visit_master.id,
+                            consultant_id=visit_master.consultant_id,
+                            created_by=user_id,
+                            created_on=datetime.utcnow(),
+                            **detail_data_dict
+                        )
+                        db.add(visit_detail)
+                        visit_details_list.append(visit_detail)
+
+            return {
+                "appointment_master": appointment_master,
+                "visit_master": visit_master,
+                "visit_details": visit_details_list
+            }
 
     except IntegrityError as e:
         db.rollback()
@@ -157,6 +156,8 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 
@@ -1528,91 +1529,98 @@ def save_enquiry_master(
     user_id: int
 ) -> Dict[str, Union[OffEnquiryMasterSchema, List[OffEnquiryDetailsSchema]]]:
     try:
-        if enquiry_master_id == 0:
-            # Insert new enquiry master record
-            enquiry_master = OffEnquiryMaster(
-                created_by=user_id,
-                created_on=datetime.utcnow(),
-                **enquiry_data.enquiry_master.dict(exclude_unset=True)
-            )
-            db.add(enquiry_master)
-            db.flush()
-
-            # Insert related enquiry details
-            enquiry_details_list = []
-            for detail_data in enquiry_data.enquiry_details:
-                enquiry_detail = OffEnquiryDetails(
-                    enquiry_master_id=enquiry_master.id,
+        with db.begin():
+            if enquiry_master_id == 0:
+                # Insert new enquiry master record
+                enquiry_master = OffEnquiryMaster(
                     created_by=user_id,
                     created_on=datetime.utcnow(),
-                    **detail_data.dict(exclude_unset=True)
+                    **enquiry_data.enquiry_master.dict(exclude_unset=True)
                 )
-                db.add(enquiry_detail)
-                enquiry_details_list.append(enquiry_detail)
+                db.add(enquiry_master)
+                db.flush()
 
-        elif enquiry_master_id > 0:
-            # Fetch existing enquiry master record
-            enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
-            if not enquiry_master:
-                raise HTTPException(status_code=404, detail="Enquiry master not found")
+                # Insert related enquiry details
+                enquiry_details_list = []
+                for detail_data in enquiry_data.enquiry_details:
+                    # Generate enquiry_number for each detail
+                    enquiry_number = generate_book_number(db, OffEnquiryDetails.enquiry_number)
+                    
+                    enquiry_detail = OffEnquiryDetails(
+                        enquiry_master_id=enquiry_master.id,
+                        enquiry_number=enquiry_number,  # Assign the generated enquiry number
+                        created_by=user_id,
+                        created_on=datetime.utcnow(),
+                        **detail_data.dict(exclude_unset=True)
+                    )
+                    db.add(enquiry_detail)
+                    enquiry_details_list.append(enquiry_detail)
 
-            # Update enquiry master fields
-            enquiry_master_data = enquiry_data.enquiry_master.dict(exclude_unset=True)
-            for field, value in enquiry_master_data.items():
-                if field == "remarks" and enquiry_master.remarks:
-                    setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
-                else:
-                    setattr(enquiry_master, field, value)
-            enquiry_master.modified_by = user_id
-            enquiry_master.modified_on = datetime.utcnow()
+            elif enquiry_master_id > 0:
+                # Fetch existing enquiry master record
+                enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
+                if not enquiry_master:
+                    raise HTTPException(status_code=404, detail="Enquiry master not found")
 
-            enquiry_details_list = []
-            for detail_data in enquiry_data.enquiry_details:
-                detail_data_dict = detail_data.dict(exclude_unset=True)
-                detail_id = detail_data_dict.get("id")
-
-                if detail_id:
-                    # Update existing detail if ID is provided
-                    existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
-                    if existing_detail:
-                        for key, value in detail_data_dict.items():
-                            if key == "remarks" and existing_detail.remarks:
-                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                            else:
-                                setattr(existing_detail, key, value)
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.utcnow()
-                        enquiry_details_list.append(existing_detail)
+                # Update enquiry master fields
+                enquiry_master_data = enquiry_data.enquiry_master.dict(exclude_unset=True)
+                for field, value in enquiry_master_data.items():
+                    if field == "remarks" and enquiry_master.remarks:
+                        setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
                     else:
-                        raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
-                else:
-                    # Check if detail exists based on unique constraints, otherwise insert new detail
-                    existing_detail = db.query(OffEnquiryDetails).filter_by(
-                        enquiry_master_id=enquiry_master_id,
-                        enquiry_number=detail_data_dict.get("enquiry_number"),
-                        enquiry_date=detail_data_dict.get("enquiry_date")
-                    ).first()
+                        setattr(enquiry_master, field, value)
+                enquiry_master.modified_by = user_id
+                enquiry_master.modified_on = datetime.utcnow()
 
-                    if existing_detail:
-                        # Update existing detail
-                        for key, value in detail_data_dict.items():
-                            if key == "remarks" and existing_detail.remarks:
-                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                            else:
-                                setattr(existing_detail, key, value)
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.utcnow()
-                        enquiry_details_list.append(existing_detail)
+                enquiry_details_list = []
+                for detail_data in enquiry_data.enquiry_details:
+                    detail_data_dict = detail_data.dict(exclude_unset=True)
+                    detail_id = detail_data_dict.get("id")
+
+                    if detail_id:
+                        # Update existing detail if ID is provided
+                        existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
+                        if existing_detail:
+                            for key, value in detail_data_dict.items():
+                                if key == "remarks" and existing_detail.remarks:
+                                    setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
+                                else:
+                                    setattr(existing_detail, key, value)
+                            existing_detail.modified_by = user_id
+                            existing_detail.modified_on = datetime.utcnow()
+                            enquiry_details_list.append(existing_detail)
+                        else:
+                            raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
                     else:
-                        # Insert new detail
-                        new_enquiry_detail = OffEnquiryDetails(
-                            enquiry_master_id=enquiry_master.id,
-                            created_by=user_id,
-                            created_on=datetime.utcnow(),
-                            **detail_data_dict
-                        )
-                        db.add(new_enquiry_detail)
-                        enquiry_details_list.append(new_enquiry_detail)
+                        # Check if detail exists based on unique constraints, otherwise insert new detail
+                        existing_detail = db.query(OffEnquiryDetails).filter_by(
+                            enquiry_master_id=enquiry_master_id,
+                            enquiry_number=detail_data_dict.get("enquiry_number"),
+                            enquiry_date=detail_data_dict.get("enquiry_date")
+                        ).first()
+
+                        if existing_detail:
+                            # Update existing detail
+                            for key, value in detail_data_dict.items():
+                                if key == "remarks" and existing_detail.remarks:
+                                    setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
+                                else:
+                                    setattr(existing_detail, key, value)
+                            existing_detail.modified_by = user_id
+                            existing_detail.modified_on = datetime.utcnow()
+                            enquiry_details_list.append(existing_detail)
+                        else:
+                            # Insert new detail
+                            new_enquiry_number = generate_book_number(db, OffEnquiryDetails, OffEnquiryDetails.enquiry_number)
+                            new_enquiry_detail = OffEnquiryDetails(
+                                enquiry_master_id=enquiry_master.id,
+                                enquiry_number=new_enquiry_number,  # Assign the generated enquiry number
+                                created_by=user_id,
+                                created_on=datetime.utcnow(),
+                                **detail_data_dict
+                            )
+                            db.add(new_enquiry_detail)
+                            enquiry_details_list.append(new_enquiry_detail)
 
         db.commit()  # Commit all changes to the database
 
@@ -1631,7 +1639,9 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+
     
 def get_enquiries(
     db: Session,
