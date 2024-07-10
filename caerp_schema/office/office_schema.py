@@ -782,8 +782,11 @@ class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_number: Optional[str]
     enquiry_date : Optional[date]
     source_of_enquiry_id : Optional[int]
+    source: Optional[str]
     enquiry_status_id: Optional[int]
+    enquiry_status: Optional[str]
     enquirer_type_id: Optional[int]
+    person_type: Optional[str]
     company_or_business_name: Optional[str]
     remarks: Optional[str]
 

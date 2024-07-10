@@ -2,14 +2,14 @@ import logging
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
-
+from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
-from caerp_db.common.models import EmployeeEmployementDetails, EmployeeMaster
+from caerp_db.common.models import EmployeeEmployementDetails, EmployeeMaster, UserRole
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
@@ -1234,6 +1234,8 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 
 
 from datetime import timedelta
+
+
 def save_consultant_schedule(
     schedule_data: ConsultantScheduleCreate,
     consultant_id: Optional[int],
@@ -1245,6 +1247,24 @@ def save_consultant_schedule(
     try:
         schedule_dict = schedule_data.dict()
 
+        if schedule_data.is_normal_schedule == "no":
+            if not schedule_data.consultation_date:
+                raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
+            
+            # Remove effective_from_date if present
+            schedule_dict.pop("effective_from_date", None)
+            
+            # Assign day_of_week_id using SQL query
+            day_of_week_query = f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')"
+           
+            print(" day_of_week_query", day_of_week_query)
+            day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
+            print(" Day of Week ID", day_of_week_id)
+            
+            
+            # Assign day_of_week_id to schedule_dict
+            schedule_dict['day_of_week_id'] = day_of_week_id
+        
         if action_type == RecordActionType.UPDATE_AND_INSERT:
             if consultant_id is None:
                 raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
@@ -1293,81 +1313,9 @@ def save_consultant_schedule(
 
     except Exception as e:
         db.rollback()
-        raise e
+        raise HTTPException(status_code=400, detail=str(e))
 
-def save_consultant_service_details_db(
-    data: ConsultantService,
-    consultant_id: Optional[int],
-    service_id: Optional[int],
-    user_id: int,
-    action_type: RecordActionType,
-    db: Session,
-    id: Optional[int] = None
-):
-    try:
-        if action_type == RecordActionType.UPDATE_AND_INSERT:
-            if consultant_id is None or service_id is None:
-                raise ValueError("consultant_id and service_id are required for UPDATE_AND_INSERT")
-            
-            # Check if there is an existing active record
-            existing_record = db.query(OffConsultantServiceDetails).filter(
-                OffConsultantServiceDetails.consultant_id == consultant_id,
-                OffConsultantServiceDetails.service_goods_master_id == service_id,
-                OffConsultantServiceDetails.effective_to_date.is_(None)
-            ).first()
-            
-            if existing_record:
-                # Update existing record's effective_to_date if it's None
-                existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
-                existing_record.modified_by = user_id
-                existing_record.modified_on = datetime.now()
-                db.commit()
-            
-                # Insert a new record
-            new_record_data = {
-                    "service_goods_master_id": service_id,
-                    "consultation_fee": data.consultation_fee,
-                    "slot_duration_in_minutes": data.slot_duration_in_minutes,
-                    "effective_from_date": data.effective_from_date,
-                    "effective_to_date": None, 
-                    "consultant_id": consultant_id,
-                    "created_by": user_id,
-                    "created_on": datetime.now()
-                }
 
-            new_record = OffConsultantServiceDetails(**new_record_data)
-            db.add(new_record)
-            db.commit()
-        
-        elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-            # Find the existing record by id
-            existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
-            
-            if existing_record:
-                # Log the existing record before update
-                print(f"Existing record before update: {existing_record.__dict__}")
-                
-                # Update existing record with new data
-                for key, value in data.dict().items():
-                    if value is not None:
-                        setattr(existing_record, key, value)
-                
-                existing_record.modified_by = user_id
-                existing_record.modified_on = datetime.now()
-                db.commit()
-
-                # Log the existing record after update
-                print(f"Existing record after update: {existing_record.__dict__}")
-
-            else:
-                raise ValueError(f"Record with ID {id} not found.")
-        
-        else:
-            raise ValueError("Invalid action type or ID provided.")
-    
-    except Exception as e:
-        # db.rollback()
-        raise e
 
 
 ##################---------------------- TASK -swathi-------------------------------------
@@ -1611,10 +1559,10 @@ def save_enquiry_master(
                             enquiry_details_list.append(existing_detail)
                         else:
                             # Insert new detail
-                            new_enquiry_number = generate_book_number(db, OffEnquiryDetails, OffEnquiryDetails.enquiry_number)
+                            
                             new_enquiry_detail = OffEnquiryDetails(
                                 enquiry_master_id=enquiry_master.id,
-                                enquiry_number=new_enquiry_number,  # Assign the generated enquiry number
+                                enquiry_number=enquiry_number,  # Assign the generated enquiry number
                                 created_by=user_id,
                                 created_on=datetime.utcnow(),
                                 **detail_data_dict
@@ -1632,13 +1580,20 @@ def save_enquiry_master(
             "enquiry_master": enquiry_master_schema,
             "enquiry_details": enquiry_details_schema
         }
-
+    except IntegrityError as e:
+        db.rollback()
+        logger.error("IntegrityError: %s", str(e))
+        if 'Duplicate entry' in str(e):
+            raise HTTPException(status_code=400, detail="Duplicate entry detected.")
+        else:
+            raise e
     except HTTPException as http_error:
         db.rollback()
         raise http_error
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
@@ -1726,7 +1681,6 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 

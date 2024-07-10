@@ -1457,12 +1457,39 @@ def get_service_details_by_consultant(
     return ConsultantServiceDetailsListResponse(services=services)
 #------------------------------------------------------------------------------------------------
 
+# @router.post("/save_consultant_schedule/")
+# def save_consultant_schedule(
+#     schedules: List[ConsultantScheduleCreate], 
+#     action_type: RecordActionType,
+#     id: Optional[int] = None,
+#     consultant_id: Optional[int] = None,  # Make consultant_id optional
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         for data in schedules:
+#             db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
+#         return {"success": True, "detail": "Saved successfully"}
+    
+#     except Exception as e:
+#         print(f"Error in endpoint: {e}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
+
 @router.post("/save_consultant_schedule/")
 def save_consultant_schedule(
     schedules: List[ConsultantScheduleCreate], 
     action_type: RecordActionType,
     id: Optional[int] = None,
-    consultant_id: Optional[int] = None,  # Make consultant_id optional
+    consultant_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1481,6 +1508,7 @@ def save_consultant_schedule(
     except Exception as e:
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
     
     
     

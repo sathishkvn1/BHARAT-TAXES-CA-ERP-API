@@ -178,7 +178,7 @@ def search_employee_details(
     category: Optional[Union[str,int]] = Query("ALL", description="Filter by category"),
     department: Optional[Union[str,int]] = Query("ALL", description="Filter by department"),
     designation: Optional[Union[str,int]] = Query("ALL", description="Filter by designation"),
-    status: Optional[ActiveStatus] = Query("ALL", description="Filter by status (yes/no)"),
+    user_status: Optional[ActiveStatus] = Query("ALL", description="Filter by status (yes/no)"),
     approval_status: Optional[ApprovedStatus] = Query("ALL", description="Filter by approval status (yes/no)"),
     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
     search: Optional[str] = Query(None, description="Search by employee details")
@@ -199,7 +199,7 @@ def search_employee_details(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
-    employees = db_employee_master.search_employee_master_details(db, status, approval_status, category, department, designation, is_consultant, search)
+    employees = db_employee_master.search_employee_master_details(db, user_status, approval_status, category, department, designation, is_consultant, search)
        
     if not employees:
       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No employees found with the given filters")
@@ -220,9 +220,6 @@ def search_employee_details(
        employee_details.append(emp_detail)
    
     return employee_details
-
-
-
 
 
 
@@ -361,7 +358,7 @@ def get_employee_details(employee_id: Optional[int] = None, db: Session = Depend
                     add_employee_detail(employee_details, sec.employee_id, 'employee_security_credentials', EmployeeSecurityCredentialsGet(**sec.__dict__),db)
           
             if option == "user_roles":
-                user_role = db_employee_master.get_user_roles(db)
+                user_role = db_employee_master.get_user_role(db)
                 for role in user_role:
                     add_employee_detail(employee_details, role.employee_id, 'user_roles', EmployeeUserRolesGet(**role.__dict__),db)
 

@@ -446,7 +446,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 
 
 
-def search_employee_master_details(db: Session, status: Optional[ActiveStatus], approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
+def search_employee_master_details(db: Session, user_status: Optional[ActiveStatus], approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
     query = db.query(
         EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
@@ -488,8 +488,8 @@ def search_employee_master_details(db: Session, status: Optional[ActiveStatus], 
                             HrDesignationMaster.id == designation,
                             HrDesignationMaster.designation == designation
                           ))
-    if status and status != ActiveStatus.ALL:
-      query = query.filter(UserBase.is_active == status.value)
+    if user_status and user_status != ActiveStatus.ALL:
+      query = query.filter(UserBase.is_active == user_status.value)
     if approval_status and approval_status != ApprovedStatus.ALL:
       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
     if is_consultant:
@@ -510,7 +510,7 @@ def search_employee_master_details(db: Session, status: Optional[ActiveStatus], 
             )
       
     result = query.all()    
-    return result     
+    return result  
 
 
 
