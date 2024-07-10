@@ -494,7 +494,7 @@ def get_all_service_goods_master(
         # Convert ORM results to Pydantic models and return
         return [
             OffViewServiceGoodsMasterDisplay(
-                **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
+                **{attribute_name: value for attribute_name, value in result.__dict__.items() if attribute_name != '_sa_instance_state'},
                 details=details_dict.get(result.service_goods_master_id, None)
             )
             for result in query_result
