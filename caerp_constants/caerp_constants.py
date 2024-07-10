@@ -6,7 +6,7 @@ class DeletedStatus(str, Enum):
     NOT_DELETED = "no"
     
 class ActiveStatus(str,Enum):
-    ALL         = 'all'
+    ALL         = 'ALL'
     ACTIVE      = 'yes'
     NOT_ACTIVE  ='no'
 

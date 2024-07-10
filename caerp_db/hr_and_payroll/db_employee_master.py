@@ -556,7 +556,28 @@ def get_professional_qualification_details(db: Session):
 def get_security_credentials(db: Session):
     return db.query(UserBase).all()
 
-def get_user_roles(db: Session):
+def get_user_role(db: Session):
     return db.query(UserRole).all()
 
 
+
+
+def get_user_roles(db: Session, employee_id: Optional[int]=None)->  List[UserRole]:  
+    # if employee_id is None:
+    #   users_role = db.query(UsersRole).filter(UsersRole.is_deleted == 'no').all()
+  
+    user_roles_data =  db.query(UserRole).filter(UserRole.employee_id == employee_id,
+                          UserRole.is_deleted=='no').all()
+   
+    result = {
+            "customer_id": employee_id,
+            "Roles": [
+                {
+                    "id"     : user_roles.id,
+                    "role_id": user_roles.role_id,                    
+                    "is_deleted"        : user_roles.is_deleted
+                } for user_roles in user_roles_data
+            ]
+        }
+  
+    return result
