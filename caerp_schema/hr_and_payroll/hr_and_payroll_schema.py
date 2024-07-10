@@ -16,7 +16,7 @@ class EmployeeMasterSchema(BaseModel):
    marital_status_id : int
    date_of_birth : date
    joining_date : date
-   next_increment_date : Optional[date]
+   # next_increment_date : Optional[date] = None
    nationality_id : int
        
    class config():
@@ -33,18 +33,18 @@ class EmployeeMasterDisplay(BaseModel):
    marital_status_id : int
    date_of_birth : date
    joining_date : date
-   next_increment_date : Optional[date]
+   # next_increment_date : Optional[date] = None
    nationality_id : int
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_approved : str = 'no'
    approved_by : int
    approved_on : datetime
-   modified_by : Optional[int] = None
-   modified_on : Optional[datetime] = None
+   # modified_by : Optional[int] = None
+   # modified_on : Optional[datetime] = None
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime]
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime]
 
    class config():
       orm_mode=True
@@ -94,11 +94,11 @@ class EmployeePresentAddressGet(BaseModel):
    effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime] = None
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime] = None
 
    class config():
       orm_mode=True 
@@ -148,11 +148,11 @@ class EmployeePermanentAddressGet(BaseModel):
    effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime] = None
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime] = None
 
    class config():
       orm_mode=True 
@@ -190,11 +190,11 @@ class EmployeeContactGet(BaseModel):
    effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime] = None
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime] = None
     
    class config():
       orm_mode=True
@@ -228,11 +228,11 @@ class EmployeeBankAccountGet(BaseModel):
    effective_from_date : date
    effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime] = None
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime] = None
 
    class config():
       orm_mode=True 
@@ -289,11 +289,11 @@ class EmployeeEducationalQualficationGet(BaseModel):
    institution : Optional[str] = None
    percentage_or_grade : Optional[str] = None
    month_and_year_of_completion : Optional[str] = None   
-   created_by : int
-   created_on : datetime
+   # created_by : int
+   # created_on : datetime
    is_deleted : str = 'no'
-   deleted_by : Optional[int] = None
-   deleted_on : Optional[datetime] = None
+   # deleted_by : Optional[int] = None
+   # deleted_on : Optional[datetime] = None
 
    class config():
       orm_mode=True
