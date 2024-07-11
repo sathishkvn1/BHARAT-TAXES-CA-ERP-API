@@ -1402,7 +1402,7 @@ def save_consultant_service_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    
+     
 #------------------------------------------------------------------------------------------------
 @router.get("/get_service_details_by_consultant/", response_model=ConsultantServiceDetailsListResponse)
 def get_service_details_by_consultant(

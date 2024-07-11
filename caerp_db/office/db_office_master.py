@@ -1230,7 +1230,80 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 
 #-----------------------------------------------------------------------------------------------
 
+def save_consultant_service_details_db(
+    data: ConsultantService,
+    consultant_id: Optional[int],
+    service_id: Optional[int],
+    user_id: int,
+    action_type: RecordActionType,
+    db: Session,
+    id: Optional[int] = None
+):
+    try:
+        if action_type == RecordActionType.UPDATE_AND_INSERT:
+            if consultant_id is None or service_id is None:
+                raise ValueError("consultant_id and service_id are required for UPDATE_AND_INSERT")
+            
+            # Check if there is an existing active record
+            existing_record = db.query(OffConsultantServiceDetails).filter(
+                OffConsultantServiceDetails.consultant_id == consultant_id,
+                OffConsultantServiceDetails.service_goods_master_id == service_id,
+                OffConsultantServiceDetails.effective_to_date.is_(None)
+            ).first()
+            
+            if existing_record:
+                # Update existing record's effective_to_date if it's None
+                existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.now()
+                db.commit()
+            
+                # Insert a new record
+            new_record_data = {
+                    "service_goods_master_id": service_id,
+                    "consultation_fee": data.consultation_fee,
+                    "slot_duration_in_minutes": data.slot_duration_in_minutes,
+                    "effective_from_date": data.effective_from_date,
+                    "effective_to_date": None, 
+                    "consultant_id": consultant_id,
+                    "created_by": user_id,
+                    "created_on": datetime.now()
+                }
 
+            new_record = OffConsultantServiceDetails(**new_record_data)
+            db.add(new_record)
+            db.commit()
+        
+        elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+            # Find the existing record by id
+            existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
+            
+            if existing_record:
+                # Log the existing record before update
+                print(f"Existing record before update: {existing_record.__dict__}")
+                
+                # Update existing record with new data
+                for key, value in data.dict().items():
+                    if value is not None:
+                        setattr(existing_record, key, value)
+                
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.now()
+                db.commit()
+
+                # Log the existing record after update
+                print(f"Existing record after update: {existing_record.__dict__}")
+
+            else:
+                raise ValueError(f"Record with ID {id} not found.")
+        
+        else:
+            raise ValueError("Invalid action type or ID provided.")
+    
+    except Exception as e:
+        # db.rollback()
+        raise e
+#------------------------------------------------------------------------------------------------------
 
 
 from datetime import timedelta
