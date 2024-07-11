@@ -1744,5 +1744,45 @@ def get_all_consultation_task_master_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+#--------------------------------------------------------------------------------------------
+# WORK ORDER
 
+
+#--------------------------------------------------------------------------------------------
+
+
+@router.get('/services/get_all_services', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
+def get_all_services(
+    service_type: str = Query(enum=["ALL", "SINGLE SERVICE", "BUNDLE SERVICE"]),
+    has_consultation: str = Query(enum=["ALL", "Yes", "No"]),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get all services from service_goods_master with the search  filters
+     
+
+    - `service_type` (str): Type of the service. Can be 'ALL', 'SINGLE SERVICE', or 'BUNDLE SERVICE'.
+          Filter services based on whether they are single services or bundled services.
+    - `service_has_consultant` (str): Specifies if the service has a consultant. Can be 'ALL', 'Yes', or 'No'.
+          Filter services based on whether they have a consultant.
+        
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    results = db_office_master.get_all_services_from_service_master(
+        db, service_type, has_consultation
+    )
+
+    # Check if no data is found
+    if not results:
+        return {"message": "No data present"}
+
+    # Remove the "details" field if there are no details available
+    for result in results:
+        if result.is_bundled_service == "no" or not result.details:
+            delattr(result, "details")
+
+    return results
 

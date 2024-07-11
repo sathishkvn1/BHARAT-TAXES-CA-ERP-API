@@ -1682,6 +1682,63 @@ def get_enquiries(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#------------------------------------------------------------------------------------------------
+    # WORK ORDER
+#------------------------------------------------------------------------------------------------
 
+def get_all_services_from_service_master(
+    db: Session,
+    service_type: str,
+    has_consultation: str
+) -> List[OffViewServiceGoodsMasterDisplay]:
+    try:
+       
+         # Initialize query with additional filter conditions
+        query = db.query(OffViewServiceGoodsMaster).filter(
+            OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no',
+            OffViewServiceGoodsMaster.hsn_sac_class_id == 2
+        )
+        # Apply filter conditions
+        if service_type != "ALL":
+            if service_type == "SINGLE SERVICE":
+                query = query.filter(OffViewServiceGoodsMaster.is_bundled_service == 'no')
+            elif service_type == "BUNDLE SERVICE":
+                query = query.filter(OffViewServiceGoodsMaster.is_bundled_service == 'yes')
 
+        if has_consultation != "ALL":
+            if has_consultation == "Yes":
+                query = query.filter(OffViewServiceGoodsMaster.has_consultation == 'yes')
+            elif has_consultation == "No":
+                query = query.filter(OffViewServiceGoodsMaster.has_consultation == 'no')
+
+        # Execute the query
+        query_result = query.all()
+
+        # Check if no data is found
+        if not query_result:
+            return []
+
+        # Fetching details for bundled service_goods_master_ids
+        master_ids = [result.service_goods_master_id for result in query_result if result.is_bundled_service == "yes"]
+        details = db.query(OffViewServiceGoodsDetails).filter(OffViewServiceGoodsDetails.bundled_service_goods_id.in_(master_ids)).all()
+
+        # Create a dictionary of details
+        details_dict = {}
+        for detail in details:
+            if detail.bundled_service_goods_id not in details_dict:
+                details_dict[detail.bundled_service_goods_id] = []
+            details_dict[detail.bundled_service_goods_id].append(OffViewServiceGoodsDetailsDisplay.from_orm(detail))
+
+        # Convert ORM results to Pydantic models and return
+        return [
+            OffViewServiceGoodsMasterDisplay(
+                **result.__dict__,
+                details=details_dict.get(result.service_goods_master_id, None)
+            )
+            for result in query_result
+        ]
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
 

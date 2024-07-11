@@ -256,11 +256,11 @@ class OffViewServiceGoodsDetailsDisplay(BaseModel):
     bundled_service_goods_id : int
     display_order: Optional[int]
     
-
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
    
-
-
 
 class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_master_id: int
@@ -285,7 +285,10 @@ class OffViewServiceGoodsMasterDisplay(BaseModel):
     is_bundled_service: str
     details: Optional[List[OffViewServiceGoodsDetailsDisplay]] = None
     
-    
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        
 
 class OffDocumentDataBase(BaseModel):
     document_data_name :str
