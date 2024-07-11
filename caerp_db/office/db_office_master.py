@@ -440,10 +440,12 @@ def get_appointments(
 
 #---service-goods-master-------------------------------------------------------------------------------------
 
+
 def get_all_service_goods_master(
     db: Session,
     deleted_status: Optional[str] = None,
     name: Optional[str] = None,
+    service_goods_type: Union[int, str] = 'ALL', 
     group_id: Union[int, str] = 'ALL',
     sub_group_id: Union[int, str] = 'ALL',
     category_id: Union[int, str] = 'ALL',
@@ -461,6 +463,9 @@ def get_all_service_goods_master(
 
         if name:
             search_conditions.append(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
+        
+        if service_goods_type != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.hsn_sac_class_id == service_goods_type)
 
         if group_id != 'ALL':
             search_conditions.append(OffViewServiceGoodsMaster.group_id == group_id)
@@ -495,7 +500,7 @@ def get_all_service_goods_master(
         # Convert ORM results to Pydantic models and return
         return [
             OffViewServiceGoodsMasterDisplay(
-                **{attribute_name: value for attribute_name, value in result.__dict__.items() if attribute_name != '_sa_instance_state'},
+                **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
                 details=details_dict.get(result.service_goods_master_id, None)
             )
             for result in query_result
@@ -503,7 +508,6 @@ def get_all_service_goods_master(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
-
 
 
 #--------------------------------------------------------------------------------------------------------------
