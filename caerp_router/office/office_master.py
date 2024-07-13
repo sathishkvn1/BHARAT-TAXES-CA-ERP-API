@@ -1155,7 +1155,8 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
 @router.get('/services/get_all_service_document_data_master', response_model=Union[List[OffViewServiceDocumentsDataMasterSchema], dict])
 def get_all_service_document_data_master(
     db: Session = Depends(get_db),
-    name: Optional[str] = None,
+    search: Optional[str] = None,  
+    service_id: Union[int, str] = Query('ALL'),
     group_id: Union[int, str] = Query('ALL'),
     sub_group_id: Union[int, str] = Query('ALL'),
     category_id: Union[int, str] = Query('ALL'),
@@ -1164,23 +1165,22 @@ def get_all_service_document_data_master(
     doc_data_status: Optional[str] = Query(None, description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
     token: str = Depends(oauth2.oauth2_scheme)
 ) -> Union[List[OffViewServiceDocumentsDataMasterSchema], Dict[str, Any]]:
-    
-    
     """
     Allows users to search and filter service document data master records by the following criteria:
     
-    - **name**: Search for records that contain the provided name as a substring.
-    
+    - **search**: Search for records that contain the provided string in any of the following fields:
+      - `service_goods_name`
+      - `group_name`
+      - `category_name`
+      - `sub_group_name`
+      - `subcategory_name`
+      -'business_constitution_name'
     - **group_id**: Filter records by group ID. Use 'ALL' to include all group IDs.
-    
     - **sub_group_id**: Filter records by sub-group ID. Use 'ALL' to include all sub-group IDs.
-    
     - **category_id**: Filter records by category ID. Use 'ALL' to include all category IDs.
-    
     - **sub_category_id**: Filter records by sub-category ID. Use 'ALL' to include all sub-category IDs.
-    
     - **constitution_id**: Filter records by constitution ID. Use 'ALL' to include all constitution IDs.
-    
+    - **service_id**: Filter records by service ID. Use 'ALL' to include all service IDs.
     - **doc_data_status**: Filter by document data status. Possible values are:
       - 'CONFIGURED'
       - 'NOT CONFIGURED'
@@ -1194,7 +1194,7 @@ def get_all_service_document_data_master(
 
     try:
         results = db_office_master.get_all_service_document_data_master(
-            db, name, group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
+            db, search, service_id ,group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
         )
 
         if not results:
@@ -1205,14 +1205,12 @@ def get_all_service_document_data_master(
             if result.get("doc_data_status") == "NOT CONFIGURED" and "details" in result:
                 del result["details"]
 
-        # Ensure the response is correctly encoded as JSON
         return JSONResponse(content=jsonable_encoder(results), status_code=200)
-        #return results
 
     except Exception as e:
-       # logging.error(f"Error fetching service document data master: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-    
+
+   
 #-----------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
 def get_service_documents_list_by_group_category(

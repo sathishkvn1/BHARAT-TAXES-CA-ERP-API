@@ -261,6 +261,7 @@ class OffViewServiceGoodsDetailsDisplay(BaseModel):
         from_attributes = True
 
    
+   
 
 class OffViewServiceGoodsMasterDisplay(BaseModel):
     service_goods_master_id: int

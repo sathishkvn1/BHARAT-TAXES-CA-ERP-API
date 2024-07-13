@@ -1039,7 +1039,8 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
 #-------------------------------------------------------------------------------------------------------
 def get_all_service_document_data_master(
     db: Session,
-    name: Optional[str] = None,
+    search: Optional[str] = None, 
+    service_id: Union[int, str] = 'ALL',
     group_id: Union[int, str] = 'ALL',
     sub_group_id: Union[int, str] = 'ALL',
     category_id: Union[int, str] = 'ALL',
@@ -1050,9 +1051,18 @@ def get_all_service_document_data_master(
     try:
         search_conditions = []
 
-        
-        if name:
-            search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_name.ilike(f'%{name}%'))
+        if search:
+            search_conditions.append(or_(
+                OffViewServiceDocumentsDataMaster.service_goods_name.ilike(f'%{search}%'),
+                OffViewServiceDocumentsDataMaster.group_name.ilike(f'%{search}%'),  
+                OffViewServiceDocumentsDataMaster.category_name.ilike(f'%{search}%'),  
+                OffViewServiceDocumentsDataMaster.sub_group_name.ilike(f'%{search}%'),  
+                OffViewServiceDocumentsDataMaster.sub_category_name.ilike(f'%{search}%'), 
+                OffViewServiceDocumentsDataMaster.business_constitution_name.ilike(f'%{search}%') 
+                 
+            ))
+        if service_id != 'ALL':
+            search_conditions.append(OffViewServiceDocumentsDataMaster.service_goods_master_id == service_id)
 
         if group_id != 'ALL':
             search_conditions.append(OffViewServiceDocumentsDataMaster.group_id == group_id)
@@ -1069,6 +1079,7 @@ def get_all_service_document_data_master(
         if constitution_id != 'ALL':
             search_conditions.append(OffViewServiceDocumentsDataMaster.constitution_id == constitution_id)
 
+        
         query = db.query(OffViewServiceDocumentsDataMaster).filter(and_(*search_conditions))
 
         master_dict = {}
@@ -1112,8 +1123,10 @@ def get_all_service_document_data_master(
         return results
 
     except Exception as e:
-      #  logging.error(f"Failed to retrieve data from database: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 #--------------------------------------------------------------------------------------------------------
 
