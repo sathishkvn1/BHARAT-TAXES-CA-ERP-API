@@ -301,8 +301,7 @@ def save_off_document_master(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-#-------------------------------------------------------------------------------------------------------
-
+#----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
     type:  Optional[str] = Query(None, description="Filter by type: 'ALL', 'DOCUMENT', 'DATA'"),
@@ -332,7 +331,6 @@ def search_off_document_data_master(
 def save_service_document_data_master(
     id: int,
     data: List[SaveServiceDocumentDataMasterRequest], 
-    service_document_master_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -342,25 +340,23 @@ def save_service_document_data_master(
     Parameters:
     - **id**: The ID of the service document data master record. This parameter is required and should be an integer.
     - **data**: A list of `SaveServiceDocumentDataMasterRequest` objects containing the service document data to be saved.
-    - **service_document_master_id**: An optional query parameter that specifies the master ID if only details need to be inserted.
     - **db**: A database session dependency injected by FastAPI.
     - **token**: An authentication token dependency injected by FastAPI using OAuth2.
 
     Returns:
     - A success message after processing all service document data.
-    
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
- #   user_id = auth_info.get("user_id")
+    # user_id = auth_info.get("user_id")
 
     try:
         result_message = ""
         for service in data:
             result = db_office_master.save_service_document_data_master(
-                db, id, service, service_document_master_id
+                db, id, service
             )
             result_message = result["message"]
         
@@ -1796,3 +1792,63 @@ def get_all_services(
 
     return results
 
+
+
+@router.get("/get_all_service_document_data_master")
+def get_all_service_document_data_master(db: Session = Depends(get_db)):
+    query = """
+    SELECT
+        g.id AS service_goods_master_id,
+        g.service_goods_name,
+        a.id AS service_document_data_master_id,
+        b.group_name,
+        c.sub_group_name,
+        d.category_name,
+        e.sub_category_name,
+        f.business_constitution_name,
+        f.business_constitution_code,
+        f.description,
+        h.service_document_data_master_id AS view_service_document_data_master_id,
+        h.document_data_category_id,
+        h.document_data_master_id,
+        h.document_data_name
+    FROM 
+        off_service_goods_master AS g
+    LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
+    LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
+    LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
+    LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
+    LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
+    LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
+    LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id;
+    """
+    
+    result = db.execute(query)
+    rows = result.fetchall()
+    
+    if not rows:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
+
+    # Formatting the response
+    service_document_data_master = []
+    for row in rows:
+        configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
+        service_document_data_master.append({
+            "service_goods_master_id": row.service_goods_master_id,
+            "service_goods_name": row.service_goods_name,
+            "service_document_data_master_id": row.service_document_data_master_id,
+            "group_name": row.group_name,
+            "sub_group_name": row.sub_group_name,
+            "category_name": row.category_name,
+            "sub_category_name": row.sub_category_name,
+            "business_constitution_name": row.business_constitution_name,
+            "business_constitution_code": row.business_constitution_code,
+            "description": row.description,
+            "view_service_document_data_master_id": row.view_service_document_data_master_id,
+            "document_data_category_id": row.document_data_category_id,
+            "document_data_master_id": row.document_data_master_id,
+            "document_data_name": row.document_data_name,
+            "status": configured_status
+        })
+
+    return service_document_data_master

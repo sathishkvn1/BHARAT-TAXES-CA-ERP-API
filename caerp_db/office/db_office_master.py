@@ -546,77 +546,19 @@ def search_off_document_data_master(
 
 
 # #-----------------------
+
 def save_service_document_data_master(
     db: Session,
     id: int,
-    doc_data: SaveServiceDocumentDataMasterRequest,
-    service_document_master_id: Optional[int]
+    doc_data: SaveServiceDocumentDataMasterRequest
 ):
-    
     try:
         if id == 0:
-            if service_document_master_id:
-                # Only insert details for the given master ID
-                if doc_data.Documents:
-                    for document_group in doc_data.Documents:
-                        document_dict = document_group.dict()
-                        for doc_type, docs in document_dict.items():
-                            if docs:
-                                if not isinstance(docs, list):
-                                    raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
-                                for doc in docs:
-                                    if not isinstance(doc['details'], list):
-                                        raise HTTPException(status_code=400, detail="Details should be a list")
-                                    for detail in doc['details']:
-                                        new_detail_data = detail
-                                        new_detail_data.update({
-                                            "document_data_category_id": doc['document_data_category_id'],
-                                            "service_document_data_id": service_document_master_id,
-                                            "is_deleted": 'no'
-                                        })
-                                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                                        db.add(new_detail)
-                db.commit()
-                return {"success": True, "message": "Details saved successfully", "action": "insert"}
-            else:
-                # Create a new master and insert details
-                new_master_data = doc_data.Service.dict()
-                new_master = OffServiceDocumentDataMaster(**new_master_data)
-                db.add(new_master)
-                db.flush()  # Ensure new_master.id is available for details
-
-                if doc_data.Documents:
-                    for document_group in doc_data.Documents:
-                        document_dict = document_group.dict()
-                        for doc_type, docs in document_dict.items():
-                            if docs:
-                                if not isinstance(docs, list):
-                                    raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
-                                for doc in docs:
-                                    if not isinstance(doc['details'], list):
-                                        raise HTTPException(status_code=400, detail="Details should be a list")
-                                    for detail in doc['details']:
-                                        new_detail_data = detail
-                                        new_detail_data.update({
-                                            "document_data_category_id": doc['document_data_category_id'],
-                                            "service_document_data_id": new_master.id,
-                                            "is_deleted": 'no'
-                                        })
-                                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
-                                        db.add(new_detail)
-
-                db.commit()
-                return {"success": True, "message": "Saved successfully", "action": "insert"}
-
-        else:
-            existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
-            if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
-
-            for key, value in doc_data.Service.dict().items():
-                setattr(existing_master, key, value)
-
-            db.query(OffServiceDocumentDataDetails).filter(OffServiceDocumentDataDetails.service_document_data_id == id).delete()
+            # Create a new master and insert details
+            new_master_data = doc_data.Service.dict()
+            new_master = OffServiceDocumentDataMaster(**new_master_data)
+            db.add(new_master)
+            db.flush()  # Ensure new_master.id is available for details
 
             if doc_data.Documents:
                 for document_group in doc_data.Documents:
@@ -629,21 +571,85 @@ def save_service_document_data_master(
                                 if not isinstance(doc['details'], list):
                                     raise HTTPException(status_code=400, detail="Details should be a list")
                                 for detail in doc['details']:
+                                    if detail['id'] != 0:
+                                        raise HTTPException(
+                                            status_code=400,
+                                            detail=f"Cannot insert detail with non-zero ID for new master: {detail['id']}"
+                                        )
                                     new_detail_data = detail
                                     new_detail_data.update({
                                         "document_data_category_id": doc['document_data_category_id'],
-                                        "service_document_data_id": id,
+                                        "service_document_data_master_id": new_master.id,
                                         "is_deleted": 'no'
                                     })
                                     new_detail = OffServiceDocumentDataDetails(**new_detail_data)
                                     db.add(new_detail)
 
             db.commit()
+            return {"success": True, "message": "Saved successfully", "action": "insert"}
+
+        else:
+            existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
+            
+            # Save master data
+            for key, value in doc_data.Service.dict().items():
+                setattr(existing_master, key, value)
+
+            if doc_data.Documents:
+                # Mark existing details as deleted
+                db.query(OffServiceDocumentDataDetails).filter(
+                    OffServiceDocumentDataDetails.service_document_data_master_id == id
+                ).update({"is_deleted": "yes"})
+
+                for document_group in doc_data.Documents:
+                    document_dict = document_group.dict()
+                    for doc_type, docs in document_dict.items():
+                        if docs:
+                            if not isinstance(docs, list):
+                                raise HTTPException(status_code=400, detail=f"{doc_type} should be a list")
+                            for doc in docs:
+                                if not isinstance(doc['details'], list):
+                                    raise HTTPException(status_code=400, detail="Details should be a list")
+                                for detail in doc['details']:
+                                    if detail['id'] == 0:
+                                        # Add new detail
+                                        new_detail_data = detail
+                                        new_detail_data.update({
+                                            "document_data_category_id": doc['document_data_category_id'],
+                                            "service_document_data_master_id": id,
+                                            "is_deleted": 'no'
+                                        })
+                                        new_detail = OffServiceDocumentDataDetails(**new_detail_data)
+                                        db.add(new_detail)
+                                    else:
+                                        # Update existing detail
+                                        existing_detail = db.query(OffServiceDocumentDataDetails).filter(
+                                            OffServiceDocumentDataDetails.id == detail['id']
+                                        ).first()
+                                        if existing_detail:
+                                            for key, value in detail.items():
+                                                setattr(existing_detail, key, value)
+                                            existing_detail.document_data_category_id = doc['document_data_category_id']
+                                            existing_detail.service_document_data_master_id = id
+                                            existing_detail.is_deleted = 'no'
+                                        else:
+                                            raise HTTPException(
+                                                status_code=400,
+                                                detail=f"Detail with ID {detail['id']} does not exist"
+                                            )
+
+            db.commit()
             return {"success": True, "message": "Updated successfully", "action": "update"}
 
+    except HTTPException as e:
+        db.rollback()
+        raise e
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #-------------------------------
 
