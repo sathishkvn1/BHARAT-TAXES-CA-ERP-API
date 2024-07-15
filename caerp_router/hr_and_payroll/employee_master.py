@@ -209,11 +209,25 @@ def search_employee_details(
     for emp in employees:
        emp_detail = {
                 "employee_id": emp.employee_id,
+                "first_name":emp.first_name,
+                "middle_name":emp.middle_name,
+                "last_name":emp.last_name,
                 "employee_name": f"{emp.first_name} {emp.middle_name} {emp.last_name}",
+                "gender": emp.gender, 
+                "date_of_birth":emp.date_of_birth,
+                "blood_group":emp.blood_group,
+                "nationality_id": emp.nationality_id,
+                "nationality": emp.nationality_name,
+                "marital_status_id": emp.marital_status_id,
+                "marital_status": emp.marital_status, 
+                "joining_date":emp.joining_date,
+                "remarks":emp.remarks,
+                
                 "category" : emp.category_name,
                 "department": emp.department_name,
                 "designation": emp.designation,
                 "contact_number": emp.personal_mobile_number,
+                "email_id":emp.personal_email_id,
                 "is_consultant": emp.is_consultant,
                 "status": emp.is_active
        }

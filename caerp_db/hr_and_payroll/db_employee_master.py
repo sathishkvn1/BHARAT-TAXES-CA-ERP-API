@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import EmployeeMaster,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -452,14 +452,28 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
         EmployeeMaster.last_name,
+        EmployeeMaster.gender_id,
+        Gender.gender,
+        EmployeeMaster.nationality_id,
+        NationalityDB.nationality_name, 
+        EmployeeMaster.date_of_birth,
+        EmployeeMaster.blood_group,
+        EmployeeMaster.nationality_id,
+        EmployeeMaster.marital_status_id,
+        EmployeeMaster.marital_status_id,
+        MaritalStatus.marital_status, 
+        EmployeeMaster.joining_date,
         HrEmployeeCategory.category_name,
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation,
         EmployeeContactDetails.personal_mobile_number,
+        EmployeeContactDetails.personal_email_id,
+        EmployeeContactDetails.remarks,
         EmployeeEmployementDetails.is_consultant,
         UserBase.is_active
     ).join(
         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+  
     ).join(
         HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
     ).join(
@@ -470,6 +484,12 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
        UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter = True
     ).join(
         EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id, isouter=True
+    ).join(
+        Gender, EmployeeMaster.gender_id == Gender.id, isouter=True  
+    ).join(
+        NationalityDB, EmployeeMaster.nationality_id == NationalityDB.id, isouter=True  # Added join 
+    ).join(
+        MaritalStatus, EmployeeMaster.marital_status_id == MaritalStatus.id, isouter=True  # Added 
     )
 
     # Applying filters at the end of the join statements
