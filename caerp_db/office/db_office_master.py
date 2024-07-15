@@ -1652,7 +1652,7 @@ def save_enquiry_master(
                             
                             new_enquiry_detail = OffEnquiryDetails(
                                 enquiry_master_id=enquiry_master.id,
-                                enquiry_number=enquiry_number,  # Assign the generated enquiry number
+                                # enquiry_number=enquiry_number,  # Assign the generated enquiry number
                                 created_by=user_id,
                                 created_on=datetime.utcnow(),
                                 **detail_data_dict

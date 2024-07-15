@@ -724,7 +724,7 @@ class OffEnquiryMasterSchema(BaseModel):
 class OffEnquiryDetailsSchema(BaseModel):
  
     financial_year_id: Optional[int]
-    enquiry_number: Optional[str]
+    # enquiry_number: Optional[str]
     enquiry_date : Optional[date]
     source_of_enquiry_id : Optional[int]
     enquiry_status_id: Optional[int]
