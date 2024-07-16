@@ -1227,29 +1227,34 @@ def get_all_service_document_data_master(
 
         base_query = """
         SELECT
-            g.id AS service_goods_master_id,
-            g.service_goods_name,
-            a.id AS service_document_data_master_id,
-            b.group_name,
-            c.sub_group_name,
-            d.category_name,
-            e.sub_category_name,
-            f.business_constitution_name,
-            f.business_constitution_code,
-            f.description,
-            h.service_document_data_master_id AS view_service_document_data_master_id,
-            h.document_data_category_id,
-            h.document_data_master_id,
-            h.document_data_name
-        FROM 
-            off_service_goods_master AS g
-        LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
-        LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
-        LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
-        LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
-        LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
-        LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
-        LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id
+        g.id AS service_goods_master_id,
+        g.service_goods_name,
+        a.id AS service_document_data_master_id,
+        a.group_id,
+        b.group_name,
+		a.sub_group_id,
+        c.sub_group_name,
+	    a.category_id,
+        d.category_name,
+		a.sub_category_id,
+        e.sub_category_name,
+        a.constitution_id,
+        f.business_constitution_name,
+        f.business_constitution_code,
+        f.description,
+        h.service_document_data_master_id AS view_service_document_data_master_id,
+        h.document_data_category_id,
+        h.document_data_master_id,
+        h.document_data_name
+    FROM 
+        off_service_goods_master AS g
+    LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
+    LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
+    LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
+    LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
+    LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
+    LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
+    LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id;
         """
         
         if search_conditions:
@@ -1279,10 +1284,15 @@ def get_all_service_document_data_master(
                 "service_goods_master_id": row.service_goods_master_id,
                 "service_goods_name": row.service_goods_name,
                 "service_document_data_master_id": row.service_document_data_master_id,
+                "group_id":row.group_id,
                 "group_name": row.group_name,
+                "sub_group_id":row.sub_group_id,
                 "sub_group_name": row.sub_group_name,
+                "category_id":row.category_id,
                 "category_name": row.category_name,
+                "sub_category_id":row.sub_category_id,
                 "sub_category_name": row.sub_category_name,
+                "constitution_id":row.constitution_id,
                 "business_constitution_name": row.business_constitution_name,
                 "business_constitution_code": row.business_constitution_code,
                 "description": row.description,
@@ -1887,61 +1897,61 @@ def get_all_services(
 
 
 
-@router.get("/get_all_service_document_data_master")
-def get_all_service_document_data_master(db: Session = Depends(get_db)):
-    query = """
-    SELECT
-        g.id AS service_goods_master_id,
-        g.service_goods_name,
-        a.id AS service_document_data_master_id,
-        b.group_name,
-        c.sub_group_name,
-        d.category_name,
-        e.sub_category_name,
-        f.business_constitution_name,
-        f.business_constitution_code,
-        f.description,
-        h.service_document_data_master_id AS view_service_document_data_master_id,
-        h.document_data_category_id,
-        h.document_data_master_id,
-        h.document_data_name
-    FROM 
-        off_service_goods_master AS g
-    LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
-    LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
-    LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
-    LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
-    LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
-    LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
-    LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id;
-    """
+# @router.get("/get_all_service_document_data_master")
+# def get_all_service_document_data_master(db: Session = Depends(get_db)):
+#     query = """
+#     SELECT
+#         g.id AS service_goods_master_id,
+#         g.service_goods_name,
+#         a.id AS service_document_data_master_id,
+#         b.group_name,
+#         c.sub_group_name,
+#         d.category_name,
+#         e.sub_category_name,
+#         f.business_constitution_name,
+#         f.business_constitution_code,
+#         f.description,
+#         h.service_document_data_master_id AS view_service_document_data_master_id,
+#         h.document_data_category_id,
+#         h.document_data_master_id,
+#         h.document_data_name
+#     FROM 
+#         off_service_goods_master AS g
+#     LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
+#     LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
+#     LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
+#     LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
+#     LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
+#     LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
+#     LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id;
+#     """
     
-    result = db.execute(query)
-    rows = result.fetchall()
+#     result = db.execute(query)
+#     rows = result.fetchall()
     
-    if not rows:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
+#     if not rows:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
 
-    # Formatting the response
-    service_document_data_master = []
-    for row in rows:
-        configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
-        service_document_data_master.append({
-            "service_goods_master_id": row.service_goods_master_id,
-            "service_goods_name": row.service_goods_name,
-            "service_document_data_master_id": row.service_document_data_master_id,
-            "group_name": row.group_name,
-            "sub_group_name": row.sub_group_name,
-            "category_name": row.category_name,
-            "sub_category_name": row.sub_category_name,
-            "business_constitution_name": row.business_constitution_name,
-            "business_constitution_code": row.business_constitution_code,
-            "description": row.description,
-            "view_service_document_data_master_id": row.view_service_document_data_master_id,
-            "document_data_category_id": row.document_data_category_id,
-            "document_data_master_id": row.document_data_master_id,
-            "document_data_name": row.document_data_name,
-            "status": configured_status
-        })
+#     # Formatting the response
+#     service_document_data_master = []
+#     for row in rows:
+#         configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
+#         service_document_data_master.append({
+#             "service_goods_master_id": row.service_goods_master_id,
+#             "service_goods_name": row.service_goods_name,
+#             "service_document_data_master_id": row.service_document_data_master_id,
+#             "group_name": row.group_name,
+#             "sub_group_name": row.sub_group_name,
+#             "category_name": row.category_name,
+#             "sub_category_name": row.sub_category_name,
+#             "business_constitution_name": row.business_constitution_name,
+#             "business_constitution_code": row.business_constitution_code,
+#             "description": row.description,
+#             "view_service_document_data_master_id": row.view_service_document_data_master_id,
+#             "document_data_category_id": row.document_data_category_id,
+#             "document_data_master_id": row.document_data_master_id,
+#             "document_data_name": row.document_data_name,
+#             "status": configured_status
+#         })
 
-    return service_document_data_master
+#     return service_document_data_master
