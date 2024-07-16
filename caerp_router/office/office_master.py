@@ -1363,60 +1363,61 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
 
 
 # #---------------------------------------------------------------------------------------
-# @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
-# def get_service_documents_data_details(
-#     service_id: int,
-#     document_category: Optional[str] = Query(None, title="Select document category", 
-#                                             enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Retrieve service document details based on specified criteria.
+@router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
+def get_service_documents_data_details(
+    service_document_data_master_id: int,
+    document_category: Optional[str] = Query(None, title="Select document category", 
+                                            enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve service document details based on specified criteria.
 
-#     Parameters:
-#     - **service_id**: Required parameter to filter by service ID.
-#     - **document_category**: Optional parameter to filter by document category.
-#     - Return a list of documents details with the selected category for the specified service_id.
+    Parameters:
+    - **service_id**: Required parameter to filter by service ID.
+    - **document_category**: Optional parameter to filter by document category.
+    - Return a list of documents details with the selected category for the specified service_id.
     
-#     Possible values for `document_category` include:
-#     - 'PERSONAL DOC'
-#     - 'CONSTITUTION DOC'
-#     - 'PRINCIPAL PLACE DOC'
-#     - 'UTILITY DOC'
-#     - 'DATA TO BE SUBMITTED'
+    Possible values for `document_category` include:
+    - 'PERSONAL DOC'
+    - 'CONSTITUTION DOC'
+    - 'PRINCIPAL PLACE DOC'
+    - 'UTILITY DOC'
+    - 'DATA TO BE SUBMITTED'
 
-#     Returns:
-#     - Returns all document details for the specified service_id and 'document_category'.
-#     - If no records are found, return {'message': 'No data found'}.
-#     """
-#     try:
-#         results = db_office_master.get_service_documents_data_details(db, service_id, document_category)
+    Returns:
+    - Returns all document details for the specified service_id and 'document_category'.
+    - If no records are found, return {'message': 'No data found'}.
+    """
+    try:
+        results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
 
-#         if not results:
-#             return JSONResponse(status_code=404, content={"message": "No data found"})
+        if not results:
+            return JSONResponse(status_code=404, content={"message": "No data found"})
 
-#         # Group the results by document category
-#         grouped_results = {}
-#         for result in results:
-#             if result.document_data_category_id not in grouped_results:
-#                 grouped_results[result.document_data_category_id] = {
-#                     "document_data_category_id": result.document_data_category_id,
-#                     "document_data_category_category_name": result.document_data_category_category_name,
-#                     "details": []
-#                 }
-#             grouped_results[result.document_data_category_id]["details"].append(result)
+        # Group the results by document category
+        grouped_results = {}
+        for result in results:
+            if result.document_data_category_id not in grouped_results:
+                grouped_results[result.document_data_category_id] = {
+                    "document_data_category_id": result.document_data_category_id,
+                    "document_data_category_category_name": result.document_data_category_category_name,
+                    "details": []
+                }
+            grouped_results[result.document_data_category_id]["details"].append(result)
 
-#         # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
-#         final_results = list(grouped_results.values())
+        # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
+        final_results = list(grouped_results.values())
 
-#         return final_results
+        return final_results
 
-#     except Exception as e:
-#         # logging.error(f"Error fetching service documents details: {e}")
-#         raise HTTPException(status_code=500, detail="Internal Server Error")
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+    except Exception as e:
+        # logging.error(f"Error fetching service documents details: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+    
+    
+    
 
 
 @router.get("/services/get_all_service_document_data_master")
@@ -1432,7 +1433,7 @@ def get_all_service_document_data_master(
     doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
 ) -> List[dict]:
     try:
-        logger.info("Endpoint /services/get_all_service_document_data_master called")
+       
 
         search_conditions = []
 
@@ -1450,16 +1451,16 @@ def get_all_service_document_data_master(
             search_conditions.append(text("g.id = :service_id"))
         
         if group_id != 'ALL':
-            search_conditions.append(text("b.id = :group_id"))
+            search_conditions.append(text("g.group_id = :group_id"))
         
         if sub_group_id != 'ALL':
-            search_conditions.append(text("c.id = :sub_group_id"))
+            search_conditions.append(text("g.sub_group_id = :sub_group_id"))
         
         if category_id != 'ALL':
-            search_conditions.append(text("d.id = :category_id"))
+            search_conditions.append(text("g.category_id = :category_id"))
         
         if sub_category_id != 'ALL':
-            search_conditions.append(text("e.id = :sub_category_id"))
+            search_conditions.append(text("g.sub_category_id = :sub_category_id"))
         
         if constitution_id != 'ALL':
             search_conditions.append(text("f.id = :constitution_id"))
@@ -1473,20 +1474,18 @@ def get_all_service_document_data_master(
         base_query = """
         SELECT
             ROW_NUMBER() OVER (ORDER BY g.service_goods_name, f.business_constitution_name) AS unique_id,
+            a.id AS service_document_data_master_id,
             g.id AS service_goods_master_id,
             g.service_goods_name,
             f.id AS constitution_id,
             f.business_constitution_name,
-            f.business_constitution_code,
-            f.description,
-            a.id AS service_document_data_master_id,
-            a.group_id,
+            b.id AS group_id,
             b.group_name,
-            a.sub_group_id,
+            c.id AS sub_group_id,
             c.sub_group_name,
-            a.category_id,
+            d.id AS category_id,
             d.category_name,
-            a.sub_category_id,
+            e.id AS sub_category_id,
             e.sub_category_name,
             CASE
                 WHEN a.id IS NOT NULL THEN 'Configured'
@@ -1498,18 +1497,18 @@ def get_all_service_document_data_master(
         LEFT JOIN off_service_document_data_master AS a 
             ON g.id = a.service_goods_master_id 
             AND f.id = a.constitution_id
-        LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
-        LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
-        LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
-        LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
+        LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
+        LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
+        LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id
+        LEFT JOIN off_service_goods_sub_category AS e ON g.sub_category_id = e.id
         """
 
         if search_conditions:
             base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
         
-        base_query += " ORDER BY g.service_goods_name, f.business_constitution_name"
+        base_query += " ORDER BY g.service_goods_name, f.display_order"
 
-        # logger.info(f"Executing query: {base_query}")
+       
 
         query = text(base_query)
 
@@ -1523,18 +1522,13 @@ def get_all_service_document_data_master(
             'constitution_id': constitution_id if constitution_id != 'ALL' else None
         }
 
-        # logger.info(f"Query parameters: {params}")
+     
 
         result = db.execute(query, params)
         rows = result.fetchall()
 
         # Log keys and rows for debugging
-        # if rows:
-        #     logger.info(f"Row keys: {rows[0].keys()}")
-        #     logger.info(f"First row data: {rows[0]}")
-        # else:
-        #     logger.info("No rows returned from the query")
-
+       
         if not rows:
             return {"message": "No data present"}
 
@@ -1555,8 +1549,8 @@ def get_all_service_document_data_master(
                 "sub_category_name": row.sub_category_name,
                 "constitution_id": row.constitution_id,
                 "business_constitution_name": row.business_constitution_name,
-                "business_constitution_code": row.business_constitution_code,
-                "description": row.description,
+                # "business_constitution_code": row.business_constitution_code,
+                # "description": row.description,
                 "status": row.document_status
             })
 
@@ -1565,8 +1559,10 @@ def get_all_service_document_data_master(
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error(f"Error occurred: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))  
+       
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 #------------------------------------------------------------------------------------------------
 ###################CONSULTANTS AND SERVICES####################################################
 #------------------------------------------------------------------------------------------------
