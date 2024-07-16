@@ -325,6 +325,7 @@ class OffServiceGoodsMasterCreate(BaseModel):
     is_bundled_service: str
 
 class OffServiceGoodsDetailsCreate(BaseModel):
+    id:int
     service_goods_master_id: int
     display_order: int
 

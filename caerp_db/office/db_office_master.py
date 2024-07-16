@@ -160,6 +160,7 @@ def save_appointment_visit_master(
 
 
 
+#######--SERVICE_GOODS-MASTER--#############################################################
 
 def save_services_goods_master(
     db: Session,
@@ -233,7 +234,12 @@ def save_services_goods_master(
 
                 for service_goods_master_id, existing_detail in existing_detail_dict.items():
                     if service_goods_master_id not in incoming_detail_dict:
-                        db.delete(existing_detail)
+                        
+                        existing_detail.is_deleted = "yes"
+                        existing_detail.deleted_by = user_id
+                        existing_detail.deleted_on = datetime.utcnow()
+                        
+
 
             db.commit()
             return {"success": True, "message": "Updated successfully", "action": "update"}
