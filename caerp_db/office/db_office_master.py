@@ -1047,6 +1047,7 @@ def save_price_data(price_data: PriceData, user_id: int, db: Session):
 
 #--------------------------------------------------------------------------------------------------------
 
+
 def get_service_documents_data_details(db: Session, service_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
     try:
         # Query to fetch all records from master table for the given service_id
@@ -1062,7 +1063,7 @@ def get_service_documents_data_details(db: Session, service_id: int, document_ca
 
         # Query to fetch details based on the collected service_document_data_master_ids and optional document_category
         details_query = db.query(OffViewServiceDocumentsDataDetails). \
-            filter(OffViewServiceDocumentsDataDetails.service_document_data_id.in_(service_document_data_master_ids))
+            filter(OffViewServiceDocumentsDataDetails.service_document_data_master_id.in_(service_document_data_master_ids))
 
         if document_category:
             details_query = details_query.filter(
