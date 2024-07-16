@@ -1148,65 +1148,158 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
 
 
 #---------------------------------------------------------------------------------------
-@router.get('/services/get_all_service_document_data_master', response_model=Union[List[OffViewServiceDocumentsDataMasterSchema], dict])
+
+@router.get("/services/get_all_service_document_data_master")
 def get_all_service_document_data_master(
     db: Session = Depends(get_db),
-    search: Optional[str] = None,  
-    service_id: Union[int, str] = Query('ALL'),
-    group_id: Union[int, str] = Query('ALL'),
-    sub_group_id: Union[int, str] = Query('ALL'),
-    category_id: Union[int, str] = Query('ALL'),
-    sub_category_id: Union[int, str] = Query('ALL'),
-    constitution_id: Union[int, str] = Query('ALL'),
-    doc_data_status: Optional[str] = Query(None, description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
-    token: str = Depends(oauth2.oauth2_scheme)
-) -> Union[List[OffViewServiceDocumentsDataMasterSchema], Dict[str, Any]]:
+    search: Optional[str] = None,
+    service_id: Union[int, str] = 'ALL',
+    group_id: Union[int, str] = 'ALL',
+    sub_group_id: Union[int, str] = 'ALL',
+    category_id: Union[int, str] = 'ALL',
+    sub_category_id: Union[int, str] = 'ALL',
+    constitution_id: Union[int, str] = 'ALL',
+    doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
+) -> List[dict]:
     """
     Allows users to search and filter service document data master records by the following criteria:
     
-    - **search**: Search for records that contain the provided string in any of the following fields:
-      - `service_goods_name`
-      - `group_name`
-      - `category_name`
-      - `sub_group_name`
-      - `subcategory_name`
-      -'business_constitution_name'
+    - **search**: Search for records that contain the provided search term as a substring in service goods name, group name, category name, sub-group name, sub-category name, or business constitution name.
+    
+    - **service_id**: Filter records by service goods ID. Use 'ALL' to include all service goods IDs.
+    
     - **group_id**: Filter records by group ID. Use 'ALL' to include all group IDs.
+    
     - **sub_group_id**: Filter records by sub-group ID. Use 'ALL' to include all sub-group IDs.
+    
     - **category_id**: Filter records by category ID. Use 'ALL' to include all category IDs.
+    
     - **sub_category_id**: Filter records by sub-category ID. Use 'ALL' to include all sub-category IDs.
+    
     - **constitution_id**: Filter records by constitution ID. Use 'ALL' to include all constitution IDs.
-    - **service_id**: Filter records by service ID. Use 'ALL' to include all service IDs.
+    
     - **doc_data_status**: Filter by document data status. Possible values are:
       - 'CONFIGURED'
       - 'NOT CONFIGURED'
+      - 'ALL' (default)
 
     Returns:
         - A list of service document data master records matching the specified filters.
         - If no records are found, a message indicating that no data is present.
     """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
     try:
-        results = db_office_master.get_all_service_document_data_master(
-            db, search, service_id ,group_id, sub_group_id, category_id, sub_category_id, constitution_id, doc_data_status
-        )
+        search_conditions = []
 
-        if not results:
-            return {"message": "No data present"}
+        if search:
+            search_conditions.append(or_(
+                text("g.service_goods_name LIKE :search"),
+                text("b.group_name LIKE :search"),
+                text("d.category_name LIKE :search"),
+                text("c.sub_group_name LIKE :search"),
+                text("e.sub_category_name LIKE :search"),
+                text("f.business_constitution_name LIKE :search")
+            ))
+
+        if service_id != 'ALL':
+            search_conditions.append(text("g.id = :service_id"))
         
-        # Remove 'details' attribute if doc_data_status is 'NOT CONFIGURED'
-        for result in results:
-            if result.get("doc_data_status") == "NOT CONFIGURED" and "details" in result:
-                del result["details"]
+        if group_id != 'ALL':
+            search_conditions.append(text("b.id = :group_id"))
+        
+        if sub_group_id != 'ALL':
+            search_conditions.append(text("c.id = :sub_group_id"))
+        
+        if category_id != 'ALL':
+            search_conditions.append(text("d.id = :category_id"))
+        
+        if sub_category_id != 'ALL':
+            search_conditions.append(text("e.id = :sub_category_id"))
+        
+        if constitution_id != 'ALL':
+            search_conditions.append(text("f.id = :constitution_id"))
+        
+        if doc_data_status != 'ALL':
+            if doc_data_status == "CONFIGURED":
+                search_conditions.append(text("h.document_data_master_id IS NOT NULL"))
+            elif doc_data_status == "NOT CONFIGURED":
+                search_conditions.append(text("h.document_data_master_id IS NULL"))
 
-        return JSONResponse(content=jsonable_encoder(results), status_code=200)
-
+        base_query = """
+        SELECT
+            g.id AS service_goods_master_id,
+            g.service_goods_name,
+            a.id AS service_document_data_master_id,
+            b.group_name,
+            c.sub_group_name,
+            d.category_name,
+            e.sub_category_name,
+            f.business_constitution_name,
+            f.business_constitution_code,
+            f.description,
+            h.service_document_data_master_id AS view_service_document_data_master_id,
+            h.document_data_category_id,
+            h.document_data_master_id,
+            h.document_data_name
+        FROM 
+            off_service_goods_master AS g
+        LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
+        LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
+        LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
+        LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
+        LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
+        LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
+        LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id
+        """
+        
+        if search_conditions:
+            base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
+        
+        query = text(base_query)
+        
+        result = db.execute(query, {
+            'search': f'%{search}%' if search else None,
+            'service_id': service_id if service_id != 'ALL' else None,
+            'group_id': group_id if group_id != 'ALL' else None,
+            'sub_group_id': sub_group_id if sub_group_id != 'ALL' else None,
+            'category_id': category_id if category_id != 'ALL' else None,
+            'sub_category_id': sub_category_id if sub_category_id != 'ALL' else None,
+            'constitution_id': constitution_id if constitution_id != 'ALL' else None
+        })
+        rows = result.fetchall()
+        
+        if not rows:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
+        
+        # Formatting the response
+        service_document_data_master = []
+        for row in rows:
+            configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
+            service_document_data_master.append({
+                "service_goods_master_id": row.service_goods_master_id,
+                "service_goods_name": row.service_goods_name,
+                "service_document_data_master_id": row.service_document_data_master_id,
+                "group_name": row.group_name,
+                "sub_group_name": row.sub_group_name,
+                "category_name": row.category_name,
+                "sub_category_name": row.sub_category_name,
+                "business_constitution_name": row.business_constitution_name,
+                "business_constitution_code": row.business_constitution_code,
+                "description": row.description,
+                "view_service_document_data_master_id": row.view_service_document_data_master_id,
+                "document_data_category_id": row.document_data_category_id,
+                "document_data_master_id": row.document_data_master_id,
+                "document_data_name": row.document_data_name,
+                "status": configured_status
+            })
+        
+        return service_document_data_master
+    
+    except HTTPException as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-   
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+ 
 #-----------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
 def get_service_documents_list_by_group_category(
