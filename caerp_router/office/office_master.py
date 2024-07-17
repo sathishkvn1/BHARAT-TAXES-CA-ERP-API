@@ -1314,50 +1314,50 @@ def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
 #         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
  
 #-----------------------------------------------------------------------------------------
-# @router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
-# def get_service_documents_list_by_group_category(
-#     group_id: Optional[int] = None,
-#     sub_group_id: Optional[int] = None,
-#     category_id: Optional[int] = None,
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Retrieve a list of service documents filtered by group, sub-group, and category.
+@router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
+def get_service_documents_list_by_group_category(
+    group_id: Optional[int] = None,
+    sub_group_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve a list of service documents filtered by group, sub-group, and category.
 
-#     Parameters:
-#     - **group_id**: Optional query parameter to filter documents by group ID.
-#     - **sub_group_id**: Optional query parameter to filter documents by sub-group ID.
-#     - **category_id**: Optional query parameter to filter documents by category ID.
-#       If all arguments are null or group_id == 0, then get all groups.
+    Parameters:
+    - **group_id**: Optional query parameter to filter documents by group ID.
+    - **sub_group_id**: Optional query parameter to filter documents by sub-group ID.
+    - **category_id**: Optional query parameter to filter documents by category ID.
+      If all arguments are null or group_id == 0, then get all groups.
 
-#     Returns:
-#     - A list of filtered service documents that match the provided criteria.
-#     - If no matching documents are found, returns a 404 status code with a message "No data found".
-#     - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
-#     """
-#     try:
-#         results = db_office_master.get_service_documents_list_by_group_category(
-#             db, group_id, sub_group_id, category_id)
+    Returns:
+    - A list of filtered service documents that match the provided criteria.
+    - If no matching documents are found, returns a 404 status code with a message "No data found".
+    - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
+    """
+    try:
+        results = db_office_master.get_service_documents_list_by_group_category(
+            db, group_id, sub_group_id, category_id)
             
-#         if not results:
-#             return JSONResponse(status_code=404, content={"message": "No data found"})
+        if not results:
+            return JSONResponse(status_code=404, content={"message": "No data found"})
         
-#         # If the results are a list of Service_Group objects
-#         if isinstance(results[0], Service_Group):
-#             return JSONResponse(status_code=200, content={"group": [result.dict() for result in results]})
+        # If the results are a list of Service_Group objects
+        if isinstance(results[0], Service_Group):
+            return JSONResponse(status_code=200, content={"group": [result.dict() for result in results]})
 
-#         # Filter out null fields from each ServiceDocumentsList_Group object
-#         filtered_results = [
-#             {k: v for k, v in result.dict().items() if v is not None}
-#             for result in results
-#         ]
+        # Filter out null fields from each ServiceDocumentsList_Group object
+        filtered_results = [
+            {k: v for k, v in result.dict().items() if v is not None}
+            for result in results
+        ]
 
-#         # Ensure the response is a list of dictionaries matching the schema
-#         return JSONResponse(status_code=200, content=filtered_results)
+        # Ensure the response is a list of dictionaries matching the schema
+        return JSONResponse(status_code=200, content=filtered_results)
 
-#     except Exception as e:
-#         print(f"Error: {e}")
-#         raise HTTPException(status_code=500, detail="Internal Server Error")
+    except Exception as e:
+        print(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 
