@@ -1772,4 +1772,22 @@ def get_all_services_from_service_master(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
     
-
+#--------------------
+def get_consultation_tools(db: Session, mode_id: int = 0):
+    if mode_id == 0:
+        # Fetch all consultation modes that are not deleted
+        consultation_modes = db.query(OffConsultationMode).filter(OffConsultationMode.is_deleted == "no").all()
+        
+        
+        # Convert SQLAlchemy models to Pydantic models
+        return [ConsultationModeSchema.from_orm(mode) for mode in consultation_modes]
+    else:
+        # Fetch consultation tools for a specific mode_id that are not deleted
+        tools = db.query(OffConsultationTool).filter(
+            OffConsultationTool.consultation_mode_id == mode_id,
+            OffConsultationTool.is_deleted == "no"
+        ).all()
+        
+        # Convert SQLAlchemy models to Pydantic models
+        tools_schema = [ConsultationToolSchema.from_orm(tool) for tool in tools]
+        return tools_schema
