@@ -981,12 +981,15 @@ class OffConsultationTaskMaster(caerp_base):
 
 
 
+
 class OffConsultationTaskDetails(caerp_base):
     __tablename__ = 'off_consultation_task_details'
     id = Column(Integer, primary_key=True, autoincrement=True)
     task_master_id = Column(Integer,nullable=False)
     service_id = Column(Integer, nullable=False)
     is_main_service = Column(Enum('yes', 'no'), default='no', nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+
 
 
 class OffViewConsultationTaskMaster(caerp_base):

@@ -807,13 +807,18 @@ class ConsultationModeSchema(BaseModel):
        
         
         
+      
 class OffConsultationTaskDetailsSchema(BaseModel):
    # task_master_id: int
-    service_id: int
+    id:int
+    service_id     : int
     is_main_service: str
 
     class Config:
         orm_mode = True
+
+
+
 
 
 class OffConsultationTaskMasterSchema(BaseModel):
@@ -829,9 +834,13 @@ class OffConsultationTaskMasterSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
 class AdditionalServices(BaseModel):
+    service_detail_id:int
     service_id: int
     service_name:str
+
+
 
 class OffViewConsultationTaskMasterSchema(BaseModel):
     consultation_task_master_id: int

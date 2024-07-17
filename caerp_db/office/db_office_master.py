@@ -1335,6 +1335,7 @@ def save_consultant_schedule(
 ##################---------------------- TASK -swathi-------------------------------------
 
 
+
 def save_off_consultation_task_master(
     db: Session,
     id: int,
@@ -1375,16 +1376,36 @@ def save_off_consultation_task_master(
             existing_task_master.modified_by = user_id
             existing_task_master.modified_on = datetime.now()
 
-            # Delete existing task details
-            db.query(OffConsultationTaskDetails).filter(OffConsultationTaskDetails.task_master_id == id).delete()
+            # Delete existing task details by setting is_deleted='yes' and updating fields
+            existing_details = db.query(OffConsultationTaskDetails).filter(OffConsultationTaskDetails.task_master_id == id).all()
+            for detail in existing_details:
+                detail.is_deleted = 'yes'
+                # detail.deleted_by = user_id
+                # detail.deleted_on = datetime.now()
+                db.add(detail)
 
             # Insert updated task details
             for detail in data.details:
-                new_detail = OffConsultationTaskDetails(
-                    task_master_id=id,
-                    **detail.dict()
-                )
-                db.add(new_detail)
+                if detail.id:
+                    # Update existing detail
+                    existing_detail = db.query(OffConsultationTaskDetails).filter(OffConsultationTaskDetails.id == detail.id).first()
+                    if existing_detail:
+                        for key, value in detail.dict().items():
+                            setattr(existing_detail, key, value)
+                        # existing_detail.modified_by = user_id
+                        # existing_detail.modified_on = datetime.now()
+                        existing_detail.is_deleted = 'no'
+                    else:
+                        raise HTTPException(status_code=404, detail=f"Detail with id {detail.id} not found")
+                else:
+                    # Insert new detail
+                    new_detail = OffConsultationTaskDetails(
+                        task_master_id=id,
+                        **detail.dict(),
+                        # created_by=user_id,
+                        # created_on=datetime.now()
+                    )
+                    db.add(new_detail)
 
             db.commit()
             return {"message": "Updated successfully"}
@@ -1392,6 +1413,9 @@ def save_off_consultation_task_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 #-------------------------------------------------------------------------------------------
 
@@ -1434,6 +1458,7 @@ def get_all_consultation_task_master_details(
     
     # Query the additional services
     additional_services_query = db.query(
+        OffConsultationTaskDetails.id,
         OffConsultationTaskDetails.task_master_id,
         OffConsultationTaskDetails.service_id,
         OffViewServiceGoodsMaster.service_goods_name
@@ -1441,16 +1466,21 @@ def get_all_consultation_task_master_details(
         OffViewServiceGoodsMaster,
         OffViewServiceGoodsMaster.service_goods_master_id == OffConsultationTaskDetails.service_id
     ).filter(
-        OffConsultationTaskDetails.is_main_service == 'no'
+        OffConsultationTaskDetails.is_main_service == 'no',
+        OffConsultationTaskDetails.is_deleted == 'no'
     ).all()
 
     # Create a dictionary to store the additional services by task_master_id
     additional_services_dict = {}
-    for task_master_id, service_id, service_goods_name in additional_services_query:
+    for service_detail_id, task_master_id, service_id, service_goods_name in additional_services_query:
         if task_master_id not in additional_services_dict:
             additional_services_dict[task_master_id] = []
         additional_services_dict[task_master_id].append(
-            AdditionalServices(service_id=service_id, service_name=service_goods_name)
+            AdditionalServices(
+                service_detail_id=service_detail_id,
+                service_id=service_id,
+                service_name=service_goods_name
+            )
         )
 
     # Merge the results
@@ -1464,22 +1494,9 @@ def get_all_consultation_task_master_details(
 
     return task_master_details
 
-def get_consultation_tools(db: Session, mode_id: int = 0):
-    if mode_id == 0:
-        # Fetch all consultation modes that are not deleted
-        consultation_modes = db.query(OffConsultationMode).filter(OffConsultationMode.is_deleted == "no").all()
-        # Convert SQLAlchemy models to Pydantic models
-        return [ConsultationModeSchema.from_orm(mode) for mode in consultation_modes]
-    else:
-        # Fetch consultation tools for a specific mode_id that are not deleted
-        tools = db.query(OffConsultationTool).filter(
-            OffConsultationTool.consultation_mode_id == mode_id,
-            OffConsultationTool.is_deleted == "no"
-        ).all()
-        
-        # Convert SQLAlchemy models to Pydantic models
-        tools_schema = [ConsultationToolSchema.from_orm(tool) for tool in tools]
-        return tools_schema
+
+
+
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
 #------------------------------------------------------------------------------------------------
