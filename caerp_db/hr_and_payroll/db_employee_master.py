@@ -31,6 +31,220 @@ def get_next_employee_number(db: Session) -> str:
 
 
 
+def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, user_id: int, employee_profile_component: Optional[str] = None):
+    try:
+        if id == 0:
+            # Insertion logic
+            data = request.employee_master.dict()
+            data["created_by"] = user_id
+            data["is_approved"] = 'yes'
+            data["approved_by"] = user_id
+            data["approved_on"] = datetime.utcnow()
+            data['employee_number'] = get_next_employee_number(db)
+
+            insert_stmt = insert(EmployeeMaster).values(**data)
+            result = db.execute(insert_stmt)
+            db.commit()
+            emp_id = result.lastrowid
+
+            contact_details_data = request.contact_details.dict()
+            contact_details_data['effective_from_date'] = datetime.utcnow().date()
+            contact_details_data['employee_id'] = emp_id
+
+            insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
+            db.execute(insert_contact_stmt)
+            db.commit()
+
+            users_new_dict = request.employee_security_credentials.dict()
+            log_password = Hash.bcrypt(users_new_dict['login_password'])
+            password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+
+            users_new_data = {
+                "employee_id": emp_id,
+                "user_name": users_new_dict['user_name'],
+                "login_password": log_password,
+                "edit_password": log_password,
+                "delete_password": log_password,
+                "security_password": log_password,
+                "is_active": 'yes',
+                "password_reset_date": password_reset_date
+            }
+            insert_user_log_stmt = insert(UserBase).values(**users_new_data)
+            db.execute(insert_user_log_stmt)
+            db.commit()
+
+            for role_id in request.user_roles.role_id:
+                user_role_data = {
+                    "employee_id": emp_id,
+                    "role_id": role_id
+                }
+                insert_user_role_stmt = insert(UserRole).values(**user_role_data)
+                db.execute(insert_user_role_stmt)
+            db.commit()
+
+            employement_details_data = request.employement_details.dict()
+            employement_details_data["employee_id"] = emp_id
+            employement_details_data['effective_from_date'] = datetime.utcnow().date()
+            employement_details_data["created_by"] = user_id
+            employement_details_data["approved_by"] = user_id
+            employement_details_data["approved_on"] = datetime.utcnow()
+
+            insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+            db.execute(insert_emp_det)
+            db.commit()
+
+            return emp_id
+
+        else:
+            # Update logic based on employee_profile_component
+            update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id, EmployeeMaster.is_deleted == 'no').first()
+            if not update_emp:
+                raise HTTPException(status_code=404, detail="Employee not found")
+
+            if employee_profile_component is None:
+                raise ValueError("Employee profile component is required for updation")
+
+            components = employee_profile_component.split(',')
+
+            # Update employee_master if present in the components
+            if 'employee_master' in components and request.employee_master:
+                update_data = request.employee_master.dict(exclude_unset=True)
+                db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).update(update_data)
+                db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).update({
+                    "modified_by": user_id,
+                    "modified_on": datetime.utcnow()
+                })
+
+            # Update contact_details if present in the components
+            if 'contact_details' in components and request.contact_details:
+                contact_details_data = request.contact_details.dict(exclude_unset=True)
+                db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == id).update(contact_details_data)
+
+            # Update employement_details if present in the components
+            if 'employement_details' in components and request.employement_details:
+                employement_details_data = request.employement_details.dict(exclude_unset=True)
+                db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == id).update(employement_details_data)
+
+            # You can add more conditions for other components if needed
+
+            db.commit()
+
+            return {
+                "success": True,
+                "message": "Updated successfully"
+            }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
+
+# def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, user_id: int, employee_profile_component: Optional[str] = None):
+#     try:
+#         if id == 0:
+#             # Insertion logic
+#             data = request.employee_master.dict()
+#             data["created_by"] = user_id
+#             data["is_approved"] = 'yes'
+#             data["approved_by"] = user_id
+#             data["approved_on"] = datetime.utcnow()
+#             data['employee_number'] = get_next_employee_number(db)
+
+#             insert_stmt = insert(EmployeeMaster).values(**data)
+#             result = db.execute(insert_stmt)
+#             db.commit()
+#             emp_id = result.lastrowid
+
+#             contact_details_data = request.contact_details.dict()
+#             contact_details_data['effective_from_date'] = datetime.utcnow().date()
+#             contact_details_data['employee_id'] = emp_id
+
+#             insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
+#             db.execute(insert_contact_stmt)
+#             db.commit()
+
+#             users_new_dict = request.employee_security_credentials.dict()
+#             log_password = Hash.bcrypt(users_new_dict['login_password'])
+#             password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+
+#             users_new_data = {
+#                 "employee_id": emp_id,
+#                 "user_name": users_new_dict['user_name'],
+#                 "login_password": log_password,
+#                 "edit_password": log_password,
+#                 "delete_password": log_password,
+#                 "security_password": log_password,
+#                 "is_active": 'yes',
+#                 "password_reset_date": password_reset_date
+#             }
+#             insert_user_log_stmt = insert(UserBase).values(**users_new_data)
+#             db.execute(insert_user_log_stmt)
+#             db.commit()
+
+#             for role_id in request.user_roles.role_id:
+#                 user_role_data = {
+#                     "employee_id": emp_id,
+#                     "role_id": role_id
+#                 }
+#                 insert_user_role_stmt = insert(UserRole).values(**user_role_data)
+#                 db.execute(insert_user_role_stmt)
+#             db.commit()
+
+#             employement_details_data = request.employement_details.dict()
+#             employement_details_data["employee_id"] = emp_id
+#             employement_details_data['effective_from_date'] = datetime.utcnow().date()
+#             employement_details_data["created_by"] = user_id
+#             employement_details_data["approved_by"] = user_id
+#             employement_details_data["approved_on"] = datetime.utcnow()
+
+#             insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+#             db.execute(insert_emp_det)
+#             db.commit()
+
+#             return emp_id
+
+#         else:
+#             # Update logic based on employee_profile_component
+#             update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id, EmployeeMaster.is_deleted == 'no').first()
+#             if not update_emp:
+#                 raise HTTPException(status_code=404, detail="Employee not found")
+
+#             if employee_profile_component is None:
+#                 raise ValueError("Employee profile component is required for updation")
+
+#             components = employee_profile_component.split(',')
+
+#             # Update employee_master if present in the components
+#             if 'employee_master' in components and request.employee_master:
+#                 update_data = request.employee_master.dict(exclude_unset=True)
+#                 db.query(EmployeeMaster).filter(EmployeeMaster.id == id).update(update_data)
+#                 db.query(EmployeeMaster).filter(EmployeeMaster.id == id).update({
+#                     "modified_by": user_id,
+#                     "modified_on": datetime.utcnow()
+#                 })
+
+#             # Update contact_details if present in the components
+#             if 'contact_details' in components and request.contact_details:
+#                 contact_details_data = request.contact_details.dict(exclude_unset=True)
+#                 db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == id).update(contact_details_data)
+
+#             # Update employement_details if present in the components
+#             if 'employement_details' in components and request.employement_details:
+#                 employement_details_data = request.employement_details.dict(exclude_unset=True)
+#                 db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == id).update(employement_details_data)
+
+#             # You can add more conditions for other components if needed
+
+#             db.commit()
+
+#             return {
+#                 "success": True,
+#                 "message": "Updated successfully"
+#             }
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
    try:
@@ -105,6 +319,10 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
         except SQLAlchemyError as e:
           db.rollback()
           raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        
+      
+      
+      
       elif Action in {RecordActionType.UPDATE_ONLY, RecordActionType.UPDATE_AND_INSERT}:
         if employee_id <= 0:
           raise HTTPException(status_code=400, detail="Please provide the employee ID to Update")

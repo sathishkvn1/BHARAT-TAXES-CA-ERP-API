@@ -1530,7 +1530,7 @@ def get_all_service_document_data_master(
         # Log keys and rows for debugging
        
         if not rows:
-            return {"message": "No data present"}
+            return [{"message": "No data present"}]
 
         service_document_data_master = []
         for row in rows:

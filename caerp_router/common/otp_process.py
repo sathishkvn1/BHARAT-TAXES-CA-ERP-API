@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from caerp_db.common import db_otp,db_user
 import random
 from caerp_functions import send_message
+from caerp_db.common.models import EmployeeContactDetails
 
 router = APIRouter(
     prefix ='/otp',
@@ -50,8 +51,10 @@ def mobile_resend_otp(
     user_id = payload.get("user_id")
     
     user_data = db_user.get_employee_by_id(db, user_id)
+    employee_contact_data =  db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == user_id).first()
+
     
-    mobile_number= user_data.mobile_phone
+    mobile_number= employee_contact_data.personal_mobile_number
     mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
     new_otp = db_otp.create_otp(db, mobile_otp_value,user_data.employee_id)
     mobile_otp_id = new_otp.id    

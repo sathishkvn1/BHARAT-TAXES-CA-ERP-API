@@ -17,6 +17,7 @@ from typing import List, Dict
 from settings import BASE_URL
 
 
+
 router = APIRouter(
     prefix ='/Employee',
     tags=['Employee']
@@ -85,7 +86,43 @@ def save_employee_master(
          } 
    except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
- 
+   
+
+@router.post('/save_employee_master_new')
+def save_employee_master(
+   
+    id: int = 0,
+    employee_profile_component: Optional[str] = Query(None,
+    description="Comma-separated list of components to Update",
+    title="Components to Update"),
+    request: EmployeeDetails = Body(...),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"]
+
+    try:
+        result = db_employee_master.save_employee_master_new(db, request,id, user_id, employee_profile_component)
+
+        if id == 0:
+            return {
+                "success": True,
+                "message": "Saved successfully",
+                "employee_id": result
+            }
+        else:
+            return {
+                "success": True,
+                "message": "Updated successfully"
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 @router.post('/upload_document')
