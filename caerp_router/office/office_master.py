@@ -1580,7 +1580,10 @@ def get_consultant_employees(
     current_date = datetime.utcnow().date()
     query = db.query(
         EmployeeMaster.employee_id,
-        func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+        EmployeeMaster.first_name,
+        EmployeeMaster.middle_name,
+         EmployeeMaster.last_name,
+        # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
         EmployeeMaster.employee_number,
         EmployeeContactDetails.personal_email_id.label('personal_email'),
         EmployeeContactDetails.official_email_id.label('official_email'),

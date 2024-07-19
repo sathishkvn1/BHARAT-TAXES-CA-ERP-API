@@ -628,7 +628,10 @@ class TimeSlotResponse(BaseModel):
 
 class ConsultantEmployee(BaseModel):
     employee_id: int
-    employee_name: str
+    first_name:str
+    middle_name:str
+    last_name:str
+    # employee_name: str
     employee_number: str
     personal_email: str
     official_email: Optional[str]
