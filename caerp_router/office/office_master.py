@@ -1438,14 +1438,17 @@ def get_all_service_document_data_master(
         search_conditions = []
 
         if search:
-            search_conditions.append(or_(
-                text("g.service_goods_name ILIKE :search"),
-                text("b.group_name ILIKE :search"),
-                text("d.category_name ILIKE :search"),
-                text("c.sub_group_name ILIKE :search"),
-                text("e.sub_category_name ILIKE :search"),
-                text("f.business_constitution_name ILIKE :search")
-            ))
+            search_like = f'%{search}%'
+            search_conditions.append(
+                or_(
+                    text("g.service_goods_name LIKE :search"),
+                    text("b.group_name LIKE :search"),
+                    text("d.category_name LIKE :search"),
+                    text("c.sub_group_name LIKE :search"),
+                    text("e.sub_category_name LIKE :search"),
+                    text("f.business_constitution_name LIKE :search")
+                )
+            )
 
         if service_id != 'ALL':
             search_conditions.append(text("g.id = :service_id"))
