@@ -742,7 +742,7 @@ def get_price_list(
 def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
                               db: Session = Depends(get_db)):
     # Call the function to get service data based on service_id
-    service_data =db_office_master.get_service_data(service_id, db)
+    service_data = db_office_master.get_service_data(service_id, db)
     return service_data
 #---------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_history/", response_model=List[ServiceModel])

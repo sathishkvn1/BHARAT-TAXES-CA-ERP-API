@@ -929,7 +929,7 @@ def get_services_filtered(db: Session,
 #     return service_data
 
 def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
-    query_result = db.execute("""
+    query = text("""
         SELECT
             a.id AS constitution_id,
             a.business_constitution_name,
@@ -941,8 +941,8 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
             COALESCE(c.stamp_duty, 0) AS stamp_duty,
             COALESCE(c.stamp_fee, 0) AS stamp_fee,
-            c.effective_from_date AS price_master_effective_from_date,
-            c.effective_to_date AS price_master_effective_to_date
+            c.effective_from_date AS effective_from_date,
+            c.effective_to_date AS effective_to_date
         FROM
             app_business_constitution AS a
         LEFT OUTER JOIN
@@ -956,7 +956,9 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             b.id = :service_id
         ORDER BY
             a.id, b.id;
-    """, {"service_id": service_id}).fetchall()
+    """)
+
+    query_result = db.execute(query, {"service_id": service_id}).fetchall()
 
     service_data = [
         ServiceModelSchema(
@@ -970,14 +972,12 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             govt_agency_fee=row.govt_agency_fee,
             stamp_duty=row.stamp_duty,
             stamp_fee=row.stamp_fee,
-            price_master_effective_from_date=row.price_master_effective_from_date,
-            price_master_effective_to_date=row.price_master_effective_to_date
+            effective_from_date=row.effective_from_date,
+            effective_to_date=row.effective_to_date
         ) for row in query_result
     ]
     
     return service_data
-
-
 #---------------------------------------------------------------------------------------------------------------
 
 def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:

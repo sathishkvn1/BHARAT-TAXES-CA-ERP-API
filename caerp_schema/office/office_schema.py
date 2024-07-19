@@ -413,8 +413,8 @@ class ServiceModelSchema(BaseModel):
     govt_agency_fee: float
     stamp_duty: float
     stamp_fee: float
-    price_master_effective_from_date: Optional[date]
-    price_master_effective_to_date: Optional[date]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
 
     
 class ServicePriceHistory(BaseModel):
