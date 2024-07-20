@@ -764,13 +764,16 @@ def save_service_price_endpoint(price_data: List[PriceData],
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
+    
     try:
         for data in price_data:
-            db_office_master.save_price_data(data, user_id, db)
+            db_office_master.save_price_data(data, id, user_id, db)
+        
         return {"detail": "Price data saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
+
+
 #---------------------------------------------------------------------------------------------------------------
  
 
@@ -2108,3 +2111,47 @@ def get_all_services(
 #         })
 
 #     return service_document_data_master
+
+
+
+@router.get("/get_consultant_schedule")
+def get_consultant_schedule(
+    consultant_id: int,
+    consultation_mode_id: int,
+    db: Session = Depends(get_db),
+    check_date: Optional[date] = None,
+    service_goods_master_id: Optional[int] = None
+):
+    if check_date:
+        return {
+            "available_slots": [
+                {"start_time": "09:30", "end_time": "10:00", "slot_duration_min": 30},
+                {"start_time": "10:00", "end_time": "10:30", "slot_duration_min": 30},
+                {"start_time": "10:30", "end_time": "11:00", "slot_duration_min": 30},
+                {"start_time": "11:00", "end_time": "11:30", "slot_duration_min": 30},
+                {"start_time": "11:30", "end_time": "12:00", "slot_duration_min": 30},
+                {"start_time": "13:00", "end_time": "13:30", "slot_duration_min": 30},
+                {"start_time": "13:30", "end_time": "14:00", "slot_duration_min": 30},
+                {"start_time": "14:00", "end_time": "14:30", "slot_duration_min": 30},
+                {"start_time": "14:30", "end_time": "15:00", "slot_duration_min": 30},
+                {"start_time": "15:00", "end_time": "15:30", "slot_duration_min": 30},
+                {"start_time": "15:30", "end_time": "16:00", "slot_duration_min": 30},
+                {"start_time": "16:00", "end_time": "16:30", "slot_duration_min": 30},
+                {"start_time": "16:30", "end_time": "17:00", "slot_duration_min": 30}
+            ]
+        }
+    else:
+        return {
+            "unavailable_dates": [
+                "2024-08-01",
+                "2024-08-02",
+                "2024-08-03",
+                "2024-08-04",
+                "2024-08-05",
+                "2024-08-06",
+                "2024-08-07",
+                "2024-08-08",
+                "2024-08-09",
+                "2024-08-10"
+            ]
+        }

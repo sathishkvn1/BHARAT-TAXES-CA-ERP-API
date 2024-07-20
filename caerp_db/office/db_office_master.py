@@ -1031,23 +1031,82 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
     return service_models
    
 #--------------------------------------------------------------------------------------------------------------   
-def save_price_data(price_data: PriceData, user_id: int, db: Session):
-    new_price = OffServiceGoodsPriceMaster(
-        service_goods_master_id=price_data.service_goods_master_id,
-        constitution_id=price_data.constitution_id,
-        service_charge=price_data.service_charge,
-        govt_agency_fee=price_data.govt_agency_fee,
-        stamp_duty=price_data.stamp_duty,
-        stamp_fee=price_data.stamp_fee,
-        effective_from_date=price_data.effective_from_date,
-        effective_to_date=price_data.effective_to_date,
-        created_by=user_id,
-        created_on=datetime.now()
-    )
-    db.add(new_price)
-    db.commit()
-    db.refresh(new_price)
-    return new_price
+# def save_price_data(price_data: PriceData, id: int, user_id: int, db: Session):
+#     price_data_dict = price_data.dict()
+
+#     if id != 0:
+#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == id).first()
+#         if existing_price:
+#             # Update existing record
+#             for key, value in price_data_dict.items():
+#                 if value is not None:  # Only update if value is not None
+#                     setattr(existing_price, key, value)
+#             existing_price.created_by = user_id
+#             existing_price.created_on = datetime.now()
+#             db.commit()
+#             db.refresh(existing_price)
+#             return existing_price
+#         else:
+#             raise HTTPException(status_code=404, detail=f"Price data with id {id} not found")
+#     else:
+#         # Insert new record
+#         new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
+#         new_price = OffServiceGoodsPriceMaster(**new_price_data)
+#         db.add(new_price)
+#         db.commit()
+#         db.refresh(new_price)
+#         return new_price
+
+
+def save_price_data(price_data: PriceData, id: int, user_id: int, db: Session):
+    price_data_dict = price_data.dict()
+    
+    if id != 0:
+        # Fetch the existing record
+        existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == id).first()
+        if existing_price:
+            # Check if `effective_from_date` has changed
+            if existing_price.effective_from_date != price_data.effective_from_date:
+                # If `effective_from_date` is changed to a future date, update `effective_to_date` of the current row
+                if price_data.effective_from_date > existing_price.effective_from_date:
+                    if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
+                        existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
+                        db.commit()
+                        db.refresh(existing_price)
+                    
+                    # Create a new row for the new `effective_from_date`
+                    new_price_data = {
+                        **price_data_dict,
+                        'created_by': user_id,
+                        'created_on': datetime.now()
+                    }
+                    new_price = OffServiceGoodsPriceMaster(**new_price_data)
+                    db.add(new_price)
+                    db.commit()
+                    db.refresh(new_price)
+                    return new_price
+                else:
+                    raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
+            else:
+                # Update the existing record if `effective_from_date` is not changed
+                for key, value in price_data_dict.items():
+                    if value is not None:  # Only update if value is not None
+                        setattr(existing_price, key, value)
+                existing_price.created_by = user_id
+                existing_price.created_on = datetime.now()
+                db.commit()
+                db.refresh(existing_price)
+                return existing_price
+        else:
+            raise HTTPException(status_code=404, detail=f"Price data with id {id} not found")
+    else:
+        # Insert new record
+        new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
+        new_price = OffServiceGoodsPriceMaster(**new_price_data)
+        db.add(new_price)
+        db.commit()
+        db.refresh(new_price)
+        return new_price
 #-------------------------------------------------------------------------------------------------------
 
 

@@ -433,6 +433,7 @@ class ServicePriceHistory(BaseModel):
 #     price_history: List[ServicePriceHistory]
 
 class PriceData(BaseModel):
+   
     service_goods_master_id: int
     constitution_id: int
     service_charge: float
@@ -440,7 +441,7 @@ class PriceData(BaseModel):
     stamp_duty: float
     stamp_fee: float
     effective_from_date: date
-    effective_to_date: date
+    effective_to_date: Optional[date] = None
    
     
 
