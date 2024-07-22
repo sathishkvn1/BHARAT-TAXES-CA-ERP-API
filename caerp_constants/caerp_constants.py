@@ -85,4 +85,13 @@ class ApprovedStatus(str, Enum):
     ALL = 'ALL'
     APPROVED      = 'yes'
     NOT_APPROVED  = 'no'    
-    
+
+
+class ApplyTo(str,Enum):
+    ALL         =   'ALL'
+    SELECTED    =   'SELECTED'
+
+class Status(str,Enum):
+    CURRENT     = "CURRENT"
+    UPCOMMING   = "UPCOMMING"
+    EXPIRED     = "EXPIRED"
