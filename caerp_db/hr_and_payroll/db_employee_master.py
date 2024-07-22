@@ -4,7 +4,7 @@ from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, Nation
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -822,3 +822,91 @@ def get_user_roles(db: Session, employee_id: Optional[int]=None)->  List[UserRol
         }
   
     return result
+
+
+# def save_or_update_educational_qualifications(db: Session, employee_id: int, qualifications: List[EmployeeEducationalQualficationSchema], user_id: int):
+#     try:
+#         for qual in qualifications:
+#             if qual.id == 0:
+#                 # Insertion logic
+#                 qualification_data = qual.dict()
+#                 qualification_data['employee_id'] = employee_id
+#                 qualification_data['created_by'] = user_id
+#                 qualification_data['created_on'] = datetime.utcnow()
+#                 insert_stmt = insert(EmployeeEducationalQualification).values(**qualification_data)
+#                 db.execute(insert_stmt)
+#             else:
+#                 # Update logic
+#                 update_stmt = update(EmployeeEducationalQualification).where(EmployeeEducationalQualification.id == qual.id).values(
+#                     qualification_name=qual.qualification_name,
+#                     institution=qual.institution,
+#                     percentage_or_grade=qual.percentage_or_grade,
+#                     month_and_year_of_completion=qual.month_and_year_of_completion,
+#                     modified_by=user_id,
+#                     modified_on=datetime.utcnow()
+#                 )
+#                 db.execute(update_stmt)
+#         db.commit()
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
+
+
+def save_or_update_educational_qualifications(
+    db: Session, employee_id: int, qualifications: List[EmployeeEducationalQualficationSchema], user_id: int
+):
+    try:
+        # Step 1: Retrieve existing records
+        existing_records = db.query(EmployeeEducationalQualification).filter(
+            EmployeeEducationalQualification.employee_id == employee_id
+        ).all()
+
+        # Step 2: Determine which records need to be deleted
+        existing_ids = {record.id for record in existing_records}
+        incoming_ids = {qual.id for qual in qualifications if qual.id != 0}
+        ids_to_delete = existing_ids - incoming_ids
+
+        if ids_to_delete:
+            db.query(EmployeeEducationalQualification).filter(
+                EmployeeEducationalQualification.id.in_(ids_to_delete)
+            ).update({"is_deleted": 'yes'}, synchronize_session=False)
+
+        # Step 3: Insert or update records
+        for qual in qualifications:
+            qualification_data = qual.dict(exclude_unset=True)
+            qualification_data['employee_id'] = employee_id
+
+            if qual.id == 0:
+                # Insertion logic
+                qualification_data['created_by'] = user_id
+                qualification_data['created_on'] = datetime.utcnow()
+                insert_stmt = insert(EmployeeEducationalQualification).values(**qualification_data)
+                db.execute(insert_stmt)
+            else:
+                # Update logic
+                existing_record = db.query(EmployeeEducationalQualification).filter(
+                    EmployeeEducationalQualification.id == qual.id,
+                    EmployeeEducationalQualification.is_deleted == 'no'
+                ).first()
+                
+                if not existing_record:
+                    raise HTTPException(status_code=404, detail=f"Record with id {qual.id} not found or already deleted")
+                
+                update_stmt = update(EmployeeEducationalQualification).where(
+                    EmployeeEducationalQualification.id == qual.id
+                ).values(
+                    qualification_name=qual.qualification_name,
+                    institution=qual.institution,
+                    percentage_or_grade=qual.percentage_or_grade,
+                    month_and_year_of_completion=qual.month_and_year_of_completion,
+                    is_deleted='no',  # Ensure the record is active
+                    # modified_by=user_id,
+                    # modified_on=datetime.utcnow()
+                )
+                db.execute(update_stmt)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
