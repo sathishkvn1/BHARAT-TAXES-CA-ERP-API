@@ -118,3 +118,25 @@ class DynamicAPI:
                 raise HTTPException(status_code=500, detail=str(e))
     
     
+
+
+    def check_duplicate(self, db: Session, field: str, name: str, id: int) -> bool:
+            try:
+                # Check if the field exists in the model
+                if not hasattr(self.table_model, field):
+                    raise HTTPException(status_code=400, detail=f"Invalid field name: {field}")
+
+                # Construct the query to check for duplicates
+                column = getattr(self.table_model, field)
+                query = db.query(self.table_model).filter(column == name)
+                
+                # Exclude the record with the provided id if id is non-zero
+                if id != 0:
+                    query = query.filter(self.table_model.id != id)
+                
+                # Check if any record exists with the given field and name
+                result = query.one_or_none()
+                return result is not None  # Return True if a record exists
+                
+            except Exception as e:
+                raise HTTPException(status_code=500)

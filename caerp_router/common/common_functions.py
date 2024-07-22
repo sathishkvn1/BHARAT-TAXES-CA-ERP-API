@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry, OffTaskPriority, OffTaskStatus
+from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry, OffTaskPriority, OffTaskStatus
 
 
 from caerp_auth import oauth2
@@ -64,7 +64,9 @@ TABLE_MODEL_MAPPING = {
     "UsersRole":UsersRole,
     "AppDayOfWeek":AppDayOfWeek,
     "OffTaskPriority":OffTaskPriority,
-    "OffTaskStatus":OffTaskStatus
+    "OffTaskStatus":OffTaskStatus,
+    "OffServiceGoodsMaster":OffServiceGoodsMaster,
+    
 }
 
 # Define a function to get the model class based on the provided model name
@@ -224,3 +226,31 @@ async def save_record(
 #         return {"message": "New record inserted successfully"}
 
 
+@router.post("/check_duplicate")
+async def check_duplicate(
+    model_name: str = Query(..., description="Model name to fetch data from"),
+    field: str = Query(..., description="Field to check for duplicates"),
+    name: str = Query(..., description="Name to check for duplicates"),
+    id: int = Query(0, description="ID to exclude from the duplicate check (0 to include all)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Search if the entered name already exists in the given table and field.
+    """
+    try:
+        # Retrieve the model from the mapping
+        model = TABLE_MODEL_MAPPING.get(model_name)
+        
+        if not model:
+            raise HTTPException(status_code=400, detail="Invalid model name")
+
+        # Initialize DynamicAPI instance with the retrieved model
+        dynamic_api = DynamicAPI(model)
+
+        # Check for duplicate
+        is_duplicate = dynamic_api.check_duplicate(db, field, name, id)
+        if is_duplicate:
+            return {"success": True, "message": "Duplicate entry"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500)
