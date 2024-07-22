@@ -1,6 +1,5 @@
 
-from MySQLdb import TIMESTAMP
-from sqlalchemy import Column, Integer, String,BigInteger,Date,Float,Enum,Time
+from sqlalchemy import Column, Integer, String,BigInteger,Date,Float,Enum,Time, func
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
@@ -71,7 +70,6 @@ class OffAppointmentVisitMaster(caerp_base):
 class OffAppointmentVisitMasterView(caerp_base):
     __tablename__ = 'off_view_appointment_master'
 
-   
     appointment_master_id= Column(Integer,  primary_key=True,nullable=False)
     full_name 	 = Column(String(200), nullable=False)
     gender_id= Column(Integer, nullable=False)
@@ -1051,3 +1049,87 @@ class OffViewConsultationTaskMaster(caerp_base):
     unit_code = Column(String(250), nullable=True)
     is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
     is_main_service = Column(Enum('yes', 'no'), nullable=True)
+
+
+
+class OffOfferCategory(caerp_base):
+    __tablename__ ='off_offer_category'
+
+    id              = Column(Integer, primary_key=True, index=True)
+    offer_category  = Column(String(100), default=None)
+    description     = Column(String(100), default=None)
+    is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffOfferMaster(caerp_base):
+    __tablename__ = "off_offer_master"
+
+    id                  = Column(Integer, primary_key=True, index=True)
+    offer_category_id   = Column(Integer, nullable=False)
+    offer_name          = Column(String, nullable=False)
+    offer_percentage    = Column(Float, default=0.0)
+    effective_from_date = Column(Date, nullable=False)
+    effective_to_date   = Column(Date, nullable=False)
+    created_by          = Column(Integer, nullable=False)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, default=None)
+    modified_on         = Column(DateTime, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, default=None)
+    deleted_on          = Column(DateTime, default=None)
+
+
+class OffOfferMasterView(caerp_base):
+    __tablename__ = 'off_view_offer_master'
+
+    offer_master_id                  = Column(Integer, primary_key=True, index=True)
+    offer_category_id                = Column(Integer, nullable=False)
+    offer_category                   = Column(String, nullable=False)
+    offer_name                       = Column(String, nullable=False)
+    offer_percentage                 = Column(Float, default=0.0)
+    offer_master_effective_from_date = Column(Date, nullable=False)
+    offer_master_effective_to_date   = Column(Date, nullable=False)
+    offer_master_created_by          = Column(Integer, nullable=False)
+    offer_master_created_on          = Column(DateTime, nullable=False, default=func.now())
+    offer_master_modified_by         = Column(Integer, default=None)
+    offer_master_modified_on         = Column(DateTime, default=None)
+    offer_master_is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    offer_master_deleted_by          = Column(Integer, default=None)
+    offer_master_deleted_on          = Column(DateTime, default=None)
+
+
+class OffOfferDetails(caerp_base):
+    __tablename__ = 'off_offer_details'
+
+    id                      = Column(Integer, primary_key=True, index=True)
+    offer_master_id         = Column(Integer, nullable=False)
+    service_goods_master_id = Column(Integer, nullable=False)
+    created_by              = Column(Integer, nullable=False)
+    created_on              = Column(DateTime, nullable=False, default=func.now())
+    modified_by             = Column(Integer, default=None)
+    modified_on             = Column(DateTime, default=None)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by              = Column(Integer, default=None)
+    deleted_on              = Column(DateTime, default=None)
+
+class OffOfferDetailsView(caerp_base):
+    __tablename__ = 'off_view_offer_details'
+
+    offer_details_id             = Column(Integer, primary_key=True, index=True) 
+    offer_master_id              = Column(Integer, nullable=False)
+    offer_category_id            = Column(Integer, nullable=False)
+    offer_category               = Column(String, nullable=False)
+    offer_name                   = Column(String, nullable=False)
+    offer_percentage             = Column(Float, default=0.0)
+    offer_amount                 = Column(Float, default=0.0)
+    service_goods_master_id      = Column(Integer, nullable=False)
+    service_goods_name           = Column(String, nullable=False)
+    effective_from_date          = Column(Date, nullable=False)
+    effective_to_date            = Column(Date, default=None)
+    offer_details_created_by     = Column(Integer, nullable=False)
+    offer_details_created_on     = Column(DateTime, nullable=False, default=func.now())
+    offer_details_modified_by    = Column(Integer, default=None)
+    offer_details_modified_on    = Column(DateTime, default=None)
+    offer_details_is_deleted     = Column(Enum('yes', 'no'), nullable=False, default='no')
+    offer_details_deleted_by     = Column(Integer, default=None)
+    offer_details_deleted_on     = Column(DateTime, default=None)

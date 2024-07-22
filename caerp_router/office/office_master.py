@@ -2,13 +2,13 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile,
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
+from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
 from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -75,6 +75,18 @@ def save_appointment_details(
 
 
 #---------------------------------------------------------------------------------------------------------------
+
+# @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
+# def get_appointment_details_by_id(
+#     appointment_master_id: int,
+#     db: Session = Depends(get_db)
+# ):
+#     results = db_office_master.get_appointment_details(appointment_master_id, db)
+#     if not results:
+#         return JSONResponse(status_code=404, content={"message": "No data present"})
+#     return results
+#---------------------------------------------------------------------------------------------------------------
+
 @router.post("/reschedule_or_cancel")
 async def reschedule_or_cancel_appointment(
    
@@ -147,7 +159,7 @@ def get_and_search_appointments(
     from_date: Optional[date]  = Query(date.today()),
     to_date: Optional[date]  = Query(date.today()),
     # search_criteria: SearchCriteriaConstants = "ALL",
-    # id:Optional[int]=0,
+    id:Optional[int]=0,
     search_value: Union[str, int] = "ALL",
     db: Session = Depends(get_db)
 ):
@@ -169,13 +181,12 @@ def get_and_search_appointments(
         status_id=status_id,
         from_date=from_date,
         to_date=to_date,
-       
-        # search_criteria=search_criteria,
+        id=id,
         search_value=search_value
     )
     return {"Appointments": result}
 
-    
+     
 
 
 #-------------------------swathy-------------------------------------------------------------------------------
@@ -402,88 +413,126 @@ from datetime import datetime, timedelta
 
 
 # @router.get("/get_availability/", response_model=List[dict])
-async def get_availability(
-    consultant_id: int,
-    service_id: int,
-    date: date ,
-    db: Session = Depends(get_db)
-):
-    # Check if date is provided
-    if not date:
-        raise HTTPException(status_code=400, detail="Date header is missing")
+# async def get_availability(
+#     consultant_id: int,
+#     service_id: int,
+#     date: date ,
+#     db: Session = Depends(get_db)
+# ):
+#     # Check if date is provided
+#     if not date:
+#         raise HTTPException(status_code=400, detail="Date header is missing")
 
-    # Query to join OffViewConsultantMaster and OffViewConsultantDetails
-    availability_query = (
-        db.query(OffViewConsultantMaster, OffViewConsultantDetails)
-        .join(OffViewConsultantDetails,OffViewConsultantMaster.consultant_id ==OffViewConsultantDetails.consultant_id)
-        .filter(
-           OffViewConsultantMaster.consultant_id == consultant_id,
-            OffViewConsultantMaster.consultant_master_available_date_from <= date,
-            (OffViewConsultantMaster.consultant_master_available_date_to == None) |
-            (OffViewConsultantMaster.consultant_master_available_date_to >= date),
-           OffViewConsultantDetails.service_goods_master_id == service_id
-        )
+#     # Query to join OffViewConsultantMaster and OffViewConsultantDetails
+#     availability_query = (
+#         db.query(OffViewConsultantMaster, OffViewConsultantDetails)
+#         .join(OffViewConsultantDetails,OffViewConsultantMaster.consultant_id ==OffViewConsultantDetails.consultant_id)
+#         .filter(
+#            OffViewConsultantMaster.consultant_id == consultant_id,
+#             OffViewConsultantMaster.consultant_master_available_date_from <= date,
+#             (OffViewConsultantMaster.consultant_master_available_date_to == None) |
+#             (OffViewConsultantMaster.consultant_master_available_date_to >= date),
+#            OffViewConsultantDetails.service_goods_master_id == service_id
+#         )
+#     )
+
+#     # Execute the query
+#     availability_data = availability_query.first()
+
+#     # Check if availability data is found
+#     if not availability_data:
+#         raise HTTPException(status_code=404, detail="Consultant or service not available on this date")
+
+#     # Extract consultant and service details
+#     consultant_master, consultant_details = availability_data
+
+#     # Calculate available time slots
+#     start_time = datetime.combine(date, consultant_master.consultant_master_available_time_from)
+#     end_time = datetime.combine(date, consultant_master.consultant_master_available_time_to)
+#     slot_duration = timedelta(minutes=consultant_details.slot_duration_in_minutes)
+
+#     available_slots = []
+#     while start_time + slot_duration <= end_time:
+#         available_slots.append({
+#             "start_time": start_time.time().strftime('%H:%M'),
+#             "end_time": (start_time + slot_duration).time().strftime('%H:%M')
+#         })
+#         start_time += slot_duration
+
+#     return available_slots
+
+
+@router.get("/get_consultant_schedule")
+def get_consultant_schedule(
+    consultant_id: int,
+    consultation_mode_id: int,
+    db: Session = Depends(get_db),
+    check_date: Optional[date] = None,
+    service_goods_master_id: Optional[int] = None
+):
+    """
+#### Parameters:
+
+- `consultant_id` (int, required): The ID of the consultant whose schedule is to be fetched.
+- `consultation_mode_id` (int, required): The ID of the consultation mode.
+- `db` (Session, required): The database session, provided by the dependency injection.
+- `check_date` (date, optional): The specific date to check the schedule for. If not provided, the endpoint will fetch the schedule for the next 10 days.
+- `service_goods_master_id` (int, optional): The ID of the service or goods master to get slot duration.
+
+#### Response:
+
+1. **When All parameters are provided**:
+    - **Available slots found**: Returns a list of available time slots.
+    - **No available slots**: Returns a message indicating no available slots for the specified date.
+
+2. **When `check_date` and `service_goods_master_id`  is not provided**:
+    - **Unavailable dates**: Returns a list of unavailable dates within the next 10 days.
+    - **Available dates**: Returns a list of available dates within the next 10 days.
+"""
+
+    return db_office_master.fetch_available_and_unavailable_dates_and_slots(
+        consultant_id=consultant_id,
+        consultation_mode_id=consultation_mode_id,
+        db=db,
+        check_date=check_date,
+        service_goods_master_id=service_goods_master_id
     )
 
-    # Execute the query
-    availability_data = availability_query.first()
-
-    # Check if availability data is found
-    if not availability_data:
-        raise HTTPException(status_code=404, detail="Consultant or service not available on this date")
-
-    # Extract consultant and service details
-    consultant_master, consultant_details = availability_data
-
-    # Calculate available time slots
-    start_time = datetime.combine(date, consultant_master.consultant_master_available_time_from)
-    end_time = datetime.combine(date, consultant_master.consultant_master_available_time_to)
-    slot_duration = timedelta(minutes=consultant_details.slot_duration_in_minutes)
-
-    available_slots = []
-    while start_time + slot_duration <= end_time:
-        available_slots.append({
-            "start_time": start_time.time().strftime('%H:%M'),
-            "end_time": (start_time + slot_duration).time().strftime('%H:%M')
-        })
-        start_time += slot_duration
-
-    return available_slots
 
 #--------------------------------------------------------------------------------------------------------
-@router.get("/get_availability/")
-async def check_availability(
-    consultant_id: int,
-    service_id: int,
-    check_date: date,
-    db: Session = Depends(get_db)
-):
-    # Call the get_availability endpoint to retrieve available slots
-    available_slots = await get_availability(consultant_id, service_id, check_date, db)
+# @router.get("/get_availability/")
+# async def check_availability(
+#     consultant_id: int,
+#     service_id: int,
+#     check_date: date,
+#     db: Session = Depends(get_db)
+# ):
+#     # Call the get_availability endpoint to retrieve available slots
+#     available_slots = await get_availability(consultant_id, service_id, check_date, db)
     
-    # Filter out booked slots
-    available_slots = filter_booked_slots(available_slots, consultant_id, check_date, db)
+#     # Filter out booked slots
+#     available_slots = filter_booked_slots(available_slots, consultant_id, check_date, db)
     
-    # Return the filtered available slots
-    return available_slots
+#     # Return the filtered available slots
+#     return available_slots
 
-def filter_booked_slots(available_slots, consultant_id, check_date, db):
-    # Query booked slots from OffAppointmentVisitMaster for the specified consultant and date
-    booked_slots_query = (
-        db.query(OffAppointmentVisitMaster)
-        .filter(
-           OffAppointmentVisitMaster.consultant_id == consultant_id,
-           OffAppointmentVisitMaster.appointment_date == check_date
-        )
-    )
+# def filter_booked_slots(available_slots, consultant_id, check_date, db):
+#     # Query booked slots from OffAppointmentVisitMaster for the specified consultant and date
+#     booked_slots_query = (
+#         db.query(OffAppointmentVisitMaster)
+#         .filter(
+#            OffAppointmentVisitMaster.consultant_id == consultant_id,
+#            OffAppointmentVisitMaster.appointment_date == check_date
+#         )
+#     )
     
-    # Extract booked slots
-    booked_slots = [(slot.appointment_time_from, slot.appointment_time_to) for slot in booked_slots_query.all()]
+#     # Extract booked slots
+#     booked_slots = [(slot.appointment_time_from, slot.appointment_time_to) for slot in booked_slots_query.all()]
     
-    # Filter out booked slots from available slots
-    available_slots = [slot for slot in available_slots if (slot['start_time'], slot['end_time']) not in booked_slots]
+#     # Filter out booked slots from available slots
+#     available_slots = [slot for slot in available_slots if (slot['start_time'], slot['end_time']) not in booked_slots]
     
-    return available_slots
+#     return available_slots
 
 #---------------------------------------------------------------------------------------------------------------
 
@@ -2114,44 +2163,76 @@ def get_all_services(
 
 
 
-@router.get("/get_consultant_schedule")
-def get_consultant_schedule(
-    consultant_id: int,
-    consultation_mode_id: int,
+#-------------------------------------OFFER-------------------------------------------
+@router.post("/save_offer_details")
+def save_office_offer_details(
+    
+    data: List[SaveOfferDetails], 
+    action_type: RecordActionType,
+    apply_to : ApplyTo,
+    id: Optional[int] = 0 ,
     db: Session = Depends(get_db),
-    check_date: Optional[date] = None,
-    service_goods_master_id: Optional[int] = None
+    token: str = Depends(oauth2.oauth2_scheme)
+    
 ):
-    if check_date:
-        return {
-            "available_slots": [
-                {"start_time": "09:30", "end_time": "10:00", "slot_duration_min": 30},
-                {"start_time": "10:00", "end_time": "10:30", "slot_duration_min": 30},
-                {"start_time": "10:30", "end_time": "11:00", "slot_duration_min": 30},
-                {"start_time": "11:00", "end_time": "11:30", "slot_duration_min": 30},
-                {"start_time": "11:30", "end_time": "12:00", "slot_duration_min": 30},
-                {"start_time": "13:00", "end_time": "13:30", "slot_duration_min": 30},
-                {"start_time": "13:30", "end_time": "14:00", "slot_duration_min": 30},
-                {"start_time": "14:00", "end_time": "14:30", "slot_duration_min": 30},
-                {"start_time": "14:30", "end_time": "15:00", "slot_duration_min": 30},
-                {"start_time": "15:00", "end_time": "15:30", "slot_duration_min": 30},
-                {"start_time": "15:30", "end_time": "16:00", "slot_duration_min": 30},
-                {"start_time": "16:00", "end_time": "16:30", "slot_duration_min": 30},
-                {"start_time": "16:30", "end_time": "17:00", "slot_duration_min": 30}
-            ]
-        }
-    else:
-        return {
-            "unavailable_dates": [
-                "2024-08-01",
-                "2024-08-02",
-                "2024-08-03",
-                "2024-08-04",
-                "2024-08-05",
-                "2024-08-06",
-                "2024-08-07",
-                "2024-08-08",
-                "2024-08-09",
-                "2024-08-10"
-            ]
-        }
+    """
+    Endpoint to save or update offer details in the office offer master table and office offer details table.
+
+    Parameters:
+    - data (List[SaveOfferDetails]): The list of offer data to save or update. This data contains both master data and details.
+    - action_type (RecordActionType): The action to perform. Use INSERT_ONLY to add new rows or UPDATE_ONLY to update existing rows.
+    - apply_to (ApplyTo): Determines the scope of application. Use ALL to apply to all services, otherwise use SELECT for selected services.
+    - id (Optional[int]): The ID of the offer master to update. Required for updating an existing offer master data. Default value is 0.
+    - db (Session): The database session dependency.
+    - token (str): The authorization token dependency.
+
+    Returns:
+    - JSON response with the status of the operation.
+    """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        for offer_master in data:
+            db_office_master.save_office_offer_details(
+                db, id, offer_master, user_id, action_type, apply_to
+            )
+        return {"success": True, "message": "Saved successfully"}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+@router.get("/get_all_offer_list", response_model=List[OffOfferMasterSchemaResponse])
+def get_all_offer_list(
+    category_id: Optional[int] = None,
+    offer_master_id: Optional[int]=None,
+    offers : Status = Status.CURRENT, # date filter parameter, 
+    db: Session = Depends(get_db)
+):
+    offer_list= db_office_master.get_all_offer_list(db,category_id,offer_master_id,offers)
+    return offer_list
+
+
+
+@router.delete("/delete_offer_master")
+def delete_offer_master(
+     offer_master_id: int,
+     action_type: ActionType = ActionType.UNDELETE,
+     db: Session = Depends(get_db),
+     token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"]
+        
+    return db_office_master.delete_offer_master(db, offer_master_id,action_type,deleted_by=user_id)

@@ -1,7 +1,7 @@
 import logging
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import  DeletedStatus, RecordActionType,SearchCriteria
+from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
 from caerp_db.common.models import EmployeeEmployementDetails, EmployeeMaster, UserRole
@@ -9,9 +9,9 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema,AppointmentVisitDetailsSchema, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
 from sqlalchemy import and_,or_, func
 
@@ -159,6 +159,11 @@ def save_appointment_visit_master(
 
 
 
+
+#///////////////////////////////////////////////////
+# def get_appointment_details(appointment_id :int , db:Session):
+#     data =db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_id).first()
+#     return data
 
 #######--SERVICE_GOODS-MASTER--#############################################################
 
@@ -335,8 +340,6 @@ def get_appointments(
     to_date: Optional[date] = date.today()
 ) -> List[ResponseSchema]:
     try:
-        appointments = []
-
         # Initialize search conditions
         search_conditions = []
 
@@ -358,12 +361,11 @@ def get_appointments(
 
         # Add conditions for appointment visit date range
         search_conditions.append(
-            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_date.between(from_date, to_date)
+            OffAppointmentVisitMasterView.appointment_date.between(from_date, to_date)
         )
 
         # Add condition for search value if it's not 'ALL'
         if search_value != "ALL":
-            # Filter search value from OffAppointmentVisitMasterView
             search_conditions.append(
                 or_(
                     OffAppointmentVisitMasterView.mobile_number.like(f"%{search_value}%"),
@@ -382,56 +384,54 @@ def get_appointments(
             )
         ]
 
-        # Execute the query
-        query_result = db.query(OffAppointmentVisitDetailsView).join(
+        # Execute the queries
+        appointment_query = db.query(OffAppointmentVisitMasterView).filter(
+            and_(*search_conditions)
+        ).all()
+
+        visit_details_query = db.query(OffAppointmentVisitDetailsView).join(
             OffAppointmentVisitMasterView,
             OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
         ).join(
             EmployeeEmployementDetails,
             OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
         ).filter(
-            and_(*search_conditions),
             and_(*consultant_conditions)
         ).all()
 
-        if not query_result:
-            raise HTTPException(status_code=404, detail="Appointment not found")
+        # Check if appointments were found
+        if not appointment_query:
+            raise HTTPException(status_code=404, detail="No appointments found")
 
-        # Dictionary to store appointments by ID
-        appointment_dict = {}
+        # Organize visit details by appointment_id
+        visit_details_dict = {}
+        for visit_details in visit_details_query:
+            visit_details_schema = OffAppointmentVisitDetailsViewSchema.from_orm(visit_details)
+            appointment_id = visit_details.appointment_visit_master_appointment_master_id
+            if appointment_id not in visit_details_dict:
+                visit_details_dict[appointment_id] = {
+                    "appointment_master": None,
+                    "visit_master": None,
+                    "visit_details": []
+                }
+            visit_details_dict[appointment_id]["visit_details"].append(visit_details_schema)
 
-        # Iterate over query result
-        for visit_details_data in query_result:
-            if visit_details_data.appointment_visit_details_is_deleted == "no":
-                appointment_id = visit_details_data.appointment_visit_master_appointment_master_id
+        # Create response data
+        appointments = []
+        for appointment in appointment_query:
+            appointment_id = appointment.appointment_master_id
+            visit_details = visit_details_dict.get(appointment_id, {})
 
-                # Get the appointment master corresponding to the visit details
-                appointment_master_data = db.query(OffAppointmentVisitMasterView).filter_by(
-                    appointment_master_id=appointment_id
-                ).first()
+            visit_master = visit_details["visit_master"]
+            if not visit_master:
+                visit_master = OffAppointmentVisitMasterViewSchema.from_orm(appointment)
 
-                if appointment_master_data:
-                    # Convert appointment_master_data to schema
-                    appointment_master_schema = OffAppointmentVisitMasterViewSchema(
-                        **appointment_master_data.__dict__
-                    )
-
-                    # Convert visit_details_data to schema
-                    visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data.__dict__)
-
-                    if appointment_id not in appointment_dict:
-                        # Create new appointment entry in dictionary
-                        appointment_dict[appointment_id] = {
-                            "appointment_master": appointment_master_schema,
-                            "visit_master": appointment_master_schema,
-                            "visit_details": [visit_details_schema]
-                        }
-                    else:
-                        # Append visit details to existing entry
-                        appointment_dict[appointment_id]["visit_details"].append(visit_details_schema)
-
-        # Convert dictionary values to list of ResponseSchema objects
-        appointments = [ResponseSchema(**appointment_data) for appointment_data in appointment_dict.values()]
+            appointment_data = ResponseSchema(
+                appointment_master=OffAppointmentMasterViewSchema.from_orm(appointment),
+                visit_master=visit_master,
+                visit_details=visit_details["visit_details"]
+            )
+            appointments.append(appointment_data)
 
         return appointments
 
@@ -439,7 +439,6 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 #---service-goods-master  swathy---------------------------
 
 
@@ -657,6 +656,162 @@ def save_service_document_data_master(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+#-------------------------------
+
+def fetch_available_and_unavailable_dates_and_slots(
+    consultant_id: Optional[int],
+    consultation_mode_id: Optional[int],
+    db: Session,
+    check_date: Optional[date] = None,
+    service_goods_master_id: Optional[int] = None
+):
+    try:
+        if check_date:
+            # Fetch service details to get the slot duration
+            service_detail = db.query(OffConsultantServiceDetails).filter(
+                OffConsultantServiceDetails.consultant_id == consultant_id,
+                OffConsultantServiceDetails.service_goods_master_id == service_goods_master_id,
+                OffConsultantServiceDetails.effective_from_date <= check_date,
+                or_(
+                    OffConsultantServiceDetails.effective_to_date >= check_date,
+                    OffConsultantServiceDetails.effective_to_date.is_(None)
+                )
+            ).first()
+
+            if not service_detail:
+                raise HTTPException(status_code=404, detail="Service details not found")
+
+            slot_duration = service_detail.slot_duration_in_minutes
+
+            # Check if there's a normal schedule available
+            normal_schedules = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.is_normal_schedule == 'yes',
+                OffConsultantSchedule.effective_from_date <= check_date,
+                or_(
+                    OffConsultantSchedule.effective_to_date >= check_date,
+                    OffConsultantSchedule.effective_to_date.is_(None)
+                )
+            ).all()
+
+            if normal_schedules:
+                available_slots = []
+                for schedule in normal_schedules:
+                    time_slots = [
+                        (schedule.morning_start_time, schedule.morning_end_time),
+                        (schedule.afternoon_start_time, schedule.afternoon_end_time)
+                    ]
+
+                    for start_time, end_time in time_slots:
+                        if start_time and end_time:
+                            current_time = datetime.combine(check_date, start_time)
+                            end_time = datetime.combine(check_date, end_time)
+                            while current_time + timedelta(minutes=slot_duration) <= end_time:
+                                next_time = current_time + timedelta(minutes=slot_duration)
+                                is_taken = db.query(OffAppointmentVisitMaster).filter(
+                                    OffAppointmentVisitMaster.consultant_id == consultant_id,
+                                    OffAppointmentVisitMaster.appointment_date == check_date,
+                                    and_(
+                                        OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
+                                        OffAppointmentVisitMaster.appointment_time_to > current_time.time()
+                                    )
+                                ).first()
+                                if not is_taken:
+                                    available_slots.append({
+                                        'start_time': current_time.strftime("%H:%M"),
+                                        'end_time': next_time.strftime("%H:%M"),
+                                        'slot_duration_min': slot_duration
+                                    })
+                                current_time = next_time
+
+                if available_slots:
+                    return {'available_slots': available_slots}
+                else:
+                    return {'message': "No available slots for the specified date."}
+
+            # If no normal schedule, check non-normal schedules
+            non_normal_schedules = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.is_normal_schedule == 'no',
+                OffConsultantSchedule.consultation_date == check_date
+            ).all()
+
+            available_slots = []
+            for schedule in non_normal_schedules:
+                time_slots = [
+                    (schedule.morning_start_time, schedule.morning_end_time),
+                    (schedule.afternoon_start_time, schedule.afternoon_end_time)
+                ]
+
+                for start_time, end_time in time_slots:
+                    if start_time and end_time:
+                        current_time = datetime.combine(check_date, start_time)
+                        end_time = datetime.combine(check_date, end_time)
+                        while current_time + timedelta(minutes=slot_duration) <= end_time:
+                            next_time = current_time + timedelta(minutes=slot_duration)
+                            is_taken = db.query(OffAppointmentVisitMaster).filter(
+                                OffAppointmentVisitMaster.consultant_id == consultant_id,
+                                OffAppointmentVisitMaster.appointment_date == check_date,
+                                and_(
+                                    OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
+                                    OffAppointmentVisitMaster.appointment_time_to > current_time.time()
+                                )
+                            ).first()
+                            if not is_taken:
+                                available_slots.append({
+                                    'start_time': current_time.strftime("%H:%M"),
+                                    'end_time': next_time.strftime("%H:%M"),
+                                    'slot_duration_min': slot_duration
+                                })
+                            current_time = next_time
+
+            if available_slots:
+                return {'available_slots': available_slots}
+            else:
+                return {'message': "No available slots for the specified date."}
+
+        else:
+            # Fetch unavailable and available dates for the next 10 days
+            start_date = datetime.utcnow().date()
+            end_date = start_date + timedelta(days=10)  # Two months range
+
+            query_schedule = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.effective_from_date <= end_date,
+                or_(
+                    OffConsultantSchedule.effective_to_date >= start_date,
+                    OffConsultantSchedule.effective_to_date.is_(None)
+                )
+            ).all()
+
+            unavailable_dates = set()
+            available_dates = set()
+            current_date = start_date
+            while current_date <= end_date:
+                is_available = any(
+                    schedule.effective_from_date <= current_date and
+                    (schedule.effective_to_date is None or schedule.effective_to_date >= current_date)
+                    for schedule in query_schedule
+                )
+                if is_available:
+                    available_dates.add(current_date)
+                else:
+                    unavailable_dates.add(current_date)
+                current_date += timedelta(days=1)
+
+            available_dates = sorted(list(available_dates))
+            unavailable_dates = sorted(list(unavailable_dates))
+
+            return {
+                'available_dates': available_dates,
+                'unavailable_dates': unavailable_dates
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 #-------------------------------
 
 def save_off_document_master(
@@ -1850,3 +2005,195 @@ def get_consultation_tools(db: Session, mode_id: int = 0):
         # Convert SQLAlchemy models to Pydantic models
         tools_schema = [ConsultationToolSchema.from_orm(tool) for tool in tools]
         return tools_schema
+
+
+#-------------------------OFFER---------------------------
+
+def save_office_offer_details(
+    db: Session,
+    id: int,
+    data: SaveOfferDetails,
+    user_id: int,
+    action_type: RecordActionType,
+    apply_to: ApplyTo
+):
+    if action_type == RecordActionType.INSERT_ONLY and id != 0:
+       raise HTTPException(status_code=400, detail="Invalid action: For INSERT_ONLY, id should be 0")
+    elif action_type == RecordActionType.UPDATE_ONLY and id <= 0:
+        raise HTTPException(status_code=400, detail="Invalid action: For UPDATE_ONLY, id should be greater than 0")
+
+    try:
+        if action_type == RecordActionType.INSERT_ONLY:
+          for master_data in data.master:
+             new_master_data = master_data.dict()
+             new_master_data.update({
+                 "created_by": user_id,
+                 "created_on": datetime.utcnow()
+               })
+             new_master = OffOfferMaster(**new_master_data)
+             db.add(new_master)
+             db.flush()  # Ensure new_master.id is available for details
+
+          if apply_to == ApplyTo.SELECTED :    
+             for detail_data in data.details:
+                new_detail_data = detail_data.dict()
+
+                service_goods_master_id = new_detail_data.get("service_goods_master_id")
+
+                # Check if the service is deleted
+                service = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == service_goods_master_id).first()
+                if service and service.is_deleted == 'yes':
+                   raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot give offers for a deleted service")
+
+                new_detail_data.update({
+                    "offer_master_id": new_master.id,
+                    "created_by": user_id,
+                    "created_on": datetime.utcnow()
+                  })
+                new_detail = OffOfferDetails(**new_detail_data)
+                db.add(new_detail)
+          else:
+                details = db.query(OffServiceGoodsMaster.id).filter(OffServiceGoodsMaster.is_deleted == 'no').all()
+                for detail_data in details:
+                   new_detail_data = {
+                     "offer_master_id": new_master.id,
+                     "service_goods_master_id": detail_data[0],
+                     "created_by": user_id,
+                     "created_on": datetime.utcnow()
+                    }
+                   new_detail = OffOfferDetails(**new_detail_data)
+                   db.add(new_detail)
+        elif action_type == RecordActionType.UPDATE_ONLY:
+          existing_master = db.query(OffOfferMaster).filter(OffOfferMaster.id == id).first()
+          if not existing_master:
+            raise HTTPException(status_code=400, detail="Master record not found")
+
+          # Use the first item from data.master for update
+          master_update_data = data.master[0].dict()
+          for key, value in master_update_data.items():
+             setattr(existing_master, key, value)
+          existing_master.modified_by = user_id
+          existing_master.modified_on = datetime.utcnow()
+            
+          existing_details = db.query(OffOfferDetails).filter(OffOfferDetails.offer_master_id == id).all()    
+          for det in existing_details:
+              det.is_deleted = 'yes'
+              det.deleted_by = user_id
+              det.deleted_on = datetime.utcnow()
+
+          if apply_to == ApplyTo.SELECTED :    
+            for detail_data in data.details:
+              new_detail_data = detail_data.dict()
+
+              service_goods_master_id = new_detail_data.get("service_goods_master_id")
+
+              # Check if the product is deleted
+              service = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == service_goods_master_id).first()
+              if service and service.is_deleted == 'yes':
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot give offers for a deleted service")
+              new_detail_data.update({
+                 "offer_master_id": id,
+                 "created_by": user_id,
+                 "created_on": datetime.utcnow()
+                })
+              new_detail = OffOfferDetails(**new_detail_data)
+              db.add(new_detail)
+          else:
+             details = db.query(OffServiceGoodsMaster.id).filter(OffServiceGoodsMaster.is_deleted == 'no').all()
+             for detail_data in details:
+                new_detail_data = {
+                  "offer_master_id": id,
+                  "service_goods_master_id": detail_data[0],
+                  "created_by": user_id,
+                  "created_on": datetime.utcnow()
+                 }
+                new_detail = OffOfferDetails(**new_detail_data)
+                db.add(new_detail)
+
+        db.commit()
+    except IntegrityError as e:
+       db.rollback()
+       logger.error("IntegrityError: %s", str(e))
+       if 'Duplicate entry' in str(e):
+         raise HTTPException(status_code=400, detail="Duplicate entry detected.")
+       else:
+         raise e
+    except OperationalError as e:
+       db.rollback()
+       logger.error("OperationalError: %s", str(e))
+       raise HTTPException(status_code=500, detail="Database connection error.")
+    except Exception as e:
+       db.rollback()
+       logger.error("Exception: %s", str(e))
+       raise e
+
+def get_all_offer_list(
+                        db : Session,
+                        category_id : Optional[int]=None,
+                        offer_master_id : Optional[int]=None ,
+                        operator : Optional[Status] = None 
+                        
+                        ):
+    try:
+        current_date = datetime.today()
+        query = db.query(OffOfferMaster).filter(OffOfferMaster.is_deleted == 'no')
+        
+        if category_id:
+            query = query.filter(OffOfferMaster.offer_category_id == category_id)
+        
+        if offer_master_id:
+            query = query.filter(OffOfferMaster.id == offer_master_id)
+        
+        if operator:
+            if operator == Status.CURRENT:
+                query = query.filter(
+                    OffOfferMaster.effective_from_date <= current_date,
+                    OffOfferMaster.effective_to_date >= current_date
+                )
+            elif operator == Status.UPCOMMING:
+                query = query.filter(OffOfferMaster.effective_from_date > current_date)
+            elif operator == Status.EXPIRED:
+                query = query.filter(OffOfferMaster.effective_to_date < current_date)
+        
+        offer_master_data = query.all()
+        # print(query.statement.compile(compile_kwargs={"literal_binds": True}))
+        return offer_master_data
+    except Exception as e:
+        print("Error:", e)  # Print the exception message for debugging
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+def delete_offer_master(db, offer_master_id,action_type,deleted_by):
+    existing_offer = db.query(OffOfferMaster).filter(OffOfferMaster.id == offer_master_id).first()
+
+    if existing_offer is None:
+        raise HTTPException(status_code=404, detail="Offer  not found")
+    
+    if(action_type== 'DELETE'):
+       existing_offer.is_deleted = 'yes'
+       existing_offer.deleted_by = deleted_by
+       existing_offer.deleted_on = datetime.utcnow()
+            
+            
+       db.query(OffOfferDetails).filter(OffOfferDetails.offer_master_id == offer_master_id).update({
+             OffOfferDetails.is_deleted: 'yes',                
+             OffOfferDetails.deleted_by: deleted_by,
+             OffOfferDetails.deleted_on: datetime.utcnow()
+          }, synchronize_session=False)
+        
+       db.commit()
+
+       return {
+            "message": "Offer marked as deleted successfully",
+            }
+    if(action_type == 'UNDELETE'):
+       existing_offer.is_deleted = 'no'
+       existing_offer.deleted_by = None
+       existing_offer.deleted_on = None
+       db.commit()
+
+       return {
+            "message": "Offer marked as Undeleted successfully",
+            }
+

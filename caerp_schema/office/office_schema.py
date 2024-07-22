@@ -14,7 +14,7 @@ class AppointmentStatusConstants(str,Enum):
 
 
 class OffAppointmentMasterSchema(BaseModel):
- 
+    # id:Optional[int]
     full_name: str
     customer_number: str
     mobile_number: Optional[str]
@@ -82,30 +82,8 @@ class OffAppointmentCancellationReasonSchema(BaseModel):
     id:int
     off_appointment_cancellation_reason:str
 
-class OffAppointmentMasterViewSchema(BaseModel):
-    appointment_master_id: int
-    full_name: Optional[str]
-    gender_id:Optional[int] 
-    customer_number: Optional[str]
-    mobile_number: Optional[str] 
-    whatsapp_number: Optional[str] 
-    email_id: Optional[str] 
-    locality: Optional[str] 
-    pin_code: Optional[str] 
-    appointment_master_post_office_id: Optional[int] 
-    post_office_name: Optional[str] 
-    appointment_master_taluk_id: Optional[int] 
-    taluk_name: Optional[str] 
-    appointment_master_district_id: Optional[int] 
-    district_name: Optional[str] 
-    appointment_master_state_id: Optional[int] 
-    state_name: Optional[str] 
-    appointment_master_is_deleted: str
-    class Config:
-        orm_mode = True
-        from_attributes = True
 
-class OffAppointmentVisitMasterViewSchema(BaseModel):
+class OffAppointmentMasterViewSchema(BaseModel):
     appointment_master_id: int
     full_name: str
     gender_id: int
@@ -134,6 +112,12 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_master_is_deleted: str
     appointment_master_deleted_by: Optional[int]
     appointment_master_deleted_on: Optional[date]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_visit_master_id: Optional[int]
     financial_year_id: Optional[int]
     voucher_number: Optional[str]
@@ -161,75 +145,30 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     cgst_amount: Optional[float]
     bill_amount: Optional[float]
     remarks: Optional[str]
+
     class Config:
         orm_mode = True
         from_attributes = True
 
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
-    
-    service_id: Optional[int]
-    service_goods_name:str
-    appointment_detail_is_main_service:str
+    appointment_visit_details_id: int
+    service_id: int
+    service_goods_name: str
+    appointment_detail_is_main_service: str
+
     class Config:
         orm_mode = True
         from_attributes = True
-
 
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master: OffAppointmentVisitMasterViewSchema
     visit_details: List[OffAppointmentVisitDetailsViewSchema]
-    class Config:
-        orm_mode = True
-        from_attributes = True
         
 
 
  
- 
-class AppointmentVisitDetailsSchema(BaseModel):
-    appointment_visit_details_id: int
-    visit_master_id: int
-    appointment_visit_master_financial_year_id: Optional[int]
-    appointment_visit_master_voucher_number: Optional[str]
-    appointment_visit_master_appointment_master_id: Optional[int]
-    appointment_visit_master_appointment_date: Optional[date]
-    appointment_visit_master_appointment_time_from: Optional[str]
-    appointment_visit_master_appointment_time_to: Optional[str]
-    source_of_enquiry_id: Optional[int]
-    appointment_status_id: Optional[int]
-    appointment_visit_master_gross_amount: Optional[float]
-    appointment_visit_master_discount_percentage: Optional[float]
-    special_discount_percentage: Optional[float]
-    special_discount_amount: Optional[float]
-    appointment_visit_master_net_amount: Optional[float]
-    appointment_visit_master_igst_amount: Optional[float]
-    appointment_visit_master_sgst_amount: Optional[float]
-    appointment_visit_master_cgst_amount: Optional[float]
-    appointment_visit_master_bill_amount: Optional[float]
-    remarks: str
-    service_id: Optional[int]
-    service_master_id: Optional[int]
-    consultation_fee: Optional[float]
-    consultancy_services_igst_rate: Optional[float]
-    available_time_from: Optional[time]
-    available_time_to: Optional[time]
-    slot_duration_in_minutes: Optional[int]
-    consultancy_services_effective_from_date: Optional[date]
-    consultancy_services_effective_to_date: Optional[date]
-    consultancy_services_is_deleted: str
-    consultant_id: Optional[int]
-    employee_master_employee_number: Optional[str]
-    employee_master_first_name: Optional[str]
-    employee_master_middle_name: Optional[str]
-    employee_master_last_name: Optional[str]
-    appointment_visit_details_created_by: Optional[int]
-    appointment_visit_details_created_on: Optional[date]
-    appointment_visit_details_modified_by: Optional[int]
-    appointment_visit_details_modified_on: Optional[date]
-    appointment_visit_details_is_deleted: str
-    appointment_visit_details_deleted_by: Optional[int]
-    appointment_visit_details_deleted_on: Optional[date]   
+
 #------------------- swathy
 
 class OffViewServiceGoodsDetailsDisplay(BaseModel):
@@ -905,30 +844,49 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
 
 #----------------------------------------------
        
-# class DocumentDetail(BaseModel):
-#     document_data_id: int
-#     nature_of_possession_id: int
-#     display_order: int
 
-# class DocumentCategory(BaseModel):
-#     document_data_category_id: int
-#     details: List[DocumentDetail]
+#-------------------------------------OFFER-------------------------------------------
 
-# class ServiceDocuments(BaseModel):
-#     personal_doc: Optional[List[DocumentCategory]] = None
-#     constitution_doc: Optional[List[DocumentCategory]] = None
-#     principal_place_doc: Optional[List[DocumentCategory]] = None
-#     utility_doc: Optional[List[DocumentCategory]] = None
-#     data_to_be_submitted_doc: Optional[List[DocumentCategory]] = None
+class  OffOfferCategoryResponse(BaseModel):
 
-# class Service(BaseModel):
-#     service_goods_master_id: int
-#     group_id: int
-#     sub_group_id: int
-#     category_id: int
-#     sub_category_id: int
-#     constitution_id: int
+    id              : int
+    offer_category  : str
+    description     : str
+    is_deleted      : str
 
-# class ServiceDocumentRequest(BaseModel):
-#     service: Service
-#     documents: ServiceDocuments
+
+class OffOfferMasterSchema(BaseModel):
+    
+    offer_category_id   : int
+    offer_name          : str
+    offer_percentage    : Optional[float]= None
+    effective_from_date : date
+    effective_to_date   : date
+
+
+class OffOfferMasterSchemaResponse(BaseModel):
+
+    id                 : Optional[int] = None
+    offer_category_id   : int
+    offer_name          : str
+    offer_percentage    : Optional[float]= None
+    effective_from_date : date
+    effective_to_date   : Optional[date] =None   
+    created_by: int
+    created_on: datetime
+    modified_by: Optional[int]
+    modified_on: Optional[datetime]
+    is_deleted: str
+    deleted_by: Optional[int]
+    deleted_on: Optional[datetime]    
+
+class OffOfferDetailsSchema(BaseModel):
+
+    offer_master_id         : Optional[int] = None
+    service_goods_master_id : Optional[int] = None
+
+
+class SaveOfferDetails(BaseModel):
+
+    master: list[OffOfferMasterSchema]
+    details: Optional[list[OffOfferDetailsSchema]]=None
