@@ -161,9 +161,9 @@ def save_appointment_visit_master(
 
 
 #///////////////////////////////////////////////////
-# def get_appointment_details(appointment_id :int , db:Session):
-#     data =db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_id).first()
-#     return data
+def get_appointment_details(appointment_id :int , db:Session):
+    data =db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_id).first()
+    return data
 
 #######--SERVICE_GOODS-MASTER--#############################################################
 
@@ -657,13 +657,13 @@ def save_service_document_data_master(
 
 
 #-------------------------------
-
 def fetch_available_and_unavailable_dates_and_slots(
     consultant_id: Optional[int],
     consultation_mode_id: Optional[int],
     db: Session,
     check_date: Optional[date] = None,
-    service_goods_master_id: Optional[int] = None
+    service_goods_master_id: Optional[int] = None,
+    appointment_id: Optional[int] = None  # Parameter for appointment ID
 ):
     try:
         if check_date:
@@ -682,8 +682,9 @@ def fetch_available_and_unavailable_dates_and_slots(
                 raise HTTPException(status_code=404, detail="Service details not found")
 
             slot_duration = service_detail.slot_duration_in_minutes
+            available_slots = []
 
-            # Check if there's a normal schedule available
+            # Fetch all schedules for the given date
             normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
@@ -695,8 +696,15 @@ def fetch_available_and_unavailable_dates_and_slots(
                 )
             ).all()
 
+            non_normal_schedules = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.is_normal_schedule == 'no',
+                OffConsultantSchedule.consultation_date == check_date
+            ).all()
+
+            # Check normal schedules
             if normal_schedules:
-                available_slots = []
                 for schedule in normal_schedules:
                     time_slots = [
                         (schedule.morning_start_time, schedule.morning_end_time),
@@ -709,14 +717,17 @@ def fetch_available_and_unavailable_dates_and_slots(
                             end_time = datetime.combine(check_date, end_time)
                             while current_time + timedelta(minutes=slot_duration) <= end_time:
                                 next_time = current_time + timedelta(minutes=slot_duration)
+
+                                # Check if slot is already booked, excluding the current appointment if editing
                                 is_taken = db.query(OffAppointmentVisitMaster).filter(
                                     OffAppointmentVisitMaster.consultant_id == consultant_id,
                                     OffAppointmentVisitMaster.appointment_date == check_date,
-                                    and_(
-                                        OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
-                                        OffAppointmentVisitMaster.appointment_time_to > current_time.time()
-                                    )
+                                    OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
+                                    OffAppointmentVisitMaster.appointment_time_to > current_time.time()
+                                ).filter(
+                                    OffAppointmentVisitMaster.appointment_master_id != appointment_id
                                 ).first()
+
                                 if not is_taken:
                                     available_slots.append({
                                         'start_time': current_time.strftime("%H:%M"),
@@ -725,20 +736,7 @@ def fetch_available_and_unavailable_dates_and_slots(
                                     })
                                 current_time = next_time
 
-                if available_slots:
-                    return {'available_slots': available_slots}
-                else:
-                    return {'message': "No available slots for the specified date."}
-
-            # If no normal schedule, check non-normal schedules
-            non_normal_schedules = db.query(OffConsultantSchedule).filter(
-                OffConsultantSchedule.consultant_id == consultant_id,
-                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
-                OffConsultantSchedule.is_normal_schedule == 'no',
-                OffConsultantSchedule.consultation_date == check_date
-            ).all()
-
-            available_slots = []
+            # Check non-normal schedules
             for schedule in non_normal_schedules:
                 time_slots = [
                     (schedule.morning_start_time, schedule.morning_end_time),
@@ -751,14 +749,17 @@ def fetch_available_and_unavailable_dates_and_slots(
                         end_time = datetime.combine(check_date, end_time)
                         while current_time + timedelta(minutes=slot_duration) <= end_time:
                             next_time = current_time + timedelta(minutes=slot_duration)
+
+                            # Check if slot is already booked, excluding the current appointment if editing
                             is_taken = db.query(OffAppointmentVisitMaster).filter(
                                 OffAppointmentVisitMaster.consultant_id == consultant_id,
                                 OffAppointmentVisitMaster.appointment_date == check_date,
-                                and_(
-                                    OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
-                                    OffAppointmentVisitMaster.appointment_time_to > current_time.time()
-                                )
+                                OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
+                                OffAppointmentVisitMaster.appointment_time_to > current_time.time()
+                            ).filter(
+                                OffAppointmentVisitMaster.appointment_master_id != appointment_id
                             ).first()
+
                             if not is_taken:
                                 available_slots.append({
                                     'start_time': current_time.strftime("%H:%M"),
@@ -775,11 +776,13 @@ def fetch_available_and_unavailable_dates_and_slots(
         else:
             # Fetch unavailable and available dates for the next 10 days
             start_date = datetime.utcnow().date()
-            end_date = start_date + timedelta(days=10)  # Two months range
+            end_date = start_date + timedelta(days=10)  # 10 days range
 
-            query_schedule = db.query(OffConsultantSchedule).filter(
+            # Fetch all schedules for the given period
+            normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.is_normal_schedule == 'yes',
                 OffConsultantSchedule.effective_from_date <= end_date,
                 or_(
                     OffConsultantSchedule.effective_to_date >= start_date,
@@ -787,20 +790,33 @@ def fetch_available_and_unavailable_dates_and_slots(
                 )
             ).all()
 
+            non_normal_schedules = db.query(OffConsultantSchedule).filter(
+                OffConsultantSchedule.consultant_id == consultant_id,
+                OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+                OffConsultantSchedule.is_normal_schedule == 'no',
+                OffConsultantSchedule.consultation_date.between(start_date, end_date)
+            ).all()
+
             unavailable_dates = set()
             available_dates = set()
+
+            # Process normal schedules
             current_date = start_date
             while current_date <= end_date:
                 is_available = any(
                     schedule.effective_from_date <= current_date and
                     (schedule.effective_to_date is None or schedule.effective_to_date >= current_date)
-                    for schedule in query_schedule
+                    for schedule in normal_schedules
                 )
                 if is_available:
                     available_dates.add(current_date)
                 else:
                     unavailable_dates.add(current_date)
                 current_date += timedelta(days=1)
+
+            # Add specific non-normal schedule dates to available dates
+            for schedule in non_normal_schedules:
+                available_dates.add(schedule.consultation_date)
 
             available_dates = sorted(list(available_dates))
             unavailable_dates = sorted(list(unavailable_dates))
@@ -812,6 +828,7 @@ def fetch_available_and_unavailable_dates_and_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 #-------------------------------
 
 def save_off_document_master(

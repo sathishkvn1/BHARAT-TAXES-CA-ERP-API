@@ -76,15 +76,15 @@ def save_appointment_details(
 
 #---------------------------------------------------------------------------------------------------------------
 
-# @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
-# def get_appointment_details_by_id(
-#     appointment_master_id: int,
-#     db: Session = Depends(get_db)
-# ):
-#     results = db_office_master.get_appointment_details(appointment_master_id, db)
-#     if not results:
-#         return JSONResponse(status_code=404, content={"message": "No data present"})
-#     return results
+@router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
+def get_appointment_details_by_id(
+    appointment_master_id: int,
+    db: Session = Depends(get_db)
+):
+    results = db_office_master.get_appointment_details(appointment_master_id, db)
+    if not results:
+        return JSONResponse(status_code=404, content={"message": "No data present"})
+    return results
 #---------------------------------------------------------------------------------------------------------------
 
 @router.post("/reschedule_or_cancel")
@@ -468,7 +468,8 @@ def get_consultant_schedule(
     consultation_mode_id: int,
     db: Session = Depends(get_db),
     check_date: Optional[date] = None,
-    service_goods_master_id: Optional[int] = None
+    service_goods_master_id: Optional[int] = None,
+    appointment_id: Optional[int] = None
 ):
     """
 #### Parameters:
@@ -480,6 +481,7 @@ def get_consultant_schedule(
 - `service_goods_master_id` (int, optional): The ID of the service or goods master to get slot duration.
 
 #### Response:
+The endpoint returns a JSON object containing either available slots or messages about unavailable dates. The response format varies depending on whether `check_date` is provided or not.
 
 1. **When All parameters are provided**:
     - **Available slots found**: Returns a list of available time slots.
@@ -495,10 +497,9 @@ def get_consultant_schedule(
         consultation_mode_id=consultation_mode_id,
         db=db,
         check_date=check_date,
-        service_goods_master_id=service_goods_master_id
+        service_goods_master_id=service_goods_master_id,
+        appointment_id=appointment_id
     )
-
-
 #--------------------------------------------------------------------------------------------------------
 # @router.get("/get_availability/")
 # async def check_availability(
