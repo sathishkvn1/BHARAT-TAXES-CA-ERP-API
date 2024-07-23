@@ -679,7 +679,7 @@ def fetch_available_and_unavailable_dates_and_slots(
             ).first()
 
             if not service_detail:
-                raise HTTPException(status_code=404, detail="Service details not found")
+                return {'message': "Booking Closed"}
 
             slot_duration = service_detail.slot_duration_in_minutes
             available_slots = []
