@@ -9,7 +9,7 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
@@ -966,10 +966,10 @@ def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewCon
 
 
 #---------------------------------------------------------------------------------------------------------------
-def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantDetails]:
-    print(f"Running query for consultant ID {consultant_id}")  # Debug print
-    services = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.consultant_id == consultant_id).all()
-    print(f"Query result for consultant ID {consultant_id}: {services}")  # Debug print
+def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantServiceDetails]:
+    
+    services = db.query(OffViewConsultantServiceDetails).filter(OffViewConsultantServiceDetails.consultant_id == consultant_id).all()
+   
     return services
 
 

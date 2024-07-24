@@ -1,5 +1,6 @@
+import os
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
@@ -7,7 +8,7 @@ from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementD
 from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffViewConsultantDetails, OffViewConsultantMaster
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
 from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -24,7 +25,7 @@ router = APIRouter(
     tags=['Office Master']
 )
 
-
+UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 
 #--------------------save_appointment_details-----------------------
 
@@ -677,26 +678,26 @@ def get_consultation_services(
     Retrieve all services by setting service_id=0.
     Retrieve services for a specific consultant by providing a valid consultant_id.
     """
-    print(f"Received request with service_id: {service_id}, consultant_id: {consultant_id}")  # Debug print
+    # print(f"Received request with service_id: {service_id}, consultant_id: {consultant_id}")  # Debug print
 
     if service_id == 0:
         # Fetch all services from off_view_consultant_details table
         services = db_office_master.get_all_services(db)
         # Convert services to a list of dictionaries
         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
-        print(f"Retrieved all services: {services_data}")  # Debug print
+        # print(f"Retrieved all services: {services_data}")  # Debug print
         return {"services": services_data}
 
     elif consultant_id is not None and consultant_id != 0:
-        print(f"Checking consultant_id: {consultant_id}")  # Debug print
+        # print(f"Checking consultant_id: {consultant_id}")  # Debug print
         # Fetch services for the given consultant_id from off_view_consultant_details table
         services = db_office_master.get_all_services_by_consultant_id(db, consultant_id)
-        print(f"Retrieved services for consultant ID {consultant_id}: {services}")  # Debug print
+        # print(f"Retrieved services for consultant ID {consultant_id}: {services}")  # Debug print
         if not services:
             raise HTTPException(status_code=404, detail=f"No services found for consultant ID {consultant_id}")
         # Convert services to a list of dictionaries
         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
-        print(f"Filtered services data: {services_data}")  # Debug print
+        # print(f"Filtered services data: {services_data}")  # Debug print
         return {"consultant_id": consultant_id, "services": services_data}
 
     else:
@@ -2237,3 +2238,266 @@ def delete_offer_master(
     user_id = auth_info["user_id"]
         
     return db_office_master.delete_offer_master(db, offer_master_id,action_type,deleted_by=user_id)
+
+
+#--------------------------------------------------------------------
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from fpdf import FPDF
+
+
+
+
+
+# def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], file_path: str):
+#     pdf = FPDF()
+#     pdf.add_page()
+    
+#     # Set font for header
+#     pdf.set_font("Arial", size=12)
+    
+#     # Add company logo (ensure the logo path is correct)
+#     logo_path = "C:\logo\logo.png"  # Update this path
+#     # pdf.image(logo_path, x=10, y=8, w=30)
+#     pdf.image(logo_path, x=10, y=8, w=30, h=30, type='', link='') 
+    
+#     # Add company name
+#     pdf.set_font("Arial", size=20)
+#     pdf.cell(200, 10, txt="BRQ ASSOCIATES", ln=True, align='C')
+    
+#     # Add a line break
+#     pdf.ln(10)
+    
+#     pdf.set_line_width(0.5)
+#     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+#     # Set font for table headers
+#     pdf.set_font("Arial", size=10)
+    
+#     # Table headers
+#     pdf.set_fill_color(200, 220, 255)  # Light blue fill color
+#     pdf.cell(10, 10, txt="ID", border=1)
+#     pdf.cell(40, 10, txt="Name", border=1)
+#     pdf.cell(50, 10, txt="Number", border=1)
+#     pdf.cell(40, 10, txt="Personal Email", border=1)
+#     pdf.cell(40, 10, txt="Official Email", border=1)
+#     pdf.cell(30, 10, txt="Department", border=1)
+#     pdf.cell(40, 10, txt="Designation", border=1)
+#     pdf.ln()
+    
+#     # Table rows
+#     pdf.set_font("Arial", size=10)
+#     for employee in employee_list:
+#         pdf.cell(30, 10, txt=str(employee.employee_id), border=1)
+#         pdf.cell(40, 10, txt=f"{employee.first_name} {employee.middle_name} {employee.last_name}", border=1)
+#         pdf.cell(50, 10, txt=employee.employee_number, border=1)
+#         pdf.cell(40, 10, txt=employee.personal_email, border=1)
+#         pdf.cell(40, 10, txt=employee.official_email or 'N/A', border=1)
+#         pdf.cell(30, 10, txt=employee.department_name, border=1)
+#         pdf.cell(40, 10, txt=employee.designation or 'N/A', border=1)
+#         pdf.ln()
+
+#     pdf.output(file_path)
+#     return open(file_path, "rb")
+
+
+class PDFWithFooter(FPDF):
+    def __init__(self):
+        super().__init__()
+        self.alias_nb_pages()
+
+    def header(self):
+        # Add company logo
+        logo_path = r"C:\logo\logo.png"  # Update this path
+        self.image(logo_path, x=10, y=8, w=20, h=20)
+        
+        # Add company name
+        self.set_font("Arial", 'B', size=20)
+        self.cell(0, 10, txt="BRQ ASSOCIATES", ln=True, align='C')
+        
+        # Add a line break
+        self.ln(10)
+        
+        # Add a horizontal line
+        self.set_line_width(0.5)
+        self.line(10, self.get_y(), 200, self.get_y())
+        
+        # Add a line break
+        self.ln(10)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        page_number = f'Page {self.page_no()} of {{nb}}'
+        self.cell(0, 10, page_number, 0, 0, 'C')
+
+
+def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], file_path: str):
+    # pdf = FPDF()
+      
+    pdf = PDFWithFooter()
+    pdf.add_page()
+    
+    # Add company logo
+    # logo_path = r"C:\logo\logo.png"  # Update this path
+    # pdf.image(logo_path, x=10, y=8, w=20, h=20)
+    
+    # Add company name
+    # pdf.set_font("Arial", 'B', size=20)
+    # pdf.cell(0, 10, txt="BRQ ASSOCIATES", ln=True, align='C')
+    
+    # Add a line break
+    # pdf.ln(10)
+    
+    # Add a horizontal line
+    # pdf.set_line_width(0.5)
+    # pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    
+    # # Add a line break
+    # pdf.ln(10)
+    
+    # Set font for invoice details
+    pdf.set_font("Arial", size=12)
+    
+    # Add invoice details
+    pdf.cell(100, 10, txt="Invoice Date: 2023-07-24", ln=True)
+    pdf.cell(100, 10, txt="Due Date: 2023-08-24", ln=True)
+    pdf.cell(100, 10, txt="Invoice Number: 12345", ln=True)
+    
+    # Add a line break
+    pdf.ln(10)
+    
+    # Add a horizontal line
+    pdf.set_line_width(0.5)
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    
+    # Add a line break
+    pdf.ln(10)
+    
+    # Set font for table headers
+    pdf.set_font("Arial", 'B', size=10)
+    
+    # Table headers
+    pdf.set_fill_color(200, 220, 255)  # Light blue fill color
+    pdf.cell(10, 10, txt="ID", border=1, fill=True)
+    pdf.cell(40, 10, txt="Name", border=1, fill=True)
+    pdf.cell(25, 10, txt="Number", border=1, fill=True)
+    pdf.cell(40, 10, txt="Personal Email", border=1, fill=True)
+    pdf.cell(40, 10, txt="Official Email", border=1, fill=True)
+    # pdf.cell(25, 10, txt="Department", border=1, fill=True)
+    # pdf.cell(25, 10, txt="Designation", border=1, fill=True)
+    pdf.ln()
+    
+    # Set font for table rows
+    pdf.set_font("Arial", size=10)
+    
+    # Table rows
+    for employee in employee_list:
+        pdf.cell(10, 10, txt=str(employee.employee_id), border=1)
+        pdf.cell(40, 10, txt=f"{employee.first_name} {employee.middle_name} {employee.last_name}", border=1)
+        pdf.cell(25, 10, txt=employee.employee_number, border=1)
+        pdf.cell(40, 10, txt=employee.personal_email, border=1)
+        pdf.cell(40, 10, txt=employee.official_email or 'N/A', border=1)
+        # pdf.cell(25, 10, txt=employee.department_name, border=1)
+        # pdf.cell(25, 10, txt=employee.designation or 'N/A', border=1)
+        pdf.ln()
+    
+    pdf.output(file_path)
+    return open(file_path, "rb")
+
+
+
+
+
+
+@router.get("/consultant_employees/pdf")
+def get_consultant_employees_pdf(
+    db: Session = Depends(get_db),
+    search_query: str = Query(None, description="Search query to filter consultant employees")
+):
+    current_date = datetime.utcnow().date()
+    query = db.query(
+        EmployeeMaster.employee_id,
+        EmployeeMaster.first_name,
+        EmployeeMaster.middle_name,
+        EmployeeMaster.last_name,
+        EmployeeMaster.employee_number,
+        EmployeeContactDetails.personal_email_id.label('personal_email'),
+        EmployeeContactDetails.official_email_id.label('official_email'),
+        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+        EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+        HrDepartmentMaster.department_name,
+        HrDesignationMaster.designation
+    ).join(
+        EmployeeEmployementDetails,
+        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        EmployeeContactDetails,
+        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).join(
+        HrDepartmentMaster,
+        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+    ).join(
+        HrDesignationMaster,
+        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+    ).filter(
+        EmployeeEmployementDetails.is_consultant == 'yes',
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeMaster.is_deleted == 'no',
+        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeContactDetails.is_deleted == 'no'
+    )
+
+    if search_query:
+        search_filter = (
+            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+        )
+        query = query.filter(search_filter)
+
+    employees = query.all()
+
+    if not employees:
+        raise HTTPException(status_code=404, detail="No consultant employees found")
+
+    # Convert query results to list of ConsultantEmployee models
+    employee_list = [
+        ConsultantEmployee(
+            employee_id=e.employee_id,
+            first_name=e.first_name,
+            middle_name=e.middle_name,
+            last_name=e.last_name,
+            employee_number=e.employee_number,
+            personal_email=e.personal_email,
+            official_email=e.official_email,
+            personal_mobile=e.personal_mobile,
+            official_mobile=e.official_mobile,
+            department_name=e.department_name,
+            designation=e.designation
+        )
+        for e in employees
+    ]
+
+    # Define the file path to save the PDF using the correct path separator
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+    print("base_dir",base_dir)
+    file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
+    # file_path = os.path.join(base_dir, UPLOAD_DIR_CONSULTANT_DETAILS, "consultant_employees.pdf")
+    print("file_path",file_path)
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    # Generate and save the PDF
+    pdf_buffer = generate_consultant_employees_pdf(employee_list, file_path)
+    
+    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
+

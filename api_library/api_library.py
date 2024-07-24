@@ -3,6 +3,10 @@
 from fastapi import HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
 
 
 class DynamicAPI:
@@ -11,15 +15,15 @@ class DynamicAPI:
 
     def get_records(self, db: Session, fields: List[str]) -> List[dict]:
         try:
-            print("Table Name:", self.table_model.__tablename__)
-            print("Fields:", fields)  # Print the provided fields
+            # print("Table Name:", self.table_model.__tablename__)
+            # print("Fields:", fields)  # Print the provided fields
             # Construct column objects based on the provided field names
             columns = [getattr(self.table_model, field) for field in fields]
-            print("Columns:", columns)  # Print the constructed columns
+            # print("Columns:", columns)  # Print the constructed columns
             # Use the constructed columns in the query
             # records = db.query(*columns).all()
             records = db.query(*columns).filter(self.table_model.is_deleted == 'no').all()
-            print("Records:", records)  # Print the retrieved records
+            # print("Records:", records)  # Print the retrieved records
             # Convert query results to dictionaries
             return [dict(zip(fields, record)) for record in records]
         except Exception as e:
@@ -140,3 +144,20 @@ class DynamicAPI:
                 
             except Exception as e:
                 raise HTTPException(status_code=500)
+
+
+    def get_related_records(self, db: Session, field: str, value: int, fields_list: list):
+            query = db.query(self.model).filter(getattr(self.model, field) == value)
+            records = query.all()
+
+            result = []
+            for record in records:
+                record_dict = {}
+                for field in fields_list:
+                    record_dict[field] = getattr(record, field)
+                result.append(record_dict)
+            
+            return result
+    
+
+
