@@ -608,12 +608,12 @@ def get_consultants_and_services(
         employees_data = [{"id": employee.employee_id, "first_name": employee.first_name, "middle_name": employee.middle_name, "last_name": employee.last_name} for employee in employees]
         return EmployeeResponse(employees=employees_data)
 
-    # elif service_id is not None and service_id != 0:
-    #     # Fetch consultants for the given service_id from off_view_consultant_details table
-    #     consultants = db_office_master.get_consultants_for_service(db, service_id)
-    #     # Convert consultants to a list of dictionaries
-    #     consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-    #     return {"consultants": consultants_data}
+    elif service_id is not None and service_id != 0:
+        # Fetch consultants for the given service_id from off_view_consultant_details table
+        consultants = db_office_master.get_consultants_for_service(db, service_id)
+        # Convert consultants to a list of dictionaries
+        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        return {"consultants": consultants_data}
     
     else:
         # Fetch all services from off_view_consultant_details table
