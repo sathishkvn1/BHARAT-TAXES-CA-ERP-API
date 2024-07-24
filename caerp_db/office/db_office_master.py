@@ -328,7 +328,6 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 #-------------get_consultancy_services-------------------------------------------------------------------
-
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -341,30 +340,19 @@ def get_appointments(
 ) -> List[ResponseSchema]:
     try:
         # Initialize search conditions
-        search_conditions = []
+        search_conditions = [OffAppointmentVisitMasterView.appointment_date.between(from_date, to_date)]
 
-        # Add condition for ID if provided
+        # Check if id is provided
         if id != 0:
             search_conditions.append(OffAppointmentVisitMasterView.appointment_master_id == id)
 
-        # Add condition for consultant ID if provided
+        # Add conditions based on the provided parameters if they are not "ALL"
         if consultant_id != "ALL":
-            search_conditions.append(OffAppointmentVisitDetailsView.consultant_id == consultant_id)
-
-        # Add condition for service ID if provided
-        if service_id != "ALL":
-            search_conditions.append(OffAppointmentVisitDetailsView.service_id == service_id)
-
-        # Add condition for status ID if provided
+            search_conditions.append(OffAppointmentVisitMasterView.appointment_visit_master_consultant_id == consultant_id)
+        
         if status_id != "ALL":
-            search_conditions.append(OffAppointmentVisitDetailsView.appointment_status_id == status_id)
-
-        # Add conditions for appointment visit date range
-        search_conditions.append(
-            OffAppointmentVisitMasterView.appointment_date.between(from_date, to_date)
-        )
-
-        # Add condition for search value if it's not 'ALL'
+            search_conditions.append(OffAppointmentVisitMasterView.appointment_status_id == status_id)
+        
         if search_value != "ALL":
             search_conditions.append(
                 or_(
@@ -384,11 +372,7 @@ def get_appointments(
             )
         ]
 
-        # Execute the queries
-        appointment_query = db.query(OffAppointmentVisitMasterView).filter(
-            and_(*search_conditions)
-        ).all()
-
+        # Execute the visit details query with service condition if provided
         visit_details_query = db.query(OffAppointmentVisitDetailsView).join(
             OffAppointmentVisitMasterView,
             OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
@@ -397,10 +381,17 @@ def get_appointments(
             OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
         ).filter(
             and_(*consultant_conditions)
-        ).all()
+        ).filter(
+            and_(*search_conditions)
+        )
+        
+        if service_id != "ALL":
+            visit_details_query = visit_details_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
+        
+        visit_details_query = visit_details_query.all()
 
-        # Check if appointments were found
-        if not appointment_query:
+        # Check if visit details were found
+        if not visit_details_query:
             raise HTTPException(status_code=404, detail="No appointments found")
 
         # Organize visit details by appointment_id
@@ -410,21 +401,30 @@ def get_appointments(
             appointment_id = visit_details.appointment_visit_master_appointment_master_id
             if appointment_id not in visit_details_dict:
                 visit_details_dict[appointment_id] = {
-                    "appointment_master": None,
-                    "visit_master": None,
                     "visit_details": []
                 }
             visit_details_dict[appointment_id]["visit_details"].append(visit_details_schema)
+
+        # Filter appointments based on the visit details
+        valid_appointment_ids = visit_details_dict.keys()
+        appointment_query = db.query(OffAppointmentVisitMasterView).filter(
+            and_(
+                OffAppointmentVisitMasterView.appointment_master_id.in_(valid_appointment_ids),
+                *search_conditions
+            )
+        ).all()
+
+        # Check if appointments were found
+        if not appointment_query:
+            raise HTTPException(status_code=404, detail="No appointments found")
 
         # Create response data
         appointments = []
         for appointment in appointment_query:
             appointment_id = appointment.appointment_master_id
-            visit_details = visit_details_dict.get(appointment_id, {})
+            visit_details = visit_details_dict.get(appointment_id, {"visit_details": []})
 
-            visit_master = visit_details["visit_master"]
-            if not visit_master:
-                visit_master = OffAppointmentVisitMasterViewSchema.from_orm(appointment)
+            visit_master = OffAppointmentVisitMasterViewSchema.from_orm(appointment)
 
             appointment_data = ResponseSchema(
                 appointment_master=OffAppointmentMasterViewSchema.from_orm(appointment),
@@ -439,7 +439,10 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 #---service-goods-master  swathy---------------------------
+
+
 
 
 
