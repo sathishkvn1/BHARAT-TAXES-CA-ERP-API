@@ -42,10 +42,9 @@ def save_employee_master(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme),
   ):
-
    """
     Creation or updation of Employee Master.
-     
+   
     -**Request** : Data needed for creation/updation of Employee Master provided as schema "EmployeeDetails".
 
     -**employeeid** : Integer parameter, the Employee Master identifier. 
@@ -88,17 +87,63 @@ def save_employee_master(
      raise HTTPException(status_code=500, detail=str(e))
    
 
+# @router.post('/save_employee_master_new')
+# def save_employee_master(
+   
+#     id: int = 0,
+#     employee_profile_component: Optional[str] = Query(None,
+#     description="Comma-separated list of components to Update",
+#     title="Components to Update"),
+#     request: EmployeeDetails = Body(...),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme),
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info["user_id"]
+
+#     try:
+#         result = db_employee_master.save_employee_master_new(db, request,id, user_id, employee_profile_component)
+
+#         if id == 0:
+#             return {
+#                 "success": True,
+#                 "message": "Saved successfully",
+#                 "employee_id": result
+#             }
+#         else:
+#             return {
+#                 "success": True,
+#                 "message": "Updated successfully"
+#             }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post('/save_employee_master_new')
 def save_employee_master(
    
     id: int = 0,
-    employee_profile_component: Optional[str] = Query(None,
-    description="Comma-separated list of components to Update",
-    title="Components to Update"),
+    employee_profile_component: Optional[str] = Query(None,        
+        description=(
+            "Comma-separated list of components to save. Valid options are: " 
+            "Valid options are:[ present_address, permanent_address, bank_details, contact_details, "
+            "employement_details, emergency_contact_details, dependent_details, employee_salary, "
+            "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+        )
+    ),
     request: EmployeeDetails = Body(...),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme),
-):
+): 
+    """
+    Save or update employee details based on the provided ID and profile components.
+
+    - **id**: The ID of the employee. Set to 0 to create a new employee.
+    - **employee_profile_component**: Comma-separated list of components to update. 
+   
+    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -158,7 +203,6 @@ def upload_document(
             }                  
   except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #delete employee details by id
@@ -287,12 +331,23 @@ def add_employee_detail(employee_details, employee_id, key, value, db):
             employee_details.append(employee)
     if employee:
         employee.setdefault(key, []).append(value)
-    
+
+
 @router.get("/get_employee_details")
-def get_employee_details(employee_id: Optional[int] = None, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme),
-    employee_profile_component: Optional[str] = Query(None,
-    description="Comma-separated list of components to view employee details")                     
-    ):
+def get_employee_details(
+    employee_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+    employee_profile_component: Optional[str] = Query(
+        None,
+        description=(
+            "Comma-separated list of components to view employee details. "
+            "Valid options are:[ present_address, permanent_address, bank_details, contact_details, "
+            "employement_details, emergency_contact_details, dependent_details, employee_salary, "
+            "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+        )
+    )
+):
     """
     -**Retrieve employee master profile by employee_id.**
 
@@ -313,7 +368,7 @@ def get_employee_details(employee_id: Optional[int] = None, db: Session = Depend
             if not emp:
                 raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {employee_id} not found" )
             employee_details.append({
-                'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+                'employee_master': EmployeeDetailsGet(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
             })
         else:
             employees = db_employee_master.get_employee_master_details(db)
@@ -338,9 +393,10 @@ def get_employee_details(employee_id: Optional[int] = None, db: Session = Depend
                 })
         
         schema_names = EmployeeDetailsGet.__fields__.keys()
+        print(f"Employee schema_names: {schema_names}")
         schemas_list = employee_profile_component.split(",")
         valid_options = [option for option in schemas_list if option in schema_names]
-
+        print(f"Employee valid_options: {valid_options}")
         if not valid_options:
             raise HTTPException(status_code=422, detail="Invalid employee profile component")
   
@@ -420,6 +476,15 @@ def get_employee_details(employee_id: Optional[int] = None, db: Session = Depend
             return next((emp for emp in employee_details if emp['employee_master'].employee_id == employee_id), None)
         else:
             return employee_details
+
+
+
+
+
+
+
+
+
 
 
 

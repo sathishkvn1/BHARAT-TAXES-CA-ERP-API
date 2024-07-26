@@ -328,6 +328,7 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 #-------------get_consultancy_services-------------------------------------------------------------------
+
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -372,8 +373,8 @@ def get_appointments(
             )
         ]
 
-        # Execute the visit details query with service condition if provided
-        visit_details_query = db.query(OffAppointmentVisitDetailsView).join(
+        # Query for main service
+        main_service_query = db.query(OffAppointmentVisitDetailsView).join(
             OffAppointmentVisitMasterView,
             OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
         ).join(
@@ -383,20 +384,48 @@ def get_appointments(
             and_(*consultant_conditions)
         ).filter(
             and_(*search_conditions)
+        ).filter(
+            OffAppointmentVisitDetailsView.appointment_visit_details_is_deleted == "no",
+            OffAppointmentVisitDetailsView.appointment_detail_is_main_service == "yes"
         )
         
         if service_id != "ALL":
-            visit_details_query = visit_details_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
+            main_service_query = main_service_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
         
-        visit_details_query = visit_details_query.all()
+        main_service_results = main_service_query.all()
 
-        # Check if visit details were found
-        if not visit_details_query:
+        # Collect appointment IDs from main service query
+        main_service_appointment_ids = {result.appointment_visit_master_appointment_master_id for result in main_service_results}
+
+        # Query for all other services related to the main services' appointments
+        other_services_query = db.query(OffAppointmentVisitDetailsView).join(
+            OffAppointmentVisitMasterView,
+            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
+        ).join(
+            EmployeeEmployementDetails,
+            OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
+        ).filter(
+            and_(*consultant_conditions)
+        ).filter(
+            and_(*search_conditions)
+        ).filter(
+            OffAppointmentVisitDetailsView.appointment_visit_details_is_deleted == "no",
+            OffAppointmentVisitDetailsView.appointment_detail_is_main_service == "no",
+            OffAppointmentVisitDetailsView.appointment_visit_master_appointment_master_id.in_(main_service_appointment_ids)
+        )
+
+        other_services_results = other_services_query.all()
+
+        # Combine main service results and other services results
+        combined_results = main_service_results + other_services_results
+
+        # Check if any results were found
+        if not combined_results:
             raise HTTPException(status_code=404, detail="No appointments found")
 
         # Organize visit details by appointment_id
         visit_details_dict = {}
-        for visit_details in visit_details_query:
+        for visit_details in combined_results:
             visit_details_schema = OffAppointmentVisitDetailsViewSchema.from_orm(visit_details)
             appointment_id = visit_details.appointment_visit_master_appointment_master_id
             if appointment_id not in visit_details_dict:
@@ -1121,6 +1150,8 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
             COALESCE(c.stamp_duty, 0) AS stamp_duty,
             COALESCE(c.stamp_fee, 0) AS stamp_fee,
+            COALESCE(c.id, 0) AS price_master_id,
+           
             c.effective_from_date AS effective_from_date,
             c.effective_to_date AS effective_to_date
         FROM
@@ -1142,6 +1173,7 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
 
     service_data = [
         ServiceModelSchema(
+           
             constitution_id=row.constitution_id,
             business_constitution_name=row.business_constitution_name,
             service_goods_master_id=row.service_goods_master_id,
@@ -1153,7 +1185,8 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             stamp_duty=row.stamp_duty,
             stamp_fee=row.stamp_fee,
             effective_from_date=row.effective_from_date,
-            effective_to_date=row.effective_to_date
+            effective_to_date=row.effective_to_date,
+            price_master_id=row.price_master_id
         ) for row in query_result
     ]
     
@@ -1211,21 +1244,47 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
     return service_models
    
 #--------------------------------------------------------------------------------------------------------------   
+
+
 # def save_price_data(price_data: PriceData, id: int, user_id: int, db: Session):
 #     price_data_dict = price_data.dict()
-
+    
 #     if id != 0:
+#         # Fetch the existing record
 #         existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == id).first()
 #         if existing_price:
-#             # Update existing record
-#             for key, value in price_data_dict.items():
-#                 if value is not None:  # Only update if value is not None
-#                     setattr(existing_price, key, value)
-#             existing_price.created_by = user_id
-#             existing_price.created_on = datetime.now()
-#             db.commit()
-#             db.refresh(existing_price)
-#             return existing_price
+#             # Check if `effective_from_date` has changed
+#             if existing_price.effective_from_date != price_data.effective_from_date:
+#                 # If `effective_from_date` is changed to a future date, update `effective_to_date` of the current row
+#                 if price_data.effective_from_date > existing_price.effective_from_date:
+#                     if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
+#                         existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
+#                         db.commit()
+#                         db.refresh(existing_price)
+                    
+#                     # Create a new row for the new `effective_from_date`
+#                     new_price_data = {
+#                         **price_data_dict,
+#                         'created_by': user_id,
+#                         'created_on': datetime.now()
+#                     }
+#                     new_price = OffServiceGoodsPriceMaster(**new_price_data)
+#                     db.add(new_price)
+#                     db.commit()
+#                     db.refresh(new_price)
+#                     return new_price
+#                 else:
+#                     raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
+#             else:
+#                 # Update the existing record if `effective_from_date` is not changed
+#                 for key, value in price_data_dict.items():
+#                     if value is not None:  # Only update if value is not None
+#                         setattr(existing_price, key, value)
+#                 existing_price.created_by = user_id
+#                 existing_price.created_on = datetime.now()
+#                 db.commit()
+#                 db.refresh(existing_price)
+#                 return existing_price
 #         else:
 #             raise HTTPException(status_code=404, detail=f"Price data with id {id} not found")
 #     else:
@@ -1237,57 +1296,102 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
 #         db.refresh(new_price)
 #         return new_price
 
+# def save_price_data(price_data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
+#     price_data_dict = price_data.dict(exclude_unset=True)
 
-def save_price_data(price_data: PriceData, id: int, user_id: int, db: Session):
-    price_data_dict = price_data.dict()
-    
-    if id != 0:
-        # Fetch the existing record
-        existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == id).first()
-        if existing_price:
-            # Check if `effective_from_date` has changed
-            if existing_price.effective_from_date != price_data.effective_from_date:
-                # If `effective_from_date` is changed to a future date, update `effective_to_date` of the current row
-                if price_data.effective_from_date > existing_price.effective_from_date:
-                    if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
-                        existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
-                        db.commit()
-                        db.refresh(existing_price)
-                    
-                    # Create a new row for the new `effective_from_date`
-                    new_price_data = {
-                        **price_data_dict,
-                        'created_by': user_id,
-                        'created_on': datetime.now()
-                    }
-                    new_price = OffServiceGoodsPriceMaster(**new_price_data)
-                    db.add(new_price)
-                    db.commit()
-                    db.refresh(new_price)
-                    return new_price
-                else:
-                    raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
+#     if service_goods_master_id:  # Update existing record
+#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.service_goods_master_id == service_goods_master_id).first()
+        
+#         if existing_price :
+#             if price_data.effective_from_date > existing_price.effective_from_date:
+#                 if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
+#                     existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
+#                     db.commit()
+#                     db.refresh(existing_price)
+                
+#                 new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
+#                 new_price = OffServiceGoodsPriceMaster(**new_price_data)
+#                 db.add(new_price)
+#                 db.commit()
+#                 db.refresh(new_price)
+#                 return new_price
+#             else:
+#                 raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
+#         else:
+#             raise HTTPException(status_code=404, detail=f"Price data with id {price_data.id} not found")
+#     else:  # Insert new record
+#         new_price_data = {**price_data_dict, 'service_goods_master_id': service_goods_master_id, 'created_by': user_id, 'created_on': datetime.now()}
+#         new_price = OffServiceGoodsPriceMaster(**new_price_data)
+#         db.add(new_price)
+#         db.commit()
+#         db.refresh(new_price)
+#         return new_price
+
+def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
+    try:
+        current_date = datetime.utcnow().date()
+        # Fetch the existing record if it exists
+        existing_record = db.query(OffServiceGoodsPriceMaster).filter(
+            OffServiceGoodsPriceMaster.id == data.id
+        ).first()
+
+        if data.id == 0:
+            # Insert new record
+            new_record = OffServiceGoodsPriceMaster(
+                service_goods_master_id=service_goods_master_id,
+                constitution_id=data.constitution_id,
+                service_charge=data.service_charge,
+                govt_agency_fee=data.govt_agency_fee,
+                stamp_duty=data.stamp_duty,
+                stamp_fee=data.stamp_fee,
+                effective_from_date=data.effective_from_date,
+                effective_to_date=None,
+                created_by=user_id,
+                created_on=datetime.utcnow()
+            )
+            db.add(new_record)
+        
+        elif existing_record:
+            if data.effective_from_date > current_date:
+                # Update effective_to_date of the existing record
+                if existing_record.effective_to_date is None or existing_record.effective_to_date >= current_date:
+                    existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+                    db.add(existing_record)
+
+                # Insert new record
+                new_record = OffServiceGoodsPriceMaster(
+                    service_goods_master_id=service_goods_master_id,
+                    constitution_id=data.constitution_id,
+                    service_charge=data.service_charge,
+                    govt_agency_fee=data.govt_agency_fee,
+                    stamp_duty=data.stamp_duty,
+                    stamp_fee=data.stamp_fee,
+                    effective_from_date=data.effective_from_date,
+                    effective_to_date=None,
+                    created_by=user_id,
+                    created_on=datetime.utcnow()
+                )
+                db.add(new_record)
+            
             else:
-                # Update the existing record if `effective_from_date` is not changed
-                for key, value in price_data_dict.items():
-                    if value is not None:  # Only update if value is not None
-                        setattr(existing_price, key, value)
-                existing_price.created_by = user_id
-                existing_price.created_on = datetime.now()
-                db.commit()
-                db.refresh(existing_price)
-                return existing_price
-        else:
-            raise HTTPException(status_code=404, detail=f"Price data with id {id} not found")
-    else:
-        # Insert new record
-        new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
-        new_price = OffServiceGoodsPriceMaster(**new_price_data)
-        db.add(new_price)
+                # Update existing record with new data
+                existing_record.service_charge = data.service_charge
+                existing_record.govt_agency_fee = data.govt_agency_fee
+                existing_record.stamp_duty = data.stamp_duty
+                existing_record.stamp_fee = data.stamp_fee
+                existing_record.effective_from_date = data.effective_from_date
+                db.add(existing_record)
+
         db.commit()
-        db.refresh(new_price)
-        return new_price
-#-------------------------------------------------------------------------------------------------------
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Duplicate entry error occurred. Please check the data and try again.")
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+#-----------------------------------------------------
+# --------------------------------------------------
 
 
 #--------------------------------------------------------------------------------------------------------
@@ -1739,7 +1843,6 @@ def get_all_consultation_task_master_details(
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
 #------------------------------------------------------------------------------------------------
-
 def save_enquiry_master(
     db: Session,
     enquiry_master_id: int,
@@ -1783,10 +1886,8 @@ def save_enquiry_master(
                 # Update enquiry master fields
                 enquiry_master_data = enquiry_data.enquiry_master.dict(exclude_unset=True)
                 for field, value in enquiry_master_data.items():
-                    if field == "remarks" and enquiry_master.remarks:
-                        setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
-                    else:
-                        setattr(enquiry_master, field, value)
+                   
+                    setattr(enquiry_master, field, value)
                 enquiry_master.modified_by = user_id
                 enquiry_master.modified_on = datetime.utcnow()
 
@@ -1810,15 +1911,14 @@ def save_enquiry_master(
                         else:
                             raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
                     else:
-                        # Check if detail exists based on unique constraints, otherwise insert new detail
+                        # Check if detail exists based on enquiry_master_id and enquiry_date
                         existing_detail = db.query(OffEnquiryDetails).filter_by(
                             enquiry_master_id=enquiry_master_id,
-                            enquiry_number=detail_data_dict.get("enquiry_number"),
                             enquiry_date=detail_data_dict.get("enquiry_date")
                         ).first()
 
                         if existing_detail:
-                            # Update existing detail
+                            # If the date is the same, update the existing detail
                             for key, value in detail_data_dict.items():
                                 if key == "remarks" and existing_detail.remarks:
                                     setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
@@ -1828,11 +1928,10 @@ def save_enquiry_master(
                             existing_detail.modified_on = datetime.utcnow()
                             enquiry_details_list.append(existing_detail)
                         else:
-                            # Insert new detail
-                            
+                            # Insert new detail if the date has changed
                             new_enquiry_detail = OffEnquiryDetails(
                                 enquiry_master_id=enquiry_master.id,
-                                # enquiry_number=enquiry_number,  # Assign the generated enquiry number
+                                enquiry_number=generate_book_number(db, OffEnquiryDetails.enquiry_number),  # Generate new enquiry number
                                 created_by=user_id,
                                 created_on=datetime.utcnow(),
                                 **detail_data_dict
@@ -1863,7 +1962,6 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 

@@ -246,6 +246,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
+
 def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
    try:
       if Action == RecordActionType.INSERT_ONLY:

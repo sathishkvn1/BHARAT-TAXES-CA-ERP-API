@@ -23,6 +23,7 @@ class EmployeeMasterSchema(BaseModel):
       orm_mode=True
 
 class EmployeeMasterDisplay(BaseModel):
+   
    employee_id :int
    employee_number : str
    first_name : str
@@ -42,7 +43,7 @@ class EmployeeMasterDisplay(BaseModel):
    approved_on : datetime
    # modified_by : Optional[int] = None
    # modified_on : Optional[datetime] = None
-   is_deleted : str = 'no'
+   # is_deleted : str = 'no'
    # deleted_by : Optional[int] = None
    # deleted_on : Optional[datetime]
 
@@ -66,7 +67,7 @@ class EmployeePresentAddressSchema(BaseModel):
    present_state_id : int
    present_country_id : int
    # effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
 #    created_on : datetime
@@ -78,6 +79,7 @@ class EmployeePresentAddressSchema(BaseModel):
       orm_mode=True
 
 class EmployeePresentAddressGet(BaseModel):
+   id:int
    employee_id : int
    present_house_or_flat_name : Optional[str] = None
    present_house_flat_or_door_number : Optional[str] = None
@@ -119,7 +121,7 @@ class EmployeePermanentAddressSchema(BaseModel):
    permanent_state_id : int
    permanent_country_id : int     
    # effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
 #    created_on : datetime
@@ -132,6 +134,7 @@ class EmployeePermanentAddressSchema(BaseModel):
 
 
 class EmployeePermanentAddressGet(BaseModel):
+   id:int
    employee_id : int    
    permanent_house_or_flat_name : Optional[str] = None
    permanent_house_flat_or_door_number : Optional[str] = None
@@ -180,6 +183,7 @@ class EmployeeContactSchema(BaseModel):
 
 
 class EmployeeContactGet(BaseModel):
+   id:int
    employee_id : int
    personal_mobile_number : Optional[str] = None
    personal_whatsapp_number : Optional[str] = None
@@ -207,7 +211,7 @@ class EmployeeBankAccountSchema(BaseModel):
    bank_branch_name : Optional[str] = None
    ifsc_code : Optional[str] = None
    # effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
 #    created_on : datetime
@@ -220,6 +224,7 @@ class EmployeeBankAccountSchema(BaseModel):
 
 
 class EmployeeBankAccountGet(BaseModel):
+   id:int
    employee_id : int
    bank_account_number : Optional[str] = None
    bank_name :  Optional[str] = None
@@ -254,6 +259,7 @@ class EmployeeEmployementSchema(BaseModel):
 
 
 class EmployeeEmployementGet(BaseModel):
+   id:int
    employee_id : int
    department_id : int
    designation_id : int
@@ -299,6 +305,7 @@ class EmployeeSalarySchema(BaseModel):
 
 
 class EmployeeSalaryGet(BaseModel):
+   id:int
    employee_id : int         
    component_id : int
    calculation_frequency_id : int
@@ -318,6 +325,7 @@ class EmployeeSalaryGet(BaseModel):
 
 
 class EmployeeExperienceGet(BaseModel):
+   id:int
    employee_id : int
    position_held : str
    company_name : str
@@ -343,6 +351,7 @@ class EmployeeDocumentsSchema(BaseModel):
 
 
 class EmployeeDocumentsGet(BaseModel):
+   id:int
    employee_id : int
    document_id : int
    document_number : Optional[str] = None
@@ -371,6 +380,7 @@ class EmployeeEmergencyContactSchema(BaseModel):
 
 
 class EmployeeEmergencyContactGet(BaseModel):
+   id:int
    employee_id : int
    contact_person_name : Optional[str] = None
    relation_id : int
@@ -398,6 +408,7 @@ class EmployeeDependentsSchema(BaseModel):
 
 
 class EmployeeDependentsGet(BaseModel):
+   id:int
    employee_id : int
    dependent_name : Optional[str] = None
    relation_id : int
@@ -414,6 +425,7 @@ class EmployeeDependentsGet(BaseModel):
          
 
 class EmployeeProfessionalQualificationGet(BaseModel):
+   id:int
    employee_id : int
    qualification_id : int
    membership_number : Optional[str] = None
@@ -430,6 +442,7 @@ class EmployeeSecurityCredentials(BaseModel):
    #  role_ids            : List[int]
 
 class EmployeeSecurityCredentialsGet(BaseModel):
+    id:int
     employee_id         : int  
     user_name           : str
     login_password      : str
@@ -445,6 +458,7 @@ class EmployeeUserRoles(BaseModel):
 
 
 class EmployeeUserRolesGet(BaseModel):
+   id:int
    employee_id        : int
    role_id            : int
 
@@ -517,3 +531,8 @@ class EmployeeDetailsGet(BaseModel):
    employee_security_credentials: Optional[EmployeeSecurityCredentialsGet] = None
    user_roles: List[EmployeeUserRolesGet] = None   
 
+
+class EmployeeAddressDetailsSchema(BaseModel):
+   present_address: Optional[List[EmployeePresentAddressSchema]] = None
+   permanent_address: Optional[List[EmployeePermanentAddressSchema]] = None
+   bank_details: Optional[List[EmployeeBankAccountSchema]] = None
