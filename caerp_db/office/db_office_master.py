@@ -1246,86 +1246,74 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
 #--------------------------------------------------------------------------------------------------------------   
 
 
-# def save_price_data(price_data: PriceData, id: int, user_id: int, db: Session):
-#     price_data_dict = price_data.dict()
-    
-#     if id != 0:
-#         # Fetch the existing record
-#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.id == id).first()
-#         if existing_price:
-#             # Check if `effective_from_date` has changed
-#             if existing_price.effective_from_date != price_data.effective_from_date:
-#                 # If `effective_from_date` is changed to a future date, update `effective_to_date` of the current row
-#                 if price_data.effective_from_date > existing_price.effective_from_date:
-#                     if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
-#                         existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
-#                         db.commit()
-#                         db.refresh(existing_price)
-                    
-#                     # Create a new row for the new `effective_from_date`
-#                     new_price_data = {
-#                         **price_data_dict,
-#                         'created_by': user_id,
-#                         'created_on': datetime.now()
-#                     }
-#                     new_price = OffServiceGoodsPriceMaster(**new_price_data)
-#                     db.add(new_price)
-#                     db.commit()
-#                     db.refresh(new_price)
-#                     return new_price
-#                 else:
-#                     raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
-#             else:
-#                 # Update the existing record if `effective_from_date` is not changed
-#                 for key, value in price_data_dict.items():
-#                     if value is not None:  # Only update if value is not None
-#                         setattr(existing_price, key, value)
-#                 existing_price.created_by = user_id
-#                 existing_price.created_on = datetime.now()
-#                 db.commit()
-#                 db.refresh(existing_price)
-#                 return existing_price
-#         else:
-#             raise HTTPException(status_code=404, detail=f"Price data with id {id} not found")
-#     else:
-#         # Insert new record
-#         new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
-#         new_price = OffServiceGoodsPriceMaster(**new_price_data)
-#         db.add(new_price)
-#         db.commit()
-#         db.refresh(new_price)
-#         return new_price
+# def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
+#     try:
+#         current_date = datetime.utcnow().date()
+#         # Fetch the existing record if it exists
+#         existing_record = db.query(OffServiceGoodsPriceMaster).filter(
+#             OffServiceGoodsPriceMaster.id == data.id
+#         ).first()
 
-# def save_price_data(price_data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
-#     price_data_dict = price_data.dict(exclude_unset=True)
-
-#     if service_goods_master_id:  # Update existing record
-#         existing_price = db.query(OffServiceGoodsPriceMaster).filter(OffServiceGoodsPriceMaster.service_goods_master_id == service_goods_master_id).first()
+#         if data.id == 0:
+#             # Insert new record
+#             new_record = OffServiceGoodsPriceMaster(
+#                 service_goods_master_id=service_goods_master_id,
+#                 constitution_id=data.constitution_id,
+#                 service_charge=data.service_charge,
+#                 govt_agency_fee=data.govt_agency_fee,
+#                 stamp_duty=data.stamp_duty,
+#                 stamp_fee=data.stamp_fee,
+#                 effective_from_date=data.effective_from_date,
+#                 effective_to_date=data.effective_to_date if data.effective_to_date else None,
+#                 # effective_to_date=data.effective_to_date,
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.utcnow()
+#             )
+#             db.add(new_record)
         
-#         if existing_price :
-#             if price_data.effective_from_date > existing_price.effective_from_date:
-#                 if existing_price.effective_to_date is None or existing_price.effective_to_date >= datetime.now().date():
-#                     existing_price.effective_to_date = price_data.effective_from_date - timedelta(days=1)
-#                     db.commit()
-#                     db.refresh(existing_price)
-                
-#                 new_price_data = {**price_data_dict, 'created_by': user_id, 'created_on': datetime.now()}
-#                 new_price = OffServiceGoodsPriceMaster(**new_price_data)
-#                 db.add(new_price)
-#                 db.commit()
-#                 db.refresh(new_price)
-#                 return new_price
+#         elif existing_record:
+#             if data.effective_from_date > current_date:
+#                 # Update effective_to_date of the existing record
+#                 if existing_record.effective_to_date is None or existing_record.effective_to_date >= current_date:
+#                     existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+#                     db.add(existing_record)
+
+#                 # Insert new record
+#                 new_record = OffServiceGoodsPriceMaster(
+#                     service_goods_master_id=service_goods_master_id,
+#                     constitution_id=data.constitution_id,
+#                     service_charge=data.service_charge,
+#                     govt_agency_fee=data.govt_agency_fee,
+#                     stamp_duty=data.stamp_duty,
+#                     stamp_fee=data.stamp_fee,
+#                     effective_from_date=data.effective_from_date,
+#                     # effective_to_date=None,
+#                     effective_to_date=data.effective_to_date if data.effective_to_date else None,
+#                     created_by=user_id,
+#                     created_on=datetime.utcnow()
+#                 )
+#                 db.add(new_record)
+            
 #             else:
-#                 raise HTTPException(status_code=400, detail="Effective from date cannot be in the past")
-#         else:
-#             raise HTTPException(status_code=404, detail=f"Price data with id {price_data.id} not found")
-#     else:  # Insert new record
-#         new_price_data = {**price_data_dict, 'service_goods_master_id': service_goods_master_id, 'created_by': user_id, 'created_on': datetime.now()}
-#         new_price = OffServiceGoodsPriceMaster(**new_price_data)
-#         db.add(new_price)
+#                 # Update existing record with new data
+#                 existing_record.service_charge = data.service_charge
+#                 existing_record.govt_agency_fee = data.govt_agency_fee
+#                 existing_record.stamp_duty = data.stamp_duty
+#                 existing_record.stamp_fee = data.stamp_fee
+#                 existing_record.effective_from_date = data.effective_from_date
+#                 existing_record.effective_to_date = data.effective_to_date if data.effective_to_date else existing_record.effective_to_date
+#                 db.add(existing_record)
+
 #         db.commit()
-#         db.refresh(new_price)
-#         return new_price
+
+#     except IntegrityError:
+#         db.rollback()
+#         raise HTTPException(status_code=400, detail="Duplicate entry error occurred. Please check the data and try again.")
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=400, detail=str(e))
+
 
 def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
     try:
@@ -1345,7 +1333,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
                 stamp_duty=data.stamp_duty,
                 stamp_fee=data.stamp_fee,
                 effective_from_date=data.effective_from_date,
-                effective_to_date=None,
+                effective_to_date=data.effective_to_date if data.effective_to_date else None,
                 created_by=user_id,
                 created_on=datetime.utcnow()
             )
@@ -1367,7 +1355,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
                     stamp_duty=data.stamp_duty,
                     stamp_fee=data.stamp_fee,
                     effective_from_date=data.effective_from_date,
-                    effective_to_date=None,
+                    effective_to_date=data.effective_to_date if data.effective_to_date else None,
                     created_by=user_id,
                     created_on=datetime.utcnow()
                 )
@@ -1380,6 +1368,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
                 existing_record.stamp_duty = data.stamp_duty
                 existing_record.stamp_fee = data.stamp_fee
                 existing_record.effective_from_date = data.effective_from_date
+                existing_record.effective_to_date = data.effective_to_date if data.effective_to_date else existing_record.effective_to_date
                 db.add(existing_record)
 
         db.commit()
@@ -1390,6 +1379,9 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
 #-----------------------------------------------------
 # --------------------------------------------------
 

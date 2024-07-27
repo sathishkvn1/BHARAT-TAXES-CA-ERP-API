@@ -3,9 +3,40 @@
   <head>
     <title>Consultant Employees Report</title>
     <style>
+      /* @page {
+        size: A4;
+        margin: 20mm;
+      } */
+      @page {
+            size: A4;
+            margin: 20mm;
+            @bottom-center {
+                content: "Page [page] of [toPage]";
+                font-size: 12px;
+            }
+        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      footer {
+        position: fixed;
+        bottom: -20mm;
+        left: 0;
+        right: 0;
+        height: 20mm;
+        text-align: center;
+        font-size: 12px;
+      }
       table {
         width: 100%;
         border-collapse: collapse;
+        margin-bottom: 20px;
       }
       table,
       th,
@@ -20,7 +51,13 @@
     </style>
   </head>
   <body>
-    <h1>Consultant Employees Report</h1>
+    <header>
+      
+      <!-- <img src="C:/logo/logo.png" alt="Logo" class="logo"> -->
+
+      <h1>BRQ ASSOCIATES</h1>
+      <hr>
+    </header>
     <table>
       <thead>
         <tr>
@@ -55,5 +92,6 @@
         {% endfor %}
       </tbody>
     </table>
+    <footer>Page {{ page_num }} of {{ total_pages }}</footer>
   </body>
 </html>

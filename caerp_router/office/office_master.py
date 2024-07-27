@@ -2471,6 +2471,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
 
+
 def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
     # Load the template environment
     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
@@ -2482,13 +2483,20 @@ def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmp
     html_content = template.render(employees=employee_list)
     
     # Configuration for pdfkit
-  
     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
     
+    # PDF options
+    options = {
+        'footer-center': 'Page [page] of [topage]',
+        'footer-font-size': '8',
+        'margin-bottom': '20mm'
+    }
+    
     # Convert HTML to PDF
-    pdfkit.from_string(html_content, file_path, configuration=config)
+    pdfkit.from_string(html_content, file_path, configuration=config, options=options)
     
     return open(file_path, "rb")
+
 
 @router.get("/template/consultant_employees/pdf")
 def get_consultant_employees_pdf(
@@ -2564,13 +2572,126 @@ def get_consultant_employees_pdf(
         for e in employees
     ]
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # file_path = os.path.join(UPLOAD_DIR_CONSULTANT_DETAILS, "consultant_employees.pdf")
     file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
-    # file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
-    print("file_path",file_path)
-
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
     pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
+
+
+
+
+
+
+
+
+
+
+
+
+# def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
+#     # Load the template environment
+#     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
+#     template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
+#     env = Environment(loader=FileSystemLoader(template_dir))
+#     template = env.get_template(template_name)
+    
+#     # Render the template with data
+#     html_content = template.render(employees=employee_list)
+    
+#     # Configuration for pdfkit
+  
+#     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
+    
+#     # Convert HTML to PDF
+#     pdfkit.from_string(html_content, file_path, configuration=config)
+    
+#     return open(file_path, "rb")
+
+
+# @router.get("/template/consultant_employees/pdf")
+# def get_consultant_employees_pdf(
+#     db: Session = Depends(get_db),
+#     search_query: str = Query(None, description="Search query to filter consultant employees")
+# ):
+#     current_date = datetime.utcnow().date()
+#     query = db.query(
+#         EmployeeMaster.employee_id,
+#         EmployeeMaster.first_name,
+#         EmployeeMaster.middle_name,
+#         EmployeeMaster.last_name,
+#         EmployeeMaster.employee_number,
+#         EmployeeContactDetails.personal_email_id.label('personal_email'),
+#         EmployeeContactDetails.official_email_id.label('official_email'),
+#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+#         EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+#         HrDepartmentMaster.department_name,
+#         HrDesignationMaster.designation
+#     ).join(
+#         EmployeeEmployementDetails,
+#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+#     ).join(
+#         EmployeeContactDetails,
+#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+#     ).join(
+#         HrDepartmentMaster,
+#         EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+#     ).join(
+#         HrDesignationMaster,
+#         EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+#     ).filter(
+#         EmployeeEmployementDetails.is_consultant == 'yes',
+#         EmployeeEmployementDetails.effective_from_date <= current_date,
+#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+#         EmployeeMaster.is_deleted == 'no',
+#         EmployeeEmployementDetails.is_deleted == 'no',
+#         EmployeeContactDetails.is_deleted == 'no'
+#     )
+
+#     if search_query:
+#         search_filter = (
+#             EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+#         )
+#         query = query.filter(search_filter)
+
+#     employees = query.all()
+
+#     if not employees:
+#         raise HTTPException(status_code=404, detail="No consultant employees found")
+
+#     employee_list = [
+#         ConsultantEmployee(
+#             employee_id=e.employee_id,
+#             first_name=e.first_name,
+#             middle_name=e.middle_name,
+#             last_name=e.last_name,
+#             employee_number=e.employee_number,
+#             personal_email=e.personal_email,
+#             official_email=e.official_email,
+#             personal_mobile=e.personal_mobile,
+#             official_mobile=e.official_mobile,
+#             department_name=e.department_name,
+#             designation=e.designation
+#         )
+#         for e in employees
+#     ]
+
+#     base_dir = os.path.dirname(os.path.abspath(__file__))
+#     file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
+#     # file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
+#     print("file_path",file_path)
+
+#     os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+#     pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
+    
+#     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})

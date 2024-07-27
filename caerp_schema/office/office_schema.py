@@ -14,7 +14,7 @@ class AppointmentStatusConstants(str,Enum):
 
 
 class OffAppointmentMasterSchema(BaseModel):
-    id:Optional[int]
+    # id:Optional[int]
     full_name: str
     customer_number: str
     mobile_number: Optional[str]
