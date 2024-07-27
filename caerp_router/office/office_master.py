@@ -2565,7 +2565,9 @@ def get_consultant_employees_pdf(
     ]
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
+    file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
+    # file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
+    print("file_path",file_path)
 
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
