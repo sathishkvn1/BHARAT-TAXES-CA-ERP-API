@@ -805,9 +805,28 @@ def get_service_data_endpoint(service_id: int = Header(..., description="Service
     return service_data
 
 #-------------------------------------------------------------------------------  
+# @router.post("/save_service_price/")
+# def save_service_price_endpoint(price_data: List[PriceData], 
+#                                 service_goods_master_id: int,
+#                                 db: Session = Depends(get_db),
+#                                 token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         for data in price_data:
+#             db_office_master.save_price_data(data, id, user_id, db)
+        
+#         return {"detail": "Price data saved successfully"}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
-                                id: int,
+                                service_goods_master_id: int,
                                 db: Session = Depends(get_db),
                                 token: str = Depends(oauth2.oauth2_scheme)):
     if not token:
@@ -818,13 +837,11 @@ def save_service_price_endpoint(price_data: List[PriceData],
     
     try:
         for data in price_data:
-            db_office_master.save_price_data(data, id, user_id, db)
+            db_office_master.save_price_data(data, service_goods_master_id, user_id, db)
         
         return {"detail": "Price data saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
 #---------------------------------------------------------------------------------------------------------------
  
 
@@ -2251,56 +2268,6 @@ from fpdf import FPDF
 
 
 
-# def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], file_path: str):
-#     pdf = FPDF()
-#     pdf.add_page()
-    
-#     # Set font for header
-#     pdf.set_font("Arial", size=12)
-    
-#     # Add company logo (ensure the logo path is correct)
-#     logo_path = "C:\logo\logo.png"  # Update this path
-#     # pdf.image(logo_path, x=10, y=8, w=30)
-#     pdf.image(logo_path, x=10, y=8, w=30, h=30, type='', link='') 
-    
-#     # Add company name
-#     pdf.set_font("Arial", size=20)
-#     pdf.cell(200, 10, txt="BRQ ASSOCIATES", ln=True, align='C')
-    
-#     # Add a line break
-#     pdf.ln(10)
-    
-#     pdf.set_line_width(0.5)
-#     pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-#     # Set font for table headers
-#     pdf.set_font("Arial", size=10)
-    
-#     # Table headers
-#     pdf.set_fill_color(200, 220, 255)  # Light blue fill color
-#     pdf.cell(10, 10, txt="ID", border=1)
-#     pdf.cell(40, 10, txt="Name", border=1)
-#     pdf.cell(50, 10, txt="Number", border=1)
-#     pdf.cell(40, 10, txt="Personal Email", border=1)
-#     pdf.cell(40, 10, txt="Official Email", border=1)
-#     pdf.cell(30, 10, txt="Department", border=1)
-#     pdf.cell(40, 10, txt="Designation", border=1)
-#     pdf.ln()
-    
-#     # Table rows
-#     pdf.set_font("Arial", size=10)
-#     for employee in employee_list:
-#         pdf.cell(30, 10, txt=str(employee.employee_id), border=1)
-#         pdf.cell(40, 10, txt=f"{employee.first_name} {employee.middle_name} {employee.last_name}", border=1)
-#         pdf.cell(50, 10, txt=employee.employee_number, border=1)
-#         pdf.cell(40, 10, txt=employee.personal_email, border=1)
-#         pdf.cell(40, 10, txt=employee.official_email or 'N/A', border=1)
-#         pdf.cell(30, 10, txt=employee.department_name, border=1)
-#         pdf.cell(40, 10, txt=employee.designation or 'N/A', border=1)
-#         pdf.ln()
-
-#     pdf.output(file_path)
-#     return open(file_path, "rb")
-
 
 class PDFWithFooter(FPDF):
     def __init__(self):
@@ -2339,25 +2306,6 @@ def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], f
     pdf = PDFWithFooter()
     pdf.add_page()
     
-    # Add company logo
-    # logo_path = r"C:\logo\logo.png"  # Update this path
-    # pdf.image(logo_path, x=10, y=8, w=20, h=20)
-    
-    # Add company name
-    # pdf.set_font("Arial", 'B', size=20)
-    # pdf.cell(0, 10, txt="BRQ ASSOCIATES", ln=True, align='C')
-    
-    # Add a line break
-    # pdf.ln(10)
-    
-    # Add a horizontal line
-    # pdf.set_line_width(0.5)
-    # pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-    
-    # # Add a line break
-    # pdf.ln(10)
-    
-    # Set font for invoice details
     pdf.set_font("Arial", size=12)
     
     # Add invoice details
@@ -2405,9 +2353,6 @@ def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], f
     
     pdf.output(file_path)
     return open(file_path, "rb")
-
-
-
 
 
 
@@ -2501,3 +2446,129 @@ def get_consultant_employees_pdf(
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
 
+
+
+#--------------------------------------------------------------------------------------
+from fpdf import FPDF
+from jinja2 import Environment, FileSystemLoader
+from typing import List
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
+import os
+from datetime import datetime
+import pdfkit
+
+TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
+
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'Consultant Employees Report', 0, 1, 'C')
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
+    # Load the template environment
+    template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
+    template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template(template_name)
+    
+    # Render the template with data
+    html_content = template.render(employees=employee_list)
+    
+    # Configuration for pdfkit
+  
+    config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
+    
+    # Convert HTML to PDF
+    pdfkit.from_string(html_content, file_path, configuration=config)
+    
+    return open(file_path, "rb")
+
+@router.get("/template/consultant_employees/pdf")
+def get_consultant_employees_pdf(
+    db: Session = Depends(get_db),
+    search_query: str = Query(None, description="Search query to filter consultant employees")
+):
+    current_date = datetime.utcnow().date()
+    query = db.query(
+        EmployeeMaster.employee_id,
+        EmployeeMaster.first_name,
+        EmployeeMaster.middle_name,
+        EmployeeMaster.last_name,
+        EmployeeMaster.employee_number,
+        EmployeeContactDetails.personal_email_id.label('personal_email'),
+        EmployeeContactDetails.official_email_id.label('official_email'),
+        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+        EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+        HrDepartmentMaster.department_name,
+        HrDesignationMaster.designation
+    ).join(
+        EmployeeEmployementDetails,
+        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        EmployeeContactDetails,
+        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).join(
+        HrDepartmentMaster,
+        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+    ).join(
+        HrDesignationMaster,
+        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+    ).filter(
+        EmployeeEmployementDetails.is_consultant == 'yes',
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeMaster.is_deleted == 'no',
+        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeContactDetails.is_deleted == 'no'
+    )
+
+    if search_query:
+        search_filter = (
+            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+        )
+        query = query.filter(search_filter)
+
+    employees = query.all()
+
+    if not employees:
+        raise HTTPException(status_code=404, detail="No consultant employees found")
+
+    employee_list = [
+        ConsultantEmployee(
+            employee_id=e.employee_id,
+            first_name=e.first_name,
+            middle_name=e.middle_name,
+            last_name=e.last_name,
+            employee_number=e.employee_number,
+            personal_email=e.personal_email,
+            official_email=e.official_email,
+            personal_mobile=e.personal_mobile,
+            official_mobile=e.official_mobile,
+            department_name=e.department_name,
+            designation=e.designation
+        )
+        for e in employees
+    ]
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
+
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
+    
+    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})

@@ -14,7 +14,7 @@ class AppointmentStatusConstants(str,Enum):
 
 
 class OffAppointmentMasterSchema(BaseModel):
-    # id:Optional[int]
+    id:Optional[int]
     full_name: str
     customer_number: str
     mobile_number: Optional[str]
@@ -342,6 +342,7 @@ class ServiceModel(BaseModel):
     price_history: List[PriceHistoryModel]
     
 class ServiceModelSchema(BaseModel):
+    price_master_id: Optional[int] = 0
     constitution_id: int
     business_constitution_name: str
     service_goods_master_id: int
@@ -372,8 +373,7 @@ class ServicePriceHistory(BaseModel):
 #     price_history: List[ServicePriceHistory]
 
 class PriceData(BaseModel):
-   
-    service_goods_master_id: int
+    id: Optional[int] = None
     constitution_id: int
     service_charge: float
     govt_agency_fee: float
