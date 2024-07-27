@@ -708,76 +708,94 @@ def get_consultation_services(
 
 
 #--------------------------------------------------------------------------------------------------------------
+
+
 @router.get("/get_price_list/", response_model=PriceListResponse)
 def get_price_list(
     service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
-    configuration_status: Optional[str] = Query(None, description="Filter by configuration status: 'ALL', 'CONFIGURED', 'NOTCONFIGURED'"),
+    configuration_status: Optional[str] = Query(None, description="Filter by configuration status: 'ALL', 'CONFIGURED', 'NOT CONFIGURED'"),
     search: Optional[str] = Query(None, description="Search by service name"),
     db: Session = Depends(get_db)
 ):
     print(f"Received request with service_type: {service_type}, configuration_status: {configuration_status}, search: {search}")  # Debug print
 
-    base_query = select([
-        OffServiceGoodsMaster.id,
-        OffServiceGoodsMaster.hsn_sac_class_id,
-        AppHsnSacClasses.hsn_sac_class,
-        OffServiceGoodsMaster.service_goods_name,
-        OffServiceGoodsMaster.is_bundled_service,
-        func.count(OffServiceGoodsPriceMaster.service_goods_master_id).label("configured_count")
-    ]).select_from(
-        OffServiceGoodsMaster.__table__.outerjoin(AppHsnSacClasses, OffServiceGoodsMaster.hsn_sac_class_id == AppHsnSacClasses.id)
-        .outerjoin(OffServiceGoodsPriceMaster, OffServiceGoodsMaster.id == OffServiceGoodsPriceMaster.service_goods_master_id)
-    ).group_by(
-        OffServiceGoodsMaster.id
-    ).order_by(
-        OffServiceGoodsMaster.hsn_sac_class_id.desc(),
-        OffServiceGoodsMaster.service_goods_name
-    )
+    # Define the base SQL query
+    sql_query = """
+    SELECT
+        off_service_goods_master.id,
+        off_service_goods_master.hsn_sac_class_id,
+        app_hsn_sac_classes.hsn_sac_class,
+        off_service_goods_master.service_goods_name,
+        off_service_goods_master.is_bundled_service,
+        COUNT(off_service_goods_price_master.service_goods_master_id) AS configured_count
+    FROM
+        off_service_goods_master
+    LEFT JOIN
+        app_hsn_sac_classes
+    ON
+        off_service_goods_master.hsn_sac_class_id = app_hsn_sac_classes.id
+    LEFT JOIN
+        off_service_goods_price_master
+    ON
+        off_service_goods_master.id = off_service_goods_price_master.service_goods_master_id
+    WHERE
+        1=1
+    """
 
-    conditions = []
-
+    # Add service_type filter
     if service_type == "GOODS":
-        conditions.append(OffServiceGoodsMaster.hsn_sac_class_id == 1)
+        sql_query += " AND off_service_goods_master.hsn_sac_class_id = 1"
     elif service_type == "SERVICE":
-        conditions.append(OffServiceGoodsMaster.hsn_sac_class_id == 2)
+        sql_query += " AND off_service_goods_master.hsn_sac_class_id = 2"
 
-    if configuration_status == "CONFIGURED":
-        having_condition = func.count(OffServiceGoodsPriceMaster.service_goods_master_id) >= 1
-    elif configuration_status == "NOTCONFIGURED":
-        having_condition = func.count(OffServiceGoodsPriceMaster.service_goods_master_id) == 0
-
+    # Add search filter
     if search:
-        conditions.append(OffServiceGoodsMaster.service_goods_name.ilike(f"%{search}%"))
+        sql_query += " AND off_service_goods_master.service_goods_name LIKE :search"
 
-    if conditions:
-        base_query = base_query.where(and_(*conditions))
+    # Add grouping
+    sql_query += """
+    GROUP BY
+        off_service_goods_master.id,
+        app_hsn_sac_classes.hsn_sac_class,
+        off_service_goods_master.service_goods_name,
+        off_service_goods_master.is_bundled_service
+    """
 
-    if configuration_status and configuration_status != "ALL":
-        base_query = base_query.having(having_condition)
+    # Add configuration_status filter
+    if configuration_status == "CONFIGURED":
+        sql_query += " HAVING COUNT(off_service_goods_price_master.service_goods_master_id) >= 1"
+    elif configuration_status == "NOT CONFIGURED":
+        sql_query += " HAVING COUNT(off_service_goods_price_master.service_goods_master_id) = 0"
+    elif configuration_status == "ALL" or not configuration_status:
+        # No specific HAVING condition for ALL or if not provided
+        pass
 
-    results = db.execute(base_query).fetchall()
+    # Add ordering
+    sql_query += """
+    ORDER BY
+        off_service_goods_master.hsn_sac_class_id DESC,
+        off_service_goods_master.service_goods_name;
+    """
+
+    # Execute the query
+    params = {"search": f"%{search}%"} if search else {}
+    results = db.execute(text(sql_query), params).fetchall()
+
+    # Map the results to the response model
     services_data = [
         ServiceGoodsPrice(
-            id=item.id,
-            service_name=item.service_goods_name,
-            service_type=item.hsn_sac_class,
-            configuration_status="Configured" if item.configured_count >= 1 else "Not Configured",
-            bundled_service="BUNDLED" if item.is_bundled_service == "yes" else "SINGLE",
-        ) for item in results
+            id=row.id,
+            service_name=row.service_goods_name,
+            service_type=row.hsn_sac_class,
+            configuration_status="Configured" if row.configured_count >= 1 else "Not Configured",
+            bundled_service="BUNDLED" if row.is_bundled_service == "yes" else "SINGLE",
+        ) for row in results
     ]
 
     if not services_data:
         raise HTTPException(status_code=404, detail="No services found matching the criteria")
 
     return PriceListResponse(price_list=services_data)
-
-
-# @router.get("/get_service_data/",response_model=List[ServiceModel])
-# def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
-#                               db: Session = Depends(get_db)):
-#     # Call the function to get service data based on service_id
-#     service_data = db_office_master.get_service_data(service_id, db)
-#     return service_data
 
 #---------------------------------------------------------------------------------------------------------------
 # @router.get("/get_service_data/", response_model=List[ServiceModel])
@@ -805,24 +823,6 @@ def get_service_data_endpoint(service_id: int = Header(..., description="Service
     return service_data
 
 #-------------------------------------------------------------------------------  
-# @router.post("/save_service_price/")
-# def save_service_price_endpoint(price_data: List[PriceData], 
-#                                 service_goods_master_id: int,
-#                                 db: Session = Depends(get_db),
-#                                 token: str = Depends(oauth2.oauth2_scheme)):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-    
-#     try:
-#         for data in price_data:
-#             db_office_master.save_price_data(data, id, user_id, db)
-        
-#         return {"detail": "Price data saved successfully"}
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
@@ -2449,149 +2449,25 @@ def get_consultant_employees_pdf(
 
 
 #--------------------------------------------------------------------------------------
-from fpdf import FPDF
-from jinja2 import Environment, FileSystemLoader
-from typing import List
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
-from fastapi.responses import StreamingResponse
-import os
-from datetime import datetime
-import pdfkit
-
-TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
-
-class PDF(FPDF):
-    def header(self):
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'Consultant Employees Report', 0, 1, 'C')
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
-
-
-def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
-    # Load the template environment
-    template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
-    template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
-    env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template(template_name)
-    
-    # Render the template with data
-    html_content = template.render(employees=employee_list)
-    
-    # Configuration for pdfkit
-    config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
-    
-    # PDF options
-    options = {
-        'footer-center': 'Page [page] of [topage]',
-        'footer-font-size': '8',
-        'margin-bottom': '20mm'
-    }
-    
-    # Convert HTML to PDF
-    pdfkit.from_string(html_content, file_path, configuration=config, options=options)
-    
-    return open(file_path, "rb")
-
-
-@router.get("/template/consultant_employees/pdf")
-def get_consultant_employees_pdf(
-    db: Session = Depends(get_db),
-    search_query: str = Query(None, description="Search query to filter consultant employees")
-):
-    current_date = datetime.utcnow().date()
-    query = db.query(
-        EmployeeMaster.employee_id,
-        EmployeeMaster.first_name,
-        EmployeeMaster.middle_name,
-        EmployeeMaster.last_name,
-        EmployeeMaster.employee_number,
-        EmployeeContactDetails.personal_email_id.label('personal_email'),
-        EmployeeContactDetails.official_email_id.label('official_email'),
-        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
-        EmployeeContactDetails.official_mobile_number.label('official_mobile'),
-        HrDepartmentMaster.department_name,
-        HrDesignationMaster.designation
-    ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
-    ).join(
-        EmployeeContactDetails,
-        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
-    ).join(
-        HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
-    ).join(
-        HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
-    ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
-        EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
-        EmployeeContactDetails.is_deleted == 'no'
-    )
-
-    if search_query:
-        search_filter = (
-            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
-            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
-            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
-        )
-        query = query.filter(search_filter)
-
-    employees = query.all()
-
-    if not employees:
-        raise HTTPException(status_code=404, detail="No consultant employees found")
-
-    employee_list = [
-        ConsultantEmployee(
-            employee_id=e.employee_id,
-            first_name=e.first_name,
-            middle_name=e.middle_name,
-            last_name=e.last_name,
-            employee_number=e.employee_number,
-            personal_email=e.personal_email,
-            official_email=e.official_email,
-            personal_mobile=e.personal_mobile,
-            official_mobile=e.official_mobile,
-            department_name=e.department_name,
-            designation=e.designation
-        )
-        for e in employees
-    ]
-
-    # file_path = os.path.join(UPLOAD_DIR_CONSULTANT_DETAILS, "consultant_employees.pdf")
-    file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-    pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
-    
-    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
 
 
 
+# from fastapi import APIRouter, Depends, Query, HTTPException
+# from fastapi.responses import StreamingResponse
+# from sqlalchemy.orm import Session
+# from datetime import datetime
+# from jinja2 import Environment, FileSystemLoader
+# from weasyprint import HTML
+# import os
 
 
 
+# router = APIRouter()
 
+# TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
+# UPLOAD_DIR_CONSULTANT_DETAILS = "path/to/upload/directory"
 
-
-
-
-
-# def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
+# def generate_consultant_employees_pdf(employee_list, output_path):
 #     # Load the template environment
 #     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
 #     template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
@@ -2601,15 +2477,8 @@ def get_consultant_employees_pdf(
 #     # Render the template with data
 #     html_content = template.render(employees=employee_list)
     
-#     # Configuration for pdfkit
-  
-#     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
-    
 #     # Convert HTML to PDF
-#     pdfkit.from_string(html_content, file_path, configuration=config)
-    
-#     return open(file_path, "rb")
-
+#     HTML(string=html_content).write_pdf(output_path)
 
 # @router.get("/template/consultant_employees/pdf")
 # def get_consultant_employees_pdf(
@@ -2685,13 +2554,15 @@ def get_consultant_employees_pdf(
 #         for e in employees
 #     ]
 
-#     base_dir = os.path.dirname(os.path.abspath(__file__))
 #     file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
-#     # file_path = os.path.join(base_dir, "UPLOAD_DIR_CONSULTANT_DETAILS", "consultant_employees.pdf")
-#     print("file_path",file_path)
-
 #     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-#     pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
-    
-#     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
+#     generate_consultant_employees_pdf(employee_list, file_path)
+
+#     return StreamingResponse(open(file_path, "rb"), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
+
+
+
+
+
+
