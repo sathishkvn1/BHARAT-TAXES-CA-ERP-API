@@ -1363,6 +1363,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
             
             else:
                 # Update existing record with new data
+                existing_record.constitution_id = data.constitution_id
                 existing_record.service_charge = data.service_charge
                 existing_record.govt_agency_fee = data.govt_agency_fee
                 existing_record.stamp_duty = data.stamp_duty
