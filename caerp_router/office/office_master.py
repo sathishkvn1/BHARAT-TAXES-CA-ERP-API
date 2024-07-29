@@ -2506,7 +2506,7 @@ import pdfkit
 
 
 TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
-UPLOAD_DIR_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/uploads"
+UPLOAD_DIR_CONSULTANT_DETAILS = "uploads/consultant_details"
 
 # def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
 #     # Load the template environment
