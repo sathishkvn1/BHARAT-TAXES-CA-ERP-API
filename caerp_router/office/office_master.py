@@ -1993,12 +1993,14 @@ def save_enquiry_details(
 
 
 
+
 @router.get("/enquiry/get_enquiries", response_model=List[OffViewEnquiryResponseSchema])
 def get_and_search_enquiries(
     search_value: Union[str, int] = "ALL",
     status_id: Optional[str] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
+    mobile_number: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -2010,13 +2012,15 @@ def get_and_search_enquiries(
     - **effective_from_date**: Effective from date (default: today's date).
     - **effective_to_date**: Effective to date (default: today's date).
     - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
+    - **mobile_number**: Search with 'mobile_number' to get the specific details.
     """
     return db_office_master.get_enquiries(
         db,
         search_value=search_value,
         status_id=status_id,
         from_date=from_date,
-        to_date=to_date
+        to_date=to_date,
+        mobile_number=mobile_number
     )
 
 

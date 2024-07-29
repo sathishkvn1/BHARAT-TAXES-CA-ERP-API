@@ -1897,17 +1897,15 @@ def save_enquiry_master(
 
 
 
-    
 def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
     status_id: Optional[str] = "ALL",
     from_date: Optional[date] = None,
-    to_date: Optional[date] = None
+    to_date: Optional[date] = None,
+    mobile_number: Optional[str] = None
 ) -> List[OffViewEnquiryResponseSchema]:
     try:
-        enquiries = []
-
         # Initialize search conditions
         search_conditions = [OffViewEnquiryDetails.is_deleted == "no"]
         
@@ -1931,6 +1929,11 @@ def get_enquiries(
                     OffViewEnquiryMaster.email_id.like(f"%{search_value}%")
                 )
             )
+
+        # Add condition for mobile number if provided
+        if mobile_number:
+            search_conditions.append(OffViewEnquiryMaster.mobile_number == mobile_number)
+
 
         # Execute the query
         query_result = db.query(OffViewEnquiryDetails).join(
@@ -1981,6 +1984,10 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 
 #------------------------------------------------------------------------------------------------
     # WORK ORDER
