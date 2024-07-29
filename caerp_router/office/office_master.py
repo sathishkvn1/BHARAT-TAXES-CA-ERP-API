@@ -539,41 +539,7 @@ The endpoint returns a JSON object containing either available slots or messages
 #---------------------------------------------------------------------------------------------------------------
 
 
-# @router.get("/consultants_and_services/")
-# def get_consultants_and_services(
-#     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),
-#     # category: str = Query(..., description="Selection category: 'consultant', 'all'"),
-#     service_id: Optional[int] = None,
-#     db: Session = Depends(get_db)
-# ):
-#     if category == "consultant":
-#         # Fetch consultants from the database
-#         consultants = db_office_master.get_consultants(db)
-#         # Convert consultants to a list of dictionaries
-#         consultants_data = [{"id": consultant.employee_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-#         return EmployeeResponse(employees=consultants_data)
 
-#     elif category == "all":
-#         # Fetch all employees from the database
-#         employees = db_office_master.get_all_non_consultant_employees(db)
-#         # Convert employees to a list of dictionaries
-#         employees_data = [{"id": employee.employee_id, "first_name": employee.first_name, "middle_name": employee.middle_name, "last_name": employee.last_name} for employee in employees]
-#         return EmployeeResponse(employees=employees_data)
-    
-#     # elif service_id is not None and service_id != 0:
-        
-#     #     # Fetch consultants for the given service_id from off_view_consultant_details table
-#     #     consultants = db_office_master.get_consultants_for_service(db, service_id)
-#     #     # Convert consultants to a list of dictionaries
-#     #     consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
-#     #     return {"consultants": consultants_data}
-    
-#     else service_id = 0:
-#         # Fetch all services from off_view_consultant_details table
-#         services = db_office_master.get_all_service(db)
-#         # Convert services to a list of dictionaries
-#         services_data = [{"id": service.service_goods_master_id, "name": service.service_goods_name} for service in services]
-#         return {"services": services_data}
 
 @router.get("/consultants_and_services/")
 def get_consultants_and_services(
@@ -709,7 +675,6 @@ def get_consultation_services(
 
 #--------------------------------------------------------------------------------------------------------------
 
-
 @router.get("/get_price_list/", response_model=PriceListResponse)
 def get_price_list(
     service_type: Optional[str] = Query(None, description="Filter by type: 'ALL', 'GOODS', 'SERVICE'"),
@@ -807,12 +772,100 @@ def get_price_list(
 
 
 
+# @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
+# def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+#                               db: Session = Depends(get_db)):
+#     # Call the function to get service data based on service_id
+#     service_data = db_office_master.get_service_data(service_id, db)
+#     return service_data
+
+
+#-----------------------------
+
+
+
+
+
+
+
+
+
+
 @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
-def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
-                              db: Session = Depends(get_db)):
-    # Call the function to get service data based on service_id
-    service_data = db_office_master.get_service_data(service_id, db)
+def get_service_data_endpoint(
+    service_id: int = Query(..., description="Service ID"),
+    rate_status: Optional[str] = Query(None, description="Rate status: CURRENT, UPCOMING, or PREVIOUS"),
+    db: Session = Depends(get_db)
+):
+    # Call the function to get service data based on service_id, optional rate_status, and the current date
+    service_data = db_office_master.get_service_data(service_id, rate_status, db)
     return service_data
+
+# def get_service_data_test(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
+#     # Use the current date if query_date is not provided
+#     query_date = datetime.utcnow().date()
+
+#     query = text("""
+#         SELECT
+#             a.id AS constitution_id,
+#             a.business_constitution_name,
+#             a.business_constitution_code,
+#             b.id AS service_goods_master_id,
+#             COALESCE(c.id, 0) AS service_goods_price_master_id,
+#             b.service_goods_name,
+#             COALESCE(c.service_charge, 0) AS service_charge,
+#             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+#             COALESCE(c.stamp_duty, 0) AS stamp_duty,
+#             COALESCE(c.stamp_fee, 0) AS stamp_fee,
+#             COALESCE(c.id, 0) AS price_master_id,
+#             c.effective_from_date AS effective_from_date,
+#             c.effective_to_date AS effective_to_date,
+#             CASE
+#                 WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 'CURRENT'
+#                 WHEN c.effective_from_date > :query_date THEN 'UPCOMING'
+#                 ELSE 'PREVIOUS'
+#             END AS rate_status
+#         FROM
+#             app_business_constitution AS a
+#         LEFT OUTER JOIN
+#             off_service_goods_master AS b ON TRUE
+#         LEFT OUTER JOIN
+#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+#                                                  AND a.id = c.constitution_id
+#         WHERE
+#             b.id = :service_id
+#             AND (:rate_status IS NULL 
+#                 OR (:rate_status = 'CURRENT' AND c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date))
+#                 OR (:rate_status = 'UPCOMING' AND c.effective_from_date > :query_date)
+#                 OR (:rate_status = 'PREVIOUS' AND c.effective_to_date IS NOT NULL AND c.effective_to_date < :query_date))
+#         ORDER BY
+#             a.id, b.id;
+#     """)
+
+#     query_result = db.execute(query, {"service_id": service_id, "query_date": query_date, "rate_status": rate_status}).fetchall()
+
+#     service_data = [
+#         ServiceModelSchema(
+#             constitution_id=row.constitution_id,
+#             business_constitution_name=row.business_constitution_name,
+#             service_goods_master_id=row.service_goods_master_id,
+#             service_goods_price_master_id=row.service_goods_price_master_id,
+#             service_name=row.service_goods_name,
+#             business_constitution_code=row.business_constitution_code,
+#             service_charge=row.service_charge,
+#             govt_agency_fee=row.govt_agency_fee,
+#             stamp_duty=row.stamp_duty,
+#             stamp_fee=row.stamp_fee,
+#             effective_from_date=row.effective_from_date,
+#             effective_to_date=row.effective_to_date,
+#             price_master_id=row.price_master_id,
+#             rate_status=row.rate_status
+#         ) for row in query_result
+#     ]
+    
+#     return service_data
+
+
 #---------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_history/", response_model=List[ServiceModel])
 def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 

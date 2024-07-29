@@ -695,11 +695,10 @@ def fetch_available_and_unavailable_dates_and_slots(
     db: Session,
     check_date: Optional[date] = None,
     service_goods_master_id: Optional[int] = None,
-    appointment_id: Optional[int] = None  # Parameter for appointment ID
+    appointment_id: Optional[int] = None
 ):
     try:
         if check_date:
-            # Fetch service details to get the slot duration
             service_detail = db.query(OffConsultantServiceDetails).filter(
                 OffConsultantServiceDetails.consultant_id == consultant_id,
                 OffConsultantServiceDetails.service_goods_master_id == service_goods_master_id,
@@ -716,7 +715,6 @@ def fetch_available_and_unavailable_dates_and_slots(
             slot_duration = service_detail.slot_duration_in_minutes
             available_slots = []
 
-            # Fetch all schedules for the given date
             normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
@@ -735,9 +733,8 @@ def fetch_available_and_unavailable_dates_and_slots(
                 OffConsultantSchedule.consultation_date == check_date
             ).all()
 
-            # Check normal schedules
-            if normal_schedules:
-                for schedule in normal_schedules:
+            def process_schedules(schedules):
+                for schedule in schedules:
                     time_slots = [
                         (schedule.morning_start_time, schedule.morning_end_time),
                         (schedule.afternoon_start_time, schedule.afternoon_end_time)
@@ -750,55 +747,31 @@ def fetch_available_and_unavailable_dates_and_slots(
                             while current_time + timedelta(minutes=slot_duration) <= end_time:
                                 next_time = current_time + timedelta(minutes=slot_duration)
 
-                                # Check if slot is already booked, excluding the current appointment if editing
-                                is_taken = db.query(OffAppointmentVisitMaster).filter(
+                                # Check if the slot is already booked by another appointment
+                                is_fully_covered = db.query(OffAppointmentVisitMaster).join(
+                                    OffAppointmentVisitMasterView,
+                                    OffAppointmentVisitMaster.id == OffAppointmentVisitMasterView.appointment_visit_master_id
+                                ).filter(
                                     OffAppointmentVisitMaster.consultant_id == consultant_id,
                                     OffAppointmentVisitMaster.appointment_date == check_date,
-                                    OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
-                                    OffAppointmentVisitMaster.appointment_time_to > current_time.time()
-                                ).filter(
+                                    OffAppointmentVisitMaster.appointment_time_from <= current_time.time(),
+                                    OffAppointmentVisitMaster.appointment_time_to > current_time.time(),
+                                    OffAppointmentVisitMasterView.appointment_status != AppointmentStatusConstants.CANCELED.name,
                                     OffAppointmentVisitMaster.appointment_master_id != appointment_id
                                 ).first()
 
-                                if not is_taken:
+                                # Exclude slot only if it is fully covered
+                                if not is_fully_covered:
                                     available_slots.append({
                                         'start_time': current_time.strftime("%H:%M"),
                                         'end_time': next_time.strftime("%H:%M"),
                                         'slot_duration_min': slot_duration
                                     })
+
                                 current_time = next_time
 
-            # Check non-normal schedules
-            for schedule in non_normal_schedules:
-                time_slots = [
-                    (schedule.morning_start_time, schedule.morning_end_time),
-                    (schedule.afternoon_start_time, schedule.afternoon_end_time)
-                ]
-
-                for start_time, end_time in time_slots:
-                    if start_time and end_time:
-                        current_time = datetime.combine(check_date, start_time)
-                        end_time = datetime.combine(check_date, end_time)
-                        while current_time + timedelta(minutes=slot_duration) <= end_time:
-                            next_time = current_time + timedelta(minutes=slot_duration)
-
-                            # Check if slot is already booked, excluding the current appointment if editing
-                            is_taken = db.query(OffAppointmentVisitMaster).filter(
-                                OffAppointmentVisitMaster.consultant_id == consultant_id,
-                                OffAppointmentVisitMaster.appointment_date == check_date,
-                                OffAppointmentVisitMaster.appointment_time_from < next_time.time(),
-                                OffAppointmentVisitMaster.appointment_time_to > current_time.time()
-                            ).filter(
-                                OffAppointmentVisitMaster.appointment_master_id != appointment_id
-                            ).first()
-
-                            if not is_taken:
-                                available_slots.append({
-                                    'start_time': current_time.strftime("%H:%M"),
-                                    'end_time': next_time.strftime("%H:%M"),
-                                    'slot_duration_min': slot_duration
-                                })
-                            current_time = next_time
+            process_schedules(normal_schedules)
+            process_schedules(non_normal_schedules)
 
             if available_slots:
                 return {'available_slots': available_slots}
@@ -806,11 +779,9 @@ def fetch_available_and_unavailable_dates_and_slots(
                 return {'message': "No available slots for the specified date."}
 
         else:
-            # Fetch unavailable and available dates for the next 10 days
             start_date = datetime.utcnow().date()
-            end_date = start_date + timedelta(days=10)  # 10 days range
+            end_date = start_date + timedelta(days=10)
 
-            # Fetch all schedules for the given period
             normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
@@ -832,7 +803,6 @@ def fetch_available_and_unavailable_dates_and_slots(
             unavailable_dates = set()
             available_dates = set()
 
-            # Process normal schedules
             current_date = start_date
             while current_date <= end_date:
                 is_available = any(
@@ -846,7 +816,6 @@ def fetch_available_and_unavailable_dates_and_slots(
                     unavailable_dates.add(current_date)
                 current_date += timedelta(days=1)
 
-            # Add specific non-normal schedule dates to available dates
             for schedule in non_normal_schedules:
                 available_dates.add(schedule.consultation_date)
 
@@ -860,7 +829,6 @@ def fetch_available_and_unavailable_dates_and_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
 #-------------------------------
 
 def save_off_document_master(
@@ -1037,53 +1005,10 @@ def get_services_filtered(db: Session,
 
 
 
-# def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
-#     query_result = db.execute("""
-#         SELECT
-#             a.id AS constitution_id,
-#             a.business_constitution_name,
-#             a.business_constitution_code,
-#             b.id AS service_goods_master_id,
-#             b.service_goods_name,
-#             c.service_charge,
-#             c.govt_agency_fee,
-#             c.stamp_duty,
-#             c.stamp_fee,
-#             c.effective_from_date AS price_master_effective_from_date,
-#             c.effective_to_date AS price_master_effective_to_date
-#         FROM
-#             app_business_constitution AS a
-#         LEFT OUTER JOIN
-#             off_service_goods_master AS b ON TRUE
-#         LEFT OUTER JOIN
-#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id AND a.id = c.constitution_id
-#         WHERE
-#             b.id = :service_id
-#         ORDER BY
-#             a.id, b.id;
-#     """, {"service_id": service_id}).fetchall()
-
-#     service_data = []
-#     for row in query_result:
-#         service_data.append(ServiceModel(
-#             id=row.constitution_id,
-#             service_name=row.service_goods_name,
-#             constitution_id=row.constitution_id,
-#             business_constitution_name=row.business_constitution_name,
-#             business_constitution_code=row.business_constitution_code,
-#             service_charge=row.service_charge if row.service_charge is not None else 0,
-#             govt_agency_fee=row.govt_agency_fee if row.govt_agency_fee is not None else 0,
-#             stamp_duty=row.stamp_duty if row.stamp_duty is not None else 0,
-#             stamp_fee=row.stamp_fee if row.stamp_fee is not None else 0,
-#             effective_from_date=row.price_master_effective_from_date,
-#             effective_to_date=row.price_master_effective_to_date,
-#             service_description=None  # Add description if available in the database
-#         ))
-
-#     return service_data
 #---------------------------------------------------------------------------------------------------------------
-# def get_service_data(service_id: int, db: Session) -> List[ServiceModel]:
-#     query_result = db.execute("""
+
+# def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
+#     query = text("""
 #         SELECT
 #             a.id AS constitution_id,
 #             a.business_constitution_name,
@@ -1095,8 +1020,10 @@ def get_services_filtered(db: Session,
 #             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
 #             COALESCE(c.stamp_duty, 0) AS stamp_duty,
 #             COALESCE(c.stamp_fee, 0) AS stamp_fee,
-#             c.effective_from_date AS price_master_effective_from_date,
-#             c.effective_to_date AS price_master_effective_to_date
+#             COALESCE(c.id, 0) AS price_master_id,
+           
+#             c.effective_from_date AS effective_from_date,
+#             c.effective_to_date AS effective_to_date
 #         FROM
 #             app_business_constitution AS a
 #         LEFT OUTER JOIN
@@ -1110,34 +1037,36 @@ def get_services_filtered(db: Session,
 #             b.id = :service_id
 #         ORDER BY
 #             a.id, b.id;
-#     """, {"service_id": service_id}).fetchall()
+#     """)
 
-#     service_data_dict = {}
-#     for row in query_result:
-#         if row.constitution_id not in service_data_dict:
-#             service_data_dict[row.constitution_id] = {
-#                 "id": row.service_goods_master_id,
-#                 "service_name": row.service_goods_name,
-#                 "constitution_id": row.constitution_id,
-#                 "business_constitution_name": row.business_constitution_name,
-#                 "business_constitution_code": row.business_constitution_code,
-#                 "price_history": []
-#             }
-        
-#         service_data_dict[row.constitution_id]["price_history"].append({
-#             "service_goods_price_master_id": row.service_goods_price_master_id,
-#             "service_charge": row.service_charge,
-#             "govt_agency_fee": row.govt_agency_fee,
-#             "stamp_duty": row.stamp_duty,
-#             "stamp_fee": row.stamp_fee,
-#             "effective_from_date": row.price_master_effective_from_date,
-#             "effective_to_date": row.price_master_effective_to_date
-#         })
+#     query_result = db.execute(query, {"service_id": service_id}).fetchall()
+
+#     service_data = [
+#         ServiceModelSchema(
+           
+#             constitution_id=row.constitution_id,
+#             business_constitution_name=row.business_constitution_name,
+#             service_goods_master_id=row.service_goods_master_id,
+#             service_goods_price_master_id=row.service_goods_price_master_id,
+#             service_name=row.service_goods_name,
+#             business_constitution_code=row.business_constitution_code,
+#             service_charge=row.service_charge,
+#             govt_agency_fee=row.govt_agency_fee,
+#             stamp_duty=row.stamp_duty,
+#             stamp_fee=row.stamp_fee,
+#             effective_from_date=row.effective_from_date,
+#             effective_to_date=row.effective_to_date,
+#             price_master_id=row.price_master_id
+#         ) for row in query_result
+#     ]
     
-#     service_data = [ServiceModel(**data) for data in service_data_dict.values()]
 #     return service_data
 
-def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
+
+def get_service_data(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
+    # Use the current date if query_date is not provided
+    query_date = datetime.utcnow().date()
+
     query = text("""
         SELECT
             a.id AS constitution_id,
@@ -1151,9 +1080,13 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             COALESCE(c.stamp_duty, 0) AS stamp_duty,
             COALESCE(c.stamp_fee, 0) AS stamp_fee,
             COALESCE(c.id, 0) AS price_master_id,
-           
             c.effective_from_date AS effective_from_date,
-            c.effective_to_date AS effective_to_date
+            c.effective_to_date AS effective_to_date,
+            CASE
+                WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 'CURRENT'
+                WHEN c.effective_from_date > :query_date THEN 'UPCOMING'
+                ELSE 'PREVIOUS'
+            END AS rate_status
         FROM
             app_business_constitution AS a
         LEFT OUTER JOIN
@@ -1161,19 +1094,20 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
         LEFT OUTER JOIN
             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
                                                  AND a.id = c.constitution_id
-                                                 AND (c.effective_to_date IS NULL OR c.effective_to_date >= CURRENT_DATE)
-                                                 AND c.effective_from_date <= CURRENT_DATE
         WHERE
             b.id = :service_id
+            AND (:rate_status IS NULL 
+                OR (:rate_status = 'CURRENT' AND c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date))
+                OR (:rate_status = 'UPCOMING' AND c.effective_from_date > :query_date)
+                OR (:rate_status = 'PREVIOUS' AND c.effective_to_date IS NOT NULL AND c.effective_to_date < :query_date))
         ORDER BY
             a.id, b.id;
     """)
 
-    query_result = db.execute(query, {"service_id": service_id}).fetchall()
+    query_result = db.execute(query, {"service_id": service_id, "query_date": query_date, "rate_status": rate_status}).fetchall()
 
     service_data = [
         ServiceModelSchema(
-           
             constitution_id=row.constitution_id,
             business_constitution_name=row.business_constitution_name,
             service_goods_master_id=row.service_goods_master_id,
@@ -1186,11 +1120,15 @@ def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
             stamp_fee=row.stamp_fee,
             effective_from_date=row.effective_from_date,
             effective_to_date=row.effective_to_date,
-            price_master_id=row.price_master_id
+            price_master_id=row.price_master_id,
+            rate_status=row.rate_status
         ) for row in query_result
     ]
     
     return service_data
+
+
+
 #---------------------------------------------------------------------------------------------------------------
 
 def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
