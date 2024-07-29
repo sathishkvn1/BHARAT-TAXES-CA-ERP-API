@@ -3,18 +3,10 @@
   <head>
     <title>Consultant Employees Report</title>
     <style>
-      /* @page {
+      @page {
         size: A4;
         margin: 20mm;
-      } */
-      @page {
-            size: A4;
-            margin: 20mm;
-            @bottom-center {
-                content: "Page [page] of [toPage]";
-                font-size: 12px;
-            }
-        }
+      }
       body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -22,11 +14,11 @@
       }
       header {
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 50px;
       }
       footer {
         position: fixed;
-        bottom: -20mm;
+        bottom: 0;
         left: 0;
         right: 0;
         height: 20mm;
@@ -37,6 +29,7 @@
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
+        margin-top: 20px;
       }
       table,
       th,
@@ -52,12 +45,10 @@
   </head>
   <body>
     <header>
-      
-      <!-- <img src="C:/logo/logo.png" alt="Logo" class="logo"> -->
-
+      <!-- <img src="C:\BHARAT-TAXES-CA-ERP-API\templates\logo\logo.png" alt="Logo"> -->
       <h1>BRQ ASSOCIATES</h1>
-      <hr>
     </header>
+    <hr />
     <table>
       <thead>
         <tr>
@@ -92,6 +83,8 @@
         {% endfor %}
       </tbody>
     </table>
-    <footer>Page {{ page_num }} of {{ total_pages }}</footer>
+    <footer>
+      <!-- Page <span class="pageNumber"></span> of <span class="totalPages"></span> -->
+    </footer>
   </body>
 </html>

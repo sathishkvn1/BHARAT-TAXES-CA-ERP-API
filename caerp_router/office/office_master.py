@@ -1,3 +1,4 @@
+import io
 import os
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -780,16 +781,7 @@ def get_price_list(
 #     return service_data
 
 
-#-----------------------------
-
-
-
-
-
-
-
-
-
+#-------------------------------------------------------------------------------------------------------
 
 @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
 def get_service_data_endpoint(
@@ -800,6 +792,8 @@ def get_service_data_endpoint(
     # Call the function to get service data based on service_id, optional rate_status, and the current date
     service_data = db_office_master.get_service_data(service_id, rate_status, db)
     return service_data
+
+
 
 # def get_service_data_test(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
 #     # Use the current date if query_date is not provided
@@ -865,7 +859,6 @@ def get_service_data_endpoint(
     
 #     return service_data
 
-
 #---------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_history/", response_model=List[ServiceModel])
 def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
@@ -875,7 +868,7 @@ def get_service_data_endpoint(service_id: int = Header(..., description="Service
         raise HTTPException(status_code=404, detail="Service not found")
     return service_data
 
-#-------------------------------------------------------------------------------  
+#-----------------------------------------------------------------------------------------------------------  
 
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
@@ -2235,7 +2228,7 @@ def get_all_services(
 
 
 
-#-------------------------------------OFFER-------------------------------------------
+#-------------------------------------OFFER-------------------------------------------------------
 @router.post("/save_offer_details")
 def save_office_offer_details(
     
@@ -2245,7 +2238,7 @@ def save_office_offer_details(
     id: Optional[int] = 0 ,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-    
+
 ):
     """
     Endpoint to save or update offer details in the office offer master table and office offer details table.
@@ -2279,6 +2272,7 @@ def save_office_offer_details(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 
@@ -2502,25 +2496,19 @@ def get_consultant_employees_pdf(
 
 
 #--------------------------------------------------------------------------------------
+from fpdf import FPDF
+from jinja2 import Environment, FileSystemLoader
+from fastapi.responses import StreamingResponse
+import os
+from datetime import datetime
+import pdfkit
 
 
 
-# from fastapi import APIRouter, Depends, Query, HTTPException
-# from fastapi.responses import StreamingResponse
-# from sqlalchemy.orm import Session
-# from datetime import datetime
-# from jinja2 import Environment, FileSystemLoader
-# from weasyprint import HTML
-# import os
+TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
+UPLOAD_DIR_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/uploads"
 
-
-
-# router = APIRouter()
-
-# TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
-# UPLOAD_DIR_CONSULTANT_DETAILS = "path/to/upload/directory"
-
-# def generate_consultant_employees_pdf(employee_list, output_path):
+# def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
 #     # Load the template environment
 #     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
 #     template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
@@ -2530,91 +2518,140 @@ def get_consultant_employees_pdf(
 #     # Render the template with data
 #     html_content = template.render(employees=employee_list)
     
+    
+#     # Configuration for pdfkit
+#     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
+
+#     print("Path is",config)
+    
+#     # PDF options
+#     options = {
+#         'footer-ce': 'Page [page] of [topage]',
+#         'footer-font-size': '8',
+#         'margin-bottom': '20mm',
+#         'no-outline': None
+#     }
+    
 #     # Convert HTML to PDF
-#     HTML(string=html_content).write_pdf(output_path)
+#     pdfkit.from_string(html_content, file_path, configuration=config, options=options)
+    
+#     return open(file_path, "rb")
 
-# @router.get("/template/consultant_employees/pdf")
-# def get_consultant_employees_pdf(
-#     db: Session = Depends(get_db),
-#     search_query: str = Query(None, description="Search query to filter consultant employees")
-# ):
-#     current_date = datetime.utcnow().date()
-#     query = db.query(
-#         EmployeeMaster.employee_id,
-#         EmployeeMaster.first_name,
-#         EmployeeMaster.middle_name,
-#         EmployeeMaster.last_name,
-#         EmployeeMaster.employee_number,
-#         EmployeeContactDetails.personal_email_id.label('personal_email'),
-#         EmployeeContactDetails.official_email_id.label('official_email'),
-#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
-#         EmployeeContactDetails.official_mobile_number.label('official_mobile'),
-#         HrDepartmentMaster.department_name,
-#         HrDesignationMaster.designation
-#     ).join(
-#         EmployeeEmployementDetails,
-#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
-#     ).join(
-#         EmployeeContactDetails,
-#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
-#     ).join(
-#         HrDepartmentMaster,
-#         EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
-#     ).join(
-#         HrDesignationMaster,
-#         EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
-#     ).filter(
-#         EmployeeEmployementDetails.is_consultant == 'yes',
-#         EmployeeEmployementDetails.effective_from_date <= current_date,
-#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
-#         EmployeeMaster.is_deleted == 'no',
-#         EmployeeEmployementDetails.is_deleted == 'no',
-#         EmployeeContactDetails.is_deleted == 'no'
-#     )
-
-#     if search_query:
-#         search_filter = (
-#             EmployeeMaster.first_name.ilike(f"%{search_query}%") |
-#             EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
-#             EmployeeMaster.last_name.ilike(f"%{search_query}%") |
-#             EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
-#             EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
-#             EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
-#             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
-#             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
-#         )
-#         query = query.filter(search_filter)
-
-#     employees = query.all()
-
-#     if not employees:
-#         raise HTTPException(status_code=404, detail="No consultant employees found")
-
-#     employee_list = [
-#         ConsultantEmployee(
-#             employee_id=e.employee_id,
-#             first_name=e.first_name,
-#             middle_name=e.middle_name,
-#             last_name=e.last_name,
-#             employee_number=e.employee_number,
-#             personal_email=e.personal_email,
-#             official_email=e.official_email,
-#             personal_mobile=e.personal_mobile,
-#             official_mobile=e.official_mobile,
-#             department_name=e.department_name,
-#             designation=e.designation
-#         )
-#         for e in employees
-#     ]
-
-#     file_path = f"{UPLOAD_DIR_CONSULTANT_DETAILS}/consultant_employees.pdf"
-#     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-#     generate_consultant_employees_pdf(employee_list, file_path)
-
-#     return StreamingResponse(open(file_path, "rb"), media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
+def generate_consultant_employees_pdf_template(employee_list, file_path):
+    # Load the template environment
+    template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
+    template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template(template_name)
+    
+    # Render the template with data
+    html_content = template.render(employees=employee_list)
+    
+    # Configuration for pdfkit
+    wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+    if not os.path.isfile(wkhtmltopdf_path):
+        raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
+    
+    config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+    
+    # PDF options
+    options = {
+        'footer-center': 'Page [page] of [topage]',
+        'footer-font-size': '8',
+        'margin-bottom': '20mm',
+        'no-outline': None
+    }
+    
+    try:
+        # Convert HTML to PDF
+        pdfkit.from_string(html_content, file_path, configuration=config, options=options)
+    except Exception as e:
+        raise RuntimeError(f'Error generating PDF: {e}')
+    
+    return open(file_path, "rb")
 
 
+
+@router.get("/template/consultant_employees/pdf")
+def get_consultant_employees_pdf(
+    db: Session = Depends(get_db),
+    search_query: str = Query(None, description="Search query to filter consultant employees")
+):
+    current_date = datetime.utcnow().date()
+    query = db.query(
+        EmployeeMaster.employee_id,
+        EmployeeMaster.first_name,
+        EmployeeMaster.middle_name,
+        EmployeeMaster.last_name,
+        EmployeeMaster.employee_number,
+        EmployeeContactDetails.personal_email_id.label('personal_email'),
+        EmployeeContactDetails.official_email_id.label('official_email'),
+        EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+        EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+        HrDepartmentMaster.department_name,
+        HrDesignationMaster.designation
+    ).join(
+        EmployeeEmployementDetails,
+        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+    ).join(
+        EmployeeContactDetails,
+        EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+    ).join(
+        HrDepartmentMaster,
+        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+    ).join(
+        HrDesignationMaster,
+        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+    ).filter(
+        EmployeeEmployementDetails.is_consultant == 'yes',
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeMaster.is_deleted == 'no',
+        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeContactDetails.is_deleted == 'no'
+    )
+
+    if search_query:
+        search_filter = (
+            EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+            EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+            EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+        )
+        query = query.filter(search_filter)
+
+    employees = query.all()
+
+    if not employees:
+        raise HTTPException(status_code=404, detail="No consultant employees found")
+
+    employee_list = [
+        ConsultantEmployee(
+            employee_id=e.employee_id,
+            first_name=e.first_name,
+            middle_name=e.middle_name,
+            last_name=e.last_name,
+            employee_number=e.employee_number,
+            personal_email=e.personal_email,
+            official_email=e.official_email,
+            personal_mobile=e.personal_mobile,
+            official_mobile=e.official_mobile,
+            department_name=e.department_name,
+            designation=e.designation
+        )
+        for e in employees
+    ]
+
+    file_path = os.path.join(UPLOAD_DIR_CONSULTANT_DETAILS, "consultant_employees.pdf")
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    pdf_buffer = generate_consultant_employees_pdf_template(employee_list, file_path)
+    
+    return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
 
 
 
