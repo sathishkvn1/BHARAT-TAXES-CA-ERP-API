@@ -2001,6 +2001,7 @@ def get_and_search_enquiries(
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     mobile_number: Optional[str] = None,
+    email_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -2013,6 +2014,7 @@ def get_and_search_enquiries(
     - **effective_to_date**: Effective to date (default: today's date).
     - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
     - **mobile_number**: Search with 'mobile_number' to get the specific details.
+    - **email_id**: Search with 'email_id' to get the specific details.
     """
     return db_office_master.get_enquiries(
         db,
@@ -2020,7 +2022,8 @@ def get_and_search_enquiries(
         status_id=status_id,
         from_date=from_date,
         to_date=to_date,
-        mobile_number=mobile_number
+        mobile_number=mobile_number,
+        email_id=email_id
     )
 
 
