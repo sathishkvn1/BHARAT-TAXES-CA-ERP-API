@@ -1,10 +1,11 @@
+
 from fastapi import HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -245,6 +246,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
 #     except Exception as e:
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
 
 
 def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
@@ -538,19 +540,15 @@ def insert_multiple_detail_records(db, model, request_data_list, employee_id, us
 #      db.rollback()
 #      raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}") 
 
-
-
 def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
     try:
         emp_documents_data = request.dict()
         emp_documents_data["employee_id"] = employee_id
         emp_documents_data["created_by"] = user_id
-
         result = EmployeeDocuments(**emp_documents_data)
         db.add(result)
         db.commit()
         db.refresh(result)
-
         # Handle file upload
         if file:
             file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, str(result.id))
@@ -562,9 +560,6 @@ def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, emp
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
-
-
-
 
 def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int, Action: ActionType, employee_profile_component: str):
    employee_found = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
@@ -686,7 +681,7 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
         HrEmployeeCategory.category_name,
         EmployeeEmployementDetails.department_id,
         HrDepartmentMaster.department_name,
-         EmployeeEmployementDetails.designation_id,
+        EmployeeEmployementDetails.designation_id,
         HrDesignationMaster.designation,
         EmployeeContactDetails.personal_mobile_number,
         EmployeeContactDetails.personal_email_id,
@@ -908,6 +903,138 @@ def save_or_update_educational_qualifications(
                 db.execute(update_stmt)
 
         db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+    
+
+
+
+def update_employee_address_or_bank_details(
+    db: Session,
+    employee_id: int,
+    user_id: int,
+    Action: RecordActionType,
+    request: EmployeeAddressDetailsSchema,
+    id: int = 0,
+    employee_profile_component: str = None
+):
+    try:
+        if employee_profile_component is None:
+            raise ValueError("Employee profile component is required for updating")
+
+        components = employee_profile_component.split(',')
+        if Action == RecordActionType.UPDATE_AND_INSERT:
+            if 'present_address' in components and request.present_address:
+                for present_address in request.present_address:
+                    if present_address:
+                        data = present_address.dict()
+                        data['employee_id'] = employee_id
+                        data['effective_from_date'] = datetime.utcnow().date()
+                        data['created_by'] = user_id
+                        data['created_on'] = datetime.utcnow()
+
+                        existing_address = db.query(EmployeePresentAddress).filter(
+                            EmployeePresentAddress.employee_id == employee_id,
+                            EmployeePresentAddress.effective_to_date == None,
+                            EmployeePresentAddress.is_deleted == 'no'
+                        ).first()
+
+                        if existing_address:
+                            db.query(EmployeePresentAddress).filter(
+                                EmployeePresentAddress.id == existing_address.id
+                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+
+                        insert_stmt = insert(EmployeePresentAddress).values(**data)
+                        db.execute(insert_stmt)
+
+                db.commit()
+
+            if 'permanent_address' in components and request.permanent_address:
+                for permanent_address in request.permanent_address:
+                    if permanent_address:
+                        data = permanent_address.dict()
+                        data['employee_id'] = employee_id
+                        data['effective_from_date'] = datetime.utcnow().date()
+                        data['created_by'] = user_id
+                        data['created_on'] = datetime.utcnow()
+
+                        existing_address = db.query(EmployeePermanentAddress).filter(
+                            EmployeePermanentAddress.employee_id == employee_id,
+                            EmployeePermanentAddress.effective_to_date == None,
+                            EmployeePermanentAddress.is_deleted == 'no'
+                        ).first()
+
+                        if existing_address:
+                            db.query(EmployeePermanentAddress).filter(
+                                EmployeePermanentAddress.id == existing_address.id
+                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+
+                        insert_stmt = insert(EmployeePermanentAddress).values(**data)
+                        db.execute(insert_stmt)
+
+                db.commit()
+
+            if 'bank_details' in components and request.bank_details:
+                for bank_detail in request.bank_details:
+                    if bank_detail:
+                        data = bank_detail.dict()
+                        data['employee_id'] = employee_id
+                        data['effective_from_date'] = datetime.utcnow().date()
+                        data['created_by'] = user_id
+                        data['created_on'] = datetime.utcnow()
+
+                        existing_bank = db.query(EmployeeBankDetails).filter(
+                            EmployeeBankDetails.employee_id == employee_id,
+                            EmployeeBankDetails.effective_to_date == None,
+                            EmployeeBankDetails.is_deleted == 'no'
+                        ).first()
+
+                        if existing_bank:
+                            db.query(EmployeeBankDetails).filter(
+                                EmployeeBankDetails.id == existing_bank.id
+                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+
+                        insert_stmt = insert(EmployeeBankDetails).values(**data)
+                        db.execute(insert_stmt)
+
+                db.commit()
+
+            return {
+                "success": True,
+                "message": "Saved successfully"
+            }
+
+        elif Action == RecordActionType.UPDATE_ONLY:
+            if 'present_address' in components and request.present_address:
+                for present_address in request.present_address:
+                    if present_address:
+                        data = present_address.dict()
+                        db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id).update(data)
+
+                db.commit()
+
+            if 'permanent_address' in components and request.permanent_address:
+                for permanent_address in request.permanent_address:
+                    if permanent_address:
+                        data = permanent_address.dict()
+                        db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).update(data)
+
+                db.commit()
+
+            if 'bank_details' in components and request.bank_details:
+                for bank_detail in request.bank_details:
+                    if bank_detail:
+                        data = bank_detail.dict()
+                        db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).update(data)
+
+                db.commit()
+
+            return {
+                "success": True,
+                "message": "Updated successfully"
+            }
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")

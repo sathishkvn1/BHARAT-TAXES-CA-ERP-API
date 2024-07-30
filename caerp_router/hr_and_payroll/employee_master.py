@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, EmployeeProfessionalQualification, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetails, EmployeeDetailsCombinedSchema,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -685,3 +685,66 @@ def save_or_update_records(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+    
+
+
+@router.post('/update_employee_address_or_bank_details')
+def update_employee_address_or_bank_details(
+    employee_id: int,
+    id: int = Query(0, description="Select 0 for new entries (UPDATE_AND_INSERT) or a non-zero value for updating a specific row (UPDATE_ONLY)."),
+    Action: RecordActionType = Query(...,description=("Select UPDATE_AND_INSERT or UPDATE_ONLY") ),
+    employee_profile_component: str = Query(...,        
+        description=(
+            "For UPDATE_AND_INSERT: Comma-separated list of components to save. Valid options are: "
+            "[present_address, permanent_address, bank_details]. "
+            "For UPDATE_ONLY: Only one component can be selected at a time to update."
+        )
+    ),
+    request: EmployeeAddressDetailsSchema = Body(...),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+):  
+    """
+    Update or insert employee address and bank details.
+
+    - **employee_id**: Employee ID (required)
+
+    - **id**: ID of the specific address or bank detail to update.
+        - Default is 0 for new entries.
+        - Non-zero means a particular row ID that needs to be updated.
+        - `id = 0` for UPDATE_AND_INSERT.
+        - `id` must be non-zero for UPDATE_ONLY.
+
+    - **Action**: Action to perform: UPDATE_AND_INSERT or UPDATE_ONLY (required)
+
+    - **employee_profile_component**: Comma-separated list of components to update 
+      (e.g., 'present_address, permanent_address, bank_details'). This parameter is required.
+     
+    - **request**: The request body containing the details to update or insert.
+
+    **Details**:
+    - If the `Action` is `UPDATE_AND_INSERT`:
+        - Inserts new entries for the specified components.
+        - For each specified component, if an existing active entry is found, it updates the `effective_to_date` to the day before the new start date to mark it as inactive.
+    - If the `Action` is `UPDATE_ONLY`:
+        - Requires a non-zero `id` to update the specific entry for the specified component.
+        - Only one component can be updated at a time.
+    - The `employee_profile_component` parameter is required to specify which components (present address, permanent address, bank details) are to be updated or inserted.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"]
+
+    try:
+        result = db_employee_master.update_employee_address_or_bank_details(
+           db, employee_id, user_id, Action, request, id, employee_profile_component
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
