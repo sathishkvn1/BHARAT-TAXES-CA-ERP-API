@@ -369,7 +369,7 @@ class ServiceModelSchema(BaseModel):
 
 
 class BundlesServiceModelSchema(BaseModel):
-    unique_id: int
+    row_id: int
     constitution_id: int
     business_constitution_name: str
     business_constitution_code: str

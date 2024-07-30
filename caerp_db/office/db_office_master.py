@@ -1162,7 +1162,7 @@ def get_bundled_service_data(service_id: int, db: Session):
     duplicate_constitutions AS (
         SELECT
             rp.*,
-            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 - 1 AS unique_id
+            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 - 1 AS row_id
         FROM
             recent_prices rp
         WHERE
@@ -1170,14 +1170,14 @@ def get_bundled_service_data(service_id: int, db: Session):
         UNION ALL
         SELECT
             rp.*,
-            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 AS unique_id
+            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 AS row_id
         FROM
             recent_prices rp
         WHERE
             rp.rn = 1
     )
     SELECT
-        unique_id,
+        row_id,
         constitution_id,
         business_constitution_name,
         business_constitution_code,
@@ -1194,7 +1194,7 @@ def get_bundled_service_data(service_id: int, db: Session):
     FROM
         duplicate_constitutions
     ORDER BY
-        unique_id;
+        row_id;
     """
 
     result = db.execute(text(query), {"service_id": service_id})
