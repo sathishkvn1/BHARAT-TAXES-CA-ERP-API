@@ -10,7 +10,7 @@ from caerp_db.database import get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundlesServiceModelSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -782,6 +782,70 @@ def get_price_list(
 
 
 #-------------------------------------------------------------------------------------------------------
+# @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
+# def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
+#                               db: Session = Depends(get_db)):
+#     # Call the function to get service data based on service_id
+#     service_data = db_office_master.get_service_data(service_id, db)
+#     return service_data
+
+# def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
+#     query = text("""
+#         SELECT
+#             a.id AS constitution_id,
+#             a.business_constitution_name,
+#             a.business_constitution_code,
+#             b.id AS service_goods_master_id,
+#             COALESCE(c.id, 0) AS service_goods_price_master_id,
+#             b.service_goods_name,
+#             COALESCE(c.service_charge, 0) AS service_charge,
+#             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+#             COALESCE(c.stamp_duty, 0) AS stamp_duty,
+#             COALESCE(c.stamp_fee, 0) AS stamp_fee,
+#             COALESCE(c.id, 0) AS price_master_id,
+           
+#             c.effective_from_date AS effective_from_date,
+#             c.effective_to_date AS effective_to_date
+#         FROM
+#             app_business_constitution AS a
+#         LEFT OUTER JOIN
+#             off_service_goods_master AS b ON TRUE
+#         LEFT OUTER JOIN
+#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+#                                                  AND a.id = c.constitution_id
+#                                                  AND (c.effective_to_date IS NULL OR c.effective_to_date >= CURRENT_DATE)
+#                                                  AND c.effective_from_date <= CURRENT_DATE
+#         WHERE
+#             b.id = :service_id
+#         ORDER BY
+#             a.id, b.id;
+#     """)
+
+#     query_result = db.execute(query, {"service_id": service_id}).fetchall()
+
+#     service_data = [
+#         ServiceModelSchema(
+           
+#             constitution_id=row.constitution_id,
+#             business_constitution_name=row.business_constitution_name,
+#             service_goods_master_id=row.service_goods_master_id,
+#             service_goods_price_master_id=row.service_goods_price_master_id,
+#             service_name=row.service_goods_name,
+#             business_constitution_code=row.business_constitution_code,
+#             service_charge=row.service_charge,
+#             govt_agency_fee=row.govt_agency_fee,
+#             stamp_duty=row.stamp_duty,
+#             stamp_fee=row.stamp_fee,
+#             effective_from_date=row.effective_from_date,
+#             effective_to_date=row.effective_to_date,
+#             price_master_id=row.price_master_id
+#         ) for row in query_result
+#     ]
+    
+#     return service_data
+
+
+
 
 @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
 def get_service_data_endpoint(
@@ -791,6 +855,16 @@ def get_service_data_endpoint(
 ):
     # Call the function to get service data based on service_id, optional rate_status, and the current date
     service_data = db_office_master.get_service_data(service_id, rate_status, db)
+    return service_data
+
+
+@router.get("/get_bundled_service_data/", response_model=List[BundlesServiceModelSchema])
+def get_bundled_service_data_endpoint(
+    service_id: int = Query(..., description="Service ID"),
+    db: Session = Depends(get_db)
+):
+    # Call the function to get service data based on service_id
+    service_data = db_office_master.get_bundled_service_data(service_id, db)
     return service_data
 
 

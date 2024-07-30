@@ -298,6 +298,17 @@ class SaveServicesGoodsMasterRequest(BaseModel):
 class EmployeeResponse(BaseModel):
     employees: List[dict]
     
+# class ServiceGoodsPrice(BaseModel):
+#     id: int
+#     service_name: str
+#     configuration_status: Optional[str] = None
+#     service_type: Optional[str] = None
+#     bundled_service: Optional[str] = None
+
+# class PriceListResponse(BaseModel):
+#     price_list: List[ServiceGoodsPrice]
+
+
 class ServiceGoodsPrice(BaseModel):
     id: int
     service_name: str
@@ -356,6 +367,25 @@ class ServiceModelSchema(BaseModel):
     effective_from_date: Optional[date]
     effective_to_date: Optional[date]
 
+
+class BundlesServiceModelSchema(BaseModel):
+    unique_id: int
+    constitution_id: int
+    business_constitution_name: str
+    business_constitution_code: str
+    service_goods_master_id: int
+    service_goods_price_master_id: int
+    service_goods_name: str
+    service_charge: float
+    govt_agency_fee: float
+    stamp_duty: float
+    stamp_fee: float
+    price_master_id: int
+    effective_from_date: Optional[date] = None
+    effective_to_date: Optional[date] = None
+
+    class Config:
+        orm_mode = True
     
 class ServicePriceHistory(BaseModel):
     constitution_id: int

@@ -1130,7 +1130,85 @@ def get_service_data(service_id: int, rate_status: Optional[str], db: Session) -
 
 
 #---------------------------------------------------------------------------------------------------------------
+def get_bundled_service_data(service_id: int, db: Session):
+    query = """
+    WITH recent_prices AS (
+        SELECT
+            a.id AS constitution_id,
+            a.business_constitution_name,
+            a.business_constitution_code,
+            b.id AS service_goods_master_id,
+            COALESCE(c.id, 0) AS service_goods_price_master_id,
+            b.service_goods_name,
+            COALESCE(c.service_charge, 0) AS service_charge,
+            COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+            COALESCE(c.stamp_duty, 0) AS stamp_duty,
+            COALESCE(c.stamp_fee, 0) AS stamp_fee,
+            COALESCE(c.id, 0) AS price_master_id,
+            c.effective_from_date AS effective_from_date,
+            c.effective_to_date AS effective_to_date,
+            ROW_NUMBER() OVER (PARTITION BY a.id, b.id ORDER BY c.effective_from_date DESC) AS rn
+        FROM
+            app_business_constitution AS a
+        LEFT OUTER JOIN
+            off_service_goods_master AS b ON TRUE
+        LEFT OUTER JOIN
+            off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+                                                 AND a.id = c.constitution_id
+        WHERE
+            b.id = :service_id
+            AND b.is_bundled_service = 'yes'
+    ),
+    duplicate_constitutions AS (
+        SELECT
+            rp.*,
+            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 - 1 AS unique_id
+        FROM
+            recent_prices rp
+        WHERE
+            rp.rn = 1
+        UNION ALL
+        SELECT
+            rp.*,
+            ROW_NUMBER() OVER (ORDER BY rp.constitution_id, rp.service_goods_master_id) * 2 AS unique_id
+        FROM
+            recent_prices rp
+        WHERE
+            rp.rn = 1
+    )
+    SELECT
+        unique_id,
+        constitution_id,
+        business_constitution_name,
+        business_constitution_code,
+        service_goods_master_id,
+        service_goods_price_master_id,
+        service_goods_name,
+        service_charge,
+        govt_agency_fee,
+        stamp_duty,
+        stamp_fee,
+        price_master_id,
+        effective_from_date,
+        effective_to_date
+    FROM
+        duplicate_constitutions
+    ORDER BY
+        unique_id;
+    """
 
+    result = db.execute(text(query), {"service_id": service_id})
+    rows = result.fetchall()
+
+    # Convert rows to list of dicts manually
+    columns = result.keys()  # Get the column names
+    service_data = [dict(zip(columns, row)) for row in rows]
+    
+    return service_data
+
+
+
+#----------------------------------------------------------------------------------------------------------
 def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
     query_result = db.execute("""
         SELECT
