@@ -815,6 +815,7 @@ class AdditionalServices(BaseModel):
 
 
 
+
 class OffViewConsultationTaskMasterSchema(BaseModel):
     consultation_task_master_id: int
     task_date: datetime
@@ -829,6 +830,16 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     appointee_gender: str
     customer_number: Optional[str]
     business_name: Optional[str]
+    locality: Optional[str]
+    pin_code: Optional[str]
+    post_office_id: Optional[int]
+    post_office_name: Optional[str]
+    taluk_id: Optional[int]
+    taluk_name: Optional[str]
+    district_id: Optional[int]
+    district_name: Optional[str]
+    state_id: Optional[int]
+    state_name: Optional[str]
     appointee_mobile_number: Optional[str]
     appointee_whatsapp_number: Optional[str]
     appointee_email_id: Optional[str]
@@ -847,11 +858,12 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     consultation_task_details_id: Optional[int]
     task_master_id: Optional[int]
     service_id: Optional[int]
+    # consultation_task_details_is_deleted: Optional[str]
     hsn_sac_class_id: int
     hsn_sac_class: str
     hsn_sac_id: int
     hsn_sac_code: str
-   # has_consultation: str
+    # has_consultation: str
     group_id: int
     group_name: Optional[str]
     sub_group_id: int
@@ -863,12 +875,15 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     service_goods_name: str
     sku_code_id: int
     unit_code: Optional[str]
-    #is_bundled_service: str
-    is_main_service: Optional[str]
-    additional_services:Optional[List[AdditionalServices]]
+    # is_bundled_service: str
+    # is_main_service: Optional[str]
+    additional_services: Optional[List[AdditionalServices]]
 
     class Config:
         orm_mode = True
+
+    
+
 
        
 

@@ -990,6 +990,7 @@ class OffConsultationTaskDetails(caerp_base):
 
 
 
+
 class OffViewConsultationTaskMaster(caerp_base):
     __tablename__ = 'off_view_consultation_task_master'
     
@@ -1006,6 +1007,16 @@ class OffViewConsultationTaskMaster(caerp_base):
     appointee_gender = Column(String(20), nullable=False)
     customer_number = Column(String(100), nullable=True)
     business_name = Column(String(250), nullable=True)
+    locality = Column(String(50), nullable=True)
+    pin_code = Column(String(50), nullable=True)
+    post_office_id = Column(Integer, nullable=True)
+    post_office_name = Column(String(255), nullable=True)
+    taluk_id = Column(Integer, nullable=True)
+    taluk_name = Column(String(50), nullable=True)
+    district_id = Column(Integer, nullable=True)
+    district_name = Column(String(50), nullable=True)
+    state_id = Column(Integer, nullable=True)
+    state_name = Column(String(50), nullable=True)
     appointee_mobile_number = Column(String(20), nullable=True)
     appointee_whatsapp_number = Column(String(20), nullable=True)
     appointee_email_id = Column(String(50), nullable=True)
@@ -1031,6 +1042,7 @@ class OffViewConsultationTaskMaster(caerp_base):
     consultation_task_details_id = Column(Integer, nullable=True)
     task_master_id = Column(Integer, nullable=True)
     service_id = Column(Integer, nullable=True)
+    # consultation_task_details_is_deleted = Column(Enum('yes', 'no'), nullable=True)
     hsn_sac_class_id = Column(Integer, nullable=False)
     hsn_sac_class = Column(String(100), nullable=False)
     has_consultation = Column(Enum('yes', 'no'), nullable=False)
@@ -1049,6 +1061,7 @@ class OffViewConsultationTaskMaster(caerp_base):
     unit_code = Column(String(250), nullable=True)
     is_bundled_service = Column(Enum('yes', 'no'), nullable=False)
     is_main_service = Column(Enum('yes', 'no'), nullable=True)
+
 
 
 
