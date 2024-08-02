@@ -170,7 +170,7 @@ class EmployeeContactSchema(BaseModel):
    official_whatsapp_number : Optional[str] = None
    official_email_id : Optional[str] = None
    # effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 #    created_by : int
 #    created_on : datetime
@@ -533,6 +533,7 @@ class EmployeeDetailsGet(BaseModel):
 
 
 class EmployeeAddressDetailsSchema(BaseModel):
-   present_address: Optional[List[EmployeePresentAddressSchema]] = None
-   permanent_address: Optional[List[EmployeePermanentAddressSchema]] = None
-   bank_details: Optional[List[EmployeeBankAccountSchema]] = None
+    present_address: Optional[EmployeePresentAddressSchema] = None
+    permanent_address: Optional[EmployeePermanentAddressSchema] = None
+    bank_details: Optional[EmployeeBankAccountSchema] = None
+    contact_details: Optional[EmployeeContactSchema] = None

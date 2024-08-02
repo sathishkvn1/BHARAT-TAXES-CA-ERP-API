@@ -6,16 +6,16 @@ from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
 from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
-from caerp_db.database import get_db
+from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundlesServiceModelSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
-from sqlalchemy import text
+from sqlalchemy import text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
@@ -858,80 +858,8 @@ def get_service_data_endpoint(
     return service_data
 
 
-@router.get("/get_bundled_service_data/", response_model=List[BundlesServiceModelSchema])
-def get_bundled_service_data_endpoint(
-    service_id: int = Query(..., description="Service ID"),
-    db: Session = Depends(get_db)
-):
-    # Call the function to get service data based on service_id
-    service_data = db_office_master.get_bundled_service_data(service_id, db)
-    return service_data
 
 
-
-# def get_service_data_test(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
-#     # Use the current date if query_date is not provided
-#     query_date = datetime.utcnow().date()
-
-#     query = text("""
-#         SELECT
-#             a.id AS constitution_id,
-#             a.business_constitution_name,
-#             a.business_constitution_code,
-#             b.id AS service_goods_master_id,
-#             COALESCE(c.id, 0) AS service_goods_price_master_id,
-#             b.service_goods_name,
-#             COALESCE(c.service_charge, 0) AS service_charge,
-#             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
-#             COALESCE(c.stamp_duty, 0) AS stamp_duty,
-#             COALESCE(c.stamp_fee, 0) AS stamp_fee,
-#             COALESCE(c.id, 0) AS price_master_id,
-#             c.effective_from_date AS effective_from_date,
-#             c.effective_to_date AS effective_to_date,
-#             CASE
-#                 WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 'CURRENT'
-#                 WHEN c.effective_from_date > :query_date THEN 'UPCOMING'
-#                 ELSE 'PREVIOUS'
-#             END AS rate_status
-#         FROM
-#             app_business_constitution AS a
-#         LEFT OUTER JOIN
-#             off_service_goods_master AS b ON TRUE
-#         LEFT OUTER JOIN
-#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
-#                                                  AND a.id = c.constitution_id
-#         WHERE
-#             b.id = :service_id
-#             AND (:rate_status IS NULL 
-#                 OR (:rate_status = 'CURRENT' AND c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date))
-#                 OR (:rate_status = 'UPCOMING' AND c.effective_from_date > :query_date)
-#                 OR (:rate_status = 'PREVIOUS' AND c.effective_to_date IS NOT NULL AND c.effective_to_date < :query_date))
-#         ORDER BY
-#             a.id, b.id;
-#     """)
-
-#     query_result = db.execute(query, {"service_id": service_id, "query_date": query_date, "rate_status": rate_status}).fetchall()
-
-#     service_data = [
-#         ServiceModelSchema(
-#             constitution_id=row.constitution_id,
-#             business_constitution_name=row.business_constitution_name,
-#             service_goods_master_id=row.service_goods_master_id,
-#             service_goods_price_master_id=row.service_goods_price_master_id,
-#             service_name=row.service_goods_name,
-#             business_constitution_code=row.business_constitution_code,
-#             service_charge=row.service_charge,
-#             govt_agency_fee=row.govt_agency_fee,
-#             stamp_duty=row.stamp_duty,
-#             stamp_fee=row.stamp_fee,
-#             effective_from_date=row.effective_from_date,
-#             effective_to_date=row.effective_to_date,
-#             price_master_id=row.price_master_id,
-#             rate_status=row.rate_status
-#         ) for row in query_result
-#     ]
-    
-#     return service_data
 
 #---------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_history/", response_model=List[ServiceModel])
@@ -1017,493 +945,10 @@ def add_price_to_service(
 
 
 
-# @router.get("/get_bundle_price_list/{bundle_id}", response_model=Bundle)
-# def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
-#     # Execute SQL query to fetch bundled service and items details
-#     query = text("""
-#         SELECT
-#             a.id AS bundle_id,
-#             a.service_goods_name AS service_name,
-#             b.id AS goods_price_master_id,
-#             b.service_goods_master_id,
-#             b.constitution_id,
-#             b.service_charge AS bundle_service_charge,
-#             b.govt_agency_fee AS bundle_govt_agency_fee,
-#             b.stamp_duty AS bundle_stamp_duty,
-#             b.stamp_fee AS bundle_stamp_fee,
-#             c.id AS service_goods_details_id,
-#             c.service_goods_master_id AS item_id,
-#             c.bundled_service_goods_id,
-#             c.display_order,
-#             a.service_goods_name AS item_name,
-#             MAX(d.service_charge) AS item_service_charge,
-#             MAX(d.govt_agency_fee) AS item_govt_agency_fee,
-#             MAX(d.stamp_fee) AS item_stamp_fee,
-#             MAX(d.stamp_duty) AS item_stamp_duty
-#         FROM
-#             off_service_goods_master AS a
-#         JOIN
-#             off_service_goods_price_master AS b ON a.id = b.service_goods_master_id
-#         JOIN
-#             off_service_goods_details AS c ON a.id = c.bundled_service_goods_id
-#         JOIN
-#             off_service_goods_price_master AS d ON c.service_goods_master_id = d.service_goods_master_id
-#         WHERE
-#             a.is_bundled_service = 'yes'
-#             AND a.id = :bundle_id
-#         GROUP BY
-#             bundle_id, service_name, goods_price_master_id, service_goods_master_id, constitution_id, bundle_service_charge, bundle_govt_agency_fee, bundle_stamp_duty, bundle_stamp_fee, service_goods_details_id, item_id, bundled_service_goods_id, display_order, item_name
-#     """)
-#     query_result = db.execute(query, {"bundle_id": bundle_id}).fetchall()
-    
-#     # Check if bundled service exists
-#     if not query_result:
-#         raise HTTPException(status_code=404, detail="Bundled service not found")
-    
-#     # Process query result to organize it into the desired structure
-#     bundle_data = {}
-#     bundle_data['service_id'] = query_result[0]['bundle_id']
-#     bundle_data['service_name'] = query_result[0]['service_name']
-#     bundle_data['service_charge'] = query_result[0]['bundle_service_charge']
-#     bundle_data['govt_agency_fee'] = query_result[0]['bundle_govt_agency_fee']
-#     bundle_data['stamp_fee'] = query_result[0]['bundle_stamp_fee']
-#     bundle_data['stamp_duty'] = query_result[0]['bundle_stamp_duty']
-
-#     items = []
-#     sub_item_total = {
-#         'service_charge': 0,
-#         'govt_agency_fee': 0,
-#         'stamp_fee': 0,
-#         'stamp_duty': 0
-#     }
-#     total_item_charge = {
-#         'service_charge': 0,
-#         'govt_agency_fee': 0,
-#         'stamp_fee': 0,
-#         'stamp_duty': 0
-#     }
-
-#     for row in query_result:
-#         item = {
-#             'id': row['service_goods_details_id'],
-#             'name': row['item_name'],
-#             'service_goods_master_id': row['item_id'],
-#             'bundled_service_goods_id': row['bundled_service_goods_id'],
-#             'display_order': row['display_order'],
-#             'service_charge': row['item_service_charge'],
-#             'govt_agency_fee': row['item_govt_agency_fee'],
-#             'stamp_fee': row['item_stamp_fee'],
-#             'stamp_duty': row['item_stamp_duty']
-#         }
-#         items.append(item)
-        
-#         # Summing item-specific details
-#         total_item_charge['service_charge'] += row['item_service_charge']
-#         total_item_charge['govt_agency_fee'] += row['item_govt_agency_fee']
-#         total_item_charge['stamp_fee'] += row['item_stamp_fee']
-#         total_item_charge['stamp_duty'] += row['item_stamp_duty']
-
-#     # Update sub_item_total with the sum of all item charges
-#     sub_item_total['service_charge'] = total_item_charge['service_charge']
-#     sub_item_total['govt_agency_fee'] = total_item_charge['govt_agency_fee']
-#     sub_item_total['stamp_fee'] = total_item_charge['stamp_fee']
-#     sub_item_total['stamp_duty'] = total_item_charge['stamp_duty']
-
-#     bundle_data['items'] = items
-
-#     # Calculate grand total
-#     grand_total = {
-#         'service_charge': bundle_data['service_charge'] + sub_item_total['service_charge'],
-#         'govt_agency_fee': bundle_data['govt_agency_fee'] + sub_item_total['govt_agency_fee'],
-#         'stamp_fee': bundle_data['stamp_fee'] + sub_item_total['stamp_fee'],
-#         'stamp_duty': bundle_data['stamp_duty'] + sub_item_total['stamp_duty']
-#     }
-
-#     # Update sub_item_total and grand_total in the bundle
-#     bundle_data['sub_item_total'] = sub_item_total
-#     bundle_data['grand_total'] = grand_total
-
-#     # Return the bundle data
-#     return bundle_data
-
-@router.get("/get_bundle_price_list/{bundle_id}", response_model=Bundle)
-def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
-    # Execute SQL query to fetch bundled service and items details
-    query = text("""
-        SELECT DISTINCT
-            a.id AS bundle_id,
-            a.service_goods_name AS service_name,
-            b.id AS goods_price_master_id,
-            b.service_goods_master_id,
-            b.constitution_id,
-            b.service_charge AS bundle_service_charge,
-            b.govt_agency_fee AS bundle_govt_agency_fee,
-            b.stamp_duty AS bundle_stamp_duty,
-            b.stamp_fee AS bundle_stamp_fee,
-            c.id AS service_goods_details_id,
-            c.service_goods_master_id AS item_id,
-            c.bundled_service_goods_id,
-            c.display_order,
-            a.service_goods_name AS item_name,
-            SUM(b.service_charge) AS total_item_service_charge,
-            SUM(b.govt_agency_fee) AS total_item_govt_agency_fee,
-            SUM(b.stamp_fee) AS total_item_stamp_fee,
-            SUM(b.stamp_duty) AS total_item_stamp_duty
-        FROM
-            off_service_goods_master AS a
-        JOIN
-            off_service_goods_price_master AS b ON a.id = b.service_goods_master_id
-            AND (b.effective_from_date <= :current_date AND b.effective_to_date >= :current_date) -- Filter based on effective date range
-        JOIN
-            off_service_goods_details AS c ON a.id = c.bundled_service_goods_id
-        WHERE
-            a.is_bundled_service = 'yes'
-            AND a.id = :bundle_id
-        GROUP BY
-            bundle_id, service_name, goods_price_master_id, service_goods_master_id, constitution_id, bundle_service_charge, bundle_govt_agency_fee, bundle_stamp_duty, bundle_stamp_fee, service_goods_details_id, item_id, bundled_service_goods_id, display_order, item_name
-    """)
-    query_result = db.execute(
-        query, {"bundle_id": bundle_id, "current_date": datetime.now()}
-    ).fetchall()
-
-    # Check if bundled service exists
-    if not query_result:
-        raise HTTPException(status_code=404, detail="Bundled service not found")
-
-    # Process query result to organize it into the desired structure
-    bundle_data = {}
-    bundle_data["service_id"] = query_result[0]["bundle_id"]
-    bundle_data["service_name"] = query_result[0]["service_name"]
-    bundle_data["service_charge"] = query_result[0]["bundle_service_charge"]
-    bundle_data["govt_agency_fee"] = query_result[0]["bundle_govt_agency_fee"]
-    bundle_data["stamp_fee"] = query_result[0]["bundle_stamp_fee"]
-    bundle_data["stamp_duty"] = query_result[0]["bundle_stamp_duty"]
-
-    items = []
-    sub_item_total = {
-        "service_charge": 0,
-        "govt_agency_fee": 0,
-        "stamp_fee": 0,
-        "stamp_duty": 0,
-    }
-    total_item_charge = {
-        "service_charge": 0,
-        "govt_agency_fee": 0,
-        "stamp_fee": 0,
-        "stamp_duty": 0,
-    }
-
-    for row in query_result:
-        item = {
-            "id": row["service_goods_details_id"],
-            "name": row["item_name"],
-            "service_goods_master_id": row["item_id"],
-            "bundled_service_goods_id": row["bundled_service_goods_id"],
-            "display_order": row["display_order"],
-            "service_charge": row["item_service_charge"],
-            "govt_agency_fee": row["item_govt_agency_fee"],
-            "stamp_fee": row["item_stamp_fee"],
-            "stamp_duty": row["item_stamp_duty"],
-        }
-        items.append(item)
-
-        # Summing item-specific details
-        total_item_charge["service_charge"] += row["item_service_charge"]
-        total_item_charge["govt_agency_fee"] += row["item_govt_agency_fee"]
-        total_item_charge["stamp_fee"] += row["item_stamp_fee"]
-        total_item_charge["stamp_duty"] += row["item_stamp_duty"]
-
-    # Update sub_item_total with the sum of all item charges
-    sub_item_total["service_charge"] = total_item_charge["service_charge"]
-    sub_item_total["govt_agency_fee"] = total_item_charge["govt_agency_fee"]
-    sub_item_total["stamp_fee"] = total_item_charge["stamp_fee"]
-    sub_item_total["stamp_duty"] = total_item_charge["stamp_duty"]
-
-    bundle_data["items"] = items
-
-    # Calculate grand total
-    grand_total = {
-        "service_charge": bundle_data["service_charge"] + sub_item_total["service_charge"],
-        "govt_agency_fee": bundle_data["govt_agency_fee"] + sub_item_total["govt_agency_fee"],
-        "stamp_fee": bundle_data["stamp_fee"] + sub_item_total["stamp_fee"],
-        "stamp_duty": bundle_data["stamp_duty"] + sub_item_total["stamp_duty"],
-    }
-
-    # Update sub_item_total and grand_total in the bundle
-    bundle_data["sub_item_total"] = sub_item_total
-    bundle_data["grand_total"] = grand_total
-
-    # Return the bundle data
-    return bundle_data
 
 
-@router.get("/test/get_bundle_price_list/{bundle_id}", response_model=Bundle)
-def get_bundled_service(bundle_id: int, db: Session = Depends(get_db)):
-    query = text("""
-        SELECT
-            a.id AS bundle_id,
-            a.service_goods_name AS service_name,
-            b.id AS goods_price_master_id,
-            b.service_goods_master_id,
-            b.constitution_id,
-            b.service_charge AS bundle_service_charge,
-            b.govt_agency_fee AS bundle_govt_agency_fee,
-            b.stamp_duty AS bundle_stamp_duty,
-            b.stamp_fee AS bundle_stamp_fee,
-            c.id AS service_goods_details_id,
-            c.service_goods_master_id AS item_id,
-            c.bundled_service_goods_id,
-            c.display_order,
-            d.service_goods_name AS item_name,
-            SUM(e.service_charge) AS total_item_service_charge,
-            SUM(e.govt_agency_fee) AS total_item_govt_agency_fee,
-            SUM(e.stamp_fee) AS total_item_stamp_fee,
-            SUM(e.stamp_duty) AS total_item_stamp_duty
-        FROM
-            off_service_goods_master AS a
-        JOIN
-            off_service_goods_price_master AS b ON a.id = b.service_goods_master_id
-        JOIN
-            off_service_goods_details AS c ON a.id = c.bundled_service_goods_id
-        JOIN
-            off_service_goods_master AS d ON c.service_goods_master_id = d.id
-        JOIN
-            off_service_goods_price_master AS e ON d.id = e.service_goods_master_id
-            AND (e.effective_from_date <= :current_date AND e.effective_to_date >= :current_date)
-        WHERE
-            a.is_bundled_service = 'yes'
-            AND a.id = :bundle_id
-        GROUP BY
-            bundle_id, service_name, goods_price_master_id, service_goods_master_id, constitution_id, bundle_service_charge, bundle_govt_agency_fee, bundle_stamp_duty, bundle_stamp_fee, service_goods_details_id, item_id, bundled_service_goods_id, display_order, item_name
-        ORDER BY
-            c.display_order;
-    """)
-
-    query_result = db.execute(
-        query, {"bundle_id": bundle_id, "current_date": datetime.now()}
-    ).fetchall()
-
-    if not query_result:
-        raise HTTPException(status_code=404, detail="Bundled service not found")
-
-    bundle_data = {
-        "service_id": query_result[0]["bundle_id"],
-        "service_name": query_result[0]["service_name"],
-        "service_charge": query_result[0]["bundle_service_charge"],
-        "govt_agency_fee": query_result[0]["bundle_govt_agency_fee"],
-        "stamp_fee": query_result[0]["bundle_stamp_fee"],
-        "stamp_duty": query_result[0]["bundle_stamp_duty"],
-    }
-
-    items = []
-    sub_item_total = {"service_charge": 0, "govt_agency_fee": 0, "stamp_fee": 0, "stamp_duty": 0}
-    total_item_charge = {"service_charge": 0, "govt_agency_fee": 0, "stamp_fee": 0, "stamp_duty": 0}
-
-    for row in query_result:
-        item = {
-            "id": row["service_goods_details_id"],
-            "name": row["item_name"],
-            "service_goods_master_id": row["item_id"],
-            "bundled_service_goods_id": row["bundled_service_goods_id"],
-            "display_order": row["display_order"],
-            "service_charge": row["total_item_service_charge"],
-            "govt_agency_fee": row["total_item_govt_agency_fee"],
-            "stamp_fee": row["total_item_stamp_fee"],
-            "stamp_duty": row["total_item_stamp_duty"],
-        }
-        items.append(item)
-
-        total_item_charge["service_charge"] += row["total_item_service_charge"]
-        total_item_charge["govt_agency_fee"] += row["total_item_govt_agency_fee"]
-        total_item_charge["stamp_fee"] += row["total_item_stamp_fee"]
-        total_item_charge["stamp_duty"] += row["total_item_stamp_duty"]
-
-    sub_item_total["service_charge"] = total_item_charge["service_charge"]
-    sub_item_total["govt_agency_fee"] = total_item_charge["govt_agency_fee"]
-    sub_item_total["stamp_fee"] = total_item_charge["stamp_fee"]
-    sub_item_total["stamp_duty"] = total_item_charge["stamp_duty"]
-
-    bundle_data["items"] = items
-
-    grand_total = {
-        "service_charge": bundle_data["service_charge"] + sub_item_total["service_charge"],
-        "govt_agency_fee": bundle_data["govt_agency_fee"] + sub_item_total["govt_agency_fee"],
-        "stamp_fee": bundle_data["stamp_fee"] + sub_item_total["stamp_fee"],
-        "stamp_duty": bundle_data["stamp_duty"] + sub_item_total["stamp_duty"],
-    }
-
-    bundle_data["sub_item_total"] = sub_item_total
-    bundle_data["grand_total"] = grand_total
-
-    return bundle_data
 
 
-#---------------------------------------------------------------------------------------
-
-# @router.get("/services/get_all_service_document_data_master")
-# def get_all_service_document_data_master(
-#     db: Session = Depends(get_db),
-#     search: Optional[str] = None,
-#     service_id: Union[int, str] = 'ALL',
-#     group_id: Union[int, str] = 'ALL',
-#     sub_group_id: Union[int, str] = 'ALL',
-#     category_id: Union[int, str] = 'ALL',
-#     sub_category_id: Union[int, str] = 'ALL',
-#     constitution_id: Union[int, str] = 'ALL',
-#     doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
-# ) -> List[dict]:
-#     """
-#     Allows users to search and filter service document data master records by the following criteria:
-    
-#     - **search**: Search for records that contain the provided search term as a substring in service goods name, group name, category name, sub-group name, sub-category name, or business constitution name.
-    
-#     - **service_id**: Filter records by service goods ID. Use 'ALL' to include all service goods IDs.
-    
-#     - **group_id**: Filter records by group ID. Use 'ALL' to include all group IDs.
-    
-#     - **sub_group_id**: Filter records by sub-group ID. Use 'ALL' to include all sub-group IDs.
-    
-#     - **category_id**: Filter records by category ID. Use 'ALL' to include all category IDs.
-    
-#     - **sub_category_id**: Filter records by sub-category ID. Use 'ALL' to include all sub-category IDs.
-    
-#     - **constitution_id**: Filter records by constitution ID. Use 'ALL' to include all constitution IDs.
-    
-#     - **doc_data_status**: Filter by document data status. Possible values are:
-#       - 'CONFIGURED'
-#       - 'NOT CONFIGURED'
-#       - 'ALL' (default)
-
-#     Returns:
-#         - A list of service document data master records matching the specified filters.
-#         - If no records are found, a message indicating that no data is present.
-#     """
-
-#     try:
-#         search_conditions = []
-
-#         if search:
-#             search_conditions.append(or_(
-#                 text("g.service_goods_name LIKE :search"),
-#                 text("b.group_name LIKE :search"),
-#                 text("d.category_name LIKE :search"),
-#                 text("c.sub_group_name LIKE :search"),
-#                 text("e.sub_category_name LIKE :search"),
-#                 text("f.business_constitution_name LIKE :search")
-#             ))
-
-#         if service_id != 'ALL':
-#             search_conditions.append(text("g.id = :service_id"))
-        
-#         if group_id != 'ALL':
-#             search_conditions.append(text("b.id = :group_id"))
-        
-#         if sub_group_id != 'ALL':
-#             search_conditions.append(text("c.id = :sub_group_id"))
-        
-#         if category_id != 'ALL':
-#             search_conditions.append(text("d.id = :category_id"))
-        
-#         if sub_category_id != 'ALL':
-#             search_conditions.append(text("e.id = :sub_category_id"))
-        
-#         if constitution_id != 'ALL':
-#             search_conditions.append(text("f.id = :constitution_id"))
-        
-#         if doc_data_status != 'ALL':
-#             if doc_data_status == "CONFIGURED":
-#                 search_conditions.append(text("h.document_data_master_id IS NOT NULL"))
-#             elif doc_data_status == "NOT CONFIGURED":
-#                 search_conditions.append(text("h.document_data_master_id IS NULL"))
-
-#         base_query = """
-#         SELECT
-#     ROW_NUMBER() OVER (ORDER BY g.service_goods_name, f.business_constitution_name) AS unique_id,
-#     g.id AS service_goods_master_id,
-#     g.service_goods_name,
-#     f.id AS constitution_id,
-#     f.business_constitution_name,
-#     f.business_constitution_code,
-#     f.description,
-#     a.id AS service_document_data_master_id,
-#     a.group_id,
-#     b.group_name,
-#     a.sub_group_id,
-#     c.sub_group_name,
-#     a.category_id,
-#     d.category_name,
-#     a.sub_category_id,
-#     e.sub_category_name,
-#     CASE
-#         WHEN a.id IS NOT NULL THEN 'Configured'
-#         ELSE 'Not Configured'
-#     END AS document_status
-# FROM 
-#     off_service_goods_master AS g
-# CROSS JOIN app_business_constitution AS f
-# LEFT JOIN off_service_document_data_master AS a 
-#     ON g.id = a.service_goods_master_id 
-#     AND f.id = a.constitution_id
-# LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
-# LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
-# LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
-# LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
-# ORDER BY g.service_goods_name, f.business_constitution_name;
-#         """
-        
-#         if search_conditions:
-#             base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
-        
-#         query = text(base_query)
-        
-#         result = db.execute(query, {
-#             'search': f'%{search}%' if search else None,
-#             'service_id': service_id if service_id != 'ALL' else None,
-#             'group_id': group_id if group_id != 'ALL' else None,
-#             'sub_group_id': sub_group_id if sub_group_id != 'ALL' else None,
-#             'category_id': category_id if category_id != 'ALL' else None,
-#             'sub_category_id': sub_category_id if sub_category_id != 'ALL' else None,
-#             'constitution_id': constitution_id if constitution_id != 'ALL' else None
-#         })
-#         rows = result.fetchall()
-        
-#         if not rows:
-#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
-        
-#         # Formatting the response
-#         service_document_data_master = []
-#         for row in rows:
-#             configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
-#             service_document_data_master.append({
-#                 "service_goods_master_id": row.service_goods_master_id,
-#                 "service_goods_name": row.service_goods_name,
-#                 "service_document_data_master_id": row.service_document_data_master_id,
-#                 "group_id":row.group_id,
-#                 "group_name": row.group_name,
-#                 "sub_group_id":row.sub_group_id,
-#                 "sub_group_name": row.sub_group_name,
-#                 "category_id":row.category_id,
-#                 "category_name": row.category_name,
-#                 "sub_category_id":row.sub_category_id,
-#                 "sub_category_name": row.sub_category_name,
-#                 "constitution_id":row.constitution_id,
-#                 "business_constitution_name": row.business_constitution_name,
-#                 "business_constitution_code": row.business_constitution_code,
-#                 "description": row.description,
-#                 "view_service_document_data_master_id": row.view_service_document_data_master_id,
-#                 "document_data_category_id": row.document_data_category_id,
-#                 "document_data_master_id": row.document_data_master_id,
-#                 "document_data_name": row.document_data_name,
-#                 "status": configured_status
-#             })
-        
-#         return service_document_data_master
-    
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
- 
 #-----------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
 def get_service_documents_list_by_group_category(
@@ -2735,5 +2180,255 @@ def get_consultant_employees_pdf(
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
 
 
+import logging
 
 
+
+
+    
+
+@router.get("/get_bundle_price_list/", response_model=List[BundledServiceSchema])
+def get_bundle_price_list(service_id: int, input_date: Optional[date] = None, db: Session = Depends(get_db)):
+    try:
+        # Call the function to get combined results
+        results = combine_service_details(db, service_id, input_date)
+        return results
+    except HTTPException as e:
+        logging.error(f"HTTP Exception: {e.detail}")
+        raise
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+def get_active_prices(db: Session, effective_date: date):
+    query = text("""
+    SELECT 
+        p.service_goods_master_id,
+        p.constitution_id,
+        p.service_charge,
+        p.govt_agency_fee,
+        p.stamp_duty,
+        p.stamp_fee
+    FROM 
+        off_service_goods_price_master p
+    WHERE
+        p.effective_from_date <= :effective_date AND
+        (p.effective_to_date IS NULL OR p.effective_to_date >= :effective_date)
+    """)
+    result = db.execute(query, {'effective_date': effective_date})
+    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
+
+
+def get_bundle_services(db: Session, service_id: int):
+    query = text("""
+    SELECT 
+        d.bundled_service_goods_id AS bundle_id,
+        d.service_goods_master_id AS sub_service_id
+    FROM 
+        off_service_goods_details d
+    WHERE 
+        d.bundled_service_goods_id = :service_id
+    """)
+    result = db.execute(query, {'service_id': service_id})
+    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
+
+
+def get_main_service(db: Session, service_id: int, effective_date: date):
+    query = text("""
+    SELECT 
+        a.id AS price_master_id,
+        a.service_goods_master_id AS service_id,
+        c.service_goods_name,
+        c.is_bundled_service,
+        b.id AS constitution_id,
+        b.business_constitution_name,
+        a.service_charge,
+        a.govt_agency_fee,
+        a.stamp_duty,
+        a.stamp_fee,
+        a.effective_from_date,
+        a.effective_to_date
+    FROM 
+        app_business_constitution AS b
+    LEFT OUTER JOIN
+        off_service_goods_price_master AS a
+    ON  b.id = a.constitution_id AND a.service_goods_master_id = :service_id
+    LEFT OUTER JOIN
+        off_service_goods_master AS c
+    ON  a.service_goods_master_id = c.id
+    WHERE 
+        (a.service_goods_master_id = :service_id OR a.service_goods_master_id IS NULL) AND
+        (a.effective_from_date <= :effective_date OR a.effective_from_date IS NULL) AND
+        (a.effective_to_date >= :effective_date OR a.effective_to_date IS NULL)
+    """)
+    result = db.execute(query, {'service_id': service_id, 'effective_date': effective_date})
+    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
+
+
+def get_sub_service(db: Session, service_id: int):
+    query = text("""
+    SELECT 
+        :service_id AS price_master_id,
+        :service_id AS service_id,
+        bm.service_goods_name AS service_goods_name,
+        'yes' AS is_bundled_service,
+        c.id AS constitution_id,
+        c.business_constitution_name,
+        COALESCE(SUM(ap.service_charge), 0) AS service_charge,
+        COALESCE(SUM(ap.govt_agency_fee), 0) AS govt_agency_fee,
+        COALESCE(SUM(ap.stamp_duty), 0) AS stamp_duty,
+        COALESCE(SUM(ap.stamp_fee), 0) AS stamp_fee,
+        NULL AS effective_from_date,
+        NULL AS effective_to_date
+    FROM 
+        off_service_goods_master bm
+    CROSS JOIN
+        app_business_constitution c
+    LEFT JOIN
+        off_service_goods_price_master ap
+    ON bm.id = ap.service_goods_master_id AND ap.constitution_id = c.id
+    WHERE 
+        bm.id = :service_id
+    GROUP BY 
+        bm.service_goods_name, c.id, c.business_constitution_name
+    """)
+    result = db.execute(query, {'service_id': service_id})
+    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
+
+
+# def combine_service_details(db: Session, service_id: int, effective_date: Optional[date] = None) -> List[dict]:
+#     effective_date = effective_date or date.today()
+    
+#     # Get results from different queries
+#     active_prices = get_active_prices(db, effective_date)
+#     bundle_services = get_bundle_services(db, service_id)
+#     main_service = get_main_service(db, service_id, effective_date)
+#     sub_service = get_sub_service(db, service_id)
+
+#     # Print results for debugging
+#     print("Active Prices:")
+#     print(active_prices)
+    
+#     print("Bundle Services:")
+#     print(bundle_services)
+    
+#     print("Main Service:")
+#     print(main_service)
+    
+#     print("Sub Service:")
+#     print(sub_service)
+    
+#     # Combine results as needed
+#     combined_results = main_service + sub_service
+
+#     # Print combined results for debugging
+#     print("Combined Results:")
+#     print(combined_results)
+
+#     # Initialize counters
+#     main_service_counter = 1
+#     sub_service_counter = 2
+
+#     # Format the results to match BundledServiceSchema
+#     formatted_results = []
+#     for result in combined_results:
+#         # Debug print each result
+#         print("Processing Result:")
+#         print(result)
+
+#         # Extract fields safely with defaults
+#         row_id = None
+#         if "price_master_id" in result:
+#             if result.get("price_master_id") == service_id:
+#                 row_id = main_service_counter
+#                 main_service_counter += 2
+#             else:
+#                 row_id = sub_service_counter
+#                 sub_service_counter += 2
+
+#         if row_id is None:
+#             print("Warning: 'price_master_id' is not as expected or 'row_id' is missing in result:", result)
+#             continue  # Skip this result if 'row_id' is missing
+        
+#         formatted_results.append({
+#             "row_id": row_id,  # Ensure this field is present
+#             "price_master_id": result.get("price_master_id"),
+#             "service_id": result.get("service_id"),
+#             "service_goods_name": result.get("service_goods_name"),
+#             "is_bundled_service": result.get("is_bundled_service"),
+#             "constitution_id": result.get("constitution_id"),
+#             "business_constitution_name": result.get("business_constitution_name"),
+#             "service_charge": result.get("service_charge"),
+#             "govt_agency_fee": result.get("govt_agency_fee"),
+#             "stamp_duty": result.get("stamp_duty"),
+#             "stamp_fee": result.get("stamp_fee"),
+#             "effective_from_date": result.get("effective_from_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_from_date"), date) else result.get("effective_from_date"),
+#             "effective_to_date": result.get("effective_to_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_to_date"), date) else result.get("effective_to_date")
+#         })
+        
+#     # Print formatted results for debugging
+#     print("Formatted Results:")
+#     print(formatted_results)
+    
+#     return formatted_results
+
+
+from collections import defaultdict
+def combine_service_details(db: Session, service_id: int, effective_date: Optional[date] = None) -> List[dict]:
+    effective_date = effective_date or date.today()
+    
+    # Get results from different queries
+    active_prices = get_active_prices(db, effective_date)
+    bundle_services = get_bundle_services(db, service_id)
+    main_service = get_main_service(db, service_id, effective_date)
+    sub_service = get_sub_service(db, service_id)
+
+    # Combine results as needed
+    combined_results = main_service + sub_service
+
+    # Group results by constitution_id
+    grouped_results = defaultdict(list)
+    for result in combined_results:
+        constitution_id = result.get("constitution_id")
+        grouped_results[constitution_id].append(result)
+
+    # Initialize a single counter for sequential row IDs
+    row_counter = 1
+
+    # Format the results to match BundledServiceSchema
+    formatted_results = []
+    for constitution_id, results in grouped_results.items():
+        # Ensure each constitution_id appears twice
+        for result in results:
+            # Assign row_id sequentially
+            formatted_results.append({
+                "row_id": row_counter,
+                "price_master_id": result.get("price_master_id"),
+                "service_id": result.get("service_id"),
+                "service_goods_name": result.get("service_goods_name"),
+                "is_bundled_service": result.get("is_bundled_service"),
+                "constitution_id": result.get("constitution_id"),
+                "business_constitution_name": result.get("business_constitution_name"),
+                "service_charge": result.get("service_charge"),
+                "govt_agency_fee": result.get("govt_agency_fee"),
+                "stamp_duty": result.get("stamp_duty"),
+                "stamp_fee": result.get("stamp_fee"),
+                "effective_from_date": result.get("effective_from_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_from_date"), date) else result.get("effective_from_date"),
+                "effective_to_date": result.get("effective_to_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_to_date"), date) else result.get("effective_to_date")
+            })
+            
+            # Increment the counter
+            row_counter += 1
+
+            # Stop if we have reached the maximum number of rows
+            if row_counter > 48:
+                break
+
+        if row_counter > 48:
+            break
+
+    # Print formatted results for debugging
+    print("Formatted Results:")
+    print(formatted_results)
+    
+    return formatted_results

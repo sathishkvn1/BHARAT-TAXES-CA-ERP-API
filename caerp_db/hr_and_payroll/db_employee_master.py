@@ -754,23 +754,67 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
 def get_employee_master_details(db: Session):
     return db.query(EmployeeMaster).all()
 
-def get_present_address_details(db: Session):
-    return db.query(EmployeePresentAddress).all()
 
+def get_present_address_details(db: Session):
+    current_date = date.today()
+    return db.query(EmployeePresentAddress).filter(
+        EmployeePresentAddress.effective_from_date <= current_date,
+        (EmployeePresentAddress.effective_to_date >= current_date) | 
+        (EmployeePresentAddress.effective_to_date.is_(None)),
+        EmployeePresentAddress.is_deleted == 'no'
+    ).all()
 def get_permanent_address_details(db: Session):
-    return db.query(EmployeePermanentAddress).all()
+    current_date = date.today()
+    return db.query(EmployeePermanentAddress).filter(
+        EmployeePermanentAddress.effective_from_date <= current_date,
+        (EmployeePermanentAddress.effective_to_date >= current_date) | 
+        (EmployeePermanentAddress.effective_to_date.is_(None)),
+        EmployeePermanentAddress.is_deleted == 'no'
+    ).all()
+
+
+# def get_permanent_address_details(db: Session):
+    # return db.query(EmployeePermanentAddress).all()
 
 def get_contact_details(db: Session):
-    return db.query(EmployeeContactDetails).all()
+    current_date = date.today()
+    return db.query(EmployeeContactDetails).filter(
+        EmployeeContactDetails.effective_from_date <= current_date,
+        (EmployeeContactDetails.effective_to_date >= current_date) | 
+        (EmployeeContactDetails.effective_to_date.is_(None)),
+        EmployeeContactDetails.is_deleted == 'no'
+    ).all()
+
+    
 
 def get_bank_details(db: Session):
-    return db.query(EmployeeBankDetails).all()
+    current_date = date.today()
+    return db.query(EmployeeBankDetails).filter(
+        EmployeeBankDetails.effective_from_date <= current_date,
+        (EmployeeBankDetails.effective_to_date >= current_date) | 
+        (EmployeeBankDetails.effective_to_date.is_(None)),
+        EmployeeBankDetails.is_deleted == 'no'
+    ).all()
+    
 
 def get_employement_details(db: Session):
-    return db.query(EmployeeEmployementDetails).all()
-
+    current_date = date.today()
+    return db.query(EmployeeEmployementDetails).filter(
+        EmployeeEmployementDetails.effective_from_date <= current_date,
+        (EmployeeEmployementDetails.effective_to_date >= current_date) | 
+        (EmployeeEmployementDetails.effective_to_date.is_(None)),
+        EmployeeEmployementDetails.is_deleted == 'no'
+    ).all()
+    
 def get_salary_details(db: Session):
-    return db.query(EmployeeSalaryDetails).all()
+    current_date = date.today()
+    return db.query(EmployeeSalaryDetails).filter(
+        EmployeeSalaryDetails.effective_from_date <= current_date,
+        (EmployeeSalaryDetails.effective_to_date >= current_date) | 
+        (EmployeeSalaryDetails.effective_to_date.is_(None)),
+        EmployeeSalaryDetails.is_deleted == 'no'
+    ).all()
+    
 
 def get_qualification_details(db: Session):
     return db.query(EmployeeEducationalQualification).all()
@@ -782,10 +826,24 @@ def get_document_details(db: Session):
     return db.query(EmployeeDocuments).all()
 
 def get_emergency_contact_details(db: Session):
-    return db.query(EmployeeEmergencyContactDetails).all()
+    current_date = date.today()
+    return db.query(EmployeeEmergencyContactDetails).filter(
+        EmployeeEmergencyContactDetails.effective_date_from <= current_date,
+        (EmployeeEmergencyContactDetails.effective_date_to >= current_date) | 
+        (EmployeeEmergencyContactDetails.effective_date_to.is_(None)),
+        EmployeeEmergencyContactDetails.is_deleted == 'no'
+    ).all()
+    
 
 def get_dependent_details(db: Session):
-    return db.query(EmployeeDependentsDetails).all()
+    current_date = date.today()
+    return db.query(EmployeeDependentsDetails).filter(
+        EmployeeDependentsDetails.effective_date_from <= current_date,
+        (EmployeeDependentsDetails.effective_date_to >= current_date) | 
+        (EmployeeDependentsDetails.effective_date_to.is_(None)),
+        EmployeeDependentsDetails.is_deleted == 'no'
+    ).all()
+    
 
 def get_professional_qualification_details(db: Session):
     return db.query(EmployeeProfessionalQualification).all()
@@ -795,6 +853,8 @@ def get_security_credentials(db: Session):
 
 def get_user_role(db: Session):
     return db.query(UserRole).all()
+
+
 
 
 
@@ -920,85 +980,115 @@ def update_employee_address_or_bank_details(
     employee_profile_component: str = None
 ):
     try:
-        if employee_profile_component is None:
+        if not employee_profile_component:
             raise ValueError("Employee profile component is required for updating")
 
         components = employee_profile_component.split(',')
+
+        # Validate that the request matches the components specified
+        if ('present_address' in components and not request.present_address) or \
+           ('permanent_address' in components and not request.permanent_address) or \
+           ('bank_details' in components and not request.bank_details) or \
+           ('contact_details' in components and not request.contact_details):
+            raise HTTPException(status_code=400, detail="Provided request data does not match the specified components")
+
         if Action == RecordActionType.UPDATE_AND_INSERT:
-            if 'present_address' in components and request.present_address:
-                for present_address in request.present_address:
-                    if present_address:
-                        data = present_address.dict()
-                        data['employee_id'] = employee_id
-                        data['effective_from_date'] = datetime.utcnow().date()
-                        data['created_by'] = user_id
-                        data['created_on'] = datetime.utcnow()
+            for component in components:
+                if component == 'present_address' and request.present_address:
+                    data = request.present_address.dict()
+                    data.update({
+                        'employee_id': employee_id,
+                        'effective_from_date': datetime.utcnow().date(),
+                        'created_by': user_id,
+                        'created_on': datetime.utcnow(),
+                    })
+                    
+                    existing_address = db.query(EmployeePresentAddress).filter(
+                        EmployeePresentAddress.employee_id == employee_id,
+                        EmployeePresentAddress.effective_to_date.is_(None),
+                        EmployeePresentAddress.is_deleted == 'no'
+                    ).first()
 
-                        existing_address = db.query(EmployeePresentAddress).filter(
-                            EmployeePresentAddress.employee_id == employee_id,
-                            EmployeePresentAddress.effective_to_date == None,
-                            EmployeePresentAddress.is_deleted == 'no'
-                        ).first()
+                    if existing_address:
+                        db.query(EmployeePresentAddress).filter(
+                            EmployeePresentAddress.id == existing_address.id
+                        ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
 
-                        if existing_address:
-                            db.query(EmployeePresentAddress).filter(
-                                EmployeePresentAddress.id == existing_address.id
-                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+                    insert_stmt = insert(EmployeePresentAddress).values(**data)
+                    db.execute(insert_stmt)
+                    db.commit()
 
-                        insert_stmt = insert(EmployeePresentAddress).values(**data)
-                        db.execute(insert_stmt)
+                elif component == 'permanent_address' and request.permanent_address:
+                    data = request.permanent_address.dict()
+                    data.update({
+                        'employee_id': employee_id,
+                        'effective_from_date': datetime.utcnow().date(),
+                        'created_by': user_id,
+                        'created_on': datetime.utcnow(),
+                    })
 
-                db.commit()
+                    existing_address = db.query(EmployeePermanentAddress).filter(
+                        EmployeePermanentAddress.employee_id == employee_id,
+                        EmployeePermanentAddress.effective_to_date.is_(None),
+                        EmployeePermanentAddress.is_deleted == 'no'
+                    ).first()
 
-            if 'permanent_address' in components and request.permanent_address:
-                for permanent_address in request.permanent_address:
-                    if permanent_address:
-                        data = permanent_address.dict()
-                        data['employee_id'] = employee_id
-                        data['effective_from_date'] = datetime.utcnow().date()
-                        data['created_by'] = user_id
-                        data['created_on'] = datetime.utcnow()
+                    if existing_address:
+                        db.query(EmployeePermanentAddress).filter(
+                            EmployeePermanentAddress.id == existing_address.id
+                        ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
 
-                        existing_address = db.query(EmployeePermanentAddress).filter(
-                            EmployeePermanentAddress.employee_id == employee_id,
-                            EmployeePermanentAddress.effective_to_date == None,
-                            EmployeePermanentAddress.is_deleted == 'no'
-                        ).first()
+                    insert_stmt = insert(EmployeePermanentAddress).values(**data)
+                    db.execute(insert_stmt)
+                    db.commit()
 
-                        if existing_address:
-                            db.query(EmployeePermanentAddress).filter(
-                                EmployeePermanentAddress.id == existing_address.id
-                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+                elif component == 'bank_details' and request.bank_details:
+                    data = request.bank_details.dict()
+                    data.update({
+                        'employee_id': employee_id,
+                        'effective_from_date': datetime.utcnow().date(),
+                        'created_by': user_id,
+                        'created_on': datetime.utcnow(),
+                    })
 
-                        insert_stmt = insert(EmployeePermanentAddress).values(**data)
-                        db.execute(insert_stmt)
+                    existing_bank = db.query(EmployeeBankDetails).filter(
+                        EmployeeBankDetails.employee_id == employee_id,
+                        EmployeeBankDetails.effective_to_date.is_(None),
+                        EmployeeBankDetails.is_deleted == 'no'
+                    ).first()
 
-                db.commit()
+                    if existing_bank:
+                        db.query(EmployeeBankDetails).filter(
+                            EmployeeBankDetails.id == existing_bank.id
+                        ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
 
-            if 'bank_details' in components and request.bank_details:
-                for bank_detail in request.bank_details:
-                    if bank_detail:
-                        data = bank_detail.dict()
-                        data['employee_id'] = employee_id
-                        data['effective_from_date'] = datetime.utcnow().date()
-                        data['created_by'] = user_id
-                        data['created_on'] = datetime.utcnow()
+                    insert_stmt = insert(EmployeeBankDetails).values(**data)
+                    db.execute(insert_stmt)
+                    db.commit()
 
-                        existing_bank = db.query(EmployeeBankDetails).filter(
-                            EmployeeBankDetails.employee_id == employee_id,
-                            EmployeeBankDetails.effective_to_date == None,
-                            EmployeeBankDetails.is_deleted == 'no'
-                        ).first()
+                elif component == 'contact_details' and request.contact_details:
+                    data = request.contact_details.dict()
+                    data.update({
+                        'employee_id': employee_id,
+                        'effective_from_date': datetime.utcnow().date(),
+                        'created_by': user_id,
+                        'created_on': datetime.utcnow(),
+                    })
 
-                        if existing_bank:
-                            db.query(EmployeeBankDetails).filter(
-                                EmployeeBankDetails.id == existing_bank.id
-                            ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
+                    existing_contact = db.query(EmployeeContactDetails).filter(
+                        EmployeeContactDetails.employee_id == employee_id,
+                        EmployeeContactDetails.effective_to_date.is_(None),
+                        EmployeeContactDetails.is_deleted == 'no'
+                    ).first()
 
-                        insert_stmt = insert(EmployeeBankDetails).values(**data)
-                        db.execute(insert_stmt)
+                    if existing_contact:
+                        db.query(EmployeeContactDetails).filter(
+                            EmployeeContactDetails.id == existing_contact.id
+                        ).update({"effective_to_date": datetime.utcnow().date() - timedelta(days=1)})
 
-                db.commit()
+                    insert_stmt = insert(EmployeeContactDetails).values(**data)
+                    db.execute(insert_stmt)
+                    db.commit()
 
             return {
                 "success": True,
@@ -1006,29 +1096,42 @@ def update_employee_address_or_bank_details(
             }
 
         elif Action == RecordActionType.UPDATE_ONLY:
-            if 'present_address' in components and request.present_address:
-                for present_address in request.present_address:
-                    if present_address:
-                        data = present_address.dict()
-                        db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id).update(data)
+            for component in components:
+                if component == 'present_address' and request.present_address:
+                    data = request.present_address.dict()
+                    record = db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id).first()
+                    if not record or record.employee_id != employee_id:
+                        raise HTTPException(status_code=400, detail="Invalid employee_id for the provided id")
 
-                db.commit()
+                    db.query(EmployeePresentAddress).filter(EmployeePresentAddress.id == id).update(data)
+                    db.commit()
 
-            if 'permanent_address' in components and request.permanent_address:
-                for permanent_address in request.permanent_address:
-                    if permanent_address:
-                        data = permanent_address.dict()
-                        db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).update(data)
+                elif component == 'permanent_address' and request.permanent_address:
+                    data = request.permanent_address.dict()
+                    record = db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).first()
+                    if not record or record.employee_id != employee_id:
+                        raise HTTPException(status_code=400, detail="Invalid employee_id for the provided id")
 
-                db.commit()
+                    db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).update(data)
+                    db.commit()
 
-            if 'bank_details' in components and request.bank_details:
-                for bank_detail in request.bank_details:
-                    if bank_detail:
-                        data = bank_detail.dict()
-                        db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).update(data)
+                elif component == 'bank_details' and request.bank_details:
+                    data = request.bank_details.dict()
+                    record = db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).first()
+                    if not record or record.employee_id != employee_id:
+                        raise HTTPException(status_code=400, detail="Invalid employee_id for the provided id")
 
-                db.commit()
+                    db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).update(data)
+                    db.commit()
+
+                elif component == 'contact_details' and request.contact_details:
+                    data = request.contact_details.dict()
+                    record = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id).first()
+                    if not record or record.employee_id != employee_id:
+                        raise HTTPException(status_code=400, detail="Invalid employee_id for the provided id")
+
+                    db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id).update(data)
+                    db.commit()
 
             return {
                 "success": True,

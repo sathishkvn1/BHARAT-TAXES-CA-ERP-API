@@ -696,7 +696,7 @@ def update_employee_address_or_bank_details(
     employee_profile_component: str = Query(...,        
         description=(
             "For UPDATE_AND_INSERT: Comma-separated list of components to save. Valid options are: "
-            "[present_address, permanent_address, bank_details]. "
+            "[present_address, permanent_address, bank_details,contact_details]. "
             "For UPDATE_ONLY: Only one component can be selected at a time to update."
         )
     ),
@@ -718,7 +718,7 @@ def update_employee_address_or_bank_details(
     - **Action**: Action to perform: UPDATE_AND_INSERT or UPDATE_ONLY (required)
 
     - **employee_profile_component**: Comma-separated list of components to update 
-      (e.g., 'present_address, permanent_address, bank_details'). This parameter is required.
+      (e.g., 'present_address, permanent_address, bank_details,contact_details'). This parameter is required.
      
     - **request**: The request body containing the details to update or insert.
 
@@ -729,7 +729,7 @@ def update_employee_address_or_bank_details(
     - If the `Action` is `UPDATE_ONLY`:
         - Requires a non-zero `id` to update the specific entry for the specified component.
         - Only one component can be updated at a time.
-    - The `employee_profile_component` parameter is required to specify which components (present address, permanent address, bank details) are to be updated or inserted.
+    - The `employee_profile_component` parameter is required to specify which components (present address, permanent address, bank details,contact_details) are to be updated or inserted.
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -744,7 +744,4 @@ def update_employee_address_or_bank_details(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
 

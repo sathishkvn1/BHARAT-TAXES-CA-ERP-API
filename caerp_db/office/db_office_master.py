@@ -4,16 +4,17 @@ from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
-from caerp_db.common.models import EmployeeEmployementDetails, EmployeeMaster, UserRole
+from caerp_db.common.models import  EmployeeEmployementDetails, EmployeeMaster
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
 from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
 from caerp_functions.generate_book_number import generate_book_number
+
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
 from typing import Union,List
-from sqlalchemy import and_,or_, func
+from sqlalchemy import and_, insert,or_, func
 
 # from caerp_constants.caerp_constants import SearchCriteria
 from fastapi import logger
@@ -1785,7 +1786,7 @@ def get_all_consultation_task_master_details(
     search_conditions = [OffViewConsultationTaskMaster.is_deleted == 'no']
 
     if service_id != 'ALL':
-        search_conditions.append(OffConsultationTaskDetails.service_id == service_id)
+        search_conditions.append(OffViewConsultationTaskMaster.service_id == service_id)
 
     if task_status != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.task_status_id == task_status)

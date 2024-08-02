@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, constr,validator
+from pydantic import BaseModel, RootModel
 from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 import re
@@ -368,24 +368,50 @@ class ServiceModelSchema(BaseModel):
     effective_to_date: Optional[date]
 
 
-class BundlesServiceModelSchema(BaseModel):
+# class BundledServiceSchema(BaseModel):
+#     row_id: int
+#     price_master_id: int
+#     service_id: int
+#     service_goods_name: str
+#     is_bundled_service: str
+#     constitution_id: int
+#     business_constitution_name: str
+#     service_charge: float
+#     govt_agency_fee: float
+#     stamp_duty: float
+#     stamp_fee: float
+#     effective_from_date: str
+#     effective_to_date: str
+
+
+
+
+class BundledServiceSchema(BaseModel):
     row_id: int
-    constitution_id: int
-    business_constitution_name: str
-    business_constitution_code: str
-    service_goods_master_id: int
-    service_goods_price_master_id: int
-    service_goods_name: str
-    service_charge: float
-    govt_agency_fee: float
-    stamp_duty: float
-    stamp_fee: float
-    price_master_id: int
-    effective_from_date: Optional[date] = None
-    effective_to_date: Optional[date] = None
+    price_master_id: Optional[int] = None
+    service_id: Optional[int] = None
+    service_goods_name: Optional[str] = None
+    is_bundled_service: Optional[str] = None
+    constitution_id:Optional[int] = None
+    business_constitution_name:Optional[str] = None
+    service_charge: Optional[float] = None
+    govt_agency_fee: Optional[float] = None
+    stamp_duty: Optional[float] = None
+    stamp_fee: Optional[float] = None
+    effective_from_date: Optional[str ]=None
+    effective_to_date: Optional[str ]=None
+
 
     class Config:
         orm_mode = True
+
+
+class BundledServiceResponseSchema(BaseModel):
+    service_details: List[BundledServiceSchema]
+
+
+# class BundledServiceResponse(RootModel[List[BundledServiceSchema]]):
+#     pass
     
 class ServicePriceHistory(BaseModel):
     constitution_id: int
