@@ -1087,3 +1087,34 @@ class AppViewVillages(caerp_base):
     taluk_code = Column(String)
 
     
+
+class BookNumber(caerp_base):
+    __tablename__ = 'acc_book_numbers'
+    
+    id              = Column(Integer, primary_key=True, index=True)
+    invoice_number_prefix  = Column (String, default=None)
+    invoice_number         = Column (Integer, default=None)
+    quotation_number_prefix =  Column (String, default=None)
+    quotation_number        = Column (Integer, default=None)
+    work_order_number_prefix = Column (String, default=None)
+    work_order_number       = Column (Integer, default=None)
+    enquiry_number_prefix  = Column (String, default=None)
+    enquiry_number          = Column (Integer, default=None)
+    appointment_number_prefix = Column (String, default=None)
+    appointment_number      = Column (Integer, default=None)
+    task_number_prefix      = Column (String, default=None)
+    task_number             = Column (Integer, default=None)
+    payment_voucher_number_prefix= Column (String, default=None)
+    payment_voucher_number = Column (Integer, default=None)
+    receipt_voucher_number_prefix = Column (String, default=None)
+    receipt_voucher_number = Column (Integer, default=None)
+    credit_note_number_prefix = Column (String, default=None)
+    credit_note_number = Column (Integer, default=None)
+    debit_note_number_prefix = Column (String, default=None)
+    debit_note_number = Column (Integer, default=None)
+    journal_voucher_number_prefix = Column (String, default=None)
+    journal_voucher_number = Column (Integer, default=None)
+    customer_number_prefix = Column (String, default=None)
+    customer_number = Column (Integer, default=None)
+    file_number_prefix = Column (String, default=None)
+    file_number = Column (Integer, default=None)

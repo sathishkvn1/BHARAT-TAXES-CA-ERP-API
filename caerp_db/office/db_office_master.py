@@ -1,7 +1,7 @@
 import logging
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
+from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
 from caerp_db.common.models import  EmployeeEmployementDetails, EmployeeMaster
@@ -9,10 +9,10 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffWorkOrderDetails, OffWorkOrderMaster
 from caerp_functions.generate_book_number import generate_book_number
 
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDetailsSchema, WorkOrderResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 
@@ -33,8 +33,8 @@ def save_appointment_visit_master(
             if appointment_master_id == 0:
                 # Insert operation
                 # Generate appointment_number
-                appointment_number = generate_book_number(db, OffAppointmentVisitMaster.appointment_number)
-                
+                # appointment_number = generate_book_number(db, OffAppointmentVisitMaster.appointment_number)
+                appointment_number = generate_book_number('APPOINTMENT',db)
                 appointment_master = OffAppointmentMaster(
                     created_by=user_id,
                     created_on=datetime.utcnow(),
@@ -157,7 +157,6 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
@@ -1876,8 +1875,8 @@ def save_enquiry_master(
                 enquiry_details_list = []
                 for detail_data in enquiry_data.enquiry_details:
                     # Generate enquiry_number for each detail
-                    enquiry_number = generate_book_number(db, OffEnquiryDetails.enquiry_number)
-                    
+                    # enquiry_number = generate_book_number(db, OffEnquiryDetails.enquiry_number)
+                    enquiry_number = generate_book_number('ENQUIRY',db)
                     enquiry_detail = OffEnquiryDetails(
                         enquiry_master_id=enquiry_master.id,
                         enquiry_number=enquiry_number,  # Assign the generated enquiry number
@@ -1897,8 +1896,10 @@ def save_enquiry_master(
                 # Update enquiry master fields
                 enquiry_master_data = enquiry_data.enquiry_master.dict(exclude_unset=True)
                 for field, value in enquiry_master_data.items():
-                   
-                    setattr(enquiry_master, field, value)
+                    if field == "remarks" and enquiry_master.remarks:
+                        setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
+                    else:
+                        setattr(enquiry_master, field, value)
                 enquiry_master.modified_by = user_id
                 enquiry_master.modified_on = datetime.utcnow()
 
@@ -1922,14 +1923,15 @@ def save_enquiry_master(
                         else:
                             raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
                     else:
-                        # Check if detail exists based on enquiry_master_id and enquiry_date
+                        # Check if detail exists based on unique constraints, otherwise insert new detail
                         existing_detail = db.query(OffEnquiryDetails).filter_by(
                             enquiry_master_id=enquiry_master_id,
+                            enquiry_number=detail_data_dict.get("enquiry_number"),
                             enquiry_date=detail_data_dict.get("enquiry_date")
                         ).first()
 
                         if existing_detail:
-                            # If the date is the same, update the existing detail
+                            # Update existing detail
                             for key, value in detail_data_dict.items():
                                 if key == "remarks" and existing_detail.remarks:
                                     setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
@@ -1939,10 +1941,11 @@ def save_enquiry_master(
                             existing_detail.modified_on = datetime.utcnow()
                             enquiry_details_list.append(existing_detail)
                         else:
-                            # Insert new detail if the date has changed
+                            # Insert new detail
+                            
                             new_enquiry_detail = OffEnquiryDetails(
                                 enquiry_master_id=enquiry_master.id,
-                                enquiry_number=generate_book_number(db, OffEnquiryDetails.enquiry_number),  # Generate new enquiry number
+                                enquiry_number=enquiry_number,  # Assign the generated enquiry number
                                 created_by=user_id,
                                 created_on=datetime.utcnow(),
                                 **detail_data_dict
@@ -1973,6 +1976,7 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 def get_enquiries(
@@ -2335,3 +2339,180 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
             "message": "Offer marked as Undeleted successfully",
             }
 
+
+#------------------WORKORDER---------------------------------------------------
+
+def save_work_order(
+    request: CreateWorkOrderRequest,
+    db : Session,
+    user_id : int
+):
+    try:
+        # with db.begin():
+            # Save the master record
+            
+            work_order_number = generate_book_number('WORK_ORDER',db)
+
+            master_data = request.master.dict()
+            master_data['created_on'] = datetime.now()
+            master_data['created_by'] = 1
+            master_data['work_order_number'] = work_order_number
+            master_data['work_order_date'] =  datetime.now()
+            master = OffWorkOrderMaster(**master_data)
+            db.add(master)
+            # master_data['work_order_number'] = work_order_number
+            # master_data['work_order_date'] =  datetime.now()
+            # master = OffWorkOrderMaster(**master_data)
+            # db.commit()
+            db.flush()
+            # db.refresh(master)
+
+        #     # Create the details records
+            for detail in request.details:
+                detail_data = detail.dict()
+                detail_data['work_order_master_id'] = master.id
+                detail_data['created_by'] = 1
+                detail_data['business_activity_id'] = 1
+                detail_data['created_on'] = datetime.now()
+                work_order_detail = OffWorkOrderDetails(**detail_data)
+                db.add(work_order_detail)
+            
+            db.commit()
+            # db.refresh(master)
+            # return {"message": "Work order created successfully"}
+            return {"message": "Work order created successfully", "master_id": master.id, "success":"success"}
+
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="An error occurred while creating the work order")
+#-------------------------------------------------------------------------------------------------------------
+
+def get_work_order_details( 
+                           db: Session,                            
+                           entry_point: EntryPoint,
+                           id: int) -> List[Dict]:
+
+                        #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
+    if entry_point == 'WORK_ORDER':
+        if id is None:
+            raise ValueError("ID is required for WORK_ORDER entry point")
+        query = db.query(OffWorkOrderMaster).filter(
+            OffWorkOrderMaster.is_deleted == 'no',
+            OffWorkOrderMaster.id == id)
+        
+        work_order_master_data = query.first()
+        work_order_details_data = db.query(OffWorkOrderDetails).filter(
+            OffWorkOrderDetails.work_order_master_id == id,
+            OffWorkOrderDetails.is_deleted== 'no').all()
+        
+        data = WorkOrderResponseSchema(
+            work_order=OffWorkOrderMasterSchema.model_validate(work_order_master_data),
+            service_data=[WorkOrderDetailsSchema.model_validate(detail) for detail in work_order_details_data]
+        )
+    
+
+    elif entry_point == 'CONSULTATION':
+            if id is None:
+                raise ValueError("ID is required for CONSULTATION entry point")
+
+            appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
+            if not appointment_data:
+                raise ValueError("Consultation not found")
+            
+            full_name = appointment_data.full_name.split()
+            first_name = full_name[0] if len(full_name) > 0 else ""
+            middle_name = full_name[1] if len(full_name) > 2 else ""
+            last_name = full_name[-1] if len(full_name) > 1 else ""
+
+            # Transforming the data
+            transformed_data = {
+                "appointment_master_id": appointment_data.id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "gender_id": appointment_data.gender_id,
+                "mobile_number": appointment_data.mobile_number,
+                "whatsapp_number":appointment_data.whatsapp_number,
+                "email_id":appointment_data.email_id,
+                "locality":appointment_data.locality,
+                "pin_code":appointment_data.pin_code,
+                "post_office_id":appointment_data.post_office_id,
+                "taluk_id":appointment_data.taluk_id,
+                "district_id":appointment_data.district_id,
+                "state_id":appointment_data.state_id,
+                "customer_number": appointment_data.customer_number
+
+                # Include other fields from appointment_data as needed
+            }
+
+            data = WorkOrderResponseSchema(
+                work_order=transformed_data,
+
+                # work_order=OffAppointmentMasterSchema.model_validate(transformed_data),
+                service_data=[]
+            )
+    elif entry_point == 'ENQUIRY':
+        if id is None:
+                raise ValueError("ID is required for ENQUIRY entry point")
+        
+        enquiry_master_data = db.query(OffViewEnquiryMaster).filter(
+            OffViewEnquiryMaster.is_deleted == 'no',
+            OffViewEnquiryMaster.enquiry_master_id == id).first()
+   
+        # data = enquiry_master_data
+        data = WorkOrderResponseSchema(
+            work_order= enquiry_master_data,
+            service_data=[]
+        )
+    else:
+            raise ValueError("Invalid entry point")
+
+    return data
+#----------------------------------------------------------------------------------------------
+
+def get_work_order_list(
+            db: Session, 
+            work_order_number: Optional[int] = None,
+            work_order_from_date: Optional[date] = None,
+            work_order_to_date: Optional[date] = None, 
+            work_order_status: Optional[int] = None,
+            # work_order_status: Optional[str] = None,
+            mobile_number: Optional[int] = None,
+            email_id: Optional[str] = None) :
+        
+        query = db.query(OffWorkOrderMaster).filter(OffWorkOrderMaster.is_deleted == 'no')
+        
+        # If no arguments are provided, filter by the current date
+        if not any([ work_order_number, work_order_from_date,work_order_to_date, work_order_status, mobile_number, email_id]):
+            work_order_from_date = date.today()
+            query = query.filter(OffWorkOrderMaster.work_order_date == work_order_from_date)
+        else:
+            if work_order_from_date and work_order_to_date:
+                query = query.filter(
+                    OffWorkOrderMaster.work_order_date.between(work_order_from_date, work_order_to_date)
+                )
+            elif work_order_from_date:
+                query = query.filter(
+                    OffWorkOrderMaster.work_order_date.between(work_order_from_date, date.today())
+                )
+            elif work_order_to_date:
+                query = query.filter(
+                    OffWorkOrderMaster.work_order_date <= work_order_to_date
+                )
+           
+            if work_order_number:
+                query = query.filter(OffWorkOrderMaster.work_order_number == work_order_number)
+            
+            if work_order_status:
+                # status_id = db.query(OffWorkOrderStatus.id).filter(OffWorkOrderStatus.work_order_status==work_order_status)
+                query = query.filter(OffWorkOrderMaster.work_order_status_id == work_order_status)
+            if mobile_number:
+                query = query.filter(OffWorkOrderMaster.ilike(f"%{mobile_number}%"))
+            if email_id:
+                query = query.filter(OffWorkOrderMaster.email_id == email_id)
+
+            work_order_master_data = query.all()
+            data =work_order_master_data
+            # data = [OffWorkOrderMasterSchema.model_validate(item) for item in work_order_master_data]
+            return data

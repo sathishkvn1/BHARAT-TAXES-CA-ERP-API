@@ -961,3 +961,121 @@ class SaveOfferDetails(BaseModel):
 
     master: list[OffOfferMasterSchema]
     details: Optional[list[OffOfferDetailsSchema]]=None
+
+
+#------------------------WORKORDER SCHEMA-----------------------------------
+class OffWorkOrderMasterSchema(BaseModel):
+
+    # id                  : Optional[int]
+    financial_year_id   : Optional[int] =None
+    enquiry_master_id      : Optional[int] =None
+    appointment_master_id  : Optional[int] = None
+    work_order_number   : Optional[str] = None
+    work_order_date     : Optional[date] = None
+    
+    first_name          : Optional[str] = None
+    middle_name         : Optional[str] = None
+    last_name           : Optional[str] = None
+    gender_id           : int
+    date_of_birth       : Optional[date] = None
+    mobile_number       : Optional[str] = None
+    whatsapp_number     : Optional[str] = None
+    email_id            : Optional[str] = None
+
+    house_or_building_name  : Optional[str] = None
+    road_or_street_name     : Optional[str] = None
+    locality                : Optional[str] = None
+    pin_code                : Optional[str] = None
+    post_office_id          : Optional[int] = None
+    village_id              : Optional[int] = None
+    lsg_type_id             : Optional[int] = None
+    lsg_id                  : Optional[int] = None
+    taluk_id                : Optional[int] = None
+    district_id             : Optional[int] = None
+    state_id                : Optional[int] = None
+    country_id              : Optional[int] = None
+    remarks                 : Optional[str] = None
+
+    contact_person_name     : Optional[str] = None
+    contact_person_mobile_number    : Optional[str] = None
+    contact_person_whatsapp_number  : Optional[str] = None
+    contact_person_email_id         : Optional[str] = None
+    work_order_status_id            : Optional[int] = None
+    class Config:
+        orm_mode = True
+        from_attributes = True
+    
+class WorkOrderDetailsSchema(BaseModel):
+    
+    # id
+    # work_order_master_id        : Optional[int] = None
+    service_id                  : Optional[int] = None
+    constitution_id             : Optional[int] = None
+    trade_name                  : Optional[str] = None
+    leagal_name                 : Optional[str] = None
+    business_nature_id          : Optional[int] = None
+    core_business_activity_id : Optional[int] = None
+    business_activity_id      : Optional[int] = None
+    has_branches              : Optional[str] = 'no'
+    number_of_branches        : Optional[int] = None
+    has_godowns               : Optional[str] = 'no'
+    number_of_godowns         : Optional[int] = None
+    number_of_directors       : Optional[int] = None
+    number_of_partners        : Optional[int] = None
+    number_of_shareholders    : Optional[int] = None
+    number_of_trustees        : Optional[int] = None
+    number_of_members         : Optional[int] = None
+    is_main_service         : Optional[str] ='no'             
+    is_bundle_service       : Optional[str] ='no' 
+    bundle_service_id       : Optional[int] = None
+    is_depended_service     : Optional[str] ='no' 
+    processing_order        : Optional[int] = None
+    service_required        : Optional[str] = 'NO'
+    service_required_date   : Optional[date] = None
+    service_status_id    : Optional[int] = None
+    file_opened_on        : Optional[date] = None
+    file_closed_on        : Optional[date] = None
+    rack_number           : Optional[int] = None
+    shelf_number          : Optional[int] = None
+    file_number           : Optional[int] = None
+    remarks               : Optional[str] = None
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class CreateWorkOrderRequest(BaseModel):
+    master: OffWorkOrderMasterSchema
+    details: List[WorkOrderDetailsSchema]
+
+class WorkOrderResponseSchema(BaseModel):
+    work_order: OffWorkOrderMasterSchema
+    service_data: List[WorkOrderDetailsSchema]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+
+
+
+
+class OffAppointmentMasterSchema(BaseModel):
+ 
+    id              : Optional[int]
+    full_name       : str
+    customer_number : str
+    mobile_number   : Optional[str]
+    whatsapp_number : Optional[str]
+    email_id        : Optional[str]
+    gender_id       :Optional[int]
+    locality        : Optional[str]
+    pin_code        : Optional[str]
+    post_office_id  : Optional[int]
+    taluk_id        : Optional[int]
+    district_id     : Optional[int]
+    state_id        : Optional[int]
+
+    class Config:
+        orm_mode = True
+        from_attributes=True

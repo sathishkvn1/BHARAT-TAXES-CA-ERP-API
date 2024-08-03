@@ -95,3 +95,10 @@ class Status(str,Enum):
     CURRENT     = "CURRENT"
     UPCOMMING   = "UPCOMMING"
     EXPIRED     = "EXPIRED"
+
+
+class EntryPoint(str, Enum):
+
+    CONSULTATION    =   'CONSULTATION'
+    ENQUIRY         =   'ENQUIRY'
+    WORK_ORDER       =   'WORK_ORDER'

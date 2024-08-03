@@ -4,13 +4,13 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile,
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, RecordActionType,SearchCriteria, Status
+from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
 from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -2268,7 +2268,7 @@ def get_main_service(db: Session, service_id: int, effective_date: date):
 def get_sub_service(db: Session, service_id: int):
     query = text("""
     SELECT 
-        :service_id AS price_master_id,
+        price_master_id,
         :service_id AS service_id,
         bm.service_goods_name AS service_goods_name,
         'yes' AS is_bundled_service,
@@ -2296,81 +2296,7 @@ def get_sub_service(db: Session, service_id: int):
     return [dict(zip(result.keys(), row)) for row in result.fetchall()]
 
 
-# def combine_service_details(db: Session, service_id: int, effective_date: Optional[date] = None) -> List[dict]:
-#     effective_date = effective_date or date.today()
-    
-#     # Get results from different queries
-#     active_prices = get_active_prices(db, effective_date)
-#     bundle_services = get_bundle_services(db, service_id)
-#     main_service = get_main_service(db, service_id, effective_date)
-#     sub_service = get_sub_service(db, service_id)
 
-#     # Print results for debugging
-#     print("Active Prices:")
-#     print(active_prices)
-    
-#     print("Bundle Services:")
-#     print(bundle_services)
-    
-#     print("Main Service:")
-#     print(main_service)
-    
-#     print("Sub Service:")
-#     print(sub_service)
-    
-#     # Combine results as needed
-#     combined_results = main_service + sub_service
-
-#     # Print combined results for debugging
-#     print("Combined Results:")
-#     print(combined_results)
-
-#     # Initialize counters
-#     main_service_counter = 1
-#     sub_service_counter = 2
-
-#     # Format the results to match BundledServiceSchema
-#     formatted_results = []
-#     for result in combined_results:
-#         # Debug print each result
-#         print("Processing Result:")
-#         print(result)
-
-#         # Extract fields safely with defaults
-#         row_id = None
-#         if "price_master_id" in result:
-#             if result.get("price_master_id") == service_id:
-#                 row_id = main_service_counter
-#                 main_service_counter += 2
-#             else:
-#                 row_id = sub_service_counter
-#                 sub_service_counter += 2
-
-#         if row_id is None:
-#             print("Warning: 'price_master_id' is not as expected or 'row_id' is missing in result:", result)
-#             continue  # Skip this result if 'row_id' is missing
-        
-#         formatted_results.append({
-#             "row_id": row_id,  # Ensure this field is present
-#             "price_master_id": result.get("price_master_id"),
-#             "service_id": result.get("service_id"),
-#             "service_goods_name": result.get("service_goods_name"),
-#             "is_bundled_service": result.get("is_bundled_service"),
-#             "constitution_id": result.get("constitution_id"),
-#             "business_constitution_name": result.get("business_constitution_name"),
-#             "service_charge": result.get("service_charge"),
-#             "govt_agency_fee": result.get("govt_agency_fee"),
-#             "stamp_duty": result.get("stamp_duty"),
-#             "stamp_fee": result.get("stamp_fee"),
-#             "effective_from_date": result.get("effective_from_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_from_date"), date) else result.get("effective_from_date"),
-#             "effective_to_date": result.get("effective_to_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_to_date"), date) else result.get("effective_to_date")
-#         })
-        
-#     # Print formatted results for debugging
-#     print("Formatted Results:")
-#     print(formatted_results)
-    
-#     return formatted_results
 
 
 from collections import defaultdict
@@ -2432,3 +2358,41 @@ def combine_service_details(db: Session, service_id: int, effective_date: Option
     print(formatted_results)
     
     return formatted_results
+
+
+
+#-----------------------WORKORDER-----------------------------------------------------------
+
+@router.post('/save_work_order')
+def save_work_order(
+    request: CreateWorkOrderRequest,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+
+):
+   if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+   auth_info = authenticate_user(token)
+   user_id = auth_info.get("user_id")
+   
+   return db_office_master.save_work_order(request, db, user_id)
+
+
+#-----------------------------------------------------------------------
+
+@router.get('/get_work_order_details')
+def get_work_order_details(
+    
+    entry_point : EntryPoint,
+    id          : int,
+   
+    db: Session = Depends(get_db)
+):
+    results = db_office_master.get_work_order_details(db,entry_point,id)
+    # results = db_office_master.get_work_order_details(
+    #      db,entry_point,id,work_order_number,work_order_date, work_order_status, mobile_number, email_id)
+    if not results:
+        return JSONResponse(status_code=404, content={"message": "No data present"})
+    return results
+
+#---------------------------------------------------------------------------------
