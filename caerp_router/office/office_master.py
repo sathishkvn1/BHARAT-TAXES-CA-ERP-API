@@ -2268,7 +2268,7 @@ def get_main_service(db: Session, service_id: int, effective_date: date):
 def get_sub_service(db: Session, service_id: int):
     query = text("""
     SELECT 
-        price_master_id,
+        :service_id AS price_master_id,
         :service_id AS service_id,
         bm.service_goods_name AS service_goods_name,
         'yes' AS is_bundled_service,
