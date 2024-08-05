@@ -1046,6 +1046,8 @@ class EmployeeProfessionalQualification(caerp_base):
     qualification_id = Column(Integer,nullable=False)
     membership_number = Column(String(50), default=None)
     enrollment_date = Column(Date, nullable=False)
+    created_by           = Column(Integer, nullable=False, default=0)
+    created_on           = Column(DateTime, nullable=False, default=func.now())
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     
     
