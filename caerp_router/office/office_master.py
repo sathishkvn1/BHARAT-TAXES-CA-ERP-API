@@ -2230,8 +2230,8 @@ def call_stored_procedure(service_id, input_date):
 # results = call_stored_procedure(1, '2024-01-01')
 # print("Resultcccccccc",results)
 
-@router.post("/get_bundle_price_list")
-def get_bundle_price_list(request: ServiceRequest):
+@router.get("/get_bundle_price_list")
+def get_bundle_price_list(request: ServiceRequest=Depends()):
     results = call_stored_procedure(request.service_id, request.input_date)
     return {"data": results}
 
