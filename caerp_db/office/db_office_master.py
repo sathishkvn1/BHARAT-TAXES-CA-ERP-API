@@ -2342,56 +2342,20 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
 
 #------------------WORKORDER---------------------------------------------------
 
-def save_work_order(
-    request: CreateWorkOrderRequest,
-    db : Session,
-    user_id : int
-):
-    try:
-        # with db.begin():
-            # Save the master record
-            
-            work_order_number = generate_book_number('WORK_ORDER',db)
-
-            master_data = request.master.dict()
-            master_data['created_on'] = datetime.now()
-            master_data['created_by'] = 1
-            master_data['work_order_number'] = work_order_number
-            master_data['work_order_date'] =  datetime.now()
-            master = OffWorkOrderMaster(**master_data)
-            db.add(master)
-            # master_data['work_order_number'] = work_order_number
-            # master_data['work_order_date'] =  datetime.now()
-            # master = OffWorkOrderMaster(**master_data)
-            # db.commit()
-            db.flush()
-            # db.refresh(master)
-
-        #     # Create the details records
-            for detail in request.details:
-                detail_data = detail.dict()
-                detail_data['work_order_master_id'] = master.id
-                detail_data['created_by'] = 1
-                detail_data['business_activity_id'] = 1
-                detail_data['created_on'] = datetime.now()
-                work_order_detail = OffWorkOrderDetails(**detail_data)
-                db.add(work_order_detail)
-            
-            db.commit()
-            # db.refresh(master)
-            # return {"message": "Work order created successfully"}
-            return {"message": "Work order created successfully", "master_id": master.id, "success":"success"}
 
 
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="An error occurred while creating the work order")
+
+
 #-------------------------------------------------------------------------------------------------------------
+
 
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
-                           id: int) -> List[Dict]:
+                           id: int,
+                           visit_master_id : Optional[int]= None,
+                           enquiry_details_id : Optional[int]= None
+                           ) -> List[Dict]:
 
                         #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
     if entry_point == 'WORK_ORDER':
@@ -2414,12 +2378,21 @@ def get_work_order_details(
 
     elif entry_point == 'CONSULTATION':
             if id is None:
-                raise ValueError("ID is required for CONSULTATION entry point")
-
+                # raise ValueError("ID is required for CONSULTATION entry point")
+                return {
+                    'message ': "ID is required for CONSULTATION entry point",
+                    'Success' : 'false'
+                }
+            elif visit_master_id is None:
+                # raise ValueError("visit master id is required for CONSULTATION entry point")
+                return {
+                    'message ': "visit master id is required for CONSULTATION entry point",
+                    'Success' : 'false'
+                }
             appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
+            visit_data       = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id==visit_master_id).first()   
             if not appointment_data:
                 raise ValueError("Consultation not found")
-            
             full_name = appointment_data.full_name.split()
             first_name = full_name[0] if len(full_name) > 0 else ""
             middle_name = full_name[1] if len(full_name) > 2 else ""
@@ -2427,7 +2400,9 @@ def get_work_order_details(
 
             # Transforming the data
             transformed_data = {
+                "financial_year_id":visit_data.financial_year_id,
                 "appointment_master_id": appointment_data.id,
+                "visit_master_id": visit_master_id,
                 "first_name": first_name,
                 "middle_name": middle_name,
                 "last_name": last_name,
@@ -2443,7 +2418,6 @@ def get_work_order_details(
                 "state_id":appointment_data.state_id,
                 "customer_number": appointment_data.customer_number
 
-                # Include other fields from appointment_data as needed
             }
 
             data = WorkOrderResponseSchema(
@@ -2454,65 +2428,94 @@ def get_work_order_details(
             )
     elif entry_point == 'ENQUIRY':
         if id is None:
-                raise ValueError("ID is required for ENQUIRY entry point")
-        
+                return {
+                    'message ': "ID is required for ENQUIRY entry point",
+                    'Success' : 'false'
+                }
+                # raise HTTPException(status_code=400, detail="ID is required for ENQUIRY entry point")
+        elif enquiry_details_id is None:
+            return {
+                    'message ': "enquiry_details_id is required for ENQUIRY entry point",
+                    'Success' : 'false'
+                }
+            # raise HTTPException(status_code=400, detail="enquiry_details_id is required for ENQUIRY entry point")        
         enquiry_master_data = db.query(OffViewEnquiryMaster).filter(
             OffViewEnquiryMaster.is_deleted == 'no',
             OffViewEnquiryMaster.enquiry_master_id == id).first()
-   
+        enquiry_detail_data = db.query(OffViewEnquiryDetails).filter(
+            OffViewEnquiryDetails.is_deleted == 'no',
+            OffViewEnquiryDetails.enquiry_details_id == enquiry_details_id).first()
+        
+        work_order_data = OffWorkOrderMasterSchema(
+            **enquiry_master_data.__dict__,
+            enquiry_details_id=enquiry_detail_data.enquiry_details_id,
+            financial_year_id=enquiry_detail_data.financial_year_id
+        )
         # data = enquiry_master_data
         data = WorkOrderResponseSchema(
-            work_order= enquiry_master_data,
+            work_order= work_order_data,
             service_data=[]
         )
     else:
             raise ValueError("Invalid entry point")
 
     return data
+
 #----------------------------------------------------------------------------------------------
 
 def get_work_order_list(
-            db: Session, 
-            work_order_number: Optional[int] = None,
-            work_order_from_date: Optional[date] = None,
-            work_order_to_date: Optional[date] = None, 
-            work_order_status: Optional[int] = None,
-            # work_order_status: Optional[str] = None,
-            mobile_number: Optional[int] = None,
-            email_id: Optional[str] = None) :
-        
-        query = db.query(OffWorkOrderMaster).filter(OffWorkOrderMaster.is_deleted == 'no')
-        
-        # If no arguments are provided, filter by the current date
-        if not any([ work_order_number, work_order_from_date,work_order_to_date, work_order_status, mobile_number, email_id]):
-            work_order_from_date = date.today()
-            query = query.filter(OffWorkOrderMaster.work_order_date == work_order_from_date)
-        else:
-            if work_order_from_date and work_order_to_date:
-                query = query.filter(
-                    OffWorkOrderMaster.work_order_date.between(work_order_from_date, work_order_to_date)
-                )
-            elif work_order_from_date:
-                query = query.filter(
-                    OffWorkOrderMaster.work_order_date.between(work_order_from_date, date.today())
-                )
-            elif work_order_to_date:
-                query = query.filter(
-                    OffWorkOrderMaster.work_order_date <= work_order_to_date
-                )
-           
-            if work_order_number:
-                query = query.filter(OffWorkOrderMaster.work_order_number == work_order_number)
+    db: Session,
+    search_value: Union[str, int] = "ALL",
+    work_order_number: Optional[int] = None,
+    status_id: Optional[int] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+) :
+   
+        try:
             
-            if work_order_status:
-                # status_id = db.query(OffWorkOrderStatus.id).filter(OffWorkOrderStatus.work_order_status==work_order_status)
-                query = query.filter(OffWorkOrderMaster.work_order_status_id == work_order_status)
-            if mobile_number:
-                query = query.filter(OffWorkOrderMaster.ilike(f"%{mobile_number}%"))
-            if email_id:
-                query = query.filter(OffWorkOrderMaster.email_id == email_id)
+            # Initialize search conditions
+            search_conditions = [OffWorkOrderMaster.is_deleted == "no"]
+            
+            # Add conditions for enquiry date range if provided
+            if from_date and to_date:
+                search_conditions.append(OffWorkOrderMaster.work_order_date.between(from_date, to_date))
+            elif from_date:
+                search_conditions.append(OffWorkOrderMaster.work_order_date >= from_date)
+            elif to_date:
+                search_conditions.append(OffWorkOrderMaster.work_order_date <= to_date)
+            
+            if work_order_number != None:
+                search_conditions.append(OffWorkOrderMaster.work_order_number == work_order_number)
 
-            work_order_master_data = query.all()
-            data =work_order_master_data
-            # data = [OffWorkOrderMasterSchema.model_validate(item) for item in work_order_master_data]
-            return data
+            # Add condition for status ID if provided
+            if status_id != None:
+                search_conditions.append(OffWorkOrderMaster.work_order_status_id == status_id)
+
+            # Add condition for search value if it's not 'ALL'
+            if search_value != "ALL":
+                search_conditions.append(
+                    or_(
+                        OffWorkOrderMaster.mobile_number.like(f"%{search_value}%"),
+                        OffWorkOrderMaster.email_id.like(f"%{search_value}%")
+                    )
+                )
+
+            # Execute the query
+            query_result = db.query(OffWorkOrderMaster).filter(and_(*search_conditions)).all()
+
+            if not query_result:
+                raise HTTPException(status_code=404, detail="Work_order not found")
+
+           
+
+            return query_result
+
+        except HTTPException as http_error:
+            raise http_error
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+         
+            # except HTTPException as http_error:
+            # raise http_error
+        

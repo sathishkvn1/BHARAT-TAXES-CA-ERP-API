@@ -967,9 +967,11 @@ class SaveOfferDetails(BaseModel):
 class OffWorkOrderMasterSchema(BaseModel):
 
     # id                  : Optional[int]
-    financial_year_id   : Optional[int] =None
+    financial_year_id   : Optional[int] = None
     enquiry_master_id      : Optional[int] =None
     appointment_master_id  : Optional[int] = None
+    visit_master_id        : Optional[int] = None
+    enquiry_details_id     : Optional[int] = None
     work_order_number   : Optional[str] = None
     work_order_date     : Optional[date] = None
     
@@ -1004,7 +1006,8 @@ class OffWorkOrderMasterSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
-    
+
+
 class WorkOrderDetailsSchema(BaseModel):
     
     # id
@@ -1043,10 +1046,11 @@ class WorkOrderDetailsSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
     details: List[WorkOrderDetailsSchema]
+
+
 
 class WorkOrderResponseSchema(BaseModel):
     work_order: OffWorkOrderMasterSchema
@@ -1054,7 +1058,6 @@ class WorkOrderResponseSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
-
 
 
 

@@ -10,7 +10,7 @@ from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -2363,32 +2363,20 @@ def combine_service_details(db: Session, service_id: int, effective_date: Option
 
 #-----------------------WORKORDER-----------------------------------------------------------
 
-@router.post('/save_work_order')
-def save_work_order(
-    request: CreateWorkOrderRequest,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
 
-):
-   if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-   auth_info = authenticate_user(token)
-   user_id = auth_info.get("user_id")
-   
-   return db_office_master.save_work_order(request, db, user_id)
 
 
 #-----------------------------------------------------------------------
-
 @router.get('/get_work_order_details')
 def get_work_order_details(
     
     entry_point : EntryPoint,
     id          : int,
-   
+    visit_master_id : Optional[int] = None,
+    enquiry_details_id : Optional[int]= None,
     db: Session = Depends(get_db)
 ):
-    results = db_office_master.get_work_order_details(db,entry_point,id)
+    results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
     # results = db_office_master.get_work_order_details(
     #      db,entry_point,id,work_order_number,work_order_date, work_order_status, mobile_number, email_id)
     if not results:
@@ -2396,3 +2384,38 @@ def get_work_order_details(
     return results
 
 #---------------------------------------------------------------------------------
+@router.get('/get_work_order_list', response_model=List[OffWorkOrderMasterSchema])
+def get_work_order_list(
+    
+   
+    work_order_number 	    : Optional[str]= None,
+    search_value            :  Union[str, int] = "ALL",
+
+    work_order_from_date  	: Optional[date]= None,
+    work_order_to_date  	: Optional[date]= None,
+    work_order_status_id 	: Optional[int]= None,
+    # mobile_number  	    : Optional[str]= None,
+    # email_id            : Optional[str]= None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve a list of work orders based on the provided filter criteria.
+
+    Parameters:
+    - search_value (Union[str, int], optional): The search value to filter work orders. It can be a email id or a mobile number.
+    - work_order_from_date (date, optional): The start date to filter work orders.
+    - work_order_to_date (date, optional): The end date to filter work orders.
+    - work_order_status_id (int, optional): The status ID to filter work orders.
+
+    Returns:
+    - List[OffWorkOrderMasterSchema]: A list of work orders matching the filter criteria.
+
+    Responses:
+    - 200: Successful retrieval of the work order list.
+    - 404: No data present based on the filter criteria.
+    """
+    results = db_office_master.get_work_order_list(
+         db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
+    if not results:
+        return JSONResponse(status_code=404, content={"message": "No data present"})
+    return results

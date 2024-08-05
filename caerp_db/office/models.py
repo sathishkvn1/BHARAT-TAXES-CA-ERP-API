@@ -1197,8 +1197,10 @@ class OffWorkOrderMaster(caerp_base):
 
     id                      = Column(Integer, primary_key=True, autoincrement=True)
     financial_year_id       = Column(Integer, nullable=False)
-    enquiry_master_id          = Column(Integer, nullable=True)
-    appointment_master_id      = Column(Integer, nullable=True)
+    enquiry_master_id       = Column(Integer, nullable=True)
+    appointment_master_id   = Column(Integer, nullable=True)
+    visit_master_id         =  Column(Integer, nullable=True)
+    enquiry_details_id      = Column(Integer, nullable=True)
     work_order_number       = Column(Integer, nullable=False)
     work_order_date         = Column(Date, nullable=True)
     first_name              = Column(String, nullable=True)
@@ -1234,6 +1236,10 @@ class OffWorkOrderMaster(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
+
+
+
+
 
 
 
@@ -1279,6 +1285,7 @@ class OffWorkOrderDetails(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
+
 
 class OffWorkOrderStatus(caerp_base):
     __tablename__ ='off_work_order_status'
