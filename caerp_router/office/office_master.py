@@ -1,7 +1,9 @@
 import io
 import os
+from shutil import Error
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from fastapi.responses import JSONResponse, StreamingResponse
+import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
@@ -10,7 +12,8 @@ from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, SetPriceModel, Slot, TimeSlotResponse
+# from caerp_router.office.crud import call_get_service_details
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -22,6 +25,8 @@ from fastapi.encoders import jsonable_encoder
 
 
 from sqlalchemy import select, func, and_
+
+
 router = APIRouter(
     tags=['Office Master']
 )
@@ -2186,178 +2191,50 @@ import logging
 
 
     
-
-@router.get("/get_bundle_price_list/", response_model=List[BundledServiceSchema])
-def get_bundle_price_list(service_id: int, input_date: Optional[date] = None, db: Session = Depends(get_db)):
+import mysql.connector
+from mysql.connector import Error
+def call_stored_procedure(service_id, input_date):
+    connection = None
+    cursor = None
     try:
-        # Call the function to get combined results
-        results = combine_service_details(db, service_id, input_date)
+        connection = mysql.connector.connect(
+            user="root",
+            password="brdb123",
+            host="202.21.38.180",
+            port="3306",
+            database="bharat_taxes_ca_erp"
+        )
+        cursor = connection.cursor(dictionary=True)
+        
+        # Call the stored procedure
+        cursor.callproc('GetServiceDetails', [service_id, input_date])
+        
+        # Fetch results
+        results = []
+        for result_set in cursor.stored_results():
+            results.extend(result_set.fetchall())
+        
         return results
-    except HTTPException as e:
-        logging.error(f"HTTP Exception: {e.detail}")
+    
+    except Error as e:
+        print(f"Error: {e}")
         raise
-    except Exception as e:
-        logging.error(f"Unexpected error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-def get_active_prices(db: Session, effective_date: date):
-    query = text("""
-    SELECT 
-        p.service_goods_master_id,
-        p.constitution_id,
-        p.service_charge,
-        p.govt_agency_fee,
-        p.stamp_duty,
-        p.stamp_fee
-    FROM 
-        off_service_goods_price_master p
-    WHERE
-        p.effective_from_date <= :effective_date AND
-        (p.effective_to_date IS NULL OR p.effective_to_date >= :effective_date)
-    """)
-    result = db.execute(query, {'effective_date': effective_date})
-    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
-
-
-def get_bundle_services(db: Session, service_id: int):
-    query = text("""
-    SELECT 
-        d.bundled_service_goods_id AS bundle_id,
-        d.service_goods_master_id AS sub_service_id
-    FROM 
-        off_service_goods_details d
-    WHERE 
-        d.bundled_service_goods_id = :service_id
-    """)
-    result = db.execute(query, {'service_id': service_id})
-    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
-
-
-def get_main_service(db: Session, service_id: int, effective_date: date):
-    query = text("""
-    SELECT 
-        a.id AS price_master_id,
-        a.service_goods_master_id AS service_id,
-        c.service_goods_name,
-        c.is_bundled_service,
-        b.id AS constitution_id,
-        b.business_constitution_name,
-        a.service_charge,
-        a.govt_agency_fee,
-        a.stamp_duty,
-        a.stamp_fee,
-        a.effective_from_date,
-        a.effective_to_date
-    FROM 
-        app_business_constitution AS b
-    LEFT OUTER JOIN
-        off_service_goods_price_master AS a
-    ON  b.id = a.constitution_id AND a.service_goods_master_id = :service_id
-    LEFT OUTER JOIN
-        off_service_goods_master AS c
-    ON  a.service_goods_master_id = c.id
-    WHERE 
-        (a.service_goods_master_id = :service_id OR a.service_goods_master_id IS NULL) AND
-        (a.effective_from_date <= :effective_date OR a.effective_from_date IS NULL) AND
-        (a.effective_to_date >= :effective_date OR a.effective_to_date IS NULL)
-    """)
-    result = db.execute(query, {'service_id': service_id, 'effective_date': effective_date})
-    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
-
-
-def get_sub_service(db: Session, service_id: int):
-    query = text("""
-    SELECT 
-        :service_id AS price_master_id,
-        :service_id AS service_id,
-        bm.service_goods_name AS service_goods_name,
-        'yes' AS is_bundled_service,
-        c.id AS constitution_id,
-        c.business_constitution_name,
-        COALESCE(SUM(ap.service_charge), 0) AS service_charge,
-        COALESCE(SUM(ap.govt_agency_fee), 0) AS govt_agency_fee,
-        COALESCE(SUM(ap.stamp_duty), 0) AS stamp_duty,
-        COALESCE(SUM(ap.stamp_fee), 0) AS stamp_fee,
-        NULL AS effective_from_date,
-        NULL AS effective_to_date
-    FROM 
-        off_service_goods_master bm
-    CROSS JOIN
-        app_business_constitution c
-    LEFT JOIN
-        off_service_goods_price_master ap
-    ON bm.id = ap.service_goods_master_id AND ap.constitution_id = c.id
-    WHERE 
-        bm.id = :service_id
-    GROUP BY 
-        bm.service_goods_name, c.id, c.business_constitution_name
-    """)
-    result = db.execute(query, {'service_id': service_id})
-    return [dict(zip(result.keys(), row)) for row in result.fetchall()]
-
-
-
-
-
-from collections import defaultdict
-def combine_service_details(db: Session, service_id: int, effective_date: Optional[date] = None) -> List[dict]:
-    effective_date = effective_date or date.today()
     
-    # Get results from different queries
-    active_prices = get_active_prices(db, effective_date)
-    bundle_services = get_bundle_services(db, service_id)
-    main_service = get_main_service(db, service_id, effective_date)
-    sub_service = get_sub_service(db, service_id)
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
 
-    # Combine results as needed
-    combined_results = main_service + sub_service
+# Example call
+# results = call_stored_procedure(1, '2024-01-01')
+# print("Resultcccccccc",results)
 
-    # Group results by constitution_id
-    grouped_results = defaultdict(list)
-    for result in combined_results:
-        constitution_id = result.get("constitution_id")
-        grouped_results[constitution_id].append(result)
+@router.post("/get_bundle_price_list")
+def get_bundle_price_list(request: ServiceRequest):
+    results = call_stored_procedure(request.service_id, request.input_date)
+    return {"data": results}
 
-    # Initialize a single counter for sequential row IDs
-    row_counter = 1
-
-    # Format the results to match BundledServiceSchema
-    formatted_results = []
-    for constitution_id, results in grouped_results.items():
-        # Ensure each constitution_id appears twice
-        for result in results:
-            # Assign row_id sequentially
-            formatted_results.append({
-                "row_id": row_counter,
-                "price_master_id": result.get("price_master_id"),
-                "service_id": result.get("service_id"),
-                "service_goods_name": result.get("service_goods_name"),
-                "is_bundled_service": result.get("is_bundled_service"),
-                "constitution_id": result.get("constitution_id"),
-                "business_constitution_name": result.get("business_constitution_name"),
-                "service_charge": result.get("service_charge"),
-                "govt_agency_fee": result.get("govt_agency_fee"),
-                "stamp_duty": result.get("stamp_duty"),
-                "stamp_fee": result.get("stamp_fee"),
-                "effective_from_date": result.get("effective_from_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_from_date"), date) else result.get("effective_from_date"),
-                "effective_to_date": result.get("effective_to_date").strftime('%Y-%m-%d') if isinstance(result.get("effective_to_date"), date) else result.get("effective_to_date")
-            })
-            
-            # Increment the counter
-            row_counter += 1
-
-            # Stop if we have reached the maximum number of rows
-            if row_counter > 48:
-                break
-
-        if row_counter > 48:
-            break
-
-    # Print formatted results for debugging
-    print("Formatted Results:")
-    print(formatted_results)
-    
-    return formatted_results
 
 
 
@@ -2419,3 +2296,57 @@ def get_work_order_list(
     if not results:
         return JSONResponse(status_code=404, content={"message": "No data present"})
     return results
+
+
+
+#-------------------------------------------------------------------------------------
+
+
+
+
+# import mysql.connector
+# from mysql.connector import Error
+# def call_stored_procedure(service_id, input_date):
+#     connection = None
+#     cursor = None
+#     try:
+#         connection = mysql.connector.connect(
+#             user="root",
+#             password="brdb123",
+#             host="202.21.38.180",
+#             port="3306",
+#             database="bharat_taxes_ca_erp"
+#         )
+#         cursor = connection.cursor(dictionary=True)
+        
+#         # Call the stored procedure
+#         cursor.callproc('GetServiceDetails', [service_id, input_date])
+        
+#         # Fetch results
+#         results = []
+#         for result_set in cursor.stored_results():
+#             results.extend(result_set.fetchall())
+        
+#         return results
+    
+#     except Error as e:
+#         print(f"Error: {e}")
+#         raise
+    
+#     finally:
+#         if cursor:
+#             cursor.close()
+#         if connection:
+#             connection.close()
+
+# # Example call
+# # results = call_stored_procedure(1, '2024-01-01')
+# # print("Resultcccccccc",results)
+
+# @router.post("/get_bundle_price_list")
+# def get_bundle_price_list(request: ServiceRequest):
+#     results = call_stored_procedure(request.service_id, request.input_date)
+#     return {"data": results}
+
+
+#-------------------------------------------------------------------------------------

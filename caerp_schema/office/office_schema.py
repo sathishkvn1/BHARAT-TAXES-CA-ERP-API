@@ -1082,3 +1082,27 @@ class OffAppointmentMasterSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes=True
+
+
+class ServiceDetail(BaseModel):
+    row_id: int
+    price_master_id: int
+    service_id: int
+    service_goods_name: str
+    is_bundled_service: str
+    constitution_id: int
+    business_constitution_name: str
+    service_charge: float
+    govt_agency_fee: float
+    stamp_duty: float
+    stamp_fee: float
+    effective_from_date: str
+    effective_to_date: str
+
+class ServiceDetailListResponse(BaseModel):
+    data: List[ServiceDetail]
+
+class ServiceRequest(BaseModel):
+    service_id: int
+    input_date: str
+
