@@ -1,5 +1,5 @@
 
-from fastapi import HTTPException, Query, File, UploadFile
+from fastapi import HTTPException, Path, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
@@ -517,49 +517,71 @@ def insert_multiple_detail_records(db, model, request_data_list, employee_id, us
      db.add(model(**insert_detail))
 
   
-# def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, id: int, user_id: int, file: UploadFile = None):
-#   try: 
-#     emp_documents_data = request.dict()
-#     emp_documents_data["employee_id"] = id
-#     emp_documents_data["created_by"] = user_id
-    
-#     result = EmployeeDocuments(**emp_documents_data)
-#     db.add(result)
-#     db.commit() 
-#     db.refresh(result)
 
-#     # Handle file upload
-#     if file:
-#         file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, {result.id})
-#         with open(file_path, "wb") as buffer:
-#             shutil.copyfileobj(file.file, buffer)
-#         # result.document_number = file_path
+
+# def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
+#     try:
+#         emp_documents_data = request.dict()
+#         emp_documents_data["employee_id"] = employee_id
+#         emp_documents_data["created_by"] = user_id
+#         result = EmployeeDocuments(**emp_documents_data)
+#         db.add(result)
 #         db.commit()
-#     # return result         
-#   except Exception as e:
-#      db.rollback()
-#      raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}") 
+#         db.refresh(result)
+#         # Handle file upload
+#         if file:
+          
+#             file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, str(result.id))
+
+#             os.makedirs(os.path.dirname(file_path), exist_ok=True)
+#             with open(file_path, "wb") as buffer:
+#                 shutil.copyfileobj(file.file, buffer)
+#             db.commit()
+#         return result
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
+
+
+
 
 def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
     try:
         emp_documents_data = request.dict()
         emp_documents_data["employee_id"] = employee_id
         emp_documents_data["created_by"] = user_id
+
         result = EmployeeDocuments(**emp_documents_data)
         db.add(result)
         db.commit()
         db.refresh(result)
+
         # Handle file upload
         if file:
-            file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, str(result.id))
+            # Extract file extension
+            file_extension = Path(file.filename).suffix
+
+            # Construct file path with the extension
+            file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, f"{result.id}{file_extension}")
+
+            # Ensure directory exists
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Save the file with the extension
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
-            db.commit()
+ 
         return result
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
+
+
+
+
+
+
 
 def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int, Action: ActionType, employee_profile_component: str):
    employee_found = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
@@ -764,7 +786,9 @@ def get_present_address_details(db: Session, employee_id: int):
         (EmployeePresentAddress.effective_to_date >= current_date) | 
         (EmployeePresentAddress.effective_to_date.is_(None)),
         EmployeePresentAddress.is_deleted == 'no'
-    ).all()    
+    ).all()   
+
+
 def get_permanent_address_details(db: Session ,employee_id: int):
     current_date = date.today()
     return db.query(EmployeePermanentAddress).filter(
@@ -823,14 +847,25 @@ def get_salary_details(db: Session,employee_id: int):
     ).all()
     
 
-def get_qualification_details(db: Session , employee_id: int):
-    return db.query(EmployeeEducationalQualification).all()
+
+def get_qualification_details(db: Session, employee_id: int):
+    return db.query(EmployeeEducationalQualification).filter(
+        EmployeeEducationalQualification.employee_id == employee_id,
+        EmployeeEducationalQualification.is_deleted == 'no'
+    ).all()
+
 
 def get_experience_details(db: Session, employee_id: int):
-    return db.query(EmployeeExperience).all()
+    return db.query(EmployeeExperience).filter(
+        EmployeeExperience.employee_id == employee_id,
+        EmployeeExperience.is_deleted == 'no'
+    ).all()
 
 def get_document_details(db: Session, employee_id: int):
-    return db.query(EmployeeDocuments).all()
+    return db.query(EmployeeDocuments).filter(
+        EmployeeDocuments.employee_id == employee_id,
+        EmployeeDocuments.is_deleted == 'no'
+    ).all()
 
 def get_emergency_contact_details(db: Session , employee_id: int):
     current_date = date.today()
@@ -854,17 +889,26 @@ def get_dependent_details(db: Session , employee_id: int):
     ).all()
     
 
+def get_professional_qualification_details(db: Session, employee_id: int):
+    return db.query(EmployeeProfessionalQualification).filter(
+        EmployeeProfessionalQualification.employee_id == employee_id,
+        EmployeeProfessionalQualification.is_deleted == 'no'
+    ).all()
 
 
+def get_security_credentials(db: Session, employee_id: int):
+    return db.query(UserBase).filter(
+        UserBase.employee_id == employee_id
+    ).all()
 
-def get_professional_qualification_details(db: Session):
-    return db.query(EmployeeProfessionalQualification).all()
 
-def get_security_credentials(db: Session):
-    return db.query(UserBase).all()
+def get_user_role(db: Session, employee_id: int):
+    return db.query(UserRole).filter(
+        UserRole.employee_id == employee_id,
+        UserRole.is_deleted == 'no'
+    ).all()
+   
 
-def get_user_role(db: Session):
-    return db.query(UserRole).all()
 
 
 
