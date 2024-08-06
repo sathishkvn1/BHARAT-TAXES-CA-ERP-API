@@ -1044,23 +1044,81 @@ class WorkOrderDetailsSchema(BaseModel):
     shelf_number          : Optional[int] = None
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
+    depended_on: List['WorkOrderDependancySchema'] = []
+    # sub_services: List['WorkOrderDetailsSchema'] = []
+
     class Config:
         orm_mode = True
         from_attributes = True
 
+class WorkOrderDependancySchema(BaseModel):
+    id : Optional[int]=None
+    work_order_master_id    : int
+    work_order_details_id   : int
+    dependent_on_work_id    : int
+    is_deleted              : Optional[str]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
     details: List[WorkOrderDetailsSchema]
 
 
+class WorkOrderDetailsResponseSchema(BaseModel):
+    
+    id                        : Optional[int] = None
+    work_order_master_id        : Optional[int] = None
+    service_id                  : Optional[int] = None
+    constitution_id             : Optional[int] = None
+    trade_name                  : Optional[str] = None
+    leagal_name                 : Optional[str] = None
+    business_activity_type_id          : Optional[int] = None
+    business_activity_master_id : Optional[int] = None
+    business_activity_id      : Optional[int] = None
+    has_branches              : Optional[str] = 'no'
+    number_of_branches        : Optional[int] = None
+    has_godowns               : Optional[str] = 'no'
+    number_of_godowns         : Optional[int] = None
+    number_of_directors       : Optional[int] = None
+    number_of_partners        : Optional[int] = None
+    number_of_shareholders    : Optional[int] = None
+    number_of_trustees        : Optional[int] = None
+    number_of_members         : Optional[int] = None
+    is_main_service         : Optional[str] ='no'             
+    is_bundle_service       : Optional[str] ='no' 
+    bundle_service_id       : Optional[int] = None
+    is_depended_service     : Optional[str] ='no' 
+    processing_order        : Optional[int] = None
+    service_required        : Optional[str] = 'NO'
+    service_required_date   : Optional[date] = None
+    service_status_id    : Optional[int] = None
+    file_opened_on        : Optional[date] = None
+    file_closed_on        : Optional[date] = None
+    rack_number           : Optional[int] = None
+    shelf_number          : Optional[int] = None
+    file_number           : Optional[int] = None
+    remarks               : Optional[str] = None
+    depended_on: List['WorkOrderDependancySchema'] = []
+    sub_services: List['WorkOrderDetailsSchema'] = []
 
-class WorkOrderResponseSchema(BaseModel):
-    work_order: OffWorkOrderMasterSchema
-    service_data: List[WorkOrderDetailsSchema]
     class Config:
         orm_mode = True
         from_attributes = True
+
+
+
+class WorkOrderResponseSchema(BaseModel):
+    work_order: OffWorkOrderMasterSchema
+    # service_data: List[WorkOrderDetailsSchema]
+    service_data: List[WorkOrderDetailsResponseSchema]
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
 
 
 

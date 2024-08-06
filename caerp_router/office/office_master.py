@@ -290,7 +290,8 @@ def get_all_service_goods_master(
 
 @router.get('/services/get_all_service_goods_master_test', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master_test(
-   
+    deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
+    service_goods_name: Optional[str] = Query(None),
     service_goods_type: Union[int, str] = Query("ALL", description="Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both."),
     group_id: Union[int, str] = Query("ALL"),
     sub_group_id: Union[int, str] = Query("ALL"),
@@ -305,7 +306,7 @@ def get_all_service_goods_master_test(
     start_time = time()
 
     results = db_office_master.get_all_service_goods_master_test(
-        db,  service_goods_type, group_id, sub_group_id, category_id, sub_category_id
+        db,deleted_status, service_goods_name, service_goods_type, group_id, sub_group_id, category_id, sub_category_id
     )
 
     end_time = time()
@@ -2326,6 +2327,7 @@ def get_bundle_price_list(request: ServiceRequest=Depends()):
 
 
 #-----------------------------------------------------------------------
+
 @router.get('/get_work_order_details')
 def get_work_order_details(
     
@@ -2337,21 +2339,25 @@ def get_work_order_details(
 ):
     """
     To retrieves work order details based on the specified entry point and associated IDs.
-    The entry points can be WORK_ORDER, CONSULTATION, or ENQUIRY.
-    Parameters:
+    
+    The entry points can be `WORK_ORDER`, `CONSULTATION`, or `ENQUIRY`. The behavior of this endpoint 
+    depends on the value of `entry_point` and includes different parameters based on the entry point type.
 
-        - entry_point (required, query parameter): Specifies the type of entry point for the query.
-        - id (required, query parameter): The ID associated with the entry point.
-        - visit_master_id (optional, query parameter): The visit master ID, required when the entry point is CONSULTATION.
-        - enquiry_details_id (optional, query parameter): The enquiry details ID, required when the entry point is ENQUIRY.
+    Parameters:
+        - entry_point (required, query parameter): Specifies the type of entry point for the query. 
+          It can be `WORK_ORDER`, `CONSULTATION`, or `ENQUIRY`.
+        - id (required, query parameter): The ID associated with the entry point. 
+          - If `entry_point` is `WORK_ORDER`, `id` should be the `work_order_master_id`.
+          - If `entry_point` is `CONSULTATION`, `id` should be the `appointment_master_id`.
+          - If `entry_point` is `ENQUIRY`, `id` should be the `enquiry_master_id`.
+        - visit_master_id (optional, query parameter): Required when the `entry_point` is `CONSULTATION`.
+        - enquiry_details_id (optional, query parameter): Required when the `entry_point` is `ENQUIRY`.
 
     """
 
     results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
     
     return results
-
-
 #---------------------------------------------------------------------------------
 @router.get('/get_work_order_list', response_model=List[OffWorkOrderMasterSchema])
 def get_work_order_list(

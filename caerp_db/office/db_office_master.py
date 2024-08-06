@@ -9,11 +9,11 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffWorkOrderDetails, OffWorkOrderMaster
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderDependancy
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDetailsSchema, WorkOrderResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancySchema, WorkOrderDetailsResponseSchema, WorkOrderDetailsSchema, WorkOrderResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 
@@ -625,17 +625,10 @@ def get_all_service_goods_master(
 
 
 
-
-
-
-
-
-
-
-
 def get_all_service_goods_master_test(
     db: Session,
-
+    deleted_status: Optional[str] = None,
+    name: Optional[str] = None,
     service_goods_type: Union[int, str] = 'ALL', 
     group_id: Union[int, str] = 'ALL',
     sub_group_id: Union[int, str] = 'ALL',
@@ -647,10 +640,9 @@ def get_all_service_goods_master_test(
     try:
         search_conditions = []
 
-        if service_goods_type != 'ALL':
-            search_conditions.append(OffViewServiceGoodsMaster.hsn_sac_class_id == service_goods_type)
+        
 
-        elif sub_category_id != 'ALL':
+        if sub_category_id != 'ALL':
             search_conditions.append(OffViewServiceGoodsMaster.sub_category_id == sub_category_id)
         elif category_id != 'ALL':
             search_conditions.append(OffViewServiceGoodsMaster.category_id == category_id)
@@ -658,6 +650,18 @@ def get_all_service_goods_master_test(
             search_conditions.append(OffViewServiceGoodsMaster.sub_group_id == sub_group_id)
         elif group_id != 'ALL':
             search_conditions.append(OffViewServiceGoodsMaster.group_id == group_id)
+        elif service_goods_type!='ALL':
+           search_conditions.append(OffViewServiceGoodsMaster.hsn_sac_class_id == service_goods_type)
+
+        
+        if deleted_status == DeletedStatus.DELETED:
+            search_conditions.append(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
+        elif deleted_status == DeletedStatus.NOT_DELETED:
+            search_conditions.append(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
+
+        if name:
+            search_conditions.append(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
+        
 
         query_start = time()
         query_result = db.query(OffViewServiceGoodsMaster).filter(and_(*search_conditions)).all()
@@ -685,13 +689,16 @@ def get_all_service_goods_master_test(
 
         end_time = time()
         total_duration = end_time - start_time
-        print(f"Total duration for get_all_service_goods_master function: {total_duration:.2f} seconds")
+        print(f"Total duration for get_all_service_goods_master_test function: {total_duration:.2f} seconds")
         print(f"Query duration: {query_duration:.2f} seconds")
 
         return result
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
+
+
+
 
 
 
@@ -2504,21 +2511,56 @@ def get_work_order_details(
 
                         #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
     if entry_point == 'WORK_ORDER':
+        data = []
         query = db.query(OffWorkOrderMaster).filter(
             OffWorkOrderMaster.is_deleted == 'no',
             OffWorkOrderMaster.id == id)
         
         work_order_master_data = query.first()
+        if not work_order_master_data:
+            return {
+                    'message ': "Work order not found ",
+                    # 'Success' : 'false'
+                }
         work_order_details_data = db.query(OffWorkOrderDetails).filter(
             OffWorkOrderDetails.work_order_master_id == id,
             OffWorkOrderDetails.is_deleted== 'no').all()
         
-        data = WorkOrderResponseSchema(
-            work_order=OffWorkOrderMasterSchema.model_validate(work_order_master_data),
-            service_data=[WorkOrderDetailsSchema.model_validate(detail) for detail in work_order_details_data]
-        )
-    
+        service_data = []
 
+        for detail in work_order_details_data:
+            detail_data = WorkOrderDetailsResponseSchema.model_validate(detail)
+            if detail.is_depended_service == 'yes':
+                detail_data.depended_on = get_dependencies(db,detail.id)
+            
+            # Handle bundle services
+            if detail.is_bundle_service == 'yes':
+                sub_services = db.query(OffWorkOrderDetails).filter(
+                    OffWorkOrderDetails.bundle_service_id == detail.id,
+                    OffWorkOrderDetails.is_deleted == 'no'
+                ).all()
+                sub_service_data = []
+                for sub_service in sub_services:
+                    sub_service_detail = WorkOrderDetailsResponseSchema.model_validate(sub_service)
+                    
+                    # Handle dependent services for sub-services
+                    if sub_service.is_depended_service == 'yes':
+                        sub_service_detail.depended_on = get_dependencies(db,sub_service.id)
+                    sub_service_data.append(sub_service_detail)
+                detail_data.sub_services = sub_service_data
+            
+                service_data.append(detail_data)
+
+            
+
+        work_order_data = WorkOrderResponseSchema(
+            work_order=OffWorkOrderMasterSchema.model_validate(work_order_master_data),
+            service_data=service_data
+        )
+        
+        data.append(work_order_data.dict())  # Assuming dict() converts to the desired output format
+
+    
     elif entry_point == 'CONSULTATION':
             
             if visit_master_id is None:
@@ -2587,7 +2629,9 @@ def get_work_order_details(
             OffViewEnquiryMaster.enquiry_master_id == id).first()
         enquiry_detail_data = db.query(OffViewEnquiryDetails).filter(
             OffViewEnquiryDetails.is_deleted == 'no',
-            OffViewEnquiryDetails.enquiry_details_id == enquiry_details_id).first()
+            # OffViewEnquiryDetails.enquiry_master_id == id,
+            OffViewEnquiryDetails.enquiry_details_id == enquiry_details_id
+            ).first()
         
         work_order_data = OffWorkOrderMasterSchema(
             **enquiry_master_data.__dict__,
@@ -2615,8 +2659,7 @@ def get_work_order_details(
     #         'Success': 'false'
     #     }
 
- 
-
+      
 
 #----------------------------------------------------------------------------------------------
 def get_work_order_list(
@@ -2704,3 +2747,9 @@ def get_business_activity_by_master_id(
                 BusinessActivity.activity_master_id == master_id).all()
         return business_activities
 #---------------------------------------------------------------------------------------------------------
+
+def get_dependencies(db: Session,detail_id):
+    dependencies = db.query(WorkOrderDependancy).filter(
+        WorkOrderDependancy.work_order_details_id == detail_id
+    ).all()
+    return [WorkOrderDependancySchema.model_validate(dep) for dep in dependencies]

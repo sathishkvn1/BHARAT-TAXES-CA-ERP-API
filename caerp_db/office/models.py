@@ -1294,3 +1294,14 @@ class OffWorkOrderStatus(caerp_base):
     id                  = Column(Integer, primary_key=True, autoincrement=True)
     work_order_status   = Column(String, nullable=False)
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class WorkOrderDependancy(caerp_base):
+    __tablename__ = 'work_order_dependency'
+
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_master_id    =  Column(Integer, nullable=False)
+    work_order_details_id   =  Column(Integer, nullable=False)
+    dependent_on_work_id    =  Column(Integer, nullable=False)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
