@@ -1239,10 +1239,6 @@ class OffWorkOrderMaster(caerp_base):
 
 
 
-
-
-
-
 class OffWorkOrderDetails(caerp_base):
     __tablename__ = 'work_order_details'
     
@@ -1252,8 +1248,8 @@ class OffWorkOrderDetails(caerp_base):
     constitution_id         = Column(Integer, nullable=True)
     trade_name              = Column(String, nullable=True)
     leagal_name             = Column(String, nullable=True)
-    business_nature_id      = Column(Integer, nullable=True)
-    core_business_activity_id   = Column(Integer, nullable=True)
+    business_activity_type_id      = Column(Integer, nullable=True)
+    business_activity_master_id   = Column(Integer, nullable=True)
     business_activity_id        = Column(Integer, nullable=True)
     has_branches                = Column(Enum('yes', 'no'), nullable=False, default='no')
     number_of_branches          = Column(Integer, nullable=True)
@@ -1285,6 +1281,11 @@ class OffWorkOrderDetails(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
+
+
+
+
+
 
 
 class OffWorkOrderStatus(caerp_base):

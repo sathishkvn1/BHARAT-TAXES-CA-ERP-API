@@ -2380,7 +2380,7 @@ def get_work_order_details(
             if not appointment_data:
                 # raise ValueError("Consultation not found")
                 return {
-                    'message ': "visit master id is required for CONSULTATION entry point",
+                    'message ': "Consultation not found",
                     # 'Success' : 'false'
                 }
             full_name = appointment_data.full_name.split()
@@ -2390,6 +2390,7 @@ def get_work_order_details(
 
             # Transforming the data
             transformed_data = {
+                "id" : appointment_data.id,
                 "financial_year_id":visit_data.financial_year_id,
                 "appointment_master_id": appointment_data.id,
                 "visit_master_id": visit_master_id,
@@ -2438,6 +2439,7 @@ def get_work_order_details(
         
         work_order_data = OffWorkOrderMasterSchema(
             **enquiry_master_data.__dict__,
+            id =enquiry_master_data.enquiry_master_id,
             enquiry_details_id=enquiry_detail_data.enquiry_details_id,
             financial_year_id=enquiry_detail_data.financial_year_id
         )
@@ -2460,6 +2462,10 @@ def get_work_order_details(
     #         'message': 'No data found',
     #         'Success': 'false'
     #     }
+
+ 
+
+
 #----------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
