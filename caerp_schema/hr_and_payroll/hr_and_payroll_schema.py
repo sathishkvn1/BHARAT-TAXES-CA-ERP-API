@@ -93,12 +93,12 @@ class EmployeePresentAddressGet(BaseModel):
    present_district_id : int
    present_state_id : int
    present_country_id : int
-   effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_from_date : date
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
    # created_by : int
    # created_on : datetime
-   is_deleted : str = 'no'
+   # is_deleted : str = 'no'
    # deleted_by : Optional[int] = None
    # deleted_on : Optional[datetime] = None
 
@@ -148,12 +148,12 @@ class EmployeePermanentAddressGet(BaseModel):
    permanent_district_id : int
    permanent_state_id : int
    permanent_country_id : int     
-   effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_from_date : date
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
    # created_by : int
    # created_on : datetime
-   is_deleted : str = 'no'
+   # is_deleted : str = 'no'
    # deleted_by : Optional[int] = None
    # deleted_on : Optional[datetime] = None
 
@@ -191,12 +191,12 @@ class EmployeeContactGet(BaseModel):
    official_mobile_number : Optional[str] = None
    official_whatsapp_number : Optional[str] = None
    official_email_id : Optional[str] = None
-   effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_from_date : date
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
    # created_by : int
    # created_on : datetime
-   is_deleted : str = 'no'
+   # is_deleted : str = 'no'
    # deleted_by : Optional[int] = None
    # deleted_on : Optional[datetime] = None
     
@@ -230,12 +230,12 @@ class EmployeeBankAccountGet(BaseModel):
    bank_name :  Optional[str] = None
    bank_branch_name : Optional[str] = None
    ifsc_code : Optional[str] = None
-   effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_from_date : date
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
    # created_by : int
    # created_on : datetime
-   is_deleted : str = 'no'
+   # is_deleted : str = 'no'
    # deleted_by : Optional[int] = None
    # deleted_on : Optional[datetime] = None
 
@@ -265,8 +265,8 @@ class EmployeeEmployementGet(BaseModel):
    designation_id : int
    employee_category_id : int
    is_consultant : str = 'no'
-   effective_from_date : date
-   effective_to_date : Optional[date] = None
+   # effective_from_date : date
+   # effective_to_date : Optional[date] = None
    remarks : Optional[str] = None
 
    class config():
@@ -281,8 +281,6 @@ class EmployeeEducationalQualficationGet(BaseModel):
    institution : Optional[str] = None
    percentage_or_grade : Optional[str] = None
    month_and_year_of_completion : Optional[str] = None   
-   is_deleted : str = 'no'
-
 
    class config():
       orm_mode=True
@@ -490,6 +488,8 @@ class EmployeeProfessionalQualificationSchema(BaseModel):
     qualification_id: int
     membership_number: Optional[str] = None
     enrollment_date: date
+   #  created_by: Optional[int] = None  # Include created_by
+   #  created_on: Optional[datetime] = None  # Include created_on
 
 class EmployeeDetailsCombinedSchema(BaseModel):
     educational_qualifications: Optional[List[EmployeeEducationalQualficationSchema]] = None

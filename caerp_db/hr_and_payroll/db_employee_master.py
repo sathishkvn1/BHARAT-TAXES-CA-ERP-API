@@ -674,7 +674,6 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
         EmployeeMaster.blood_group,
         EmployeeMaster.nationality_id,
         EmployeeMaster.marital_status_id,
-        EmployeeMaster.marital_status_id,
         MaritalStatus.marital_status, 
         EmployeeMaster.joining_date,
         EmployeeEmployementDetails.employee_category_id,
@@ -687,6 +686,7 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
         EmployeeContactDetails.personal_email_id,
         EmployeeContactDetails.remarks,
         EmployeeEmployementDetails.is_consultant,
+        EmployeeMaster.is_approved,
         UserBase.is_active
     ).join(
         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
@@ -742,8 +742,8 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
               # EmployeeMaster.employee_id.like(search_term) |
               func.lower(HrEmployeeCategory.category_name).like(func.lower(search_term)) |
               func.lower(HrDepartmentMaster.department_name).like(func.lower(search_term)) |
-              func.lower(HrDesignationMaster.designation).like(func.lower(search_term)) |
-              EmployeeContactDetails.personal_mobile_number.like(search_term)
+              func.lower(HrDesignationMaster.designation).like(func.lower(search_term)) 
+              # EmployeeContactDetails.personal_mobile_number.like(search_term)
             )
       
     result = query.all()    
@@ -755,17 +755,20 @@ def get_employee_master_details(db: Session):
     return db.query(EmployeeMaster).all()
 
 
-def get_present_address_details(db: Session):
+
+def get_present_address_details(db: Session, employee_id: int):
     current_date = date.today()
     return db.query(EmployeePresentAddress).filter(
+        EmployeePresentAddress.employee_id == employee_id, 
         EmployeePresentAddress.effective_from_date <= current_date,
         (EmployeePresentAddress.effective_to_date >= current_date) | 
         (EmployeePresentAddress.effective_to_date.is_(None)),
         EmployeePresentAddress.is_deleted == 'no'
-    ).all()
-def get_permanent_address_details(db: Session):
+    ).all()    
+def get_permanent_address_details(db: Session ,employee_id: int):
     current_date = date.today()
     return db.query(EmployeePermanentAddress).filter(
+        EmployeePresentAddress.employee_id == employee_id,
         EmployeePermanentAddress.effective_from_date <= current_date,
         (EmployeePermanentAddress.effective_to_date >= current_date) | 
         (EmployeePermanentAddress.effective_to_date.is_(None)),
@@ -776,9 +779,10 @@ def get_permanent_address_details(db: Session):
 # def get_permanent_address_details(db: Session):
     # return db.query(EmployeePermanentAddress).all()
 
-def get_contact_details(db: Session):
+def get_contact_details(db: Session , employee_id: int):
     current_date = date.today()
     return db.query(EmployeeContactDetails).filter(
+        EmployeePresentAddress.employee_id == employee_id,
         EmployeeContactDetails.effective_from_date <= current_date,
         (EmployeeContactDetails.effective_to_date >= current_date) | 
         (EmployeeContactDetails.effective_to_date.is_(None)),
@@ -787,9 +791,10 @@ def get_contact_details(db: Session):
 
     
 
-def get_bank_details(db: Session):
+def get_bank_details(db: Session, employee_id: int):
     current_date = date.today()
     return db.query(EmployeeBankDetails).filter(
+        EmployeePresentAddress.employee_id == employee_id,
         EmployeeBankDetails.effective_from_date <= current_date,
         (EmployeeBankDetails.effective_to_date >= current_date) | 
         (EmployeeBankDetails.effective_to_date.is_(None)),
@@ -797,18 +802,20 @@ def get_bank_details(db: Session):
     ).all()
     
 
-def get_employement_details(db: Session):
+def get_employement_details(db: Session, employee_id: int):
     current_date = date.today()
     return db.query(EmployeeEmployementDetails).filter(
+        EmployeePresentAddress.employee_id == employee_id,
         EmployeeEmployementDetails.effective_from_date <= current_date,
         (EmployeeEmployementDetails.effective_to_date >= current_date) | 
         (EmployeeEmployementDetails.effective_to_date.is_(None)),
         EmployeeEmployementDetails.is_deleted == 'no'
     ).all()
     
-def get_salary_details(db: Session):
+def get_salary_details(db: Session,employee_id: int):
     current_date = date.today()
     return db.query(EmployeeSalaryDetails).filter(
+        EmployeePresentAddress.employee_id == employee_id,
         EmployeeSalaryDetails.effective_from_date <= current_date,
         (EmployeeSalaryDetails.effective_to_date >= current_date) | 
         (EmployeeSalaryDetails.effective_to_date.is_(None)),
@@ -816,34 +823,39 @@ def get_salary_details(db: Session):
     ).all()
     
 
-def get_qualification_details(db: Session):
+def get_qualification_details(db: Session , employee_id: int):
     return db.query(EmployeeEducationalQualification).all()
 
-def get_experience_details(db: Session):
+def get_experience_details(db: Session, employee_id: int):
     return db.query(EmployeeExperience).all()
 
-def get_document_details(db: Session):
+def get_document_details(db: Session, employee_id: int):
     return db.query(EmployeeDocuments).all()
 
-def get_emergency_contact_details(db: Session):
+def get_emergency_contact_details(db: Session , employee_id: int):
     current_date = date.today()
     return db.query(EmployeeEmergencyContactDetails).filter(
-        EmployeeEmergencyContactDetails.effective_date_from <= current_date,
-        (EmployeeEmergencyContactDetails.effective_date_to >= current_date) | 
-        (EmployeeEmergencyContactDetails.effective_date_to.is_(None)),
+        EmployeePresentAddress.employee_id == employee_id,
+        EmployeeEmergencyContactDetails.effective_from_date <= current_date,
+        (EmployeeEmergencyContactDetails.effective_to_date >= current_date) | 
+        (EmployeeEmergencyContactDetails.effective_to_date.is_(None)),
         EmployeeEmergencyContactDetails.is_deleted == 'no'
     ).all()
     
 
-def get_dependent_details(db: Session):
+def get_dependent_details(db: Session , employee_id: int):
     current_date = date.today()
     return db.query(EmployeeDependentsDetails).filter(
-        EmployeeDependentsDetails.effective_date_from <= current_date,
-        (EmployeeDependentsDetails.effective_date_to >= current_date) | 
-        (EmployeeDependentsDetails.effective_date_to.is_(None)),
+        EmployeePresentAddress.employee_id == employee_id,
+        EmployeeDependentsDetails.effective_from_date <= current_date,
+        (EmployeeDependentsDetails.effective_to_date >= current_date) | 
+        (EmployeeDependentsDetails.effective_to_date.is_(None)),
         EmployeeDependentsDetails.is_deleted == 'no'
     ).all()
     
+
+
+
 
 def get_professional_qualification_details(db: Session):
     return db.query(EmployeeProfessionalQualification).all()
