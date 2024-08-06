@@ -537,3 +537,23 @@ class EmployeeAddressDetailsSchema(BaseModel):
     permanent_address: Optional[EmployeePermanentAddressSchema] = None
     bank_details: Optional[EmployeeBankAccountSchema] = None
     contact_details: Optional[EmployeeContactSchema] = None
+
+
+class EmployeeDocumentResponse(BaseModel):
+    id: int
+    employee_id: int
+    document_id: int
+    document_number: Optional[str]
+    issue_date: date
+    expiry_date: Optional[date]
+    issued_by: Optional[str]
+    remarks: Optional[str]
+    created_by: int
+    created_on: datetime
+    is_deleted: str
+    deleted_by: Optional[int]
+    deleted_on: Optional[datetime]
+    document_name: str  # Adding document_name field to the response
+
+    class Config:
+        orm_mode = True

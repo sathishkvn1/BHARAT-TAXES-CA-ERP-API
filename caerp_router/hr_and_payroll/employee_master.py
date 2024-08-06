@@ -1,5 +1,5 @@
-from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, EmployeeProfessionalQualification, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
+from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, EmployeeProfessionalQualification, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, EmployeeContactDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -653,6 +653,40 @@ def view_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@router.get('/employee_documents/{employee_id}', response_model=List[EmployeeDocumentResponse])
+def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
+    try:
+        query = db.query(
+            EmployeeDocuments.id,
+            EmployeeDocuments.employee_id,
+            EmployeeDocuments.document_id,
+            EmployeeDocuments.document_number,
+            EmployeeDocuments.issue_date,
+            EmployeeDocuments.expiry_date,
+            EmployeeDocuments.issued_by,
+            EmployeeDocuments.remarks,
+            EmployeeDocuments.created_by,
+            EmployeeDocuments.created_on,
+            EmployeeDocuments.is_deleted,
+            EmployeeDocuments.deleted_by,
+            EmployeeDocuments.deleted_on,
+            HrDocumentMaster.document_name
+        ).join(
+            HrDocumentMaster, EmployeeDocuments.document_id == HrDocumentMaster.id
+        ).filter(
+            EmployeeDocuments.employee_id == employee_id
+        )
+
+        employee_documents = query.all()
+
+        if not employee_documents:
+            raise HTTPException(status_code=404, detail="Employee documents not found")
+
+        response = [EmployeeDocumentResponse(**doc._asdict()) for doc in employee_documents]
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/employee_save_update')
 def employee_save_update(
