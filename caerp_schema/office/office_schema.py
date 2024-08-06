@@ -966,7 +966,7 @@ class SaveOfferDetails(BaseModel):
 #------------------------WORKORDER SCHEMA-----------------------------------
 class OffWorkOrderMasterSchema(BaseModel):
 
-    # id                  : Optional[int]
+    id                  : Optional[int]
     financial_year_id   : Optional[int] = None
     enquiry_master_id      : Optional[int] =None
     appointment_master_id  : Optional[int] = None
@@ -1006,18 +1006,19 @@ class OffWorkOrderMasterSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+  
 
 
 class WorkOrderDetailsSchema(BaseModel):
     
-    # id
-    # work_order_master_id        : Optional[int] = None
+    id                        : Optional[int] = None
+    work_order_master_id        : Optional[int] = None
     service_id                  : Optional[int] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
     leagal_name                 : Optional[str] = None
-    business_nature_id          : Optional[int] = None
-    core_business_activity_id : Optional[int] = None
+    business_activity_type_id          : Optional[int] = None
+    business_activity_master_id : Optional[int] = None
     business_activity_id      : Optional[int] = None
     has_branches              : Optional[str] = 'no'
     number_of_branches        : Optional[int] = None
@@ -1045,6 +1046,7 @@ class WorkOrderDetailsSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
 
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
