@@ -14,6 +14,7 @@ from caerp_db.common.models import HrDepartmentMaster, HrDesignationMaster, HrEm
 from caerp_db.hash import Hash
 import os
 import shutil
+from pathlib import Path 
 
 
 UPLOAD_EMP_DOCUMENTS = "uploads/employee_documents"
@@ -541,7 +542,6 @@ def insert_multiple_detail_records(db, model, request_data_list, employee_id, us
 #     except Exception as e:
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
-
 
 
 

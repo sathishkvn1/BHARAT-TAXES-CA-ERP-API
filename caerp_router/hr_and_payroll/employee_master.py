@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 from sqlalchemy.exc import SQLAlchemyError
 from typing import List, Optional, Type, Union
-from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Path, Query, File, UploadFile
+from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ApprovedStatus, ActiveStatus
@@ -15,6 +15,8 @@ from collections import defaultdict
 import os
 from typing import List, Dict
 from settings import BASE_URL
+
+
 
 
 
@@ -170,6 +172,42 @@ def save_employee_master(
 
 
 
+# @router.post('/upload_document')
+# def upload_document(
+#    employee_id: int,
+#    request: EmployeeDocumentsSchema = Depends(),
+#    file: UploadFile = File(None),
+#    db: Session = Depends(get_db),
+#    token: str = Depends(oauth2.oauth2_scheme)
+#   ):
+#   """
+#   For uploading documents for a particular employee.
+     
+#     -**Request** : Data needed for uploading documents provided as schema "EmployeeDocumentsSchema".
+
+#     -**id**      : Integer parameter, employee_documents identifier.
+    
+#     -**file**    : for uploading file/document.
+
+#     -**db**      : database session for uploading documentss.
+#   """ 
+#   if not token:
+#     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#   auth_info = authenticate_user(token)
+#   user_id = auth_info["user_id"] 
+
+#   try:
+#       db_employee_master.upload_employee_documents(db, request, employee_id, user_id, file)
+#       return {
+#             "success": True,
+#             "message": "Uploaded successfully",
+#             }                  
+#   except Exception as e:    
+#      raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.post('/upload_document')
 def upload_document(
    employee_id: int,
@@ -203,6 +241,9 @@ def upload_document(
             }                  
   except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 
 #delete employee details by id
@@ -979,4 +1020,14 @@ def update_employee_address_or_bank_details(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+#-----------------------------------------------------------------------
+
+@router.get("/documents/get_employee_uploaded_documents/{id}", response_model=dict)
+def get_employee_documents(id: int):
+    
+    document_name = f"{id}.jpg"  
+    # BASE_URL="http://127.0.0.1:8010/"
+    return {"photo_url": f"{BASE_URL}/product/save_product_master/{document_name}"}
 
