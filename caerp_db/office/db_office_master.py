@@ -482,6 +482,75 @@ def get_appointments(
 #---service-goods-master-------------------------------------------------------------------------------------
 
 
+# def get_all_service_goods_master(
+#     db: Session,
+#     deleted_status: Optional[str] = None,
+#     name: Optional[str] = None,
+#     service_goods_type: Union[int, str] = 'ALL', 
+#     group_id: Union[int, str] = 'ALL',
+#     sub_group_id: Union[int, str] = 'ALL',
+#     category_id: Union[int, str] = 'ALL',
+#     sub_category_id: Union[int, str] = 'ALL'
+# ) -> List[OffViewServiceGoodsMasterDisplay]:
+#     try:
+#         # Initialize search conditions
+#         search_conditions = []
+
+#         # Apply filter conditions
+#         if deleted_status == DeletedStatus.DELETED:
+#             search_conditions.append(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
+#         elif deleted_status == DeletedStatus.NOT_DELETED:
+#             search_conditions.append(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'no')
+
+#         if name:
+#             search_conditions.append(OffViewServiceGoodsMaster.service_goods_name.ilike(f'%{name}%'))
+        
+#         if service_goods_type != 'ALL':
+#             search_conditions.append(OffViewServiceGoodsMaster.hsn_sac_class_id == service_goods_type)
+
+#         if group_id != 'ALL':
+#             search_conditions.append(OffViewServiceGoodsMaster.group_id == group_id)
+
+#         if sub_group_id != 'ALL':
+#             search_conditions.append(OffViewServiceGoodsMaster.sub_group_id == sub_group_id)
+
+#         if category_id != 'ALL':
+#             search_conditions.append(OffViewServiceGoodsMaster.category_id == category_id)
+
+#         if sub_category_id != 'ALL':
+#             search_conditions.append(OffViewServiceGoodsMaster.sub_category_id == sub_category_id)
+
+#         # Execute the query with the combined conditions
+#         query_result = db.query(OffViewServiceGoodsMaster).filter(and_(*search_conditions)).all()
+
+#         # Check if no data is found
+#         if not query_result:
+#             return []
+
+#         # Fetching details for bundled service_goods_master_ids
+#         master_ids = [result.service_goods_master_id for result in query_result if result.is_bundled_service == "yes"]
+#         details = db.query(OffViewServiceGoodsDetails).filter(OffViewServiceGoodsDetails.bundled_service_goods_id.in_(master_ids)).all()
+
+#         # Create a dictionary of details
+#         details_dict = {}
+#         for detail in details:
+#             if detail.bundled_service_goods_id not in details_dict:
+#                 details_dict[detail.bundled_service_goods_id] = []
+#             details_dict[detail.bundled_service_goods_id].append(OffViewServiceGoodsDetailsDisplay(**vars(detail)))
+
+#         # Convert ORM results to Pydantic models and return
+#         return [
+#             OffViewServiceGoodsMasterDisplay(
+#                 **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
+#                 details=details_dict.get(result.service_goods_master_id, None)
+#             )
+#             for result in query_result
+#         ]
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
+
+from time import time
 def get_all_service_goods_master(
     db: Session,
     deleted_status: Optional[str] = None,
@@ -492,11 +561,11 @@ def get_all_service_goods_master(
     category_id: Union[int, str] = 'ALL',
     sub_category_id: Union[int, str] = 'ALL'
 ) -> List[OffViewServiceGoodsMasterDisplay]:
+    start_time = time()  # Capture start time
+
     try:
-        # Initialize search conditions
         search_conditions = []
 
-        # Apply filter conditions
         if deleted_status == DeletedStatus.DELETED:
             search_conditions.append(OffViewServiceGoodsMaster.service_goods_master_is_deleted == 'yes')
         elif deleted_status == DeletedStatus.NOT_DELETED:
@@ -520,26 +589,23 @@ def get_all_service_goods_master(
         if sub_category_id != 'ALL':
             search_conditions.append(OffViewServiceGoodsMaster.sub_category_id == sub_category_id)
 
-        # Execute the query with the combined conditions
+        query_start = time()  # Capture query start time
         query_result = db.query(OffViewServiceGoodsMaster).filter(and_(*search_conditions)).all()
+        query_duration = time() - query_start  # Capture query duration
 
-        # Check if no data is found
         if not query_result:
             return []
 
-        # Fetching details for bundled service_goods_master_ids
         master_ids = [result.service_goods_master_id for result in query_result if result.is_bundled_service == "yes"]
         details = db.query(OffViewServiceGoodsDetails).filter(OffViewServiceGoodsDetails.bundled_service_goods_id.in_(master_ids)).all()
 
-        # Create a dictionary of details
         details_dict = {}
         for detail in details:
             if detail.bundled_service_goods_id not in details_dict:
                 details_dict[detail.bundled_service_goods_id] = []
             details_dict[detail.bundled_service_goods_id].append(OffViewServiceGoodsDetailsDisplay(**vars(detail)))
 
-        # Convert ORM results to Pydantic models and return
-        return [
+        result = [
             OffViewServiceGoodsMasterDisplay(
                 **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
                 details=details_dict.get(result.service_goods_master_id, None)
@@ -547,8 +613,89 @@ def get_all_service_goods_master(
             for result in query_result
         ]
 
+        end_time = time()  # Capture end time
+        total_duration = end_time - start_time
+        print(f"Total duration for get_all_service_goods_master function: {total_duration:.2f} seconds")
+        print(f"Query duration: {query_duration:.2f} seconds")
+
+        return result
+
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
+
+
+
+
+
+
+
+
+
+
+
+def get_all_service_goods_master_test(
+    db: Session,
+
+    service_goods_type: Union[int, str] = 'ALL', 
+    group_id: Union[int, str] = 'ALL',
+    sub_group_id: Union[int, str] = 'ALL',
+    category_id: Union[int, str] = 'ALL',
+    sub_category_id: Union[int, str] = 'ALL'
+) -> List[OffViewServiceGoodsMasterDisplay]:
+    start_time = time()
+
+    try:
+        search_conditions = []
+
+        if service_goods_type != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.hsn_sac_class_id == service_goods_type)
+
+        elif sub_category_id != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.sub_category_id == sub_category_id)
+        elif category_id != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.category_id == category_id)
+        elif sub_group_id != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.sub_group_id == sub_group_id)
+        elif group_id != 'ALL':
+            search_conditions.append(OffViewServiceGoodsMaster.group_id == group_id)
+
+        query_start = time()
+        query_result = db.query(OffViewServiceGoodsMaster).filter(and_(*search_conditions)).all()
+        query_duration = time() - query_start
+
+        if not query_result:
+            return []
+
+        master_ids = [result.service_goods_master_id for result in query_result if result.is_bundled_service == "yes"]
+        details = db.query(OffViewServiceGoodsDetails).filter(OffViewServiceGoodsDetails.bundled_service_goods_id.in_(master_ids)).all()
+
+        details_dict = {}
+        for detail in details:
+            if detail.bundled_service_goods_id not in details_dict:
+                details_dict[detail.bundled_service_goods_id] = []
+            details_dict[detail.bundled_service_goods_id].append(OffViewServiceGoodsDetailsDisplay(**vars(detail)))
+
+        result = [
+            OffViewServiceGoodsMasterDisplay(
+                **{k: v for k, v in result.__dict__.items() if k != '_sa_instance_state'},
+                details=details_dict.get(result.service_goods_master_id, None)
+            )
+            for result in query_result
+        ]
+
+        end_time = time()
+        total_duration = end_time - start_time
+        print(f"Total duration for get_all_service_goods_master function: {total_duration:.2f} seconds")
+        print(f"Query duration: {query_duration:.2f} seconds")
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
+
+
+
+
 
 
 #--------------------------------------------------------------------------------------------------------------

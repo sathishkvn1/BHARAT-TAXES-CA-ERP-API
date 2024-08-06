@@ -199,6 +199,51 @@ def get_and_search_appointments(
 
 #-------------------------swathy-------------------------------------------------------------------------------
 
+# @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
+# def get_all_service_goods_master(
+#     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
+#     service_goods_name: Optional[str] = Query(None),
+#     service_goods_type: Union[int, str] = Query("ALL", description="Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both."),
+#     group_id: Union[int, str] = Query("ALL"),
+#     sub_group_id: Union[int, str] = Query("ALL"),
+#     category_id: Union[int, str] = Query("ALL"),
+#     sub_category_id: Union[int, str] = Query("ALL"),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Get all service goods master
+
+#      This endpoint retrieves a list of service goods masters based on the provided filters.
+#     - `deleted_status`: Filter services based on whether they are deleted or not.
+#     - `service_goods_name`: Filter services by their name.
+#     - `group_id`: Filter services by group ID.
+#     - `sub_group_id`: Filter services by sub-group ID.
+#     - `category_id`: Filter services by category ID.
+#     - `sub_category_id`: Filter services by sub-category ID.
+#     - `service_goods_type`: Filter services by hsn_sac_class_id (1 for goods, 2 for services).
+
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     results = db_office_master.get_all_service_goods_master(
+#         db, deleted_status, service_goods_name, service_goods_type, group_id, sub_group_id, category_id, sub_category_id
+#     )
+    
+
+#     # Check if no data is found
+#     if not results:
+#         return {"message": "No data present"}
+
+#     # Remove the "details" field if there are no details available
+#     for result in results:
+#         if result.is_bundled_service == "no" or not result.details:
+#             delattr(result, "details")
+
+#     return results
+
+from time import time
 @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master(
     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
@@ -213,30 +258,24 @@ def get_all_service_goods_master(
 ):
     """
     Get all service goods master
-
-     This endpoint retrieves a list of service goods masters based on the provided filters.
-    - `deleted_status`: Filter services based on whether they are deleted or not.
-    - `service_goods_name`: Filter services by their name.
-    - `group_id`: Filter services by group ID.
-    - `sub_group_id`: Filter services by sub-group ID.
-    - `category_id`: Filter services by category ID.
-    - `sub_category_id`: Filter services by sub-category ID.
-    - `service_goods_type`: Filter services by hsn_sac_class_id (1 for goods, 2 for services).
-
+    This endpoint retrieves a list of service goods masters based on the provided filters.
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
+
+    start_time = time()  # Capture start time
+
     results = db_office_master.get_all_service_goods_master(
         db, deleted_status, service_goods_name, service_goods_type, group_id, sub_group_id, category_id, sub_category_id
     )
-    
 
-    # Check if no data is found
+    end_time = time()  # Capture end time
+    total_duration = end_time - start_time
+    print(f"Total duration for fetching service goods master: {total_duration:.2f} seconds")
+
     if not results:
         return {"message": "No data present"}
 
-    # Remove the "details" field if there are no details available
     for result in results:
         if result.is_bundled_service == "no" or not result.details:
             delattr(result, "details")
@@ -244,6 +283,43 @@ def get_all_service_goods_master(
     return results
 
 
+
+
+
+
+
+@router.get('/services/get_all_service_goods_master_test', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
+def get_all_service_goods_master_test(
+   
+    service_goods_type: Union[int, str] = Query("ALL", description="Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both."),
+    group_id: Union[int, str] = Query("ALL"),
+    sub_group_id: Union[int, str] = Query("ALL"),
+    category_id: Union[int, str] = Query("ALL"),
+    sub_category_id: Union[int, str] = Query("ALL"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    start_time = time()
+
+    results = db_office_master.get_all_service_goods_master_test(
+        db,  service_goods_type, group_id, sub_group_id, category_id, sub_category_id
+    )
+
+    end_time = time()
+    total_duration = end_time - start_time
+    print(f"Total duration for fetching service goods master: {total_duration:.2f} seconds")
+
+    if not results:
+        return {"message": "No data present"}
+
+    for result in results:
+        if result.is_bundled_service == "no" or not result.details:
+            delattr(result, "details")
+
+    return results
 
 
 #--------------------------------------------------------------------------------------------------------
