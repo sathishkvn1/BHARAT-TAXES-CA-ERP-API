@@ -13,6 +13,7 @@ from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
 # from caerp_router.office.crud import call_get_service_details
+from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -2232,6 +2233,11 @@ def call_stored_procedure(service_id, input_date):
 
 @router.get("/get_bundle_price_list")
 def get_bundle_price_list(request: ServiceRequest=Depends()):
+    """
+    Query Parameters:
+    service_id (int, required): The unique identifier of the service for which the bundle price details are requested.
+    input_date (string, optional): The date for which the price details should be retrieved, formatted as YYYY-MM-DD.
+    """
     results = call_stored_procedure(request.service_id, request.input_date)
     return {"data": results}
 
@@ -2253,12 +2259,22 @@ def get_work_order_details(
     enquiry_details_id : Optional[int]= None,
     db: Session = Depends(get_db)
 ):
+    """
+    To retrieves work order details based on the specified entry point and associated IDs.
+    The entry points can be WORK_ORDER, CONSULTATION, or ENQUIRY.
+    Parameters:
+
+        - entry_point (required, query parameter): Specifies the type of entry point for the query.
+        - id (required, query parameter): The ID associated with the entry point.
+        - visit_master_id (optional, query parameter): The visit master ID, required when the entry point is CONSULTATION.
+        - enquiry_details_id (optional, query parameter): The enquiry details ID, required when the entry point is ENQUIRY.
+
+    """
+
     results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
-    # results = db_office_master.get_work_order_details(
-    #      db,entry_point,id,work_order_number,work_order_date, work_order_status, mobile_number, email_id)
-    if not results:
-        return JSONResponse(status_code=404, content={"message": "No data present"})
+    
     return results
+
 
 #---------------------------------------------------------------------------------
 @router.get('/get_work_order_list', response_model=List[OffWorkOrderMasterSchema])
@@ -2293,16 +2309,26 @@ def get_work_order_list(
     """
     results = db_office_master.get_work_order_list(
          db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
-    if not results:
-        return JSONResponse(status_code=404, content={"message": "No data present"})
+    
     return results
-
-
+#-------------------------------------------------------------------------------------
+@router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
+def get_business_activity_master_by_type_id(
+    activity_type_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    business_activities = db_office_master.get_business_activity_master_by_type_id(db, activity_type_id)
+    return business_activities
 
 #-------------------------------------------------------------------------------------
-
-
-
+@router.get('/get_business_activity_by_master_id', response_model=List[BusinessActivitySchema])
+def get_business_activity_by_master_id(
+    activity_master_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    business_activities = db_office_master.get_business_activity_by_master_id(db, activity_master_id)
+    return business_activities
+#-------------------------------------------------------------------------------------
 
 # import mysql.connector
 # from mysql.connector import Error

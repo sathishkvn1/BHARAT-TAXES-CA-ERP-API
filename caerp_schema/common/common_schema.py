@@ -1772,3 +1772,22 @@ class VillageResponse(BaseModel):
     district: str = ""
     state: str = "kerala"
     country: str = "India"
+
+
+class BusinessActivityMasterSchema(BaseModel):
+    id: int
+    business_activity_type_id: int
+    business_activity: str
+    is_deleted : str
+
+    class Config:
+        orm_mode = True
+
+class BusinessActivitySchema(BaseModel):
+    id: int
+    activity_master_id: int
+    business_activity: str
+    is_deleted : str
+
+    class Config:
+        orm_mode = True

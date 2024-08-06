@@ -1120,3 +1120,29 @@ class BookNumber(caerp_base):
     customer_number = Column (Integer, default=None)
     file_number_prefix = Column (String, default=None)
     file_number = Column (Integer, default=None)
+
+
+class BusinessActivityType(caerp_base):
+    __tablename__ = 'app_business_activity_type'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    business_activity_type      = Column(String, nullable=False)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class BusinessActivityMaster(caerp_base):
+    __tablename__ = 'app_business_activity_master'
+
+    id                                   = Column(Integer, primary_key=True, autoincrement=True)
+    business_activity_type_id            = Column(Integer,nullable=False)
+    business_activity             = Column(String, nullable=False)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class BusinessActivity(caerp_base):
+    __tablename__ = 'app_business_activity'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    activity_master_id            = Column(Integer,nullable=False)
+    business_activity           = Column(String, nullable=False)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
-from caerp_db.common.models import  EmployeeEmployementDetails, EmployeeMaster
+from caerp_db.common.models import  BusinessActivity, BusinessActivityMaster, EmployeeEmployementDetails, EmployeeMaster
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
@@ -12,6 +12,7 @@ from sqlalchemy.orm.session import Session
 from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffWorkOrderDetails, OffWorkOrderMaster
 from caerp_functions.generate_book_number import generate_book_number
 
+from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDetailsSchema, WorkOrderResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
@@ -2341,14 +2342,6 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
 
 
 #------------------WORKORDER---------------------------------------------------
-
-
-
-
-
-#-------------------------------------------------------------------------------------------------------------
-
-
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
@@ -2359,8 +2352,6 @@ def get_work_order_details(
 
                         #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
     if entry_point == 'WORK_ORDER':
-        if id is None:
-            raise ValueError("ID is required for WORK_ORDER entry point")
         query = db.query(OffWorkOrderMaster).filter(
             OffWorkOrderMaster.is_deleted == 'no',
             OffWorkOrderMaster.id == id)
@@ -2377,13 +2368,8 @@ def get_work_order_details(
     
 
     elif entry_point == 'CONSULTATION':
-            if id is None:
-                # raise ValueError("ID is required for CONSULTATION entry point")
-                return {
-                    'message ': "ID is required for CONSULTATION entry point",
-                    'Success' : 'false'
-                }
-            elif visit_master_id is None:
+            
+            if visit_master_id is None:
                 # raise ValueError("visit master id is required for CONSULTATION entry point")
                 return {
                     'message ': "visit master id is required for CONSULTATION entry point",
@@ -2392,7 +2378,11 @@ def get_work_order_details(
             appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
             visit_data       = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id==visit_master_id).first()   
             if not appointment_data:
-                raise ValueError("Consultation not found")
+                # raise ValueError("Consultation not found")
+                return {
+                    'message ': "visit master id is required for CONSULTATION entry point",
+                    # 'Success' : 'false'
+                }
             full_name = appointment_data.full_name.split()
             first_name = full_name[0] if len(full_name) > 0 else ""
             middle_name = full_name[1] if len(full_name) > 2 else ""
@@ -2457,12 +2447,20 @@ def get_work_order_details(
             service_data=[]
         )
     else:
-            raise ValueError("Invalid entry point")
+            return {
+                'message': 'Invalid entry point',
+                'Success': 'false'
+            }
+            # raise ValueError("Invalid entry point")
+    # if data:
 
     return data
-
+    # else:
+    #     return {
+    #         'message': 'No data found',
+    #         'Success': 'false'
+    #     }
 #----------------------------------------------------------------------------------------------
-
 def get_work_order_list(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -2504,8 +2502,8 @@ def get_work_order_list(
             # Execute the query
             query_result = db.query(OffWorkOrderMaster).filter(and_(*search_conditions)).all()
 
-            if not query_result:
-                raise HTTPException(status_code=404, detail="Work_order not found")
+            # if not query_result:
+            #     raise HTTPException(status_code=404, detail="Work_order not found")
 
            
 
@@ -2518,4 +2516,33 @@ def get_work_order_list(
          
             # except HTTPException as http_error:
             # raise http_error
+    
+#-----------------------------------------------------------------------------------------------
+def get_business_activity_master_by_type_id(
+        db: Session,
+        type_id: Optional[int] = None
+) -> List[BusinessActivityMasterSchema]:
+    
+    if type_id is None:
+        business_activities = db.query(BusinessActivityMaster).filter(BusinessActivityMaster.is_deleted == 'no').all()
+    else:
+        business_activities = db.query(BusinessActivityMaster).filter(
+            BusinessActivityMaster.is_deleted == 'no',
+            BusinessActivityMaster.business_activity_type_id == type_id).all()
         
+    return business_activities  
+#---------------------------------------------------------------------------------------------------------
+def get_business_activity_by_master_id(
+        db: Session,
+        master_id: Optional[int] =None
+) -> List[BusinessActivitySchema]:
+        
+        if master_id is None:
+            business_activities = db.query(BusinessActivity).filter(BusinessActivity.is_deleted == 'no').all()
+
+        else:
+            business_activities = db.query(BusinessActivity).filter(
+                BusinessActivity.is_deleted == 'no',
+                BusinessActivity.activity_master_id == master_id).all()
+        return business_activities
+#---------------------------------------------------------------------------------------------------------
