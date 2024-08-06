@@ -610,163 +610,9 @@ def add_employee_detail(employee_details, employee_id, key, value, db):
         employee.setdefault(key, []).append(value)
 
 
-# @router.get("/get_employee_details")
-# def get_employee_details(
-#     employee_id: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme),
-#     employee_profile_component: Optional[str] = Query(
-#         None,
-#         description=(
-#             "Comma-separated list of components to view employee details. "
-#             "Valid options are:[ present_address, permanent_address, bank_details, contact_details, "
-#             "employement_details, emergency_contact_details, dependent_details, employee_salary, "
-#             "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
-#         )
-#     )
-# ):
-#     """
-#     -**Retrieve employee master profile by employee_id.**
-
-#     -**employee_id** : Integer parameter, the Employee Master identifier.
-#     - If id is 0, all the employees will be retrieved.
-
-#     -**employee_profile_component** : a textfield to add components for retrieving employee profiles. Following are the components:
-#     - present_address,permanent_address,bank_details,contact_details,employement_details,emergency_contact_details,dependent_details,employee_salary, educational_qualification, employee_experience, employee_documents, professional_qualification
-#     """
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#     employee_details = []
-
-#     if employee_profile_component is None: 
-#         if employee_id is not None:  
-#             emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
-#             if not emp:
-#                 raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {employee_id} not found" )
-#             employee_details.append({
-#                 'employee_master': EmployeeDetailsGet(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
-#             })
-#         else:
-#             employees = db_employee_master.get_employee_master_details(db)
-#             for emp in employees:
-#                 employee_details.append({
-#                     'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
-#                 })
-#         return employee_details    
-#     else: 
-#         if employee_id is not None:  
-#             emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
-#             if not emp:
-#                 raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,detail = f"Employee with id {employee_id} not found" )
-#             employee_details.append({
-#                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
-#             })
-#         else:
-#             employees = db_employee_master.get_employee_master_details(db)
-#             for emp in employees:
-#                 employee_details.append({
-#                     'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
-#                 })
-        
-#         schema_names = EmployeeDetailsGet.__fields__.keys()
-#         print(f"Employee schema_names: {schema_names}")
-#         schemas_list = employee_profile_component.split(",")
-#         valid_options = [option for option in schemas_list if option in schema_names]
-#         print(f"Employee valid_options: {valid_options}")
-#         if not valid_options:
-#             raise HTTPException(status_code=422, detail="Invalid employee profile component")
-  
-#         for option in valid_options:
-
-#             if option == "present_address":
-#                 present_addresses = db_employee_master.get_present_address_details(db)
-#                 for present in present_addresses:
-#                     add_employee_detail(employee_details, present.employee_id, 'present_address', EmployeePresentAddressGet(**present.__dict__),db)
-      
-#             if option == "permanent_address":
-#                 permanent_addresses = db_employee_master.get_permanent_address_details(db)
-#                 for permanent in permanent_addresses:
-#                     add_employee_detail(employee_details, permanent.employee_id, 'permanent_address', EmployeePermanentAddressGet(**permanent.__dict__),db)    
-    
-#             if option == "contact_details":
-#                 contact_info = db_employee_master.get_contact_details(db)
-#                 for contact in contact_info:
-#                     add_employee_detail(employee_details, contact.employee_id, 'contact_details', EmployeeContactGet(**contact.__dict__),db)
-
-#             if option == "bank_details":
-#                 bank_info = db_employee_master.get_bank_details(db)
-#                 for bank in bank_info:
-#                     add_employee_detail(employee_details, bank.employee_id, 'bank_details', EmployeeBankAccountGet(**bank.__dict__),db)
-     
-#             if option == "employement_details":
-#                 employement_info = db_employee_master.get_employement_details(db)
-#                 for employement in employement_info:
-#                     add_employee_detail(employee_details, employement.employee_id, 'employement_details', EmployeeEmployementGet(**employement.__dict__),db)
-     
-#             if option == "employee_salary":
-#                 salary_info = db_employee_master.get_salary_details(db)
-#                 for salary in salary_info:
-#                     add_employee_detail(employee_details, salary.employee_id, 'employee_salary', EmployeeSalaryGet(**salary.__dict__),db)
-     
-#             if option == "educational_qualification":
-#                 edu_qual_info = db_employee_master.get_qualification_details(db)
-#                 for edu_qual in edu_qual_info:
-#                     add_employee_detail(employee_details, edu_qual.employee_id, 'educational_qualification', EmployeeEducationalQualficationGet(**edu_qual.__dict__),db)
-
-#             if option == "employee_experience":
-#                 exp_info = db_employee_master.get_experience_details(db)
-#                 for exp in exp_info:
-#                     add_employee_detail(employee_details, exp.employee_id, 'employee_experience', EmployeeExperienceGet(**exp.__dict__),db)
-
-#             if option == "employee_documents":
-#                 doc_info = db_employee_master.get_document_details(db)
-#                 for doc in doc_info:
-#                     add_employee_detail(employee_details, doc.employee_id, 'employee_documents', EmployeeDocumentsGet(**doc.__dict__),db)
-
-#             if option == "emergency_contact_details":
-#                 emer_contact = db_employee_master.get_emergency_contact_details(db)
-#                 for emer in emer_contact:
-#                     add_employee_detail(employee_details, emer.employee_id, 'emergency_contact_details', EmployeeEmergencyContactGet(**emer.__dict__),db)
-
-#             if option == "dependent_details":
-#                 dep_details = db_employee_master.get_dependent_details(db)
-#                 for dep in dep_details:
-#                     add_employee_detail(employee_details, dep.employee_id, 'dependent_details', EmployeeDependentsGet(**dep.__dict__),db)
-     
-#             if option == "professional_qualification":
-#                 prof_qual_info = db_employee_master.get_professional_qualification_details(db)
-#                 for prof_qual in prof_qual_info:
-#                     add_employee_detail(employee_details, prof_qual.employee_id, 'professional_qualification', EmployeeProfessionalQualificationGet(**prof_qual.__dict__),db)
-
-#             if option == "employee_security_credentials":
-#                 sec_credentials = db_employee_master.get_security_credentials(db)
-#                 for sec in sec_credentials:
-#                     add_employee_detail(employee_details, sec.employee_id, 'employee_security_credentials', EmployeeSecurityCredentialsGet(**sec.__dict__),db)
-          
-#             if option == "user_roles":
-#                 user_role = db_employee_master.get_user_role(db)
-#                 for role in user_role:
-#                     add_employee_detail(employee_details, role.employee_id, 'user_roles', EmployeeUserRolesGet(**role.__dict__),db)
-
-#         if employee_id is not None:
-#             return next((emp for emp in employee_details if emp['employee_master'].employee_id == employee_id), None)
-#         else:
-#             return employee_details
 
 
-
-
-
-
-
-
-
-
-
-
-
-@router.get('/view_documents/{employee_id}', response_model=List[Dict[str, str]])
+@router.get('/get_employee_uploaded_documents/{employee_id}', response_model=List[Dict[str, str]])
 def view_documents(
     employee_id: int,
     db: Session = Depends(get_db),
@@ -800,7 +646,7 @@ def view_documents(
 
           for filename in os.listdir(UPLOAD_EMP_DOCUMENTS):
               if filename.startswith(filename_prefix):
-                 document_urls.append({"document": f"{BASE_URL}/Employee/upload_document/{filename}"})
+                 document_urls.append({"document": f"{BASE_URL}/hr_and_payroll/Employee/upload_document/{filename}"})
         
         return document_urls
     except Exception as e:
@@ -1024,10 +870,10 @@ def update_employee_address_or_bank_details(
 
 #-----------------------------------------------------------------------
 
-@router.get("/documents/get_employee_uploaded_documents/{id}", response_model=dict)
-def get_employee_documents(id: int):
+# @router.get("/documents/get_employee_uploaded_documents/{id}", response_model=dict)
+# def get_employee_documents(id: int):
     
-    document_name = f"{id}.jpg"  
-    # BASE_URL="http://127.0.0.1:8010/"
-    return {"photo_url": f"{BASE_URL}/product/save_product_master/{document_name}"}
+#     document_name = f"{id}.jpg"  
+#     # BASE_URL="http://127.0.0.1:8010/"
+#     return {"photo_url": f"{BASE_URL}/product/save_product_master/{document_name}"}
 

@@ -108,7 +108,7 @@ app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 
 
 app_common.mount("/captcha/generate_captcha", StaticFiles(directory="uploads/captcha_modified_images"), name="captcha_images")
-hr_and_payroll.mount("/upload_document", StaticFiles(directory="uploads/employee_documents"), name="documents")
+hr_and_payroll.mount("/Employee/upload_document", StaticFiles(directory="uploads/employee_documents"), name="documents")
 
 
 
