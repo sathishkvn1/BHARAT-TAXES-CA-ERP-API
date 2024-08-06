@@ -764,6 +764,7 @@ class OffViewEnquiryMasterSchema(BaseModel):
     country_name_arabic: Optional[str] 
     
 class OffViewEnquiryDetailsSchema(BaseModel):
+    enquiry_details_id:int
     financial_year_id: Optional[int]
     financial_year: Optional[str]
     enquiry_number: Optional[str]

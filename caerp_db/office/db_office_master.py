@@ -422,12 +422,13 @@ def get_appointments(
 
         # Check if any results were found
         if not combined_results:
-            raise HTTPException(status_code=404, detail="No appointments found")
+            return []
 
         # Organize visit details by appointment_id
         visit_details_dict = {}
         for visit_details in combined_results:
-            visit_details_schema = OffAppointmentVisitDetailsViewSchema.from_orm(visit_details)
+            visit_details_data = {column.name: getattr(visit_details, column.name) for column in visit_details.__table__.columns}
+            visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data)
             appointment_id = visit_details.appointment_visit_master_appointment_master_id
             if appointment_id not in visit_details_dict:
                 visit_details_dict[appointment_id] = {
@@ -446,7 +447,7 @@ def get_appointments(
 
         # Check if appointments were found
         if not appointment_query:
-            raise HTTPException(status_code=404, detail="No appointments found")
+            return []
 
         # Create response data
         appointments = []
@@ -454,14 +455,16 @@ def get_appointments(
             appointment_id = appointment.appointment_master_id
             visit_details = visit_details_dict.get(appointment_id, {"visit_details": []})
 
-            visit_master = OffAppointmentVisitMasterViewSchema.from_orm(appointment)
+            appointment_data = {column.name: getattr(appointment, column.name) for column in appointment.__table__.columns}
+            visit_master = OffAppointmentVisitMasterViewSchema(**appointment_data)
+            appointment_master = OffAppointmentMasterViewSchema(**appointment_data)
 
-            appointment_data = ResponseSchema(
-                appointment_master=OffAppointmentMasterViewSchema.from_orm(appointment),
+            response_data = ResponseSchema(
+                appointment_master=appointment_master,
                 visit_master=visit_master,
                 visit_details=visit_details["visit_details"]
             )
-            appointments.append(appointment_data)
+            appointments.append(response_data)
 
         return appointments
 
@@ -2027,7 +2030,7 @@ def get_enquiries(
         ).filter(and_(*search_conditions)).all()
 
         if not query_result:
-            raise HTTPException(status_code=404, detail="Enquiry not found")
+            return []
 
         # Dictionary to store enquiries by ID
         enquiry_dict = {}
@@ -2069,6 +2072,8 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 #------------------------------------------------------------------------------------------------
