@@ -367,25 +367,32 @@ def get_employee_details(
                 if option == "educational_qualification":
                     edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
                     if edu_qual_info:
+                        # Create a list of EmployeeEducationalQualificationGet objects
+                        qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
                         employee_details.append({
-                            
-                            'educational_qualification': EmployeeEducationalQualficationGet(**edu_qual_info[0].__dict__)
-                        })
+                              'educational_qualification': qualifications
+                            })
+        
 
                 if option == "employee_experience":
                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
                     if exp_info:
+
+                        # Create a list of EmployeeExperienceGet objects
+                        experiences = [EmployeeExperienceGet(**exp.__dict__) for exp in exp_info]
                         employee_details.append({
-                            'employee_experience': EmployeeExperienceGet(**exp_info[0].__dict__)
+                            'employee_experience': experiences
                         })
 
                 if option == "employee_documents":
                     doc_info = db_employee_master.get_document_details(db, employee_id=employee_id)
                     if doc_info:
+                       # Create a list of EmployeeDocumentsGet objects
+                        documents = [EmployeeDocumentsGet(**doc.__dict__) for doc in doc_info]
                         employee_details.append({
-                            'employee_documents': EmployeeDocumentsGet(**doc_info[0].__dict__)
+                             'employee_documents': documents
                         })
-
+                
                 if option == "emergency_contact_details":
                     emer_contact = db_employee_master.get_emergency_contact_details(db, employee_id=employee_id)
                     if emer_contact:
@@ -403,22 +410,32 @@ def get_employee_details(
                 if option == "professional_qualification":
                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
                     if prof_qual_info:
+                         # Create a list of EmployeeProfessionalQualificationGet objects
+                        prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
                         employee_details.append({
-                            'professional_qualification': EmployeeProfessionalQualificationGet(**prof_qual_info[0].__dict__)
+                                'professional_qualification': prof_qualifications
                         })
+       
 
                 if option == "employee_security_credentials":
                     sec_credentials = db_employee_master.get_security_credentials(db, employee_id=employee_id)
                     if sec_credentials:
+                       # Create a list of EmployeeSecurityCredentialsGet objects
+                        credentials = [EmployeeSecurityCredentialsGet(**cred.__dict__) for cred in sec_credentials]
                         employee_details.append({
-                            'employee_security_credentials': EmployeeSecurityCredentialsGet(**sec_credentials[0].__dict__)
+                              'employee_security_credentials': credentials
                         })
+        
 
+
+                
                 if option == "user_roles":
-                    user_role = db_employee_master.get_user_role(db, employee_id=employee_id)
-                    if user_role:
+                    user_roles = db_employee_master.get_user_role(db, employee_id=employee_id)
+                    if user_roles:
+                 # Create a list of EmployeeUserRolesGet objects
+                        roles = [EmployeeUserRolesGet(**role.__dict__) for role in user_roles]
                         employee_details.append({
-                            'user_roles': EmployeeUserRolesGet(**user_role[0].__dict__)
+                                  'user_roles': roles
                         })
 
             return employee_details
@@ -470,7 +487,6 @@ def get_employee_details(
             employee_details.append(emp_detail)
 
         return employee_details
-
 
 # @router.get("/search_employee_details")
 # def search_employee_details(
