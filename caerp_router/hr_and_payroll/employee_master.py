@@ -736,7 +736,9 @@ def get_employee_documents(employee_id: int, db: Session = Depends(get_db),token
 
                 if filename.startswith(filename_prefix) :
                     
-                    document_url = f"{BASE_URL}/upload_document/{filename}"
+        
+                    
+                    document_url = f"{BASE_URL}/hr_and_payroll/Employee/upload_document/{filename}"
                     break
                 else:
                     print(f"No match for file: {filename}")  # Debugging: No match
