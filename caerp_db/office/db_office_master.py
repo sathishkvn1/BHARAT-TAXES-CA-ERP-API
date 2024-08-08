@@ -1049,6 +1049,7 @@ from sqlalchemy.sql import text
 def get_consultants(db: Session):
     sql = text("""
     SELECT 
+  
         em.employee_id,
         em.first_name,
         em.middle_name,
@@ -1061,18 +1062,39 @@ def get_consultants(db: Session):
         em.employee_id = eed.employee_id
     WHERE 
         eed.is_consultant = 'yes'
-        AND eed.effective_from_date = (
-            SELECT MAX(eed_inner.effective_from_date)
-            FROM employee_employement_details eed_inner
-            WHERE eed_inner.employee_id = eed.employee_id
-        )
         AND eed.effective_from_date <= CURDATE()
-        AND (eed.effective_to_date IS NULL OR eed.effective_to_date >= CURDATE())
+        AND eed.effective_to_date IS NULL OR eed.effective_to_date >= CURDATE()
+        
         AND em.is_deleted = 'no'
         AND eed.is_deleted = 'no';
     """)
     result = db.execute(sql)
     return result.fetchall()
+
+
+# def get_all_employees(db: Session) -> List[Employee]:
+#     """
+#     Fetches all employees (non-consultants) from the database.
+
+#     Args:
+#         db (Session): Database session.
+
+#     Returns:
+#         List[Employee]: List of employees.
+#     """
+#     return db.query(Employee).filter(Employee.is_consultant == 'no').all()
+
+def get_all_non_consultant_employees(db: Session):
+    query = (
+        db.query(EmployeeMaster)
+        .join(EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id)
+        .filter(
+            EmployeeEmployementDetails.is_consultant == 'no',
+            EmployeeMaster.is_deleted == 'no',
+            EmployeeEmployementDetails.is_deleted == 'no'
+        )
+    )
+    return query.all()
 
 
 # def get_all_employees(db: Session) -> List[Employee]:
