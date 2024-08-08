@@ -491,7 +491,7 @@ def get_employee_details(
         )
 
         if not employees:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No employees found with the given filters")
+            return []
 
         
         employee_details = []

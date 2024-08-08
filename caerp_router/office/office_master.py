@@ -34,9 +34,9 @@ router = APIRouter(
 
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 
-#--------------------save_appointment_details-----------------------
+#--------------------save_appointment_details-------------------------------------------------------
 
-#---------------------------------------------------------------------------------------------------------------
+
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
@@ -199,49 +199,7 @@ def get_and_search_appointments(
 
 #-------------------------swathy-------------------------------------------------------------------------------
 
-# @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
-# def get_all_service_goods_master(
-#     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
-#     service_goods_name: Optional[str] = Query(None),
-#     service_goods_type: Union[int, str] = Query("ALL", description="Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both."),
-#     group_id: Union[int, str] = Query("ALL"),
-#     sub_group_id: Union[int, str] = Query("ALL"),
-#     category_id: Union[int, str] = Query("ALL"),
-#     sub_category_id: Union[int, str] = Query("ALL"),
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     """
-#     Get all service goods master
 
-#      This endpoint retrieves a list of service goods masters based on the provided filters.
-#     - `deleted_status`: Filter services based on whether they are deleted or not.
-#     - `service_goods_name`: Filter services by their name.
-#     - `group_id`: Filter services by group ID.
-#     - `sub_group_id`: Filter services by sub-group ID.
-#     - `category_id`: Filter services by category ID.
-#     - `sub_category_id`: Filter services by sub-category ID.
-#     - `service_goods_type`: Filter services by hsn_sac_class_id (1 for goods, 2 for services).
-
-#     """
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     results = db_office_master.get_all_service_goods_master(
-#         db, deleted_status, service_goods_name, service_goods_type, group_id, sub_group_id, category_id, sub_category_id
-#     )
-    
-
-#     # Check if no data is found
-#     if not results:
-#         return {"message": "No data present"}
-
-#     # Remove the "details" field if there are no details available
-#     for result in results:
-#         if result.is_bundled_service == "no" or not result.details:
-#             delattr(result, "details")
-
-#     return results
 
 from time import time
 @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
@@ -274,7 +232,7 @@ def get_all_service_goods_master(
     print(f"Total duration for fetching service goods master: {total_duration:.2f} seconds")
 
     if not results:
-        return {"message": "No data present"}
+        return []
 
     for result in results:
         if result.is_bundled_service == "no" or not result.details:
@@ -416,7 +374,7 @@ def search_off_document_data_master(
        
     documents = db_office_master.search_off_document_data_master(db, type, document_name)
     if not documents:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found")
+        return []
     return documents
 
 
@@ -1059,7 +1017,7 @@ def get_service_documents_list_by_group_category(
             db, group_id, sub_group_id, category_id)
             
         if not results:
-            return JSONResponse(status_code=404, content={"message": "No data found"})
+            return []
         
         # If the results are a list of Service_Group objects
         if isinstance(results[0], Service_Group):
@@ -1112,7 +1070,7 @@ def get_service_documents_data_details(
         results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
 
         if not results:
-            return JSONResponse(status_code=404, content={"message": "No data found"})
+            return []
 
         # Group the results by document category
         grouped_results = {}
@@ -1252,7 +1210,7 @@ def get_all_service_document_data_master(
         # Log keys and rows for debugging
        
         if not rows:
-            return [{"message": "No data present"}]
+            return []
 
         service_document_data_master = []
         for row in rows:
@@ -1716,7 +1674,7 @@ def get_all_consultation_task_master_details(
         )
 
         if not results:
-            return {"message": "No data present"}
+            return []
         
         # Filter out null fields and convert datetime objects to strings
         filtered_results = [
@@ -1765,7 +1723,7 @@ def get_all_services(
 
     # Check if no data is found
     if not results:
-        return {"message": "No data present"}
+        return []
 
     # Remove the "details" field if there are no details available
     for result in results:
