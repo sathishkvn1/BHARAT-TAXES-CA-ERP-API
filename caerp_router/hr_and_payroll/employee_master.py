@@ -612,50 +612,87 @@ def add_employee_detail(employee_details, employee_id, key, value, db):
 
 
 
-@router.get('/get_employee_uploaded_documents/{employee_id}', response_model=List[Dict[str, str]])
-def view_documents(
-    employee_id: int,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    """
-    Fetch uploaded documents for a particular employee.
+# @router.get('/get_employee_uploaded_documents/{employee_id}', response_model=List[Dict[str, str]])
+# def view_documents(
+#     employee_id: int,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Fetch uploaded documents for a particular employee.
     
-    - **employee_id**: Integer parameter, employee identifier.
-    - **db**: Database session.
-    - **token**: Authentication token.
-    """
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     - **employee_id**: Integer parameter, employee identifier.
+#     - **db**: Database session.
+#     - **token**: Authentication token.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-    auth_info = authenticate_user(token)
-    user_id = auth_info["user_id"]
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info["user_id"]
 
-    try:
-        documents = db.query(EmployeeDocuments).filter(
-            EmployeeDocuments.employee_id == employee_id,
-            EmployeeDocuments.is_deleted == 'no'
-        ).all()
+#     try:
+#         documents = db.query(EmployeeDocuments).filter(
+#             EmployeeDocuments.employee_id == employee_id,
+#             EmployeeDocuments.is_deleted == 'no'
+#         ).all()
 
-        if not documents:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found for the given employee id")
+#         if not documents:
+#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found for the given employee id")
 
-        document_urls = []
-        for doc in documents:
-          filename_prefix = f"{doc.id}"
+#         document_urls = []
+#         for doc in documents:
+#           filename_prefix = f"{doc.id}"
 
-          for filename in os.listdir(UPLOAD_EMP_DOCUMENTS):
-              if filename.startswith(filename_prefix):
-                 document_urls.append({"document": f"{BASE_URL}/hr_and_payroll/Employee/upload_document/{filename}"})
+#           for filename in os.listdir(UPLOAD_EMP_DOCUMENTS):
+#               if filename.startswith(filename_prefix):
+#                  document_urls.append({"document": f"{BASE_URL}/hr_and_payroll/Employee/upload_document/{filename}"})
         
-        return document_urls
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#         return document_urls
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 
-@router.get('/get_employee_document_details/{employee_id}', response_model=List[EmployeeDocumentResponse])
-def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
+# @router.get('/get_employee_document_details/{employee_id}', response_model=List[EmployeeDocumentResponse])
+# def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
+#     try:
+#         query = db.query(
+#             EmployeeDocuments.id,
+#             EmployeeDocuments.employee_id,
+#             EmployeeDocuments.document_id,
+#             EmployeeDocuments.document_number,
+#             HrDocumentMaster.document_name,
+#             EmployeeDocuments.issue_date,
+#             EmployeeDocuments.expiry_date,
+#             EmployeeDocuments.issued_by,
+#             EmployeeDocuments.remarks,
+
+#             EmployeeDocuments.is_deleted,
+          
+          
+#         ).join(
+#             HrDocumentMaster, EmployeeDocuments.document_id == HrDocumentMaster.id
+#         ).filter(
+#             EmployeeDocuments.employee_id == employee_id
+#         )
+
+#         employee_documents = query.all()
+
+#         if not employee_documents:
+#             raise HTTPException(status_code=404, detail="Employee documents not found")
+
+#         response = [EmployeeDocumentResponse(**doc._asdict()) for doc in employee_documents]
+#         return response
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get('/get_employee_document_details_with_uploads/{employee_id}', response_model=List[EmployeeDocumentResponse])
+def get_employee_documents(employee_id: int, db: Session = Depends(get_db),token: str = Depends(oauth2.oauth2_scheme)):
+
+    if not token:
+       raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     try:
         query = db.query(
             EmployeeDocuments.id,
@@ -667,16 +704,12 @@ def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
             EmployeeDocuments.expiry_date,
             EmployeeDocuments.issued_by,
             EmployeeDocuments.remarks,
-            # EmployeeDocuments.created_by,
-            # EmployeeDocuments.created_on,
-            EmployeeDocuments.is_deleted,
-            # EmployeeDocuments.deleted_by,
-            # EmployeeDocuments.deleted_on,
-          
+            EmployeeDocuments.is_deleted
         ).join(
             HrDocumentMaster, EmployeeDocuments.document_id == HrDocumentMaster.id
         ).filter(
-            EmployeeDocuments.employee_id == employee_id
+            EmployeeDocuments.employee_id == employee_id,
+            EmployeeDocuments.is_deleted == 'no'
         )
 
         employee_documents = query.all()
@@ -684,10 +717,42 @@ def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
         if not employee_documents:
             raise HTTPException(status_code=404, detail="Employee documents not found")
 
-        response = [EmployeeDocumentResponse(**doc._asdict()) for doc in employee_documents]
+        response = []
+        files_in_directory = os.listdir(UPLOAD_EMP_DOCUMENTS)
+       
+        for doc in employee_documents:
+            document_data = doc._asdict()
+            
+
+            # Construct the file name prefix
+            filename_prefix = f"{document_data['id']}"
+            
+
+            document_url = None
+
+            # Loop through the files in the directory
+            for filename in files_in_directory:
+                
+
+                if filename.startswith(filename_prefix) :
+                    
+                    document_url = f"{BASE_URL}/upload_document/{filename}"
+                    break
+                else:
+                    print(f"No match for file: {filename}")  # Debugging: No match
+
+            if not document_url:
+                print(f"No document found for ID: {document_data['id']}")  # Debugging: No document found
+
+            # Attach the document URL or keep it as None if not found
+            document_data['document'] = document_url
+            response.append(EmployeeDocumentResponse(**document_data))
+
         return response
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 @router.post('/employee_save_update')
 def employee_save_update(
