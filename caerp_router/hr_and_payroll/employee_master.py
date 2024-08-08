@@ -654,7 +654,7 @@ def view_documents(
 
 
 
-@router.get('/employee_documents/{employee_id}', response_model=List[EmployeeDocumentResponse])
+@router.get('/get_employee_document_details/{employee_id}', response_model=List[EmployeeDocumentResponse])
 def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
     try:
         query = db.query(
@@ -662,16 +662,17 @@ def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
             EmployeeDocuments.employee_id,
             EmployeeDocuments.document_id,
             EmployeeDocuments.document_number,
+            HrDocumentMaster.document_name,
             EmployeeDocuments.issue_date,
             EmployeeDocuments.expiry_date,
             EmployeeDocuments.issued_by,
             EmployeeDocuments.remarks,
-            EmployeeDocuments.created_by,
-            EmployeeDocuments.created_on,
+            # EmployeeDocuments.created_by,
+            # EmployeeDocuments.created_on,
             EmployeeDocuments.is_deleted,
-            EmployeeDocuments.deleted_by,
-            EmployeeDocuments.deleted_on,
-            HrDocumentMaster.document_name
+            # EmployeeDocuments.deleted_by,
+            # EmployeeDocuments.deleted_on,
+          
         ).join(
             HrDocumentMaster, EmployeeDocuments.document_id == HrDocumentMaster.id
         ).filter(

@@ -543,17 +543,18 @@ class EmployeeDocumentResponse(BaseModel):
     id: int
     employee_id: int
     document_id: int
+    document_name: str 
     document_number: Optional[str]
     issue_date: date
     expiry_date: Optional[date]
     issued_by: Optional[str]
     remarks: Optional[str]
-    created_by: int
-    created_on: datetime
+   #  created_by: int
+   #  created_on: datetime
     is_deleted: str
-    deleted_by: Optional[int]
-    deleted_on: Optional[datetime]
-    document_name: str  # Adding document_name field to the response
+   #  deleted_by: Optional[int]
+   #  deleted_on: Optional[datetime]
+     # Adding document_name field to the response
 
     class Config:
         orm_mode = True
