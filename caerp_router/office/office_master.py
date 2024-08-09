@@ -14,7 +14,7 @@ from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -2370,49 +2370,33 @@ def get_business_activity_by_master_id(
     return business_activities
 #-------------------------------------------------------------------------------------
 
-# import mysql.connector
-# from mysql.connector import Error
-# def call_stored_procedure(service_id, input_date):
-#     connection = None
-#     cursor = None
-#     try:
-#         connection = mysql.connector.connect(
-#             user="root",
-#             password="brdb123",
-#             host="202.21.38.180",
-#             port="3306",
-#             database="bharat_taxes_ca_erp"
-#         )
-#         cursor = connection.cursor(dictionary=True)
-        
-#         # Call the stored procedure
-#         cursor.callproc('GetServiceDetails', [service_id, input_date])
-        
-#         # Fetch results
-#         results = []
-#         for result_set in cursor.stored_results():
-#             results.extend(result_set.fetchall())
-        
-#         return results
-    
-#     except Error as e:
-#         print(f"Error: {e}")
-#         raise
-    
-#     finally:
-#         if cursor:
-#             cursor.close()
-#         if connection:
-#             connection.close()
-
-# # Example call
-# # results = call_stored_procedure(1, '2024-01-01')
-# # print("Resultcccccccc",results)
-
-# @router.post("/get_bundle_price_list")
-# def get_bundle_price_list(request: ServiceRequest):
-#     results = call_stored_procedure(request.service_id, request.input_date)
-#     return {"data": results}
+@router.get('/get_utility_document_by_nature_of_position', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
+def get_utility_document_by_nature_of_position(
+        service_id: int,
+        constitution_id: int,
+        nature_of_position : int,
+        db:Session = Depends(get_db)
+):
+    return db_office_master.get_utility_document_by_nature_of_position(service_id,constitution_id,nature_of_position,db)
 
 
 #-------------------------------------------------------------------------------------
+
+@router.post('/save_work_order_set_details')
+def save_work_order_set_details(
+    request: CreateWorkOrderSetDtailsRequest,
+    work_order_details_id:int,
+    business_place_details_id:Optional[int] = 0,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+
+):
+   if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+   auth_info = authenticate_user(token)
+   user_id = auth_info.get("user_id")
+   
+   return db_office_master.save_work_order_set_details( db,request,work_order_details_id,user_id,business_place_details_id)
+
+
+

@@ -14,157 +14,172 @@ class AppointmentStatusConstants(str,Enum):
 
 
 class OffAppointmentMasterSchema(BaseModel):
-    # id:Optional[int]
-    full_name: str
-    customer_number: str
-    mobile_number: Optional[str]
-    whatsapp_number: Optional[str]
-    email_id: Optional[str]
-    gender_id:Optional[int]
-    locality : Optional[str]
-    pin_code : Optional[str]
-    post_office_id: Optional[int]
-    taluk_id: Optional[int]
-    district_id: Optional[int]
-    state_id: Optional[int]
+ 
+    full_name        : str
+    customer_number  : str
+    mobile_number    : Optional[str]
+    whatsapp_number  : Optional[str]
+    email_id         : Optional[str]
+    gender_id        : Optional[int]
+    locality         : Optional[str]
+    pin_code         : Optional[str]
+    post_office_id   : Optional[int]
+    taluk_id         : Optional[int]
+    district_id      : Optional[int]
+    state_id         : Optional[int]
+
 
 class OffAppointmentVisitMasterSchema(BaseModel):
  
-    financial_year_id: Optional[int]
-    voucher_number: Optional[str]
-    appointment_date : Optional[date]
-    appointment_time_from: Optional[str] 
-    appointment_time_to: Optional[str]
-    source_of_enquiry_id : Optional[int]
-    appointment_status_id: Optional[int]
-    consultant_id: Optional[int]
-    consultation_mode_id: Optional[int]
-    consultation_tool_id: Optional[int]
-    gross_amount: Optional[int]
-    discount_percentage: Optional[int]
+    financial_year_id         : Optional[int]
+    voucher_number            : Optional[str]
+    appointment_date          : Optional[date]
+    appointment_time_from     : Optional[str] 
+    appointment_time_to       : Optional[str]
+    source_of_enquiry_id      : Optional[int]
+    appointment_status_id     : Optional[int]
+    consultant_id             : Optional[int]
+    consultation_mode_id      : Optional[int]
+    consultation_tool_id      : Optional[int]
+    gross_amount              : Optional[int]
+    discount_percentage       : Optional[int]
     special_discount_percentage: Optional[int]
-    special_discount_amount: Optional[int]
-    net_amount : Optional[int]
-    igst_amount: Optional[int]
-    sgst_amount : Optional[int]
-    cgst_amount : Optional[int]
-    bill_amount : Optional[int]
-    remarks: Optional[str]
+    special_discount_amount    : Optional[int]
+    net_amount                 : Optional[int]
+    igst_amount                : Optional[int]
+    sgst_amount                : Optional[int]
+    cgst_amount                : Optional[int]
+    bill_amount                : Optional[int]
+    remarks                    : Optional[str]
     class Config:
         orm_mode = True
         from_attributes = True
 
+
+
+
 class OffAppointmentVisitDetailsSchema(BaseModel):
   
-    service_id: int
+    service_id     : int
     is_main_service:str
     class Config:
         orm_mode = True
         from_attributes = True
 
+
 class OffAppointmentDetails(BaseModel):
     appointment_master: OffAppointmentMasterSchema
-    visit_master: OffAppointmentVisitMasterSchema
-    visit_details: List[OffAppointmentVisitDetailsSchema]
+    visit_master      : OffAppointmentVisitMasterSchema
+    visit_details     : List[OffAppointmentVisitDetailsSchema]
 
 
 class RescheduleOrCancelRequest(BaseModel):
-    consultant_id: Optional[int] = None
+    consultant_id        : Optional[int] = None
     appointment_master_id: Optional[int] = None
-    date: Optional[str] = None 
-    from_time: Optional[str] = None
-    to_time: Optional[str] = None
-    description: str
+    date                 : Optional[str] = None 
+    from_time            : Optional[str] = None
+    to_time              : Optional[str] = None
+    description          : str
+
 
 
     
 class OffAppointmentCancellationReasonSchema(BaseModel):
-    id:int
+    id                                 :int
     off_appointment_cancellation_reason:str
+
+
 
 
 class OffAppointmentMasterViewSchema(BaseModel):
     appointment_master_id: int
-    full_name: str
-    gender_id: int
-    appointment_number: Optional[str]
-    customer_number: Optional[str]
-    mobile_number: Optional[str]
-    whatsapp_number: Optional[str]
-    email_id: Optional[str]
-    locality: Optional[str]
-    pin_code: Optional[str]
-    appointment_master_post_office_id: Optional[int]
-    post_office_name: Optional[str]
-    contact_number: Optional[str]
-    appointment_master_taluk_id: Optional[int]
-    taluk_name: Optional[str]
-    appointment_master_district_id: Optional[int]
-    district_name: Optional[str]
-    appointment_master_state_id: Optional[int]
-    state_name: Optional[str]
-    state_code: Optional[int]
+    full_name            : str
+    gender_id            : int
+    gender               : str
+    appointment_number   : Optional[str]
+    customer_number      : Optional[str]
+    mobile_number        : Optional[str]
+    whatsapp_number      : Optional[str]
+    email_id             : Optional[str]
+    locality             : Optional[str]
+    pin_code             : Optional[str]
+    post_office_id       : Optional[int]
+    post_office_name     : Optional[str]
+    contact_number       : Optional[str]
+    taluk_id             : Optional[int]
+    taluk_name           : Optional[str]
+    district_id          : Optional[int]
+    district_name        : Optional[str]
+    state_id             : Optional[int]
+    state_name           : Optional[str]
+    state_code           : Optional[int]
     gst_registration_name: Optional[str]
-    appointment_master_created_by: Optional[int]
-    appointment_master_created_on: Optional[date]
-    appointment_master_modified_by: Optional[int]
-    appointment_master_modified_on: Optional[date]
-    appointment_master_is_deleted: str
-    appointment_master_deleted_by: Optional[int]
-    appointment_master_deleted_on: Optional[date]
+    created_by           : Optional[int]
+    created_on           : Optional[date]
+    modified_by          : Optional[int]
+    modified_on          : Optional[date]
+    is_deleted           : str
+    deleted_by           : Optional[int]
+    deleted_on           : Optional[date]
 
     class Config:
         orm_mode = True
         from_attributes = True
+
+
 
 class OffAppointmentVisitMasterViewSchema(BaseModel):
-    appointment_visit_master_id: Optional[int]
-    financial_year_id: Optional[int]
-    voucher_number: Optional[str]
-    appointment_date: Optional[date]
-    appointment_time_from: Optional[str]
-    appointment_time_to: Optional[str]
-    source_of_enquiry_id: Optional[int]
-    source: Optional[str]
-    appointment_status_id: Optional[int]
-    appointment_status: Optional[str]
-    appointment_visit_master_consultant_id: Optional[int]
-    appointment_visit_master_consultation_mode_id: Optional[int]
-    appointment_visit_master_consultation_tool_id: Optional[int]
-    employee_master_employee_number: Optional[str]
-    employee_master_first_name: Optional[str]
-    employee_master_middle_name: Optional[str]
-    employee_master_last_name: Optional[str]
-    gross_amount: Optional[float]
-    discount_percentage: Optional[float]
+    visit_master_id           : Optional[int]
+    financial_year_id         : Optional[int]
+    voucher_number            : Optional[str]
+    appointment_date          : Optional[date]
+    appointment_time_from     : Optional[str]
+    appointment_time_to       : Optional[str]
+    source_of_enquiry_id      : Optional[int]
+    source                    : Optional[str]
+    appointment_status_id     : Optional[int]
+    appointment_status        : Optional[str]
+    consultant_id             : Optional[int]
+    consultation_mode_id      : Optional[int]
+    consultation_tool_id      : Optional[int]
+    employee_number           : Optional[str]
+    first_name                : Optional[str]
+    middle_name               : Optional[str]
+    last_name                 : Optional[str]
+    gross_amount              : Optional[float]
+    discount_percentage       : Optional[float]
     special_discount_percentage: Optional[float]
-    special_discount_amount: Optional[float]
-    net_amount: Optional[float]
-    igst_amount: Optional[float]
-    sgst_amount: Optional[float]
-    cgst_amount: Optional[float]
-    bill_amount: Optional[float]
-    remarks: Optional[str]
+    special_discount_amount    : Optional[float]
+    net_amount                 : Optional[float]
+    igst_amount                : Optional[float]
+    sgst_amount                : Optional[float]
+    cgst_amount                : Optional[float]
+    bill_amount                : Optional[float]
+    remarks                    : Optional[str]
 
     class Config:
         orm_mode = True
         from_attributes = True
+
+
 
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
-    appointment_visit_details_id: int
-    service_id: int
+    visit_details_id  : int
+    service_id        : int
     service_goods_name: str
-    appointment_detail_is_main_service: str
+    is_main_service   : str
 
     class Config:
         orm_mode = True
         from_attributes = True
+
 
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
-    visit_master: OffAppointmentVisitMasterViewSchema
-    visit_details: List[OffAppointmentVisitDetailsViewSchema]
+    visit_master      : OffAppointmentVisitMasterViewSchema
+    visit_details     : List[OffAppointmentVisitDetailsViewSchema]
         
+
 
 
  
@@ -1009,12 +1024,12 @@ class OffWorkOrderMasterSchema(BaseModel):
         from_attributes = True
   
 
-
 class WorkOrderDetailsSchema(BaseModel):
     
     id                        : Optional[int] = None
     work_order_master_id        : Optional[int] = None
-    service_id                  : Optional[int] = None
+    service_goods_master_id     : Optional[int] = None
+    # service_goods_name          : Optional[str] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
     leagal_name                 : Optional[str] = None
@@ -1044,12 +1059,14 @@ class WorkOrderDetailsSchema(BaseModel):
     shelf_number          : Optional[int] = None
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
-    depended_on: List['WorkOrderDependancySchema'] = []
+    # depended_on: List['WorkOrderDependancySchema'] = []
     # sub_services: List['WorkOrderDetailsSchema'] = []
 
     class Config:
         orm_mode = True
         from_attributes = True
+
+
 
 class WorkOrderDependancySchema(BaseModel):
     id : Optional[int]=None
@@ -1061,6 +1078,7 @@ class WorkOrderDependancySchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
 
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
@@ -1110,13 +1128,31 @@ class WorkOrderDetailsResponseSchema(BaseModel):
 
 
 
-class WorkOrderResponseSchema(BaseModel):
-    work_order: OffWorkOrderMasterSchema
-    # service_data: List[WorkOrderDetailsSchema]
-    service_data: List[WorkOrderDetailsResponseSchema]
-    class Config:
-        orm_mode = True
-        from_attributes = True
+# class WorkOrderResponseSchema(BaseModel):
+#     work_order: OffWorkOrderMasterSchema
+#     # service_data: List[WorkOrderDetailsSchema]
+#     service_data: List[WorkOrderDetailsResponseSchema]
+#     class Config:
+#         orm_mode = True
+#         from_attributes = True
+
+
+
+class  WorkOrderBusinessPlaceDetailsScheema(BaseModel):
+
+    id                      : Optional[int] = None
+    work_order_details_id   : Optional[int] = None
+    business_place_type     : Optional[str] = 'GODOWN'  
+    nature_of_possession_id : Optional[int] = None
+    utility_document_id     : Optional[int] = None
+    is_deleted              : Optional[str] = None
+
+
+class CreateWorkOrderSetDtailsRequest(BaseModel):
+    workOrderDetails: WorkOrderDetailsSchema
+    businessPlaceDetails: List[WorkOrderBusinessPlaceDetailsScheema]
+
+
 
 
 
@@ -1145,6 +1181,7 @@ class OffAppointmentMasterSchema(BaseModel):
         from_attributes=True
 
 
+
 class ServiceDetail(BaseModel):
     row_id: int
     price_master_id: int
@@ -1167,3 +1204,113 @@ class ServiceRequest(BaseModel):
     service_id: int
     input_date: str
 
+
+class OffViewWorkOrderMasterSchema(BaseModel):
+
+    work_order_master_id     : Optional[int] =None
+    financial_year_id   : Optional[int] = None
+    financial_year      :  Optional[str] = None
+    enquiry_master_id      : Optional[int] =None
+    appointment_master_id  : Optional[int] = None
+    visit_master_id        : Optional[int] = None
+    enquiry_details_id     : Optional[int] = None
+    work_order_number   : Optional[str] = None
+    work_order_date     : Optional[date] = None
+    
+    first_name          : Optional[str] = None
+    middle_name         : Optional[str] = None
+    last_name           : Optional[str] = None
+    gender_id           : int
+    gender              : Optional[str] = None
+    date_of_birth       : Optional[date] = None
+    mobile_number       : Optional[str] = None
+    whatsapp_number     : Optional[str] = None
+    email_id            : Optional[str] = None
+
+    house_or_building_name  : Optional[str] = None
+    road_or_street_name     : Optional[str] = None
+    locality                : Optional[str] = None
+    pin_code                : Optional[str] = None
+    post_office_id          : Optional[int] = None
+    post_office_name        : Optional[str] = None
+    village_id              : Optional[int] = None
+    village_name            : Optional[str] = None
+    lsg_type_id             : Optional[int] = None
+    lsg_type                : Optional[str] = None
+    lsg_id                  : Optional[int] = None
+    lsg_name                : Optional[str] = None
+    taluk_id                : Optional[int] = None
+    taluk_name              : Optional[str] = None
+    district_id             : Optional[int] = None
+    district_name           : Optional[str] = None
+    state_id                : Optional[int] = None
+    state_name              : Optional[str] = None
+    country_id              : Optional[int] = None
+    country_name            : Optional[str] = None
+    remarks                 : Optional[str] = None
+
+    contact_person_name     : Optional[str] = None
+    contact_person_mobile_number    : Optional[str] = None
+    contact_person_whatsapp_number  : Optional[str] = None
+    contact_person_email_id         : Optional[str] = None
+    work_order_status_id            : Optional[int] = None
+    class Config:
+        orm_mode = True
+        from_attributes = True
+  
+
+class OffViewWorkOrderDetailsSchema(BaseModel):
+    
+    work_order_details_id       : Optional[int] = None
+    work_order_master_id        : Optional[int] = None
+    service_goods_master_id     : Optional[int] = None
+    service_goods_name          : Optional[str] = None
+    constitution_id             : Optional[int] = None
+    business_constitution_name  : Optional[str] = None
+    trade_name                  : Optional[str] = None
+    leagal_name                 : Optional[str] = None
+    business_activity_type_id   : Optional[int] = None
+    business_activity_type      : Optional[str] = None
+    business_activity_master_id : Optional[int] = None
+    business_activity_master  : Optional[str] = None  
+    business_activity_id      : Optional[int] = None
+    business_activity         : Optional[str] = None
+    has_branches              : Optional[str] = 'no'
+    number_of_branches        : Optional[int] = None
+    has_godowns               : Optional[str] = 'no'
+    number_of_godowns         : Optional[int] = None
+    number_of_directors       : Optional[int] = None
+    number_of_partners        : Optional[int] = None
+    number_of_shareholders    : Optional[int] = None
+    number_of_trustees        : Optional[int] = None
+    number_of_members         : Optional[int] = None
+    is_main_service         : Optional[str] ='no'             
+    is_bundle_service       : Optional[str] ='no' 
+    bundle_service_id       : Optional[int] = None
+    is_depended_service     : Optional[str] ='no' 
+    processing_order        : Optional[int] = None
+    service_required        : Optional[str] = 'NO'
+    service_required_date   : Optional[date] = None
+    service_status_id       : Optional[int] = None
+    service_status          : Optional[str] = None
+    file_opened_on        : Optional[date] = None
+    file_closed_on        : Optional[date] = None
+    rack_number           : Optional[int] = None
+    shelf_number          : Optional[int] = None
+    file_number           : Optional[int] = None
+    remarks               : Optional[str] = None
+    depended_on: List['WorkOrderDependancySchema'] = []
+    sub_services: List['OffViewWorkOrderDetailsSchema'] = []
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class WorkOrderResponseSchema(BaseModel):
+    work_order: OffViewWorkOrderMasterSchema
+    # service_data: List[WorkOrderDetailsSchema]
+    service_data: List[OffViewWorkOrderDetailsSchema]
+    class Config:
+        orm_mode = True
+        from_attributes = True
