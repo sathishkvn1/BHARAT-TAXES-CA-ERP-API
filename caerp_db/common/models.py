@@ -942,65 +942,6 @@ class EmployeeEmployementDetails(caerp_base):
 
 
 
-class EmployeeSalaryDetails(caerp_base):
-    __tablename__ = "employee_salary_details"
-
-    id                          = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id                 = Column(Integer, nullable=False)
-    component_id                = Column(Integer, nullable=False)
-    calculation_frequency_id    = Column(Integer, nullable=False)
-    calculation_method_id       = Column(Integer, nullable=False)
-    amount                      = Column(Float, nullable=False, default=0.0)
-    percentage_of_component_id  = Column(Integer, default=None)
-    percentage                  = Column(Float, nullable=False, default=0.0)
-    effective_from_date         = Column(Date, nullable=False)
-    effective_to_date           = Column(Date, default=None)
-    next_increment_date         = Column(Date, default=None)
-    created_by                  = Column(Integer, nullable=False, default=0)
-    created_on                  = Column(DateTime, nullable=False, default=func.now())
-    is_approved                 = Column(Enum('yes', 'no'), nullable=False, default='no')
-    approved_by                 = Column(Integer, nullable=False)
-    approved_on                 = Column(DateTime, nullable=False)
-    modified_by                 = Column(Integer, default=None)
-    modified_on                 = Column(DateTime, default=None)
-    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by                  = Column(Integer, default=None)
-    deleted_on                  = Column(DateTime, default=None)
-
-
-class EmployeeSalaryDetailsView(caerp_base):
-    __tablename__ = "hr_view_employee_salary"
-
-    salary_id                          = Column(Integer, primary_key=True)
-    employee_id                        = Column(Integer)
-    employee_first_name                = Column(String)
-    employee_middle_name               = Column(String)
-    employee_last_name                 = Column(String)
-    component_id                       = Column(Integer)
-    salary_component_name              = Column(String)
-    salary_component_type              = Column(String)
-    calculation_frequency_id           = Column(Integer)
-    calculation_frequency_name         = Column(String)
-    calculation_method_id              = Column(Integer)
-    calculation_method_name            = Column(String)
-    amount                             = Column(Float)
-    percentage_of_component_id         = Column(Integer)
-    percentage_component_name          = Column(String)
-    percentage                         = Column(Float)
-    effective_from_date                = Column(Date)
-    effective_to_date                  = Column(Date)
-    next_increment_date                = Column(Date)
-    created_by                         = Column(Integer)
-    created_on                         = Column(DateTime)
-    is_approved                        = Column(Enum('yes', 'no'))
-    approved_by                        = Column(Integer)
-    approved_on                        = Column(DateTime)
-    modified_by                        = Column(Integer)
-    modified_on                        = Column(DateTime)
-    is_deleted                         = Column(Enum('yes', 'no'))
-    deleted_by                         = Column(Integer)
-    deleted_on                         = Column(DateTime)
-    
 
 
 class EmployeeExperience(caerp_base):

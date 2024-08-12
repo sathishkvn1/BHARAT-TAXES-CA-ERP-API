@@ -2954,117 +2954,129 @@ def get_business_activity_by_master_id(
    
 
 #----------------------------------------------------------------------------------------------------
-
-
 def save_work_order(
     request: CreateWorkOrderRequest,
-    db : Session,
-    user_id : int,
-    work_order_master_id:Optional[int] =0,
-    # work_order_details_id : Optional[int] = 0
+    db: Session,
+    user_id: int,
+    work_order_master_id: Optional[int] = 0,
 ):
-    
-        # with db.begin():
-            # Save the master record
-        if work_order_master_id == 0:
-           try: 
-                work_order_number = generate_book_number('WORK_ORDER',db)
+    if work_order_master_id == 0:
+        try:
+            work_order_number = generate_book_number('WORK_ORDER', db)
 
-                master_data = request.master.dict()
-                master_data['created_on'] = datetime.now()
-                master_data['created_by'] = 1
-                master_data['work_order_number'] = work_order_number
-                master_data['work_order_date'] =  datetime.now()
-                master = OffWorkOrderMaster(**master_data)
-                db.add(master)
-                # master_data['work_order_number'] = work_order_number
-                # master_data['work_order_date'] =  datetime.now()
-                # master = OffWorkOrderMaster(**master_data)
-                # db.commit()
-                db.flush()
-                # db.refresh(master)
+            master_data = request.master.dict()
+            master_data['created_on'] = datetime.now()
+            master_data['created_by'] = user_id
+            master_data['work_order_number'] = work_order_number
+            master_data['work_order_date'] = datetime.now()
+            master = OffWorkOrderMaster(**master_data)
+            db.add(master)
+            db.flush()
 
-            #     # Create the details records
-                for detail in request.details:
-                    detail_data = detail.dict()
+            for detail in request.details:
+                detail_data = detail.dict()
+                detail_data['work_order_master_id'] = master.id
+                detail_data['created_by'] = user_id
+                detail_data['created_on'] = datetime.now()
+                work_order_detail = OffWorkOrderDetails(**detail_data)
+                db.add(work_order_detail)
+
+            db.commit()
+            return {"message": "Work order created successfully", "master_id": master.id, "success": "success"}
+
+        except SQLAlchemyError as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order,{str(e)}")
+
+    else:
+        try:
+            master = db.query(OffWorkOrderMaster).filter(
+                OffWorkOrderMaster.id == work_order_master_id
+            ).first()
+
+            if not master:
+                return {
+                    'message': 'Work order master not found'
+                }
+
+            master_data = request.master.model_dump()
+            for key, value in master_data.items():
+                if key != "id":
+                    setattr(master, key, value)
+
+            master.modified_on = datetime.now()
+            master.modified_by = user_id
+
+            db.commit()
+            db.flush()
+
+            existing_detail_ids = {
+                detail.id for detail in db.query(OffWorkOrderDetails.id).filter(
+                    OffWorkOrderDetails.work_order_master_id == work_order_master_id
+                ).all()
+            }
+
+            provided_detail_ids = {detail.id for detail in request.details if detail.id}
+
+            # Update existing records or add new ones
+            for detail in request.details:
+                if detail.id and detail.id in existing_detail_ids:
+                    work_order_detail = db.query(OffWorkOrderDetails).filter(
+                        OffWorkOrderDetails.id == detail.id,
+                        OffWorkOrderDetails.work_order_master_id == work_order_master_id
+                    ).first()
+
+                    if not work_order_detail:
+                        return {
+                            'message': f"Work order detail with id {detail.id} not found"
+                        }
+
+                    detail_data = detail.model_dump()
+                    for key, value in detail_data.items():
+                        if key != "id":
+                            setattr(work_order_detail, key, value)
+
+                    work_order_detail.modified_on = datetime.now()
+                    work_order_detail.modified_by = user_id
+                else:
+                    detail_data = detail.model_dump()
                     detail_data['work_order_master_id'] = master.id
-                    detail_data['created_by'] = 1
-                    detail_data['business_activity_id'] = 1
+                    detail_data['created_by'] = user_id
                     detail_data['created_on'] = datetime.now()
                     work_order_detail = OffWorkOrderDetails(**detail_data)
                     db.add(work_order_detail)
-                
-                db.commit()
-                # db.refresh(master)
-                # return {"message": "Work order created successfully"}
-                return {"message": "Work order created successfully", "master_id": master.id, "success":"success"}
 
+            # Set is_details = 'yes' for existing records not in the provided details list
+            for existing_id in existing_detail_ids - provided_detail_ids:
 
-           except SQLAlchemyError as e:
-                db.rollback()
-                raise HTTPException(status_code=500, detail="An error occurred while creating the work order")
-        else:
-
-        
-            try:
-                # Fetch the existing master record
-                master = db.query(OffWorkOrderMaster).filter(
-                    OffWorkOrderMaster.id == work_order_master_id
+                work_order_detail = db.query(OffWorkOrderDetails).filter(
+                    OffWorkOrderDetails.id == existing_id
                 ).first()
 
-                if not master:
-                    raise HTTPException(status_code=404, detail="Work order master not found")
+                if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
+                    sub_services = db.query(OffWorkOrderDetails).filter(
+                        OffWorkOrderDetails.bundle_service_id == work_order_detail.id
+                    ).all()
 
-                # Update master record
-                master_data = request.master.model_dump()
-                for key, value in master_data.items():
-                    if key != "id":  # Ensure 'id' is not updated
-                        setattr(master, key, value)
+                    if sub_services:  # Check if sub_services is not empty
+                        for service in sub_services:
+                            service.bundle_service_id = None
+                            service.modified_on = datetime.now()
+                            service.modified_by = user_id
+                            db.add(service)  # Add to the session
 
-                master.modified_on = datetime.now()
-                master.modified_by = user_id
+                work_order_detail.is_deleted = 'yes'
+                work_order_detail.modified_on = datetime.now()
+                work_order_detail.modified_by = user_id
+                db.add(work_order_detail)  # Add to the session
 
-                db.commit()
-                db.flush()
+            db.commit()  # Commit all changes at once
 
-                # Loop through the details in the request
-                for detail in request.details:
-                    if detail.id:
-                        # Fetch the existing detail record
-                        work_order_detail = db.query(OffWorkOrderDetails).filter(
-                            OffWorkOrderDetails.id == detail.id,
-                            OffWorkOrderDetails.work_order_master_id == work_order_master_id
-                        ).first()
+            return {"message": "Work order updated successfully", "master_id": master.id, "success": "success"}
 
-                        if not work_order_detail:
-                            raise HTTPException(status_code=404, detail=f"Work order detail with id {detail.id} not found")
-
-                        # Update the existing detail record
-                        detail_data = detail.model_dump()
-                        for key, value in detail_data.items():
-                            if key != "id":  # Ensure 'id' is not updated
-                                setattr(work_order_detail, key, value)
-
-                        work_order_detail.modified_on = datetime.now()
-                        work_order_detail.modified_by = user_id
-
-                    else:
-                        # Create a new detail record if id is not provided
-                        detail_data = detail.model_dump()
-                        detail_data['work_order_master_id'] = master.id
-                        detail_data['created_by'] = user_id
-                        detail_data['created_on'] = datetime.now()
-                        work_order_detail = OffWorkOrderDetails(**detail_data)
-                        db.add(work_order_detail)
-
-                db.commit()
-
-                return {"message": "Work order updated successfully", "master_id": master.id, "success":"success"}
-
-            except SQLAlchemyError as e:
-                db.rollback()
-                raise HTTPException(status_code=500, detail=str(e))
-
+        except SQLAlchemyError as e:
+            db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
 #-------------------------------------------------------------------------------------------------------------
 
 
