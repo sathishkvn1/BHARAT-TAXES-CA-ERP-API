@@ -244,7 +244,7 @@ class EmployeeSalarySchema(BaseModel):
       orm_mode=True
 
 
-class EmployeeSalaryDetailsViewSchema(BaseModel):
+class EmployeeSalaryGet(BaseModel):
     salary_id                  : int
     employee_id                : Optional[int]
     employee_first_name        : Optional[str]
@@ -266,22 +266,6 @@ class EmployeeSalaryDetailsViewSchema(BaseModel):
     next_increment_date        : Optional[date]
     
     class Config:
-        orm_mode = True
-
-class EmployeeSalaryGet(BaseModel):
-    id                        : int
-    employee_id               : int
-    component_id              : int
-    calculation_frequency_id : int
-    calculation_method_id    : int
-    amount                   : float
-    percentage_of_component_id : Optional[int] = None
-    percentage               : float
-    effective_from_date      : date
-    effective_to_date        : Optional[date] = None
-    next_increment_date      : Optional[date] = None
-
-    class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
 
