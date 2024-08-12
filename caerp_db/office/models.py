@@ -1243,14 +1243,12 @@ class OffWorkOrderMaster(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
-
-
 class OffWorkOrderDetails(caerp_base):
     __tablename__ = 'work_order_details'
     
     id                      = Column(Integer, primary_key=True, autoincrement=True)
     work_order_master_id    = Column(Integer, nullable=True)
-    service_id              = Column(Integer, nullable=True)
+    service_goods_master_id   = Column(Integer, nullable=True)
     constitution_id         = Column(Integer, nullable=True)
     trade_name              = Column(String, nullable=True)
     leagal_name             = Column(String, nullable=True)
@@ -1291,16 +1289,12 @@ class OffWorkOrderDetails(caerp_base):
 
 
 
-
-
-
 class OffWorkOrderStatus(caerp_base):
     __tablename__ ='off_work_order_status'
 
     id                  = Column(Integer, primary_key=True, autoincrement=True)
     work_order_status   = Column(String, nullable=False)
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
-
 
 
 class WorkOrderDependancy(caerp_base):
@@ -1311,7 +1305,6 @@ class WorkOrderDependancy(caerp_base):
     work_order_details_id   =  Column(Integer, nullable=False)
     dependent_on_work_id    =  Column(Integer, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
-
 
 class WorkOrderMasterView(caerp_base):
     __tablename__ = 'off_view_work_order_master'
@@ -1368,8 +1361,6 @@ class WorkOrderMasterView(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
-
-
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
     
@@ -1419,7 +1410,6 @@ class WorkOrderDetailsView(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
-
 class WorkOrderBusinessPlaceDetails(caerp_base):
     __tablename__ = 'work_order_business_place_details'
     
@@ -1429,3 +1419,17 @@ class WorkOrderBusinessPlaceDetails(caerp_base):
     nature_of_possession_id = Column(Integer, nullable=False) 
     utility_document_id     = Column(Integer, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class OffViewWorkOrderBusinessPlaceDetails(caerp_base):
+    __tablename__ = 'off_view_work_order_business_place_details'
+
+    business_place_id       = Column(Integer, primary_key=True, autoincrement=True)        
+    work_order_details_id   = Column(Integer, nullable=False) 
+    business_place_type     = Column(Enum('MAIN OFFICE','GODOWN','BRANCH'), nullable=False, default='MAIN OFFICE')   
+    nature_of_possession_id = Column(Integer, nullable=False) 
+    nature_of_possession    = Column(String, nullable=False)
+    utility_document_id     = Column(Integer, nullable=False)
+    document_data_name      = Column(String, nullable=False)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+

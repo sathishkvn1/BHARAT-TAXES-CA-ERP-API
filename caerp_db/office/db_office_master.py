@@ -9,11 +9,11 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy
+from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServices, OffViewConsultantDetails, OffViewConsultantMaster, OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancySchema, WorkOrderDetailsResponseSchema, WorkOrderDetailsSchema, WorkOrderResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancySchema, WorkOrderDetailsResponseSchema, WorkOrderDetailsSchema, WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 
@@ -30,134 +30,130 @@ def save_appointment_visit_master(
     user_id: int
 ):
     try:
-        with db.begin():
-            if appointment_master_id == 0:
-                # Insert operation
-                # Generate appointment_number
-                # appointment_number = generate_book_number(db, OffAppointmentVisitMaster.appointment_number)
-                appointment_number = generate_book_number('APPOINTMENT',db)
-                appointment_master = OffAppointmentMaster(
+        # Manually begin the transaction
+        db.begin()
+
+        if appointment_master_id == 0:
+            # Insert operation
+            appointment_number = generate_book_number('APPOINTMENT', db)
+            appointment_master = OffAppointmentMaster(
+                created_by=user_id,
+                created_on=datetime.now(),
+                **appointment_data.appointment_master.model_dump(exclude_unset=True)
+            )
+            db.add(appointment_master)
+            db.flush()  # Ensure changes are flushed to the database
+
+            visit_master = OffAppointmentVisitMaster(
+                appointment_master_id=appointment_master.id,
+                appointment_number=appointment_number,
+                created_by=user_id,
+                created_on=datetime.now(),
+                **appointment_data.visit_master.model_dump(exclude_unset=True)
+            )
+            db.add(visit_master)
+            db.flush()
+
+            visit_details_list = []
+            for detail_data in appointment_data.visit_details:
+                visit_detail = OffAppointmentVisitDetails(
+                    visit_master_id=visit_master.id,
+                    consultant_id=visit_master.consultant_id,
                     created_by=user_id,
                     created_on=datetime.now(),
-                    **appointment_data.appointment_master.dict(exclude_unset=True)
+                    **detail_data.model_dump(exclude_unset=True)
                 )
-                db.add(appointment_master)
-                db.flush()
+                db.add(visit_detail)
+                visit_details_list.append(visit_detail)
 
-                visit_master = OffAppointmentVisitMaster(
-                    appointment_master_id=appointment_master.id,
-                    appointment_number=appointment_number,  # Assign the generated appointment number
-                    created_by=user_id,
-                    created_on=datetime.now(),
-                    **appointment_data.visit_master.model_dump(exclude_unset=True)
-                )
-                db.add(visit_master)
-                db.flush()
+        elif appointment_master_id > 0:
+            # Update operation
+            appointment_master = db.query(OffAppointmentMaster).filter(
+                OffAppointmentMaster.id == appointment_master_id).first()
+            if not appointment_master:
+                return {"detail":"Appointment master not found"}
 
-                visit_details_list = []
-                for detail_data in appointment_data.visit_details:
+            for field, value in appointment_data.appointment_master.model_dump(exclude_unset=True).items():
+                setattr(appointment_master, field, value)
+            appointment_master.modified_by = user_id
+            appointment_master.modified_on = datetime.now()
+
+            visit_master = db.query(OffAppointmentVisitMaster).filter(
+                OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
+            if not visit_master:
+                return {"detail":"Visit master not found"}
+
+            for field, value in appointment_data.visit_master.model_dump(exclude_unset=True).items():
+                if field == "remarks":
+                    if visit_master.remarks:
+                        setattr(visit_master, field, visit_master.remarks + "\n" + value)
+                    else:
+                        setattr(visit_master, field, value)
+                else:
+                    setattr(visit_master, field, value)
+            visit_master.modified_by = user_id
+            visit_master.modified_on = datetime.now()
+
+            existing_details = db.query(OffAppointmentVisitDetails).filter(
+                OffAppointmentVisitDetails.visit_master_id == visit_master.id).all()
+
+            existing_details_dict = {detail.service_id: detail for detail in existing_details}
+
+            for detail in existing_details:
+                detail.is_deleted = "yes"
+                detail.deleted_by = user_id
+                detail.deleted_on = datetime.now()
+                detail.modified_by = user_id
+                detail.modified_on = datetime.now()
+
+            visit_details_list = []
+            for detail_data in appointment_data.visit_details:
+                detail_data_dict = detail_data.model_dump(exclude_unset=True)
+                service_id = detail_data_dict.get("service_id")
+
+                if service_id in existing_details_dict:
+                    existing_detail = existing_details_dict[service_id]
+                    for key, value in detail_data_dict.items():
+                        setattr(existing_detail, key, value)
+                    existing_detail.is_deleted = "no"
+                    existing_detail.deleted_by = None
+                    existing_detail.deleted_on = None
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.now()
+                    visit_details_list.append(existing_detail)
+                else:
                     visit_detail = OffAppointmentVisitDetails(
                         visit_master_id=visit_master.id,
                         consultant_id=visit_master.consultant_id,
                         created_by=user_id,
                         created_on=datetime.now(),
-                        **detail_data.model_dump(exclude_unset=True)
+                        **detail_data_dict
                     )
                     db.add(visit_detail)
                     visit_details_list.append(visit_detail)
 
-            elif appointment_master_id > 0:
-                # Update operation
-                # Fetch existing appointment master record
-                appointment_master = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_master_id).first()
-                if not appointment_master:
-                    return {"message": "Appointment master not found"}
+        # Commit the transaction
+        db.commit()
 
-                # Update appointment master fields
-                for field, value in appointment_data.appointment_master.model_dump(exclude_unset=True).items():
-                    setattr(appointment_master, field, value)
-                appointment_master.modified_by = user_id
-                appointment_master.modified_on = datetime.now()
-
-                # Fetch existing visit master record
-                visit_master = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.appointment_master_id == appointment_master_id).first()
-                if not visit_master:
-                    return {"message": "Visit master not found"}
-
-                # Update visit master fields
-                for field, value in appointment_data.visit_master.model_dump(exclude_unset=True).items():
-                    # Append new remarks with newline separation
-                    if field == "remarks":
-                        if visit_master.remarks:
-                            setattr(visit_master, field, visit_master.remarks + "\n" + value)
-                        else:
-                            setattr(visit_master, field, value)
-                    else:
-                        setattr(visit_master, field, value)
-                visit_master.modified_by = user_id
-                visit_master.modified_on = datetime.now()
-
-                # Fetch existing visit details
-                existing_details = db.query(OffAppointmentVisitDetails).filter(
-                    OffAppointmentVisitDetails.visit_master_id == visit_master.id
-                ).all()
-
-                existing_details_dict = {detail.service_id: detail for detail in existing_details}
-
-                # Mark all existing visit details as deleted
-                for detail in existing_details:
-                    detail.is_deleted = "yes"
-                    detail.deleted_by = user_id
-                    detail.deleted_on = datetime.now()
-                    detail.modified_by = user_id
-                    detail.modified_on = datetime.now()
-
-                visit_details_list = []
-                for detail_data in appointment_data.visit_details:
-                    detail_data_dict = detail_data.model_dump(exclude_unset=True)
-                    service_id = detail_data_dict.get("service_id")
-
-                    if service_id in existing_details_dict:
-                        # Update existing detail
-                        existing_detail = existing_details_dict[service_id]
-                        for key, value in detail_data_dict.items():
-                            setattr(existing_detail, key, value)
-                        existing_detail.is_deleted = "no"
-                        existing_detail.deleted_by = None
-                        existing_detail.deleted_on = None
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.now()
-                        visit_details_list.append(existing_detail)
-                    else:
-                        # Insert new detail
-                        visit_detail = OffAppointmentVisitDetails(
-                            visit_master_id=visit_master.id,
-                            consultant_id=visit_master.consultant_id,
-                            created_by=user_id,
-                            created_on=datetime.now(),
-                            **detail_data_dict
-                        )
-                        db.add(visit_detail)
-                        visit_details_list.append(visit_detail)
-
-            return {
-                "appointment_master": appointment_master,
-                "visit_master": visit_master,
-                "visit_details": visit_details_list
-            }
+        # Return response outside of the transaction block
+        return {
+            "appointment_master": appointment_master,
+            "visit_master": visit_master,
+            "visit_details": visit_details_list
+        }
 
     except IntegrityError as e:
         db.rollback()
-        # Check if the error message indicates a duplicate entry violation
         if 'Duplicate entry' in str(e):
-            # Return a custom error message indicating the duplicate entry
             raise HTTPException(status_code=400, detail="The selected slot is already booked. Please choose another slot.")
         else:
-            # For other IntegrityError cases, raise the exception with the original message
             raise e
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 #///////////////////////////////////////////////////
 def get_appointment_details(appointment_id :int , db:Session):
@@ -906,7 +902,7 @@ def fetch_available_and_unavailable_dates_and_slots(
                                 # Check if the slot is already booked by another appointment
                                 is_fully_covered = db.query(OffAppointmentVisitMaster).join(
                                     OffAppointmentVisitMasterView,
-                                    OffAppointmentVisitMaster.id == OffAppointmentVisitMasterView.appointment_visit_master_id
+                                    OffAppointmentVisitMaster.id == OffAppointmentVisitMasterView.visit_master_id
                                 ).filter(
                                     OffAppointmentVisitMaster.consultant_id == consultant_id,
                                     OffAppointmentVisitMaster.appointment_date == check_date,
@@ -2036,126 +2032,119 @@ def save_enquiry_master(
     enquiry_master_id: int,
     enquiry_data: OffEnquiryResponseSchema,
     user_id: int
-) -> Dict[str, Union[OffEnquiryMasterSchema, List[OffEnquiryDetailsSchema]]]:
+) -> Dict[str, Union[Dict, List[Dict]]]:
     try:
-        with db.begin():
-            if enquiry_master_id == 0:
-                # Insert new enquiry master record
-                enquiry_master = OffEnquiryMaster(
+        # Begin the transaction
+        db.begin()
+
+        if enquiry_master_id == 0:
+            # Insert new enquiry master record
+            enquiry_master = OffEnquiryMaster(
+                created_by=user_id,
+                created_on=datetime.now(),
+                **enquiry_data.enquiry_master.model_dump(exclude_unset=True)
+            )
+            db.add(enquiry_master)
+            db.flush()  # Ensure the ID is generated
+
+            # Insert related enquiry details
+            enquiry_details_list = []
+            for detail_data in enquiry_data.enquiry_details:
+                enquiry_number = generate_book_number('ENQUIRY', db)
+                enquiry_detail = OffEnquiryDetails(
+                    enquiry_master_id=enquiry_master.id,
+                    enquiry_number=enquiry_number,
                     created_by=user_id,
                     created_on=datetime.now(),
-                    **enquiry_data.enquiry_master.model_dump(exclude_unset=True)
+                    **detail_data.model_dump(exclude_unset=True)
                 )
-                db.add(enquiry_master)
-                db.flush()
+                db.add(enquiry_detail)
+                enquiry_details_list.append(enquiry_detail)
 
-                # Insert related enquiry details
-                enquiry_details_list = []
-                for detail_data in enquiry_data.enquiry_details:
-                    # Generate enquiry_number for each detail
-                    # enquiry_number = generate_book_number(db, OffEnquiryDetails.enquiry_number)
-                    enquiry_number = generate_book_number('ENQUIRY',db)
-                    enquiry_detail = OffEnquiryDetails(
-                        enquiry_master_id=enquiry_master.id,
-                        enquiry_number=enquiry_number,  # Assign the generated enquiry number
-                        created_by=user_id,
-                        created_on=datetime.now(),
-                        **detail_data.model_dump(exclude_unset=True)
-                    )
-                    db.add(enquiry_detail)
-                    enquiry_details_list.append(enquiry_detail)
+        elif enquiry_master_id > 0:
+            # Fetch existing enquiry master record
+            enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
+            if not enquiry_master:
+                return {"detail":"Enquiry master not found"}
 
-            elif enquiry_master_id > 0:
-                # Fetch existing enquiry master record
-                enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
-                if not enquiry_master:
-                    raise HTTPException(status_code=404, detail="Enquiry master not found")
+            # Update enquiry master
+            enquiry_master_data = enquiry_data.enquiry_master.model_dump(exclude_unset=True)
+            for field, value in enquiry_master_data.items():
+                setattr(enquiry_master, field, value)
+            enquiry_master.modified_by = user_id
+            enquiry_master.modified_on = datetime.now()
 
-                # Update enquiry master fields
-                enquiry_master_data = enquiry_data.enquiry_master.model_dump(exclude_unset=True)
-                for field, value in enquiry_master_data.items():
-                    if field == "remarks" and enquiry_master.remarks:
-                        setattr(enquiry_master, field, enquiry_master.remarks + "\n" + value)
+            # Process enquiry details
+            enquiry_details_list = []
+            for detail_data in enquiry_data.enquiry_details:
+                detail_data_dict = detail_data.model_dump(exclude_unset=True)
+                detail_id = detail_data_dict.get("id")
+
+                if detail_id:
+                    # Update existing detail if ID is provided
+                    existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
+                    if existing_detail:
+                        for key, value in detail_data_dict.items():
+                            if key == "remarks" and existing_detail.remarks:
+                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
+                            else:
+                                setattr(existing_detail, key, value)
+                        existing_detail.modified_by = user_id
+                        existing_detail.modified_on = datetime.now()
+                        enquiry_details_list.append(existing_detail)
                     else:
-                        setattr(enquiry_master, field, value)
-                enquiry_master.modified_by = user_id
-                enquiry_master.modified_on = datetime.now()
+                        return {"detail":"Enquiry details not found"}
+                else:
+                    # Check for existing detail or insert new one
+                    existing_detail = db.query(OffEnquiryDetails).filter_by(
+                        enquiry_master_id=enquiry_master_id,
+                        enquiry_date=detail_data_dict.get("enquiry_date")
+                    ).first()
 
-                enquiry_details_list = []
-                for detail_data in enquiry_data.enquiry_details:
-                    detail_data_dict = detail_data.model_dump(exclude_unset=True)
-                    detail_id = detail_data_dict.get("id")
-
-                    if detail_id:
-                        # Update existing detail if ID is provided
-                        existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
-                        if existing_detail:
-                            for key, value in detail_data_dict.items():
-                                if key == "remarks" and existing_detail.remarks:
-                                    setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                                else:
-                                    setattr(existing_detail, key, value)
-                            existing_detail.modified_by = user_id
-                            existing_detail.modified_on = datetime.now()
-                            enquiry_details_list.append(existing_detail)
-                        else:
-                            raise HTTPException(status_code=404, detail=f"Enquiry detail with id {detail_id} not found")
+                    if existing_detail:
+                        for key, value in detail_data_dict.items():
+                            if key == "remarks" and existing_detail.remarks:
+                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
+                            else:
+                                setattr(existing_detail, key, value)
+                        existing_detail.modified_by = user_id
+                        existing_detail.modified_on = datetime.now()
+                        enquiry_details_list.append(existing_detail)
                     else:
-                        # Check if detail exists based on unique constraints, otherwise insert new detail
-                        existing_detail = db.query(OffEnquiryDetails).filter_by(
-                            enquiry_master_id=enquiry_master_id,
-                            enquiry_number=detail_data_dict.get("enquiry_number"),
-                            enquiry_date=detail_data_dict.get("enquiry_date")
-                        ).first()
+                        enquiry_number = generate_book_number('ENQUIRY', db)
+                        new_enquiry_detail = OffEnquiryDetails(
+                            enquiry_master_id=enquiry_master.id,
+                            enquiry_number=enquiry_number,
+                            created_by=user_id,
+                            created_on=datetime.now(),
+                            **detail_data_dict
+                        )
+                        db.add(new_enquiry_detail)
+                        enquiry_details_list.append(new_enquiry_detail)
 
-                        if existing_detail:
-                            # Update existing detail
-                            for key, value in detail_data_dict.items():
-                                if key == "remarks" and existing_detail.remarks:
-                                    setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                                else:
-                                    setattr(existing_detail, key, value)
-                            existing_detail.modified_by = user_id
-                            existing_detail.modified_on = datetime.now()
-                            enquiry_details_list.append(existing_detail)
-                        else:
-                            # Insert new detail
-                            
-                            new_enquiry_detail = OffEnquiryDetails(
-                                enquiry_master_id=enquiry_master.id,
-                                enquiry_number=enquiry_number,  # Assign the generated enquiry number
-                                created_by=user_id,
-                                created_on=datetime.now(),
-                                **detail_data_dict
-                            )
-                            db.add(new_enquiry_detail)
-                            enquiry_details_list.append(new_enquiry_detail)
+        # Commit the transaction
+        db.commit()
 
-        db.commit()  # Commit all changes to the database
-
-        # Convert to schema objects for response
-        enquiry_master_schema = OffEnquiryMasterSchema.from_orm(enquiry_master)
-        enquiry_details_schema = [OffEnquiryDetailsSchema.from_orm(detail) for detail in enquiry_details_list]
+        # Convert to dictionaries for response
+        enquiry_master_schema = {column.name: getattr(enquiry_master, column.name) for column in OffEnquiryMaster.__table__.columns}
+        enquiry_details_schema = [{column.name: getattr(detail, column.name) for column in OffEnquiryDetails.__table__.columns} for detail in enquiry_details_list]
 
         return {
             "enquiry_master": enquiry_master_schema,
             "enquiry_details": enquiry_details_schema
         }
+
     except IntegrityError as e:
         db.rollback()
-        logger.error("IntegrityError: %s", str(e))
         if 'Duplicate entry' in str(e):
             raise HTTPException(status_code=400, detail="Duplicate entry detected.")
         else:
             raise e
-    except HTTPException as http_error:
-        db.rollback()
-        raise http_error
+    
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
+#-------------------------------------------------------------------------------------------------------------
 
 def get_enquiries(
     db: Session,
@@ -2694,34 +2683,34 @@ def get_work_order_list(
         try:
             
             # Initialize search conditions
-            search_conditions = [OffWorkOrderMaster.is_deleted == "no"]
+            search_conditions = [WorkOrderMasterView.is_deleted == "no"]
             
             # Add conditions for enquiry date range if provided
             if from_date and to_date:
-                search_conditions.append(OffWorkOrderMaster.work_order_date.between(from_date, to_date))
+                search_conditions.append(WorkOrderMasterView.work_order_date.between(from_date, to_date))
             elif from_date:
-                search_conditions.append(OffWorkOrderMaster.work_order_date >= from_date)
+                search_conditions.append(WorkOrderMasterView.work_order_date >= from_date)
             elif to_date:
-                search_conditions.append(OffWorkOrderMaster.work_order_date <= to_date)
+                search_conditions.append(WorkOrderMasterView.work_order_date <= to_date)
             
             if work_order_number != None:
-                search_conditions.append(OffWorkOrderMaster.work_order_number == work_order_number)
+                search_conditions.append(WorkOrderMasterView.work_order_number == work_order_number)
 
             # Add condition for status ID if provided
             if status_id != None:
-                search_conditions.append(OffWorkOrderMaster.work_order_status_id == status_id)
+                search_conditions.append(WorkOrderMasterView.work_order_status_id == status_id)
 
             # Add condition for search value if it's not 'ALL'
             if search_value != "ALL":
                 search_conditions.append(
                     or_(
-                        OffWorkOrderMaster.mobile_number.like(f"%{search_value}%"),
-                        OffWorkOrderMaster.email_id.like(f"%{search_value}%")
+                        WorkOrderMasterView.mobile_number.like(f"%{search_value}%"),
+                        WorkOrderMasterView.email_id.like(f"%{search_value}%")
                     )
                 )
 
             # Execute the query
-            query_result = db.query(OffWorkOrderMaster).filter(and_(*search_conditions)).all()
+            query_result = db.query(WorkOrderMasterView).filter(and_(*search_conditions)).all()
 
             # if not query_result:
             #     raise HTTPException(status_code=404, detail="Work_order not found")
@@ -2737,22 +2726,11 @@ def get_work_order_list(
          
             # except HTTPException as http_error:
             # raise http_error
-    
+
+
+
 #-----------------------------------------------------------------------------------------------
-def get_business_activity_master_by_type_id(
-        db: Session,
-        type_id: Optional[int] = None
-) -> List[BusinessActivityMasterSchema]:
-    
-    if type_id is None:
-        business_activities = db.query(BusinessActivityMaster).filter(BusinessActivityMaster.is_deleted == 'no').all()
-    else:
-        business_activities = db.query(BusinessActivityMaster).filter(
-            BusinessActivityMaster.is_deleted == 'no',
-            BusinessActivityMaster.business_activity_type_id == type_id).all()
-        
-    return business_activities  
-#---------------------------------------------------------------------------------------------------------
+
 def get_business_activity_master_by_type_id(
         db: Session,
         type_id: Optional[int] = None
@@ -2768,11 +2746,195 @@ def get_business_activity_master_by_type_id(
     return business_activities  
 #---------------------------------------------------------------------------------------------------------
 
+
 def get_dependencies(db: Session,detail_id):
     dependencies = db.query(WorkOrderDependancy).filter(
         WorkOrderDependancy.work_order_details_id == detail_id
     ).all()
     return [WorkOrderDependancySchema.model_validate(dep) for dep in dependencies]
+
+def get_work_order_details( 
+                           db: Session,                            
+                           entry_point: EntryPoint,
+                           id: int,
+                           visit_master_id : Optional[int]= None,
+                           enquiry_details_id : Optional[int]= None
+                           ) -> List[Dict]:
+
+                        #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
+    if entry_point == 'WORK_ORDER':
+        try:
+            data = []
+            query = db.query(WorkOrderMasterView).filter(
+                WorkOrderMasterView.is_deleted == 'no',
+                WorkOrderMasterView.work_order_master_id == id)
+            
+            work_order_master_data = query.first()
+            if not work_order_master_data:
+                return {
+                        'message ': "Work order not found ",
+                        # 'Success' : 'false'
+                    }
+
+            work_order_details_data = db.query(WorkOrderDetailsView).filter(
+                WorkOrderDetailsView.work_order_master_id == id,
+                WorkOrderDetailsView.is_deleted== 'no').all()
+            
+            service_data = []
+
+            for detail in work_order_details_data:
+                detail_data = OffViewWorkOrderDetailsSchema.model_validate(detail)
+                service_name = db.query(OffServiceGoodsMaster.service_goods_name).filter(
+                    OffServiceGoodsMaster.id == detail.service_goods_master_id
+                ).first()
+                detail_data.service_goods_name = service_name.service_goods_name
+                if detail.is_depended_service == 'yes':
+                    detail_data.depended_on = get_dependencies(db,detail.work_order_details_id)
+                
+                # Handle bundle services
+                if detail.is_bundle_service == 'yes':
+                    sub_services = db.query(WorkOrderDetailsView).filter(
+                        WorkOrderDetailsView.bundle_service_id == detail.work_order_details_id,
+                        WorkOrderDetailsView.is_deleted == 'no'
+                    ).all()
+                    sub_service_data = []
+                    for sub_service in sub_services:
+                        sub_service_detail = OffViewWorkOrderDetailsSchema.model_validate(sub_service)
+                        service_name = db.query(OffServiceGoodsMaster.service_goods_name).filter(
+                            OffServiceGoodsMaster.id == sub_service.service_goods_master_id
+                        ).first()
+                        sub_service_detail.service_goods_name = service_name.service_goods_name
+                        # Handle dependent services for sub-services
+                        if sub_service.is_depended_service == 'yes':
+                            sub_service_detail.depended_on = get_dependencies(db,sub_service.work_order_details_id)
+                        sub_service_data.append(sub_service_detail)
+                    detail_data.sub_services = sub_service_data
+                
+                    service_data.append(detail_data)                
+
+            work_order_data = WorkOrderResponseSchema(
+                work_order=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data),
+                service_data=service_data
+            )
+            
+            data.append(work_order_data.dict())  # Assuming dict() converts to the desired output format
+        except SQLAlchemyError as e:
+            # db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+
+
+    
+    elif entry_point == 'CONSULTATION':
+        
+            
+            if visit_master_id is None:
+                # raise ValueError("visit master id is required for CONSULTATION entry point")
+                return {
+                    'message ': "visit master id is required for CONSULTATION entry point",
+                    'Success' : 'false'
+                }
+            # appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
+            visit_data       = db.query(OffAppointmentVisitMasterView).filter(
+                OffAppointmentVisitMasterView.appointment_master_id == id,
+                OffAppointmentVisitMasterView.visit_master_id==visit_master_id).first()   
+            if  not visit_data:
+                return {
+                    'message': "Consultation or visit data not found",
+                }
+            full_name = visit_data.full_name.split()
+            first_name = full_name[0] if len(full_name) > 0 else ""
+            middle_name = full_name[1] if len(full_name) > 2 else ""
+            last_name = full_name[-1] if len(full_name) > 1 else ""
+
+            # Transforming the data
+            transformed_data = {
+                # "work_order_master_id" : visit_data.,
+                "financial_year_id":visit_data.financial_year_id,
+                "financial_year" : visit_data.financial_year,
+                "appointment_master_id": visit_data.appointment_master_id,
+                "visit_master_id": visit_master_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "gender_id": visit_data.gender_id,
+                "gender" : visit_data.gender,
+                "mobile_number": visit_data.mobile_number,
+                "whatsapp_number":visit_data.whatsapp_number,
+                "email_id":visit_data.email_id,
+                "locality":visit_data.locality,
+                "pin_code":visit_data.pin_code,
+                "post_office_id":visit_data.post_office_id,
+                "post_office_name": visit_data.post_office_name,
+                "taluk_id":visit_data.taluk_id,
+                "taluk_name": visit_data.taluk_name,
+                "district_id":visit_data.district_id,
+                "district_name":visit_data.district_name,
+                "state_id":visit_data.state_id,
+                "state_name": visit_data.state_name,
+                "customer_number": visit_data.customer_number
+
+            }
+
+            data = WorkOrderResponseSchema(
+                work_order=transformed_data,
+
+                # work_order=OffAppointmentMasterSchema.model_validate(transformed_data),
+                service_data=[]
+            )
+    elif entry_point == 'ENQUIRY':
+        if id is None:
+                return {
+                    'message ': "ID is required for ENQUIRY entry point",
+                    'Success' : 'false'
+                }
+                # raise HTTPException(status_code=400, detail="ID is required for ENQUIRY entry point")
+        elif enquiry_details_id is None:
+            return {
+                    'message ': "enquiry_details_id is required for ENQUIRY entry point",
+                    'Success' : 'false'
+                }
+            # raise HTTPException(status_code=400, detail="enquiry_details_id is required for ENQUIRY entry point")        
+        enquiry_master_data = db.query(OffViewEnquiryMaster).filter(
+            OffViewEnquiryMaster.is_deleted == 'no',
+            OffViewEnquiryMaster.enquiry_master_id == id).first()
+        enquiry_detail_data = db.query(OffViewEnquiryDetails).filter(
+            OffViewEnquiryDetails.is_deleted == 'no',
+            OffViewEnquiryDetails.enquiry_master_id == id,
+            OffViewEnquiryDetails.enquiry_details_id == enquiry_details_id
+            ).first()
+        if not enquiry_master_data or not enquiry_detail_data:
+                return {
+                    'message': "Enquiry master or Enquiry details  data not found"
+                }
+        
+        work_order_data = OffViewWorkOrderMasterSchema(
+            **enquiry_master_data.__dict__,
+            # work_order_master_id =enquiry_master_data.enquiry_master_id,
+            enquiry_details_id=enquiry_detail_data.enquiry_details_id,
+            financial_year_id=enquiry_detail_data.financial_year_id,
+            financial_year= enquiry_detail_data.financial_year,
+            country_name = enquiry_detail_data.country_name_english
+
+        )
+        # data = enquiry_master_data
+        data = WorkOrderResponseSchema(
+            work_order= work_order_data,
+            service_data=[]
+        )
+    else:
+            return {
+                'message': 'Invalid entry point',
+                'Success': 'false'
+            }
+            # raise ValueError("Invalid entry point")
+    # if data:
+
+    return data
+    # else:
+    #     return {
+    #         'message': 'No data found',
+    #         'Success': 'false'
+    #     }
 
 
 #-------------------------------------------------------------------------------------------------------\
@@ -2789,13 +2951,127 @@ def get_business_activity_by_master_id(
                 BusinessActivity.is_deleted == 'no',
                 BusinessActivity.activity_master_id == master_id).all()
         return business_activities
+   
+
+#----------------------------------------------------------------------------------------------------
 
 
+def save_work_order(
+    request: CreateWorkOrderRequest,
+    db : Session,
+    user_id : int,
+    work_order_master_id:Optional[int] =0,
+    # work_order_details_id : Optional[int] = 0
+):
+    
+        # with db.begin():
+            # Save the master record
+        if work_order_master_id == 0:
+           try: 
+                work_order_number = generate_book_number('WORK_ORDER',db)
 
-def get_utility_document_by_nature_of_position(
+                master_data = request.master.dict()
+                master_data['created_on'] = datetime.now()
+                master_data['created_by'] = 1
+                master_data['work_order_number'] = work_order_number
+                master_data['work_order_date'] =  datetime.now()
+                master = OffWorkOrderMaster(**master_data)
+                db.add(master)
+                # master_data['work_order_number'] = work_order_number
+                # master_data['work_order_date'] =  datetime.now()
+                # master = OffWorkOrderMaster(**master_data)
+                # db.commit()
+                db.flush()
+                # db.refresh(master)
+
+            #     # Create the details records
+                for detail in request.details:
+                    detail_data = detail.dict()
+                    detail_data['work_order_master_id'] = master.id
+                    detail_data['created_by'] = 1
+                    detail_data['business_activity_id'] = 1
+                    detail_data['created_on'] = datetime.now()
+                    work_order_detail = OffWorkOrderDetails(**detail_data)
+                    db.add(work_order_detail)
+                
+                db.commit()
+                # db.refresh(master)
+                # return {"message": "Work order created successfully"}
+                return {"message": "Work order created successfully", "master_id": master.id, "success":"success"}
+
+
+           except SQLAlchemyError as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail="An error occurred while creating the work order")
+        else:
+
+        
+            try:
+                # Fetch the existing master record
+                master = db.query(OffWorkOrderMaster).filter(
+                    OffWorkOrderMaster.id == work_order_master_id
+                ).first()
+
+                if not master:
+                    raise HTTPException(status_code=404, detail="Work order master not found")
+
+                # Update master record
+                master_data = request.master.model_dump()
+                for key, value in master_data.items():
+                    if key != "id":  # Ensure 'id' is not updated
+                        setattr(master, key, value)
+
+                master.modified_on = datetime.now()
+                master.modified_by = user_id
+
+                db.commit()
+                db.flush()
+
+                # Loop through the details in the request
+                for detail in request.details:
+                    if detail.id:
+                        # Fetch the existing detail record
+                        work_order_detail = db.query(OffWorkOrderDetails).filter(
+                            OffWorkOrderDetails.id == detail.id,
+                            OffWorkOrderDetails.work_order_master_id == work_order_master_id
+                        ).first()
+
+                        if not work_order_detail:
+                            raise HTTPException(status_code=404, detail=f"Work order detail with id {detail.id} not found")
+
+                        # Update the existing detail record
+                        detail_data = detail.model_dump()
+                        for key, value in detail_data.items():
+                            if key != "id":  # Ensure 'id' is not updated
+                                setattr(work_order_detail, key, value)
+
+                        work_order_detail.modified_on = datetime.now()
+                        work_order_detail.modified_by = user_id
+
+                    else:
+                        # Create a new detail record if id is not provided
+                        detail_data = detail.model_dump()
+                        detail_data['work_order_master_id'] = master.id
+                        detail_data['created_by'] = user_id
+                        detail_data['created_on'] = datetime.now()
+                        work_order_detail = OffWorkOrderDetails(**detail_data)
+                        db.add(work_order_detail)
+
+                db.commit()
+
+                return {"message": "Work order updated successfully", "master_id": master.id, "success":"success"}
+
+            except SQLAlchemyError as e:
+                db.rollback()
+                raise HTTPException(status_code=500, detail=str(e))
+
+#-------------------------------------------------------------------------------------------------------------
+
+
+def get_utility_document_by_nature_of_possession(
         service_id: int,
         constitution_id: int,
-        nature_of_position_id: int,
+        nature_of_possession_id: int,
         db: Session 
 )->List[OffViewServiceDocumentsDataDetailsSchema]:
     try:
@@ -2814,7 +3090,7 @@ def get_utility_document_by_nature_of_position(
         # Fetch service document details
         service_document_details_data = db.query(OffViewServiceDocumentsDataDetails).filter(
             OffViewServiceDocumentsDataDetails.service_document_data_master_id == service_document_master_id,
-            OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_position_id
+            OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
         ).all()
 
         return service_document_details_data
@@ -2825,8 +3101,9 @@ def get_utility_document_by_nature_of_position(
     except Exception as e:
         return {"error": str(e)}
 
+#---------------------------------------------------------------------------------------------------------------
 
-def save_work_order_set_details(
+def save_work_order_service_details(
         db:Session,
         request: CreateWorkOrderSetDtailsRequest,
         work_order_details_id:int,
@@ -2856,7 +3133,7 @@ def save_work_order_set_details(
 
                 # Update the modified_by and modified_on fields
                 # work_order_details.modified_by = user_id
-                work_order_details.modified_on = datetime.now()
+                work_order_details.modified_on = datetime.utcnow()
 
         db.commit()
 
@@ -2882,7 +3159,7 @@ def save_work_order_set_details(
         else:
             # Insert a new record if business_place_details_id is not provided
           for detail in request.businessPlaceDetails:
-            detail_data = detail.model_dump()            
+            detail_data = detail.dict()            
             work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
             db.add(work_order_business_place)
             db.commit()
@@ -2892,7 +3169,127 @@ def save_work_order_set_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+            # db.refresh(master)
+
+#-----------------------------------------------------------------------------------
+
+def get_work_order_service_details(
+        db:Session ,
+        id : int
+)-> List[Dict]:
+    try:
+        data = []
+
+        # Query for work order details
+        work_order_details_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.is_deleted == 'no',
+            WorkOrderDetailsView.work_order_details_id == id
+        ).first()
+
+        if not work_order_details_data:
+            return {
+                'message': "Service not found"
+            }
+
+        # Query for business place details
+        business_place_details_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
+            OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == id,
+            OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
+        ).all()
+
+        # Create response object
+        work_order_business_place_data = WorkOrderSetDetailsResponseSchema(
+            workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
+            businessPlaceDetails=[OffViewBusinessPlaceDetailsScheema.model_validate(detail) for detail in business_place_details_data]
+        )
+
+        data.append(work_order_business_place_data.model_dump())  # Convert the response schema to a dictionary
+        return data
+
+    except SQLAlchemyError as e:
+        # Handle database exceptions
+        raise HTTPException(status_code=500, detail=str(e))
 
 
+#-------------------------------------------------------------------------------------------------------
 
+def get_work_order_dependancy_service_details(
+        db:Session ,
+        work_order_details_id : int,
+        work_order_master_id: int,
+        is_main_service  = str
 
+) :
+   try: 
+    if is_main_service == 'yes':
+        service_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+            WorkOrderDetailsView.work_order_details_id != work_order_details_id,
+            WorkOrderDetailsView.is_deleted == 'no'
+        ).all()
+        return service_data
+    else:
+        service_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+            WorkOrderDetailsView.bundle_service_id == work_order_details_id,
+            WorkOrderDetailsView.work_order_details_id != work_order_details_id
+        ).all()
+
+    return service_data
+   except SQLAlchemyError as e:
+        # Handle database exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+   
+
+#--------------------------------------------------------------------------------------------------
+def save_work_order_dependancies( 
+         depended_works: List[WorkOrderDependancySchema],
+         RecordActionType : RecordActionType,
+         db: Session ,
+         
+):
+    results = []
+    try:
+        # with db.begin():
+            if RecordActionType == 'INSERT_ONLY':
+                # Save new records
+                for work_order_dependancy in depended_works:
+                    new_record = WorkOrderDependancy(**work_order_dependancy.model_dump(exclude={"id"}))
+                    db.add(new_record)
+                    db.commit()
+                    db.refresh(new_record)
+                    results.append(new_record.id)
+            elif RecordActionType== 'UPDATE_ONLY':
+                # Update existing records
+                for work_order_dependancy in depended_works:
+                    if work_order_dependancy.id and work_order_dependancy.id != 0:
+                        existing_record = db.query(WorkOrderDependancy).filter(
+                            # WorkOrderDependancy.id == id
+                            WorkOrderDependancy.id == work_order_dependancy.id
+                        ).first()
+
+                        if not existing_record:
+                            return {
+                                'message' : f"Work order dependency with id {work_order_dependancy.id} not found",
+                                'Success' : 'false'
+                            }
+                            # raise HTTPException(status_code=404, detail=f"Work order dependency with id {work_order_dependancy.id} not found")
+
+                        for key, value in work_order_dependancy.model_dump(exclude_unset=True).items():
+                            setattr(existing_record, key, value)
+                        
+                        db.commit()
+                        db.refresh(existing_record)
+                        results.append(existing_record.id)
+                    # else:
+                    #     raise HTTPException(status_code=400, detail="Cannot update record without an ID.")
+
+    except SQLAlchemyError as e:
+        db.rollback()  # Rollback the transaction in case of error
+        raise HTTPException(status_code=500, detail="Failed to save or update work order dependencies. Error: " + str(e))
+    return {
+        'message': 'Successfully Saved' if results else 'No Records Processed',
+        'Success': 'true' if results else 'false',
+        'record_ids': results
+    }
+    # return results

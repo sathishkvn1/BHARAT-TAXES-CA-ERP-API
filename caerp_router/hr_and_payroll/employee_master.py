@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, EmployeeProfessionalQualification, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalaryDetailsViewSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -877,7 +877,7 @@ def save_or_update_records(
 
         # Step 3: Insert or update records
         for rec in records:
-            record_data = rec.dict(exclude_unset=True)
+            record_data = rec.model_dump(exclude_unset=True)
             record_data['employee_id'] = employee_id
 
             if rec.id == 0:
@@ -972,10 +972,34 @@ def update_employee_address_or_bank_details(
 
 #-----------------------------------------------------------------------
 
-# @router.get("/documents/get_employee_uploaded_documents/{id}", response_model=dict)
-# def get_employee_documents(id: int):
+@router.post("/save_employee_salary_details/{id}")
+def save_employee_salary_details(
+    id: int,
+    employee_id: int,
+    salary_data: EmployeeSalarySchema,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> Union[dict, List]:
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
-#     document_name = f"{id}.jpg"  
-#     # BASE_URL="http://127.0.0.1:8010/"
-#     return {"photo_url": f"{BASE_URL}/product/save_product_master/{document_name}"}
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    message = db_employee_master.save_employee_salary_details(db, id, employee_id, salary_data, user_id)
+    
+    return message
+
+#-----------------------------------------------------------------------
+
+@router.get("/get/employee_salary_details/", response_model=List[EmployeeSalaryDetailsViewSchema])
+def get_employee_salary_details(
+    employee_id: int,
+    
+    db: Session = Depends(get_db)
+):
+    return db_employee_master.get_employee_salary_details(db, employee_id)
+
+
+
 

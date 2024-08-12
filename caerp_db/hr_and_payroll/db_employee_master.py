@@ -1,11 +1,11 @@
 
 from fastapi import HTTPException, Path, Query, File, UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import EmployeeMaster, EmployeeSalaryDetailsView, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeSalaryDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -1201,3 +1201,96 @@ def update_employee_address_or_bank_details(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+
+#--------------------------------------------------------------------------------------------------------
+
+def save_employee_salary_details(
+    db: Session,
+    id: int,
+    employee_id: int,
+    salary_data: EmployeeSalarySchema,
+    user_id: int
+) -> Union[str, List]:
+    # Validate calculation frequency and method
+    if salary_data.calculation_frequency_id == 1:  # ONE TIME
+        if not salary_data.effective_to_date:
+            return {"message":"Effective To Date is required for ONE TIME calculation frequency."}
+        elif salary_data.effective_to_date.month != salary_data.effective_from_date.month:
+            return {"message":"Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
+
+    if salary_data.calculation_method_id == 1:  # FIXED
+        if salary_data.amount <= 0:
+            return {"message":"Amount must be non-zero for FIXED calculation method."}
+
+    if salary_data.calculation_method_id == 2:  # PERCENTAGE
+        if salary_data.percentage is None or salary_data.percentage <= 0:
+            return {"message":"Percentage must be non-zero for PERCENTAGE calculation method."}
+
+    try:
+        # Query existing salary detail
+        existing_salary_detail = db.query(EmployeeSalaryDetails).filter(
+            EmployeeSalaryDetails.employee_id == employee_id,
+            EmployeeSalaryDetails.component_id == salary_data.component_id,
+            EmployeeSalaryDetails.calculation_frequency_id == salary_data.calculation_frequency_id,
+            EmployeeSalaryDetails.effective_to_date.is_(None)
+        ).first()
+
+        if existing_salary_detail:
+            if salary_data.calculation_frequency_id != 1:
+                new_effective_to_date = salary_data.effective_from_date - timedelta(days=1)
+                existing_salary_detail.effective_to_date = new_effective_to_date
+                existing_salary_detail.modified_by = user_id
+                existing_salary_detail.modified_on = datetime.now()
+
+        if id == 0:
+            # Insert new salary detail
+            new_salary_detail = EmployeeSalaryDetails(
+                employee_id=employee_id,
+                created_by=user_id,
+                created_on=datetime.now(),
+                approved_by=user_id,
+                approved_on=datetime.now(),
+                **salary_data.model_dump(exclude_unset=True)
+            )
+            db.add(new_salary_detail)
+            db.flush()
+
+        else:
+            # Update existing salary detail
+            existing_salary_detail = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id).first()
+            if not existing_salary_detail:
+                return []
+
+            for field, value in salary_data.model_dump(exclude_unset=True).items():
+                setattr(existing_salary_detail, field, value)
+            existing_salary_detail.modified_by = user_id
+            existing_salary_detail.modified_on = datetime.now()
+
+        db.commit()
+        return {"message":"Saved successfully"}
+
+   
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+#-------------------------------------------------------------------------------------------------------
+def get_employee_salary_details(db: Session, 
+                                employee_id: int,
+                                
+                                  ):
+    try:
+        # Query salary details based on provided id and employee_id
+        salary_details = db.query(EmployeeSalaryDetailsView).filter(
+        
+            EmployeeSalaryDetailsView.employee_id == employee_id
+        ).all()
+        
+        # If no records are found, raise an HTTPException
+        if not salary_details:
+            return []
+
+        return salary_details
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

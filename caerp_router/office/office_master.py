@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import  ActionType, ApplyTo, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
+from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
 from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
@@ -14,7 +14,7 @@ from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse
+from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -1025,7 +1025,7 @@ def get_service_documents_list_by_group_category(
 
         # Filter out null fields from each ServiceDocumentsList_Group object
         filtered_results = [
-            {k: v for k, v in result.dict().items() if v is not None}
+            {k: v for k, v in result.model_dump().items() if v is not None}
             for result in results
         ]
 
@@ -1320,6 +1320,11 @@ def save_consultant_service_details(
 ):
     """
     Save or update consultant service details.
+    To save give action_type =Update and Insert
+    id:0
+    consultant_id:1
+    service_id:88
+    these data should be given
     """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
@@ -1680,7 +1685,7 @@ def get_all_consultation_task_master_details(
         filtered_results = [
             {
                 attribute_name: value.isoformat() if isinstance(value, datetime) else value 
-                for attribute_name, value in result.dict().items() if value not in [None, [], {}]
+                for attribute_name, value in result.service_id().items() if value not in [None, [], {}]
             }
             for result in results
         ]
@@ -2285,7 +2290,6 @@ def get_bundle_price_list(request: ServiceRequest=Depends()):
 
 
 #-----------------------------------------------------------------------
-
 @router.get('/get_work_order_details')
 def get_work_order_details(
     
@@ -2293,31 +2297,42 @@ def get_work_order_details(
     id          : int,
     visit_master_id : Optional[int] = None,
     enquiry_details_id : Optional[int]= None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token : str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    To retrieves work order details based on the specified entry point and associated IDs.
+    To retrieves work order details based on the specified entry point and associated IDs. 
     
     The entry points can be `WORK_ORDER`, `CONSULTATION`, or `ENQUIRY`. The behavior of this endpoint 
     depends on the value of `entry_point` and includes different parameters based on the entry point type.
 
-    Parameters:
-        - entry_point (required, query parameter): Specifies the type of entry point for the query. 
-          It can be `WORK_ORDER`, `CONSULTATION`, or `ENQUIRY`.
+    Parameters: 
+        
+        - entry_point (required, query parameter): Specifies the type of entry point for the query.   
+          It can be `WORK_ORDER`, `CONSULTATION`, or `ENQUIRY`.  
         - id (required, query parameter): The ID associated with the entry point. 
-          - If `entry_point` is `WORK_ORDER`, `id` should be the `work_order_master_id`.
-          - If `entry_point` is `CONSULTATION`, `id` should be the `appointment_master_id`.
-          - If `entry_point` is `ENQUIRY`, `id` should be the `enquiry_master_id`.
-        - visit_master_id (optional, query parameter): Required when the `entry_point` is `CONSULTATION`.
+
+          - If `entry_point` is `WORK_ORDER`, `id` should be the `work_order_master_id`. 
+          - If `entry_point` is `CONSULTATION`, `id` should be the `appointment_master_id`. 
+          - If `entry_point` is `ENQUIRY`, `id` should be the `enquiry_master_id`. 
+
+        - visit_master_id (optional, query parameter): Required when the `entry_point` is `CONSULTATION`. 
         - enquiry_details_id (optional, query parameter): Required when the `entry_point` is `ENQUIRY`.
 
     """
 
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+
     results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
     
     return results
+
+
+
 #---------------------------------------------------------------------------------
-@router.get('/get_work_order_list', response_model=List[OffWorkOrderMasterSchema])
+@router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
     
    
@@ -2329,7 +2344,8 @@ def get_work_order_list(
     work_order_status_id 	: Optional[int]= None,
     # mobile_number  	    : Optional[str]= None,
     # email_id            : Optional[str]= None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token : str = Depends(oauth2.oauth2_scheme)
 ):
     """
     Retrieve a list of work orders based on the provided filter criteria.
@@ -2341,7 +2357,7 @@ def get_work_order_list(
     - work_order_status_id (int, optional): The status ID to filter work orders.
 
     Returns:
-    - List[OffWorkOrderMasterSchema]: A list of work orders matching the filter criteria.
+    - List[OffViewWorkOrderMasterSchema]: A list of work orders matching the filter criteria.
 
     Responses:
     - 200: Successful retrieval of the work order list.
@@ -2351,6 +2367,9 @@ def get_work_order_list(
          db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
     
     return results
+
+
+
 #-------------------------------------------------------------------------------------
 @router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
 def get_business_activity_master_by_type_id(
@@ -2359,6 +2378,7 @@ def get_business_activity_master_by_type_id(
 ):
     business_activities = db_office_master.get_business_activity_master_by_type_id(db, activity_type_id)
     return business_activities
+
 
 #-------------------------------------------------------------------------------------
 @router.get('/get_business_activity_by_master_id', response_model=List[BusinessActivitySchema])
@@ -2369,21 +2389,36 @@ def get_business_activity_by_master_id(
     business_activities = db_office_master.get_business_activity_by_master_id(db, activity_master_id)
     return business_activities
 #-------------------------------------------------------------------------------------
-
-@router.get('/get_utility_document_by_nature_of_position', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
-def get_utility_document_by_nature_of_position(
+@router.get('/get_utility_document_by_nature_of_possession', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
+def get_utility_document_by_nature_of_possession(
         service_id: int,
         constitution_id: int,
-        nature_of_position : int,
+        nature_of_possession : int,
         db:Session = Depends(get_db)
 ):
-    return db_office_master.get_utility_document_by_nature_of_position(service_id,constitution_id,nature_of_position,db)
+    return db_office_master.get_utility_document_by_nature_of_possession(service_id,constitution_id,nature_of_possession,db)
 
 
 #-------------------------------------------------------------------------------------
+@router.post('/save_work_order')
+def save_work_order(
+    request: CreateWorkOrderRequest,
+    db: Session = Depends(get_db),
+    work_order_master_id:Optional[int] =0,
 
-@router.post('/save_work_order_set_details')
-def save_work_order_set_details(
+    token: str = Depends(oauth2.oauth2_scheme)
+
+):
+   if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+   auth_info = authenticate_user(token)
+   user_id = auth_info.get("user_id")
+   
+   return db_office_master.save_work_order(request, db, user_id,work_order_master_id)
+#---------------------------------------------------------------------------------------------------------
+
+@router.post('/save_work_order_service_details')
+def save_work_order_service_details(
     request: CreateWorkOrderSetDtailsRequest,
     work_order_details_id:int,
     business_place_details_id:Optional[int] = 0,
@@ -2396,7 +2431,69 @@ def save_work_order_set_details(
    auth_info = authenticate_user(token)
    user_id = auth_info.get("user_id")
    
-   return db_office_master.save_work_order_set_details( db,request,work_order_details_id,user_id,business_place_details_id)
+   return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id,business_place_details_id)
+
+@router.get('/get_work_order_service_details')
+def get_work_order_service_details(
+    id: int,
+    db:Session = Depends(get_db)
+):
+    
+    result  = db_office_master.get_work_order_service_details(db,id)
+    return result
+
+
+#---------------------------------------------------------------------------------------------------
+@router.get('/get_work_order_dependancy_service_details', response_model=List[OffViewWorkOrderDetailsSchema])
+def get_work_order_dependancy_service_details(
+    work_order_master_id : int,
+    work_order_details_id : int,
+    is_main_service : BooleanFlag,
+    db: Session = Depends(get_db)
+) :
+    """
+    Get work order dependency services.  
+
+    Parameters: 
+       - work_order_master_id (int): ID of the work order master. 
+       - work_order_details_id (int): ID of the current work order details. 
+       - is_main_service (BooleanFlag): Indicates if the service is the main service ('yes' or 'no'). 
+       - db (Session): Database session dependency.
+
+    Returns:
+        List[OffViewWorkOrderDetailsSchema]: List of dependent work order services.
+    """
+    result = db_office_master.get_work_order_dependancy_service_details(db,work_order_details_id,work_order_master_id,is_main_service)
+    return result
+
+#-----------------------------------------------------------------------------------------------------------
 
 
 
+@router.post('/save_work_order_dependancies')
+def save_work_order_dependancies(
+    depended_works: List[WorkOrderDependancySchema],
+    record_action : RecordActionType,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save or update work order dependencies based on the action type.
+
+    - depended_works: List of `WorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
+    - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_ONLY'`.
+    - db: Database session dependency.
+
+    **Returns**:
+    - A dictionary with a success message, success status, and list of processed record IDs.
+    - In case of error, raises an HTTPException with the appropriate status code.
+    """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    # auth_info = authenticate_user(token)
+    # user_id = auth_info.get("user_id")
+
+    result = db_office_master.save_work_order_dependancies(depended_works,db, record_action)
+    
+    return result
