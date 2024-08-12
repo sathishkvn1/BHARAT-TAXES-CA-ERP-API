@@ -2520,57 +2520,76 @@ def get_work_order_details(
 
                         #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
     if entry_point == 'WORK_ORDER':
-        data = []
-        query = db.query(OffWorkOrderMaster).filter(
-            OffWorkOrderMaster.is_deleted == 'no',
-            OffWorkOrderMaster.id == id)
-        
-        work_order_master_data = query.first()
-        if not work_order_master_data:
-            return {
-                    'message ': "Work order not found ",
-                    # 'Success' : 'false'
-                }
-        work_order_details_data = db.query(OffWorkOrderDetails).filter(
-            OffWorkOrderDetails.work_order_master_id == id,
-            OffWorkOrderDetails.is_deleted== 'no').all()
-        
-        service_data = []
-
-        for detail in work_order_details_data:
-            detail_data = WorkOrderDetailsResponseSchema.model_validate(detail)
-            if detail.is_depended_service == 'yes':
-                detail_data.depended_on = get_dependencies(db,detail.id)
+        try:
+            data = []
+            query = db.query(WorkOrderMasterView).filter(
+                WorkOrderMasterView.is_deleted == 'no',
+                WorkOrderMasterView.work_order_master_id == id)
             
-            # Handle bundle services
-            if detail.is_bundle_service == 'yes':
-                sub_services = db.query(OffWorkOrderDetails).filter(
-                    OffWorkOrderDetails.bundle_service_id == detail.id,
-                    OffWorkOrderDetails.is_deleted == 'no'
-                ).all()
-                sub_service_data = []
-                for sub_service in sub_services:
-                    sub_service_detail = WorkOrderDetailsResponseSchema.model_validate(sub_service)
-                    
-                    # Handle dependent services for sub-services
-                    if sub_service.is_depended_service == 'yes':
-                        sub_service_detail.depended_on = get_dependencies(db,sub_service.id)
-                    sub_service_data.append(sub_service_detail)
-                detail_data.sub_services = sub_service_data
-            
-                service_data.append(detail_data)
+            work_order_master_data = query.first()
+            if not work_order_master_data:
+                return {
+                        'message ': "Work order not found ",
+                        # 'Success' : 'false'
+                    }
 
-            
+            work_order_details_data = db.query(WorkOrderDetailsView).filter(
+                WorkOrderDetailsView.work_order_master_id == id,
+                WorkOrderDetailsView.is_deleted== 'no').all()
+            # if work_order_details_data:
+            #     print("work order detail",work_order_details_data.work_order_details_id )
+            service_data = []
 
-        work_order_data = WorkOrderResponseSchema(
-            work_order=OffWorkOrderMasterSchema.model_validate(work_order_master_data),
-            service_data=service_data
-        )
-        
-        data.append(work_order_data.model_dump())  # Assuming dict() converts to the desired output format
+            for detail in work_order_details_data:
+                print("work order detail",detail.work_order_details_id )
+                detail_data = OffViewWorkOrderDetailsSchema.model_validate(detail)
+                # service_name = db.query(OffServiceGoodsMaster.service_goods_name).filter(
+                #     OffServiceGoodsMaster.id == detail.service_goods_master_id
+                # ).first()
+                # detail_data.service_goods_name = service_name.service_goods_name
+                if detail.is_depended_service == 'yes':
+                    detail_data.depended_on = get_dependencies(db,detail.work_order_details_id)
+                
+                # Handle bundle services
+                if detail.is_bundle_service == 'yes':
+                    sub_services = db.query(WorkOrderDetailsView).filter(
+                        WorkOrderDetailsView.bundle_service_id == detail.work_order_details_id,
+                        WorkOrderDetailsView.is_deleted == 'no'
+                    ).all()
+
+                    sub_service_data = []
+                    for sub_service in sub_services:
+                        sub_service_detail = OffViewWorkOrderDetailsSchema.model_validate(sub_service)
+                        service_name = db.query(OffServiceGoodsMaster.service_goods_name).filter(
+                            OffServiceGoodsMaster.id == sub_service.service_goods_master_id
+                        ).first()
+                        sub_service_detail.service_goods_name = service_name.service_goods_name
+                        # Handle dependent services for sub-services
+                        if sub_service.is_depended_service == 'yes':
+                            sub_service_detail.depended_on = get_dependencies(db,sub_service.work_order_details_id)
+                        sub_service_data.append(sub_service_detail)
+                    detail_data.sub_services = sub_service_data
+                
+                    service_data.append(detail_data)   
+
+                
+                if not detail.is_bundle_service or detail.bundle_service_id is None:
+                    service_data.append(detail_data)           
+
+            work_order_data = WorkOrderResponseSchema(
+                work_order=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data),
+                service_data=service_data
+            )
+            
+            data.append(work_order_data.dict())  # Assuming dict() converts to the desired output format
+        except SQLAlchemyError as e:
+            # db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+
 
     
     elif entry_point == 'CONSULTATION':
+        
             
             if visit_master_id is None:
                 # raise ValueError("visit master id is required for CONSULTATION entry point")
@@ -2578,39 +2597,45 @@ def get_work_order_details(
                     'message ': "visit master id is required for CONSULTATION entry point",
                     'Success' : 'false'
                 }
-            appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
-            visit_data       = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id==visit_master_id).first()   
-            if not appointment_data:
-                # raise ValueError("Consultation not found")
+            # appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
+            visit_data       = db.query(OffAppointmentVisitMasterView).filter(
+                OffAppointmentVisitMasterView.appointment_master_id == id,
+                OffAppointmentVisitMasterView.visit_master_id==visit_master_id).first()   
+            if  not visit_data:
                 return {
-                    'message ': "Consultation not found",
-                    # 'Success' : 'false'
+                    'message': "Consultation or visit data not found",
                 }
-            full_name = appointment_data.full_name.split()
+            full_name = visit_data.full_name.split()
             first_name = full_name[0] if len(full_name) > 0 else ""
             middle_name = full_name[1] if len(full_name) > 2 else ""
             last_name = full_name[-1] if len(full_name) > 1 else ""
 
             # Transforming the data
             transformed_data = {
-                "id" : appointment_data.id,
+                # "work_order_master_id" : visit_data.,
                 "financial_year_id":visit_data.financial_year_id,
-                "appointment_master_id": appointment_data.id,
+                "financial_year" : visit_data.financial_year,
+                "appointment_master_id": visit_data.appointment_master_id,
                 "visit_master_id": visit_master_id,
                 "first_name": first_name,
                 "middle_name": middle_name,
                 "last_name": last_name,
-                "gender_id": appointment_data.gender_id,
-                "mobile_number": appointment_data.mobile_number,
-                "whatsapp_number":appointment_data.whatsapp_number,
-                "email_id":appointment_data.email_id,
-                "locality":appointment_data.locality,
-                "pin_code":appointment_data.pin_code,
-                "post_office_id":appointment_data.post_office_id,
-                "taluk_id":appointment_data.taluk_id,
-                "district_id":appointment_data.district_id,
-                "state_id":appointment_data.state_id,
-                "customer_number": appointment_data.customer_number
+                "gender_id": visit_data.gender_id,
+                "gender" : visit_data.gender,
+                "mobile_number": visit_data.mobile_number,
+                "whatsapp_number":visit_data.whatsapp_number,
+                "email_id":visit_data.email_id,
+                "locality":visit_data.locality,
+                "pin_code":visit_data.pin_code,
+                "post_office_id":visit_data.post_office_id,
+                "post_office_name": visit_data.post_office_name,
+                "taluk_id":visit_data.taluk_id,
+                "taluk_name": visit_data.taluk_name,
+                "district_id":visit_data.district_id,
+                "district_name":visit_data.district_name,
+                "state_id":visit_data.state_id,
+                "state_name": visit_data.state_name,
+                "customer_number": visit_data.customer_number
 
             }
 
@@ -2638,15 +2663,22 @@ def get_work_order_details(
             OffViewEnquiryMaster.enquiry_master_id == id).first()
         enquiry_detail_data = db.query(OffViewEnquiryDetails).filter(
             OffViewEnquiryDetails.is_deleted == 'no',
-            # OffViewEnquiryDetails.enquiry_master_id == id,
+            OffViewEnquiryDetails.enquiry_master_id == id,
             OffViewEnquiryDetails.enquiry_details_id == enquiry_details_id
             ).first()
+        if not enquiry_master_data or not enquiry_detail_data:
+                return {
+                    'message': "Enquiry master or Enquiry details  data not found"
+                }
         
-        work_order_data = OffWorkOrderMasterSchema(
+        work_order_data = OffViewWorkOrderMasterSchema(
             **enquiry_master_data.__dict__,
-            id =enquiry_master_data.enquiry_master_id,
+            # work_order_master_id =enquiry_master_data.enquiry_master_id,
             enquiry_details_id=enquiry_detail_data.enquiry_details_id,
-            financial_year_id=enquiry_detail_data.financial_year_id
+            financial_year_id=enquiry_detail_data.financial_year_id,
+            financial_year= enquiry_detail_data.financial_year,
+            country_name = enquiry_detail_data.country_name_english
+
         )
         # data = enquiry_master_data
         data = WorkOrderResponseSchema(
@@ -2666,9 +2698,7 @@ def get_work_order_details(
     #     return {
     #         'message': 'No data found',
     #         'Success': 'false'
-    #     }
-
-      
+    #     }    
 
 #----------------------------------------------------------------------------------------------
 def get_work_order_list(
@@ -3239,7 +3269,8 @@ def get_work_order_dependancy_service_details(
             WorkOrderDetailsView.work_order_details_id != work_order_details_id,
             WorkOrderDetailsView.is_deleted == 'no'
         ).all()
-        return service_data
+    
+        # return service_data
     else:
         service_data = db.query(WorkOrderDetailsView).filter(
             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
@@ -3247,12 +3278,19 @@ def get_work_order_dependancy_service_details(
             WorkOrderDetailsView.work_order_details_id != work_order_details_id
         ).all()
 
-    return service_data
+    result = [
+            {
+                'work_order_details_id': service.work_order_details_id,
+                'service_goods_master_id': service.service_goods_master_id,
+                'service_goods_name': service.service_goods_name
+            }
+            for service in service_data
+        ]
+    return result
    except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
    
-
 #--------------------------------------------------------------------------------------------------
 def save_work_order_dependancies( 
          depended_works: List[WorkOrderDependancySchema],

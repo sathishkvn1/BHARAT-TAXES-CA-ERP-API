@@ -2444,7 +2444,8 @@ def get_work_order_service_details(
 
 
 #---------------------------------------------------------------------------------------------------
-@router.get('/get_work_order_dependancy_service_details', response_model=List[OffViewWorkOrderDetailsSchema])
+
+@router.get('/get_work_order_dependancy_service_details')
 def get_work_order_dependancy_service_details(
     work_order_master_id : int,
     work_order_details_id : int,
