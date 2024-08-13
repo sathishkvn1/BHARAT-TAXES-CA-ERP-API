@@ -2888,6 +2888,7 @@ def save_work_order(
     if work_order_master_id == 0:
         try:
             work_order_number = generate_book_number('WORK_ORDER', db)
+
             master_data = request.master.dict()
             master_data['created_on'] = datetime.now()
             master_data['created_by'] = user_id
@@ -2897,20 +2898,38 @@ def save_work_order(
             db.add(master)
             db.flush()
 
-            for detail in request.details:
-                detail_data = detail.dict()
+            for main_detail in request.main_service:
+                detail_data = main_detail.dict()
                 detail_data['work_order_master_id'] = master.id
                 detail_data['created_by'] = user_id
                 detail_data['created_on'] = datetime.now()
+                
+                # Remove sub_services before creating the main work order detail
+                sub_services = detail_data.pop('sub_services', [])
+                
                 work_order_detail = OffWorkOrderDetails(**detail_data)
                 db.add(work_order_detail)
+                db.flush()
+
+                for sub_detail in sub_services:
+                    sub_detail_data = sub_detail  # Already a dictionary
+                    sub_detail_data['work_order_master_id'] = master.id
+                    sub_detail_data['created_by'] = user_id
+                    sub_detail_data['created_on'] = datetime.now()
+                    sub_detail_data['bundle_service_id'] = work_order_detail.id
+
+                    # Remove sub_services from sub_detail_data if present
+                    sub_detail_data.pop('sub_services', None)
+                    
+                    work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+                    db.add(work_order_sub_detail)
 
             db.commit()
             return {"message": "Work order created successfully", "master_id": master.id, "success": "success"}
 
         except SQLAlchemyError as e:
             db.rollback()
-            raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order,{str(e)}")
+            raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order, {str(e)}")
 
     else:
         try:
@@ -2940,10 +2959,10 @@ def save_work_order(
                 ).all()
             }
 
-            provided_detail_ids = {detail.id for detail in request.details if detail.id}
+            provided_detail_ids = {detail.id for detail in request.main_service if detail.id}
 
             # Update existing records or add new ones
-            for detail in request.details:
+            for detail in request.main_service:
                 if detail.id and detail.id in existing_detail_ids:
                     work_order_detail = db.query(OffWorkOrderDetails).filter(
                         OffWorkOrderDetails.id == detail.id,
@@ -2967,12 +2986,28 @@ def save_work_order(
                     detail_data['work_order_master_id'] = master.id
                     detail_data['created_by'] = user_id
                     detail_data['created_on'] = datetime.now()
+                    
+                    # Remove sub_services before creating the detail
+                    sub_services = detail_data.pop('sub_services', [])
+                    
                     work_order_detail = OffWorkOrderDetails(**detail_data)
                     db.add(work_order_detail)
 
+                    for sub_detail in sub_services:
+                        sub_detail_data = sub_detail  # Already a dictionary
+                        sub_detail_data['work_order_master_id'] = master.id
+                        sub_detail_data['created_by'] = user_id
+                        sub_detail_data['created_on'] = datetime.now()
+                        sub_detail_data['bundle_service_id'] = work_order_detail.id
+
+                        # Remove sub_services from sub_detail_data if present
+                        sub_detail_data.pop('sub_services', None)
+
+                        work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+                        db.add(work_order_sub_detail)
+
             # Set is_details = 'yes' for existing records not in the provided details list
             for existing_id in existing_detail_ids - provided_detail_ids:
-
                 work_order_detail = db.query(OffWorkOrderDetails).filter(
                     OffWorkOrderDetails.id == existing_id
                 ).first()
@@ -2980,7 +3015,7 @@ def save_work_order(
                 if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
                     sub_services = db.query(OffWorkOrderDetails).filter(
                         OffWorkOrderDetails.bundle_service_id == work_order_detail.id
-                    ).all()                   
+                    ).all()
 
                     if sub_services:  # Check if sub_services is not empty
                         for service in sub_services:
@@ -2988,12 +3023,12 @@ def save_work_order(
                             service.modified_on = datetime.now()
                             service.modified_by = user_id
                             db.add(service)  # Add to the session
+
                 depended_services = db.query(WorkOrderDependancy).filter(
-                        WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
-                    ).all()
+                    WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
+                ).all()
                 for depended_service in depended_services:
                     depended_service.is_deleted = 'yes'
-                    
                     db.add(depended_service)
 
                 work_order_detail.is_deleted = 'yes'
@@ -3009,20 +3044,19 @@ def save_work_order(
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
 
-
-
 #====================================================================================
 def save_work_order_dependancies( 
          depended_works: List[WorkOrderDependancySchema],
          action_type : RecordActionType,
          db: Session ,
-       
+         
 ):
     try:
             results = []   
         # with db.begin():
             if action_type == RecordActionType.INSERT_ONLY:
-               
+
+                
                 # Save new records
                 for work_order_dependancy in depended_works:
                     previouse_records = db.query(WorkOrderDependancy).filter(
@@ -3079,7 +3113,6 @@ def save_work_order_dependancies(
         'record_ids': results
     }
     # return results
-
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(
         service_id: int,
