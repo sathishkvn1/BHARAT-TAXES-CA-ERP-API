@@ -2584,6 +2584,7 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
 
 
 #------------------WORKORDER---------------------------------------------------
+
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
@@ -2772,8 +2773,9 @@ def get_work_order_details(
     #     return {
     #         'message': 'No data found',
     #         'Success': 'false'
-    #     }    
+    #     }
 
+      
 #----------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
@@ -3058,6 +3060,7 @@ def get_business_activity_by_master_id(
    
 
 #----------------------------------------------------------------------------------------------------
+
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session,
@@ -3067,7 +3070,6 @@ def save_work_order(
     if work_order_master_id == 0:
         try:
             work_order_number = generate_book_number('WORK_ORDER', db)
-
             master_data = request.master.dict()
             master_data['created_on'] = datetime.now()
             master_data['created_by'] = user_id
@@ -3160,7 +3162,7 @@ def save_work_order(
                 if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
                     sub_services = db.query(OffWorkOrderDetails).filter(
                         OffWorkOrderDetails.bundle_service_id == work_order_detail.id
-                    ).all()
+                    ).all()                   
 
                     if sub_services:  # Check if sub_services is not empty
                         for service in sub_services:
@@ -3168,6 +3170,13 @@ def save_work_order(
                             service.modified_on = datetime.now()
                             service.modified_by = user_id
                             db.add(service)  # Add to the session
+                depended_services = db.query(WorkOrderDependancy).filter(
+                        WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
+                    ).all()
+                for depended_service in depended_services:
+                    depended_service.is_deleted = 'yes'
+                    
+                    db.add(depended_service)
 
                 work_order_detail.is_deleted = 'yes'
                 work_order_detail.modified_on = datetime.now()
@@ -3181,6 +3190,78 @@ def save_work_order(
         except SQLAlchemyError as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
+
+
+
+#====================================================================================
+def save_work_order_dependancies( 
+         depended_works: List[WorkOrderDependancySchema],
+         action_type : RecordActionType,
+         db: Session ,
+       
+):
+    try:
+            results = []   
+        # with db.begin():
+            if action_type == RecordActionType.INSERT_ONLY:
+               
+                # Save new records
+                for work_order_dependancy in depended_works:
+                    previouse_records = db.query(WorkOrderDependancy).filter(
+                        WorkOrderDependancy.dependent_on_work_id == work_order_dependancy.dependent_on_work_id,
+                        WorkOrderDependancy.work_order_details_id == work_order_dependancy.work_order_details_id,
+                        WorkOrderDependancy.is_deleted == 'yes'
+                    ).all()
+                    if previouse_records:
+                        for record in previouse_records:
+                            record.is_deleted = 'no'
+                            db.add(record)
+                            db.commit()
+                        db.refresh(record)
+                        results.append(record.id)
+                        
+                    else:
+                        new_record = WorkOrderDependancy(**work_order_dependancy.model_dump(exclude={"id"}))
+                        db.add(new_record)
+                        db.commit()
+                        db.refresh(new_record)
+                        results.append(new_record.id)
+            elif action_type == RecordActionType.UPDATE_ONLY:
+                # Update existing records
+                for work_order_dependancy in depended_works:
+                    if work_order_dependancy.id and work_order_dependancy.id != 0:
+                        existing_record = db.query(WorkOrderDependancy).filter(
+                            # WorkOrderDependancy.id == id
+                            WorkOrderDependancy.id == work_order_dependancy.id
+                        ).first()
+
+                        if not existing_record:
+                            return {
+                                'message' : f"Work order dependency with id {work_order_dependancy.id} not found",
+                                'Success' : 'false'
+                            }
+                            # raise HTTPException(status_code=404, detail=f"Work order dependency with id {work_order_dependancy.id} not found")
+
+                        for key, value in work_order_dependancy.model_dump(exclude_unset=True).items():
+                            setattr(existing_record, key, value)
+                        
+                        db.commit()
+                        db.refresh(existing_record)
+                        results.append(existing_record.id)
+
+                    # else:
+                    #     raise HTTPException(status_code=400, detail="Cannot update record without an ID.")
+
+    except SQLAlchemyError as e:
+        db.rollback()  # Rollback the transaction in case of error
+        raise HTTPException(status_code=500, detail="Failed to save or update work order dependencies. Error: " + str(e))
+    return {
+        'message': 'Successfully Saved' if results else 'No Records Processed',
+        'Success': 'true' if results else 'false',
+        'record_ids': results
+    }
+    # return results
+
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(
         service_id: int,
@@ -3378,7 +3459,7 @@ def get_work_order_dependancy_service_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
     
-#--------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
 def save_work_order_dependancies( 
          depended_works: List[WorkOrderDependancySchema],
          action_type : RecordActionType,
