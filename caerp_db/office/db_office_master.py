@@ -1,7 +1,7 @@
 import logging
 from fastapi import HTTPException,status,Depends
 from sqlalchemy.orm import Session
-from caerp_constants.caerp_constants import  ApplyTo, DeletedStatus, EntryPoint, RecordActionType, Status
+from caerp_constants.caerp_constants import  ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
 from caerp_db.common.models import  BusinessActivity, BusinessActivityMaster, EmployeeEmployementDetails, EmployeeMaster
@@ -3182,8 +3182,6 @@ def save_work_order(
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
 #-------------------------------------------------------------------------------------------------------------
-
-
 def get_utility_document_by_nature_of_possession(
         service_id: int,
         constitution_id: int,
@@ -3333,25 +3331,40 @@ def get_work_order_dependancy_service_details(
         db:Session ,
         work_order_details_id : int,
         work_order_master_id: int,
-        is_main_service  = str
+        is_main_service  = BooleanFlag
 
 ) :
    try: 
-    if is_main_service == 'yes':
+    print("service data ================",is_main_service)
+    existing_row =  db.query(WorkOrderDetailsView).filter(
+        WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+        WorkOrderDetailsView.work_order_details_id == work_order_details_id,
+         WorkOrderDetailsView.is_deleted == 'no',
+         WorkOrderDetailsView.is_main_service == is_main_service).all()
+    if not existing_row : 
+         return {
+        'message': 'No record found for the given work order master ID and work order details ID.'
+    }
+    if is_main_service == BooleanFlag.yes:
         service_data = db.query(WorkOrderDetailsView).filter(
             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
             WorkOrderDetailsView.work_order_details_id != work_order_details_id,
+            WorkOrderDetailsView.is_main_service =='yes',
             WorkOrderDetailsView.is_deleted == 'no'
         ).all()
-    
+        print("service data ================",service_data)
         # return service_data
     else:
-        service_data = db.query(WorkOrderDetailsView).filter(
+        query = db.query(WorkOrderDetailsView).filter(
             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
-            WorkOrderDetailsView.bundle_service_id == work_order_details_id,
-            WorkOrderDetailsView.work_order_details_id != work_order_details_id
-        ).all()
-
+            # WorkOrderDetailsView.bundle_service_id == work_order_details_id,
+            WorkOrderDetailsView.work_order_details_id != work_order_details_id,
+            WorkOrderDetailsView.is_main_service=='no',
+            WorkOrderDetailsView.is_deleted == 'no'
+        )
+        print(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
+        service_data = query.all()
+        print("service data ================",service_data)
     result = [
             {
                 'work_order_details_id': service.work_order_details_id,
@@ -3364,18 +3377,20 @@ def get_work_order_dependancy_service_details(
    except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-   
+    
 #--------------------------------------------------------------------------------------------------
 def save_work_order_dependancies( 
          depended_works: List[WorkOrderDependancySchema],
-         RecordActionType : RecordActionType,
+         action_type : RecordActionType,
          db: Session ,
          
 ):
-    results = []
     try:
+            results = []   
         # with db.begin():
-            if RecordActionType == 'INSERT_ONLY':
+            if action_type == RecordActionType.INSERT_ONLY:
+
+                
                 # Save new records
                 for work_order_dependancy in depended_works:
                     new_record = WorkOrderDependancy(**work_order_dependancy.model_dump(exclude={"id"}))
@@ -3383,7 +3398,8 @@ def save_work_order_dependancies(
                     db.commit()
                     db.refresh(new_record)
                     results.append(new_record.id)
-            elif RecordActionType== 'UPDATE_ONLY':
+                    print('new_record',new_record.id)
+            elif action_type == RecordActionType.UPDATE_ONLY:
                 # Update existing records
                 for work_order_dependancy in depended_works:
                     if work_order_dependancy.id and work_order_dependancy.id != 0:
@@ -3405,6 +3421,7 @@ def save_work_order_dependancies(
                         db.commit()
                         db.refresh(existing_record)
                         results.append(existing_record.id)
+
                     # else:
                     #     raise HTTPException(status_code=400, detail="Cannot update record without an ID.")
 
@@ -3416,4 +3433,3 @@ def save_work_order_dependancies(
         'Success': 'true' if results else 'false',
         'record_ids': results
     }
-    # return results

@@ -1568,17 +1568,17 @@ def get_all_consultation_task_master_details(
         if not results:
             return []
         
-        # Filter out null fields and convert datetime objects to strings
-        filtered_results = [
-            {
-                attribute_name: value.isoformat() if isinstance(value, datetime) else value 
-                for attribute_name, value in result.dict().items() if value not in [None, [], {}]
-            }
-            for result in results
-        ]
+        # # Filter out null fields and convert datetime objects to strings
+        # filtered_results = [
+        #     {
+        #         attribute_name: value.isoformat() if isinstance(value, datetime) else value 
+        #         for attribute_name, value in result.dict().items() if value not in [None, [], {}]
+        #     }
+        #     for result in results
+        # ]
 
-        return JSONResponse(status_code=200, content=filtered_results)
-
+        # return JSONResponse(status_code=200, content=filtered_results)
+        return results
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -2326,8 +2326,8 @@ def save_work_order_dependancies(
     # auth_info = authenticate_user(token)
     # user_id = auth_info.get("user_id")
 
-    result = db_office_master.save_work_order_dependancies(depended_works,db, record_action)
+    result = db_office_master.save_work_order_dependancies(depended_works, record_action,db)
     
     return result
-
 #--------------------------------------------------------------------------------------------------------------
+
