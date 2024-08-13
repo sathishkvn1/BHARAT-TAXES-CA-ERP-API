@@ -1316,7 +1316,6 @@ class WorkOrderResponseSchema(BaseModel):
         from_attributes = True
 
 
-
 class OffViewBusinessPlaceDetailsScheema(BaseModel):
 
     business_place_id       : Optional[int] = None
