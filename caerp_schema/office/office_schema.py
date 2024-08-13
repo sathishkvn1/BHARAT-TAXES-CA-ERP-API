@@ -794,75 +794,143 @@ class OffConsultationTaskMasterSchema(BaseModel):
 
 
 
+
+
 class AdditionalServices(BaseModel):
-    service_detail_id       :int
-    service_id              : int
-    service_name            :str
+    service_detail_id:int
+    service_id: int
+    service_name:str
 
 
+
+
+# class OffViewConsultationTaskMasterSchema(BaseModel):
+#     consultation_task_master_id           : int
+#     task_date                             : datetime
+#     consultant_id                         : int
+#     employee_number                       : str
+#     employee_first_name                   : str
+#     employee_middle_name                  : Optional[str]
+#     employee_last_name                    : str
+#     appointment_master_id                 : int
+#     appointee_full_name                   : str
+#     appointee_gender_id                   : int
+#     appointee_gender                      : str
+#     customer_number                       : Optional[str]
+#     business_name                         : Optional[str]
+#     locality                              : Optional[str]
+#     pin_code                              : Optional[str]
+#     post_office_id                        : Optional[int]
+#     post_office_name                      : Optional[str]
+#     taluk_id                              : Optional[int]
+#     taluk_name                            : Optional[str]
+#     district_id                           : Optional[int]
+#     district_name                         : Optional[str]
+#     state_id                              : Optional[int]
+#     state_name                            : Optional[str]
+#     appointee_mobile_number               : Optional[str]
+#     appointee_whatsapp_number             : Optional[str]
+#     appointee_email_id                    : Optional[str]
+#     visit_master_id                       : int
+#     visit_master_appointment_time_from    : str
+#     visit_master_appointment_time_to      : Optional[str]
+#     consultation_mode_id                  : int
+#     consultation_mode                     : str
+#     consultation_tool_id                  : int
+#     consultation_tool                     : str
+#     task_status_id                        : int
+#     task_status                           : Optional[str]
+#     task_priority_id                      : int
+#     task_priority                         : Optional[str]
+#     remarks                               : Optional[str]
+#     consultation_task_details_id          : Optional[int]
+#     task_master_id                        : Optional[int]
+#     service_id                            : Optional[int]
+#     hsn_sac_class_id                      : int
+#     hsn_sac_class                         : str
+#     hsn_sac_id                            : int
+#     hsn_sac_code                          : str
+#     group_id                              : int
+#     group_name                            : Optional[str]
+#     sub_group_id                          : int
+#     sub_group_name                        : Optional[str]
+#     category_id                           : int
+#     category_name                         : Optional[str]
+#     sub_category_id                       : int
+#     sub_category_name                     : Optional[str]
+#     service_goods_name                    : str
+#     sku_code_id                           : int
+#     unit_code                             : Optional[str]
+#     additional_services                   : Optional[List[AdditionalServices]]
+
+#     class Config:
+#         orm_mode                           = True
 
 class OffViewConsultationTaskMasterSchema(BaseModel):
-    consultation_task_master_id           : int
-    task_date                             : datetime
-    consultant_id                         : int
-    employee_number                       : str
-    employee_first_name                   : str
-    employee_middle_name                  : Optional[str]
-    employee_last_name                    : str
-    appointment_master_id                 : int
-    appointee_full_name                   : str
-    appointee_gender_id                   : int
-    appointee_gender                      : str
-    customer_number                       : Optional[str]
-    business_name                         : Optional[str]
-    locality                              : Optional[str]
-    pin_code                              : Optional[str]
-    post_office_id                        : Optional[int]
-    post_office_name                      : Optional[str]
-    taluk_id                              : Optional[int]
-    taluk_name                            : Optional[str]
-    district_id                           : Optional[int]
-    district_name                         : Optional[str]
-    state_id                              : Optional[int]
-    state_name                            : Optional[str]
-    appointee_mobile_number               : Optional[str]
-    appointee_whatsapp_number             : Optional[str]
-    appointee_email_id                    : Optional[str]
-    visit_master_id                       : int
-    visit_master_appointment_time_from    : str
-    visit_master_appointment_time_to      : Optional[str]
-    consultation_mode_id                  : int
-    consultation_mode                     : str
-    consultation_tool_id                  : int
-    consultation_tool                     : str
-    task_status_id                        : int
-    task_status                           : Optional[str]
-    task_priority_id                      : int
-    task_priority                         : Optional[str]
-    remarks                               : Optional[str]
-    consultation_task_details_id          : Optional[int]
-    task_master_id                        : Optional[int]
-    service_id                            : Optional[int]
-    hsn_sac_class_id                      : int
-    hsn_sac_class                         : str
-    hsn_sac_id                            : int
-    hsn_sac_code                          : str
-    group_id                              : int
-    group_name                            : Optional[str]
-    sub_group_id                          : int
-    sub_group_name                        : Optional[str]
-    category_id                           : int
-    category_name                         : Optional[str]
-    sub_category_id                       : int
-    sub_category_name                     : Optional[str]
-    service_goods_name                    : str
-    sku_code_id                           : int
-    unit_code                             : Optional[str]
-    additional_services                   : Optional[List[AdditionalServices]]
+    consultation_task_master_id: int
+    task_date: datetime
+    consultant_id: int
+    employee_number: str
+    employee_first_name: str
+    employee_middle_name: Optional[str]
+    employee_last_name: str
+    appointment_master_id: int
+    appointee_full_name: str
+    appointee_gender_id: int
+    appointee_gender: str
+    customer_number: Optional[str]
+    business_name: Optional[str]
+    locality: Optional[str]
+    pin_code: Optional[str]
+    post_office_id: Optional[int]
+    post_office_name: Optional[str]
+    taluk_id: Optional[int]
+    taluk_name: Optional[str]
+    district_id: Optional[int]
+    district_name: Optional[str]
+    state_id: Optional[int]
+    state_name: Optional[str]
+    appointee_mobile_number: Optional[str]
+    appointee_whatsapp_number: Optional[str]
+    appointee_email_id: Optional[str]
+    visit_master_id: int
+    visit_master_appointment_time_from: str
+    visit_master_appointment_time_to: Optional[str]
+    consultation_mode_id: int
+    consultation_mode: str
+    consultation_tool_id: int
+    consultation_tool: str
+    task_status_id: int
+    task_status: Optional[str]
+    task_priority_id: int
+    task_priority: Optional[str]
+    remarks: Optional[str]
+    consultation_task_details_id: Optional[int]
+    task_master_id: Optional[int]
+    service_id: Optional[int]
+    # consultation_task_details_is_deleted: Optional[str]
+    hsn_sac_class_id: int
+    hsn_sac_class: str
+    hsn_sac_id: int
+    hsn_sac_code: str
+    # has_consultation: str
+    group_id: int
+    group_name: Optional[str]
+    sub_group_id: int
+    sub_group_name: Optional[str]
+    category_id: int
+    category_name: Optional[str]
+    sub_category_id: int
+    sub_category_name: Optional[str]
+    service_goods_name: str
+    sku_code_id: int
+    unit_code: Optional[str]
+    # is_bundled_service: str
+    # is_main_service: Optional[str]
+    additional_services: Optional[List[AdditionalServices]]
 
     class Config:
-        orm_mode                           = True
-
+        orm_mode = True
     
 
 #-------------------------------------OFFER-------------------------------------------

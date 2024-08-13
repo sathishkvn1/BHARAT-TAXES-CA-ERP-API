@@ -11,10 +11,10 @@ from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementD
 from caerp_db.database import  get_db
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek, AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitDetailsView, OffAppointmentVisitMaster, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubGroup, OffViewConsultantDetails, OffViewConsultantMaster
+from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import  AppointmentStatusConstants, Bundle, BundledServiceResponseSchema, BundledServiceSchema, ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDetail, ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel, Slot, TimeSlotResponse, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -377,9 +377,6 @@ def search_off_document_data_master(
         return []
     return documents
 
-
-
-
 #-------------------------------------------------------------------------------------------------------
 @router.post("/services/save_service_document_data_master/{id}")
 def save_service_document_data_master(
@@ -421,88 +418,9 @@ def save_service_document_data_master(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-
-###......................test
-
-# @router.get("/generate_consultation_slots/", response_model=List[Slot])
-# def generate_consultation_slots(request: ConsultationRequest=Depends(), db: Session = Depends(get_db)):
-#     # Step 1: Get Service and Consultants
-#     service, consultants = db_office_master.get_service_and_consultants_by_service(db, request.service_id)
-#     print("Service:", service)
-#     print("Consultants:", consultants)
-#     if not service:
-#         raise HTTPException(status_code=404, detail="Service not found")
-#     if not consultants:
-#         raise HTTPException(status_code=404, detail="No consultants available for this service")
-
-#     # Step 2: Check Consultant Availability
-#     available_consultants = []
-#     for consultant_id in consultants:
-#         is_available = db_office_master.check_consultant_availability(db, consultant_id, request.start_time, request.end_time)
-#         if is_available:
-#             available_consultants.append(consultant_id)
-    
-#     if not available_consultants:
-#         raise HTTPException(status_code=404, detail="No available consultants for the selected time")
-
-#     # Step 3: Generate Slots
-#     slots = []
-#     for consultant_id in available_consultants:
-#         slots.extend(db_office_master.generate_slots(db, request.service_id, consultant_id, request.start_time, request.end_time))
-    
-#     return slots
 #---------------------------------------------------------------------------------------------------------------
 from datetime import datetime, timedelta
 
-
-# @router.get("/get_availability/", response_model=List[dict])
-# async def get_availability(
-#     consultant_id: int,
-#     service_id: int,
-#     date: date ,
-#     db: Session = Depends(get_db)
-# ):
-#     # Check if date is provided
-#     if not date:
-#         raise HTTPException(status_code=400, detail="Date header is missing")
-
-#     # Query to join OffViewConsultantMaster and OffViewConsultantDetails
-#     availability_query = (
-#         db.query(OffViewConsultantMaster, OffViewConsultantDetails)
-#         .join(OffViewConsultantDetails,OffViewConsultantMaster.consultant_id ==OffViewConsultantDetails.consultant_id)
-#         .filter(
-#            OffViewConsultantMaster.consultant_id == consultant_id,
-#             OffViewConsultantMaster.consultant_master_available_date_from <= date,
-#             (OffViewConsultantMaster.consultant_master_available_date_to == None) |
-#             (OffViewConsultantMaster.consultant_master_available_date_to >= date),
-#            OffViewConsultantDetails.service_goods_master_id == service_id
-#         )
-#     )
-
-#     # Execute the query
-#     availability_data = availability_query.first()
-
-#     # Check if availability data is found
-#     if not availability_data:
-#         raise HTTPException(status_code=404, detail="Consultant or service not available on this date")
-
-#     # Extract consultant and service details
-#     consultant_master, consultant_details = availability_data
-
-#     # Calculate available time slots
-#     start_time = datetime.combine(date, consultant_master.consultant_master_available_time_from)
-#     end_time = datetime.combine(date, consultant_master.consultant_master_available_time_to)
-#     slot_duration = timedelta(minutes=consultant_details.slot_duration_in_minutes)
-
-#     available_slots = []
-#     while start_time + slot_duration <= end_time:
-#         available_slots.append({
-#             "start_time": start_time.time().strftime('%H:%M'),
-#             "end_time": (start_time + slot_duration).time().strftime('%H:%M')
-#         })
-#         start_time += slot_duration
-
-#     return available_slots
 
 
 @router.get("/get_consultant_schedule")
@@ -543,40 +461,7 @@ The endpoint returns a JSON object containing either available slots or messages
         service_goods_master_id=service_goods_master_id,
         appointment_id=appointment_id
     )
-#--------------------------------------------------------------------------------------------------------
-# @router.get("/get_availability/")
-# async def check_availability(
-#     consultant_id: int,
-#     service_id: int,
-#     check_date: date,
-#     db: Session = Depends(get_db)
-# ):
-#     # Call the get_availability endpoint to retrieve available slots
-#     available_slots = await get_availability(consultant_id, service_id, check_date, db)
-    
-#     # Filter out booked slots
-#     available_slots = filter_booked_slots(available_slots, consultant_id, check_date, db)
-    
-#     # Return the filtered available slots
-#     return available_slots
 
-# def filter_booked_slots(available_slots, consultant_id, check_date, db):
-#     # Query booked slots from OffAppointmentVisitMaster for the specified consultant and date
-#     booked_slots_query = (
-#         db.query(OffAppointmentVisitMaster)
-#         .filter(
-#            OffAppointmentVisitMaster.consultant_id == consultant_id,
-#            OffAppointmentVisitMaster.appointment_date == check_date
-#         )
-#     )
-    
-#     # Extract booked slots
-#     booked_slots = [(slot.appointment_time_from, slot.appointment_time_to) for slot in booked_slots_query.all()]
-    
-#     # Filter out booked slots from available slots
-#     available_slots = [slot for slot in available_slots if (slot['start_time'], slot['end_time']) not in booked_slots]
-    
-#     return available_slots
 
 #---------------------------------------------------------------------------------------------------------------
 
@@ -710,10 +595,6 @@ def get_consultation_services(
 
     else:
         raise HTTPException(status_code=400, detail="Invalid request. Provide a valid service ID or consultant ID.")
-
-
-
-
 
 #--------------------------------------------------------------------------------------------------------------
 
@@ -898,10 +779,6 @@ def get_service_data_endpoint(
     service_data = db_office_master.get_service_data(service_id, rate_status, db)
     return service_data
 
-
-
-
-
 #---------------------------------------------------------------------------------------------------------------
 @router.get("/get_price_history/", response_model=List[ServiceModel])
 def get_service_data_endpoint(service_id: int = Header(..., description="Service ID"), 
@@ -910,9 +787,7 @@ def get_service_data_endpoint(service_id: int = Header(..., description="Service
     if not service_data:
         raise HTTPException(status_code=404, detail="Service not found")
     return service_data
-
 #-----------------------------------------------------------------------------------------------------------  
-
 @router.post("/save_service_price/")
 def save_service_price_endpoint(price_data: List[PriceData], 
                                 service_goods_master_id: int,
@@ -932,10 +807,6 @@ def save_service_price_endpoint(price_data: List[PriceData],
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 #---------------------------------------------------------------------------------------------------------------
- 
-
-
-
 import datetime
 @router.post("/add_price/", response_model=dict)
 def add_price_to_service(
@@ -983,13 +854,6 @@ def add_price_to_service(
     except Exception as e:
         return {"success": False, "message": str(e)}
     
-
-
-
-
-
-
-
 #-----------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_list_by_group_category', response_model=Union[List[ServiceDocumentsList_Group], List[Service_Group]])
 def get_service_documents_list_by_group_category(
@@ -1035,9 +899,6 @@ def get_service_documents_list_by_group_category(
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-
 
 # #---------------------------------------------------------------------------------------
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
@@ -1094,7 +955,7 @@ def get_service_documents_data_details(
     
     
     
-    
+ #-------------------------------------------------------------------------------------------------------------   
 
 
 @router.get("/services/get_all_service_document_data_master")
@@ -1306,7 +1167,7 @@ def get_consultant_employees(
 
 
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
@@ -1399,34 +1260,10 @@ def get_service_details_by_consultant(
     ]
 
     return ConsultantServiceDetailsListResponse(services=services)
-#------------------------------------------------------------------------------------------------
-
-# @router.post("/save_consultant_schedule/")
-# def save_consultant_schedule(
-#     schedules: List[ConsultantScheduleCreate], 
-#     action_type: RecordActionType,
-#     id: Optional[int] = None,
-#     consultant_id: Optional[int] = None,  # Make consultant_id optional
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-    
-#     try:
-#         for data in schedules:
-#             db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
-        
-#         return {"success": True, "detail": "Saved successfully"}
-    
-#     except Exception as e:
-#         print(f"Error in endpoint: {e}")
-#         raise HTTPException(status_code=400, detail=str(e))
 
 
+
+#-------------------------------------------------------------------------------------------------------------
 
 @router.post("/save_consultant_schedule/")
 def save_consultant_schedule(
@@ -1454,7 +1291,7 @@ def save_consultant_schedule(
         raise HTTPException(status_code=400, detail=str(e))
 
     
-    
+ #-------------------------------------------------------------------------------------------------------------   
     
         
 from fastapi import Query
@@ -1557,7 +1394,7 @@ def save_enquiry_details(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.get("/enquiry/get_enquiries", response_model=List[OffViewEnquiryResponseSchema])
 def get_and_search_enquiries(
@@ -1645,6 +1482,56 @@ def save_off_consultation_task_master(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 #-----------------------------------------------------------------------------------------
 
+# @router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
+# def get_all_consultation_task_master_details(
+#     db: Session = Depends(get_db),
+#     service_id: Union[int, str] = Query("ALL"),
+#     task_status: Union[int, str] = Query("ALL"),
+#     consultation_mode: Union[int, str] = Query("ALL"),
+#     tool: Union[int, str] = Query("ALL"),
+#     consultant_id: Union[int, str] = Query("ALL"),
+#     from_date: Optional[date] = None,
+#     to_date: Optional[date] = None,
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ) -> Union[List[OffViewConsultationTaskMasterSchema], dict]:
+#     """
+#     Retrieve consultation task master details with optional filters.
+    
+#     - `service_id`: Filter by service_id or 'ALL' for all services.
+#     - `task_status`: Filter by task status or 'ALL' for all statuses.
+#     - `consultation_mode`: Filter by consultation mode or 'ALL' for all modes.
+#     - `tool`: Filter by consultation tool or 'ALL' for all tools.
+#     - `consultant_id`: Filter by consultant ID or 'ALL' for all consultants.
+#     - `from_date`: Optional. Filter tasks from this date onwards.(default None)
+#     - `to_date`: Optional. Filter tasks up to this date.(default None)
+    
+#     """
+    
+#     try:
+#         if not token:
+#             raise HTTPException(status_code=401, detail="Token is missing")
+
+#         results = db_office_master.get_all_consultation_task_master_details(
+#             db, service_id, task_status, consultation_mode, tool, consultant_id, from_date, to_date
+#         )
+
+#         if not results:
+#             return []
+        
+#         # Filter out null fields and convert datetime objects to strings
+#         filtered_results = [
+#             {
+#                 attribute_name: value.isoformat() if isinstance(value, datetime) else value 
+#                 for attribute_name, value in result.service_id().items() if value not in [None, [], {}]
+#             }
+#             for result in results
+#         ]
+
+#         return JSONResponse(status_code=200, content=filtered_results)
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+
 @router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
 def get_all_consultation_task_master_details(
     db: Session = Depends(get_db),
@@ -1685,7 +1572,7 @@ def get_all_consultation_task_master_details(
         filtered_results = [
             {
                 attribute_name: value.isoformat() if isinstance(value, datetime) else value 
-                for attribute_name, value in result.service_id().items() if value not in [None, [], {}]
+                for attribute_name, value in result.dict().items() if value not in [None, [], {}]
             }
             for result in results
         ]
@@ -1694,6 +1581,14 @@ def get_all_consultation_task_master_details(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+
+
+
+
+
 
 #--------------------------------------------------------------------------------------------
 # WORK ORDER
@@ -1736,67 +1631,6 @@ def get_all_services(
             delattr(result, "details")
 
     return results
-
-
-
-# @router.get("/get_all_service_document_data_master")
-# def get_all_service_document_data_master(db: Session = Depends(get_db)):
-#     query = """
-#     SELECT
-#         g.id AS service_goods_master_id,
-#         g.service_goods_name,
-#         a.id AS service_document_data_master_id,
-#         b.group_name,
-#         c.sub_group_name,
-#         d.category_name,
-#         e.sub_category_name,
-#         f.business_constitution_name,
-#         f.business_constitution_code,
-#         f.description,
-#         h.service_document_data_master_id AS view_service_document_data_master_id,
-#         h.document_data_category_id,
-#         h.document_data_master_id,
-#         h.document_data_name
-#     FROM 
-#         off_service_goods_master AS g
-#     LEFT JOIN off_service_document_data_master AS a ON g.id = a.service_goods_master_id
-#     LEFT JOIN off_service_goods_group AS b ON a.group_id = b.id
-#     LEFT JOIN off_service_goods_sub_group AS c ON a.sub_group_id = c.id
-#     LEFT JOIN off_service_goods_category AS d ON a.category_id = d.id
-#     LEFT JOIN off_service_goods_sub_category AS e ON a.sub_category_id = e.id
-#     LEFT JOIN app_business_constitution AS f ON a.constitution_id = f.id
-#     LEFT JOIN off_view_service_documents_data_details AS h ON h.service_document_data_master_id = a.id;
-#     """
-    
-#     result = db.execute(query)
-#     rows = result.fetchall()
-    
-#     if not rows:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No records found")
-
-#     # Formatting the response
-#     service_document_data_master = []
-#     for row in rows:
-#         configured_status = "CONFIGURED" if row.document_data_master_id is not None else "NOT CONFIGURED"
-#         service_document_data_master.append({
-#             "service_goods_master_id": row.service_goods_master_id,
-#             "service_goods_name": row.service_goods_name,
-#             "service_document_data_master_id": row.service_document_data_master_id,
-#             "group_name": row.group_name,
-#             "sub_group_name": row.sub_group_name,
-#             "category_name": row.category_name,
-#             "sub_category_name": row.sub_category_name,
-#             "business_constitution_name": row.business_constitution_name,
-#             "business_constitution_code": row.business_constitution_code,
-#             "description": row.description,
-#             "view_service_document_data_master_id": row.view_service_document_data_master_id,
-#             "document_data_category_id": row.document_data_category_id,
-#             "document_data_master_id": row.document_data_master_id,
-#             "document_data_name": row.document_data_name,
-#             "status": configured_status
-#         })
-
-#     return service_document_data_master
 
 
 
@@ -1846,7 +1680,7 @@ def save_office_offer_details(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_all_offer_list", response_model=List[OffOfferMasterSchemaResponse])
 def get_all_offer_list(
@@ -1858,7 +1692,7 @@ def get_all_offer_list(
     offer_list= db_office_master.get_all_offer_list(db,category_id,offer_master_id,offers)
     return offer_list
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.delete("/delete_offer_master")
 def delete_offer_master(
@@ -1918,7 +1752,7 @@ class PDFWithFooter(FPDF):
         page_number = f'Page {self.page_no()} of {{nb}}'
         self.cell(0, 10, page_number, 0, 0, 'C')
 
-
+#-------------------------------------------------------------------------------------------------------------
 def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], file_path: str):
     # pdf = FPDF()
       
@@ -1973,7 +1807,7 @@ def generate_consultant_employees_pdf(employee_list: List[ConsultantEmployee], f
     pdf.output(file_path)
     return open(file_path, "rb")
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.get("/consultant_employees/pdf")
 def get_consultant_employees_pdf(
@@ -2142,7 +1976,7 @@ def generate_consultant_employees_pdf_template(employee_list, file_path):
     
     return open(file_path, "rb")
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 @router.get("/template/consultant_employees/pdf")
 def get_consultant_employees_pdf(
@@ -2228,7 +2062,7 @@ def get_consultant_employees_pdf(
 
 import logging
 
-
+#-------------------------------------------------------------------------------------------------------------
 
 
     
@@ -2284,12 +2118,12 @@ def get_bundle_price_list(request: ServiceRequest=Depends()):
 
 
 
-#-----------------------WORKORDER-----------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 
 
+####################################WORKORDER####################################
 
-
-#-----------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_details')
 def get_work_order_details(
     
@@ -2331,7 +2165,7 @@ def get_work_order_details(
 
 
 
-#---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
     
@@ -2370,7 +2204,7 @@ def get_work_order_list(
 
 
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
 def get_business_activity_master_by_type_id(
     activity_type_id: Optional[int] = None,
@@ -2380,7 +2214,7 @@ def get_business_activity_master_by_type_id(
     return business_activities
 
 
-#-------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_by_master_id', response_model=List[BusinessActivitySchema])
 def get_business_activity_by_master_id(
     activity_master_id: Optional[int] = None,
@@ -2443,7 +2277,7 @@ def get_work_order_service_details(
     return result
 
 
-#---------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
 
 @router.get('/get_work_order_dependancy_service_details')
 def get_work_order_dependancy_service_details(
@@ -2468,9 +2302,6 @@ def get_work_order_dependancy_service_details(
     return result
 
 #-----------------------------------------------------------------------------------------------------------
-
-
-
 @router.post('/save_work_order_dependancies')
 def save_work_order_dependancies(
     depended_works: List[WorkOrderDependancySchema],
@@ -2498,3 +2329,5 @@ def save_work_order_dependancies(
     result = db_office_master.save_work_order_dependancies(depended_works,db, record_action)
     
     return result
+
+#--------------------------------------------------------------------------------------------------------------
