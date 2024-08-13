@@ -1076,6 +1076,10 @@ class WorkOrderDependancySchema(BaseModel):
     dependent_on_work_id    : int
     is_deleted              : Optional[str] ='no'
 
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
 
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
