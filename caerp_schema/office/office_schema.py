@@ -1083,7 +1083,7 @@ class WorkOrderDependancySchema(BaseModel):
 
 class CreateWorkOrderRequest(BaseModel):
     master: OffWorkOrderMasterSchema
-    details: List[WorkOrderDetailsSchema]
+    main_service: List[WorkOrderDetailsSchema]
 
 
 class WorkOrderDetailsResponseSchema(BaseModel):
