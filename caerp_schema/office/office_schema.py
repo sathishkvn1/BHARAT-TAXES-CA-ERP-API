@@ -1062,7 +1062,7 @@ class WorkOrderDetailsSchema(BaseModel):
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
     # depended_on: List['WorkOrderDependancySchema'] = []
-    # sub_services: List['WorkOrderDetailsSchema'] = []
+    sub_services: List['WorkOrderDetailsSchema'] = []
 
     class Config:
         orm_mode = True
