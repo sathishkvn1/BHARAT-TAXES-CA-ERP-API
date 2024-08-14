@@ -1712,15 +1712,7 @@ def delete_offer_master(
 
 #--------------------------------------------------------------------
 
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from io import BytesIO
 from fpdf import FPDF
-
-
-
-
-
 
 class PDFWithFooter(FPDF):
     def __init__(self):
@@ -2060,14 +2052,13 @@ def get_consultant_employees_pdf(
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
 
 
-import logging
-
 #-------------------------------------------------------------------------------------------------------------
 
 
     
 import mysql.connector
 from mysql.connector import Error
+
 def call_stored_procedure(service_id, input_date):
     connection = None
     cursor = None
@@ -2162,14 +2153,11 @@ def get_work_order_details(
     results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
     
     return results
-
-
-
 #-------------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
-    
-   
+ 
+ 
     work_order_number 	    : Optional[str]= None,
     search_value            :  Union[str, int] = "ALL",
 
@@ -2199,11 +2187,8 @@ def get_work_order_list(
     """
     results = db_office_master.get_work_order_list(
          db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
-    
+  
     return results
-
-
-
 #-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
 def get_business_activity_master_by_type_id(
@@ -2212,8 +2197,6 @@ def get_business_activity_master_by_type_id(
 ):
     business_activities = db_office_master.get_business_activity_master_by_type_id(db, activity_type_id)
     return business_activities
-
-
 #-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_by_master_id', response_model=List[BusinessActivitySchema])
 def get_business_activity_by_master_id(
@@ -2231,17 +2214,13 @@ def get_utility_document_by_nature_of_possession(
         db:Session = Depends(get_db)
 ):
     return db_office_master.get_utility_document_by_nature_of_possession(service_id,constitution_id,nature_of_possession,db)
-
-
 #-------------------------------------------------------------------------------------
 @router.post('/save_work_order')
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session = Depends(get_db),
     work_order_master_id:Optional[int] =0,
-
     token: str = Depends(oauth2.oauth2_scheme)
-
 ):
    if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -2250,7 +2229,6 @@ def save_work_order(
    
    return db_office_master.save_work_order(request, db, user_id,work_order_master_id)
 #---------------------------------------------------------------------------------------------------------
-
 @router.post('/save_work_order_service_details')
 def save_work_order_service_details(
     request: CreateWorkOrderSetDtailsRequest,
@@ -2267,6 +2245,7 @@ def save_work_order_service_details(
    
    return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id,business_place_details_id)
 
+#---------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_service_details')
 def get_work_order_service_details(
     id: int,
@@ -2275,10 +2254,7 @@ def get_work_order_service_details(
     
     result  = db_office_master.get_work_order_service_details(db,id)
     return result
-
-
 #-----------------------------------------------------------------------------------------------------------
-
 @router.get('/get_work_order_dependancy_service_details')
 def get_work_order_dependancy_service_details(
     work_order_master_id : int,
@@ -2288,17 +2264,17 @@ def get_work_order_dependancy_service_details(
 ) :
     """
     Get work order dependency services.  
-
     Parameters: 
        - work_order_master_id (int): ID of the work order master. 
        - work_order_details_id (int): ID of the current work order details. 
        - is_main_service (BooleanFlag): Indicates if the service is the main service ('yes' or 'no'). 
        - db (Session): Database session dependency.
-
     Returns:
         List[OffViewWorkOrderDetailsSchema]: List of dependent work order services.
     """
+    
     result = db_office_master.get_work_order_dependancy_service_details(db,work_order_details_id,work_order_master_id,is_main_service)
+   
     return result
 
 #-----------------------------------------------------------------------------------------------------------
@@ -2327,7 +2303,7 @@ def save_work_order_dependancies(
     # user_id = auth_info.get("user_id")
 
     result = db_office_master.save_work_order_dependancies(depended_works, record_action,db)
-    
+  
     return result
 #--------------------------------------------------------------------------------------------------------------
 

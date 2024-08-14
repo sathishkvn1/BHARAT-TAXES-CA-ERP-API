@@ -1028,7 +1028,7 @@ class OffWorkOrderMasterSchema(BaseModel):
 
 class WorkOrderDetailsSchema(BaseModel):
     
-    id                        : Optional[int] = None
+    id                          : Optional[int] = None
     work_order_master_id        : Optional[int] = None
     service_goods_master_id     : Optional[int] = None
     # service_goods_name          : Optional[str] = None
@@ -1062,7 +1062,7 @@ class WorkOrderDetailsSchema(BaseModel):
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
     # depended_on: List['WorkOrderDependancySchema'] = []
-    sub_services: List['WorkOrderDetailsSchema'] = []
+    sub_services        : List['WorkOrderDetailsSchema'] = []
 
     class Config:
         orm_mode = True
@@ -1152,13 +1152,6 @@ class  WorkOrderBusinessPlaceDetailsScheema(BaseModel):
 class CreateWorkOrderSetDtailsRequest(BaseModel):
     workOrderDetails: WorkOrderDetailsSchema
     businessPlaceDetails: List[WorkOrderBusinessPlaceDetailsScheema]
-
-
-
-
-
-
-
 
 
 class OffAppointmentMasterSchema(BaseModel):
