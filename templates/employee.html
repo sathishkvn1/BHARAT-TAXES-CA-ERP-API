@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Consultant Employees Report</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 20mm;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 50px;
+      }
+      footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 20mm;
+        text-align: center;
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        margin-top: 20px;
+      }
+      table,
+      th,
+      td {
+        border: 1px solid black;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <!-- <img src="C:\BHARAT-TAXES-CA-ERP-API\templates\logo\logo.png" alt="Logo"> -->
+      <h1>BRQ ASSOCIATES</h1>
+    </header>
+    <hr />
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>First Name</th>
+          <th>Middle Name</th>
+          <th>Last Name</th>
+          <th>Employee Number</th>
+          <th>Personal Email</th>
+          <th>Official Email</th>
+          <th>Personal Mobile</th>
+          <th>Official Mobile</th>
+          <th>Department</th>
+          <th>Designation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for employee in employees %}
+        <tr>
+          <td>{{ employee.employee_id }}</td>
+          <td>{{ employee.first_name }}</td>
+          <td>{{ employee.middle_name }}</td>
+          <td>{{ employee.last_name }}</td>
+          <td>{{ employee.employee_number }}</td>
+          <td>{{ employee.personal_email }}</td>
+          <td>{{ employee.official_email }}</td>
+          <td>{{ employee.personal_mobile }}</td>
+          <td>{{ employee.official_mobile }}</td>
+          <td>{{ employee.department_name }}</td>
+          <td>{{ employee.designation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <footer>
+      <!-- Page <span class="pageNumber"></span> of <span class="totalPages"></span> -->
+    </footer>
+  </body>
+</html>

@@ -3,6 +3,10 @@
 from fastapi import HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional, Union
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
 
 
 class DynamicAPI:
@@ -11,15 +15,15 @@ class DynamicAPI:
 
     def get_records(self, db: Session, fields: List[str]) -> List[dict]:
         try:
-            print("Table Name:", self.table_model.__tablename__)
-            print("Fields:", fields)  # Print the provided fields
+            # print("Table Name:", self.table_model.__tablename__)
+            # print("Fields:", fields)  # Print the provided fields
             # Construct column objects based on the provided field names
             columns = [getattr(self.table_model, field) for field in fields]
-            print("Columns:", columns)  # Print the constructed columns
+            # print("Columns:", columns)  # Print the constructed columns
             # Use the constructed columns in the query
             # records = db.query(*columns).all()
             records = db.query(*columns).filter(self.table_model.is_deleted == 'no').all()
-            print("Records:", records)  # Print the retrieved records
+            # print("Records:", records)  # Print the retrieved records
             # Convert query results to dictionaries
             return [dict(zip(fields, record)) for record in records]
         except Exception as e:
@@ -118,3 +122,42 @@ class DynamicAPI:
                 raise HTTPException(status_code=500, detail=str(e))
     
     
+
+
+    def check_duplicate(self, db: Session, field: str, name: str, id: int) -> bool:
+            try:
+                # Check if the field exists in the model
+                if not hasattr(self.table_model, field):
+                    raise HTTPException(status_code=400, detail=f"Invalid field name: {field}")
+
+                # Construct the query to check for duplicates
+                column = getattr(self.table_model, field)
+                query = db.query(self.table_model).filter(column == name)
+                
+                # Exclude the record with the provided id if id is non-zero
+                if id != 0:
+                    query = query.filter(self.table_model.id != id)
+                
+                # Check if any record exists with the given field and name
+                result = query.one_or_none()
+                return result is not None  # Return True if a record exists
+                
+            except Exception as e:
+                raise HTTPException(status_code=500)
+
+
+    def get_related_records(self, db: Session, field: str, value: int, fields_list: list):
+            query = db.query(self.model).filter(getattr(self.model, field) == value)
+            records = query.all()
+
+            result = []
+            for record in records:
+                record_dict = {}
+                for field in fields_list:
+                    record_dict[field] = getattr(record, field)
+                result.append(record_dict)
+            
+            return result
+    
+
+

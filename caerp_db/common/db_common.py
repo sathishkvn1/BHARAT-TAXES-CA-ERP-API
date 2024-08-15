@@ -2,11 +2,11 @@
 
 
 from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import AppEducationalQualificationsMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, StateDB, TalukDB
+from caerp_db.common.models import AppEducationalQualificationsMaster, AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -256,8 +256,8 @@ def get_query_manager_query_by_id(db: Session, id: int):
     return db.query(QueryManagerQuery).filter(QueryManagerQuery.id == id).first()
 
 
-def get_queries_by_id(db: Session, id: int):
-    return db.query(QueryView).filter(QueryView.id == id).first()
+# def get_queries_by_id(db: Session, id: int):
+#     return db.query(QueryView).filter(QueryView.id == id).first()
 
 #-----------------------------------------------------------
 
@@ -560,6 +560,52 @@ def delete_refund_reason(db: Session,
     return {"success": True, "message": f"Refund Reason {action.value.lower()} successfully"}
 
 
+
+def get_villages_data(db: Session, pincode: str) -> VillageResponse:
+    result = db.query(AppViewVillages).filter(AppViewVillages.pincode == pincode).all()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="No villages found for the given pincode")
+
+    villages = []
+    block = None
+    taluk = None
+  
+
+    for row in result:
+        try:
+            village_name = str(row.village_name) if row.village_name is not None else ""
+            villages.append(
+                Village(
+                    id=row.app_village_id,
+                    village_name=village_name,
+                    lsg_type=row.lsg_type,
+                    lsg_type_id=row.lsg_type_id,
+                    lsg_sub_type=row.lsg_sub_type,
+                    lsg_sub_type_id=row.lsg_sub_type_id,
+                    lsg_name=row.lsg_name,
+                    lsg_id=row.lsg_id
+                )
+            )
+            if block is None:
+                block = {"name": row.block_name, "id": row.block_id}
+            if taluk is None:
+                taluk = {"name": row.taluk_name, "id": row.taluk_id}
+            # if district is None:
+            #     district = {"name": row.district_name, "id": row.district_id}
+
+        except Exception as e:
+            print(f"Error processing row {row}: {e}")
+            continue
+
+    return VillageResponse(
+        villages=villages,
+        block=block,
+        taluk=taluk,
+        district="",
+        state="kerala",
+        country="India"
+    )
 
 
 

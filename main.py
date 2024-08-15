@@ -1,6 +1,7 @@
  
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from starlette.middleware.sessions import SessionMiddleware 
 from caerp_auth import authentication
 from caerp_router.common import user,otp_process,common,common_functions
@@ -9,6 +10,11 @@ from caerp_router.hr_and_payroll import employee_master
 from caerp_functions import captcha
 from caerp_db.database import caerp_base, caerp_engine
 from fastapi.staticfiles import StaticFiles
+
+
+# from fastapi_cache import FastAPICache
+# from fastapi_cache.backends.redis import RedisBackend
+# import redis
 
 
 
@@ -33,6 +39,20 @@ app = FastAPI(
        """
 )
 
+
+# @app.on_event("startup")
+# async def startup():
+#     # Initialize cache
+#     redis_client = redis.Redis.from_url("redis://localhost:6379")
+#     FastAPICache.init(RedisBackend(redis_client), prefix="cache")
+
+# @app.on_event("shutdown")
+# async def shutdown():
+#     await FastAPICache.clear()
+
+
+
+    
 app_common=FastAPI(debug=True)
 app_office=FastAPI(debug=True)
 hr_and_payroll=FastAPI(debug=True)
@@ -88,6 +108,7 @@ app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 
 
 app_common.mount("/captcha/generate_captcha", StaticFiles(directory="uploads/captcha_modified_images"), name="captcha_images")
+hr_and_payroll.mount("/Employee/upload_document", StaticFiles(directory="uploads/employee_documents"), name="documents")
 
 
 

@@ -6,7 +6,7 @@ class DeletedStatus(str, Enum):
     NOT_DELETED = "no"
     
 class ActiveStatus(str,Enum):
-    ALL         = 'all'
+    ALL         = 'ALL'
     ACTIVE      = 'yes'
     NOT_ACTIVE  ='no'
 
@@ -26,9 +26,7 @@ class VerifiedStatus(str, Enum):
     VERIFIED      = 'yes'
     NOT_VERIFIED  = 'no'
 
-class ApprovedStatus(str, Enum):
-    APPROVED      = 'yes'
-    NOT_APPROVED  = 'no'    
+ 
     
 class ActionType(str, Enum):
     DELETE      = 'DELETE'
@@ -54,11 +52,13 @@ class EmployeeDetails(str, Enum):
     CONTACT_DETAILS     = "CONTACT_DETAILS"
     BANK_DETAILS        = "BANK_DETAILS"
 
-class AppointmentStatus(str,Enum):
-    NEW = "NEW"
-    CANCELED = "CANCELED"
-    RESCHEDULED = "RESCHEDULED"
-    CLOSED = "CLOSED"
+
+# class AppointmentStatus(str,Enum):
+#     NEW = "NEW"
+#     CANCELED = "CANCELED"
+#     RESCHEDULED = "RESCHEDULED"
+#     CLOSED = "CLOSED"
+
     
 class SearchCriteria(str, Enum):
     mobile_number = "mobile_number"
@@ -71,3 +71,34 @@ class EmployeeActionType(str, Enum):
     INSERT_ONLY = 'INSERT_ONLY'    
     UPDATE_ONLY = 'UPDATE_ONLY'
     UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'
+
+
+class RecordActionType(str, Enum):
+    INSERT_ONLY = 'INSERT_ONLY'    
+    UPDATE_ONLY = 'UPDATE_ONLY'
+    UPDATE_AND_INSERT = 'UPDATE_AND_INSERT'  
+    DELETE      = 'DELETE'
+    UNDELETE ='UNDELETE'
+
+
+class ApprovedStatus(str, Enum):
+    ALL = 'ALL'
+    APPROVED      = 'yes'
+    NOT_APPROVED  = 'no'    
+
+
+class ApplyTo(str,Enum):
+    ALL         =   'ALL'
+    SELECTED    =   'SELECTED'
+
+class Status(str,Enum):
+    CURRENT     = "CURRENT"
+    UPCOMMING   = "UPCOMMING"
+    EXPIRED     = "EXPIRED"
+
+
+class EntryPoint(str, Enum):
+
+    CONSULTATION    =   'CONSULTATION'
+    ENQUIRY         =   'ENQUIRY'
+    WORK_ORDER       =   'WORK_ORDER'

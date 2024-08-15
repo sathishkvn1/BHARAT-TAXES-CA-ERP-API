@@ -1,14 +1,14 @@
 from fastapi import APIRouter,Depends,HTTPException,status,Query
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import  Employee, QueryManager, QueryManagerQuery, QueryView, UserBase
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, User
+from caerp_db.common.models import  AppViewVillages, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase
+from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, User, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
-from caerp_constants.caerp_constants import ActionType, ActiveStatus, DeletedStatus
+from caerp_constants.caerp_constants import CRUD, ActionType, ActiveStatus, DeletedStatus
 from typing import List
 from caerp_auth import oauth2
 from datetime import datetime
@@ -29,36 +29,87 @@ router = APIRouter(
 
 
 
+# @router.get("/country", response_model=List[CountryCreate])
+# def get_all_countries(db: Session = Depends(get_db),
+#                       token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Retrieve all countries.
+
+#     This endpoint retrieves a list of all countries available in the database.
+
+#     Parameters:
+#     - `db` (optional): SQLAlchemy database session. If not provided, a new session will be created.
+#     - `token` (required): Authentication token.
+
+#     Returns:
+#     - List[CountryCreate]: A list of countries with their IDs and names.
+
+#     Raises:
+#     - HTTPException(401): If the authentication token is missing.
+#     """
+#     # Check authorization
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     countries = db_common.get_countries(db)
+#     return countries
+
+
+
 @router.get("/country", response_model=List[CountryCreate])
-def get_all_countries(db: Session = Depends(get_db),
-                      token: str = Depends(oauth2.oauth2_scheme)):
-    """
-    Retrieve all countries.
+def get_all_countries(db: Session = Depends(get_db), id: int = None):
+    if id == 1:
+        # No authentication required for id == 1
+        countries = db_common.get_countries(db)
+        return countries
+    elif id is not None:
+        # Authentication required for any other value of id
+        return get_countries_authenticated(db)
+    else:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid id")
 
-    This endpoint retrieves a list of all countries available in the database.
-
-    Parameters:
-    - `db` (optional): SQLAlchemy database session. If not provided, a new session will be created.
-    - `token` (required): Authentication token.
-
-    Returns:
-    - List[CountryCreate]: A list of countries with their IDs and names.
-
-    Raises:
-    - HTTPException(401): If the authentication token is missing.
-    """
-    # Check authorization
+def get_countries_authenticated(db: Session = Depends(get_db), 
+                                token: str = oauth2.oauth2_scheme):
+      # Call the dependency to get the token value
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
     countries = db_common.get_countries(db)
     return countries
 
+from fastapi import APIRouter, HTTPException, Request
+@router.route("/test_countries/{country_id}", methods=["GET", "PUT", "DELETE"])
+async def manage_country(country_id: int, request: Request):
+    if request.method == "GET":
+        # Retrieve country logic
+        country = CountryDB.get_country(country_id)
+        if country:
+            return {"country_id": country_id, "country": country}
+        else:
+            raise HTTPException(status_code=404, detail="Country not found")
+
+    elif request.method == "PUT":
+        # Update country logic
+        country_data = await request.json()
+        updated_country = CountryDB.update_country(country_id, country_data)
+        if updated_country:
+            return {"message": f"Updated country {country_id}"}
+        else:
+            raise HTTPException(status_code=404, detail="Country not found")
+
+    elif request.method == "DELETE":
+        # Delete country logic
+        deleted_country = CountryDB.delete_country(country_id)
+        if deleted_country:
+            return {"message": f"Deleted country {country_id}"}
+        else:
+            raise HTTPException(status_code=404, detail="Country not found")
+    
 
 @router.get("/country/{country_id}", response_model=CountryDetail)
 def get_country_by_id(country_id: int,
                       db: Session = Depends(get_db),
                       token: str = Depends(oauth2.oauth2_scheme)):
+    
     """
     Retrieve a country by ID.
 
@@ -1312,42 +1363,42 @@ def resolve_query_manager(
 		
 
 
-@router.get("/queries/", response_model=List[QueryViewSchema])
-def get_queries_by_status(
-    status: QueryStatus = Query(QueryStatus.ALL),
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    query = db.query(QueryView)  # Query the QueryView view
+# @router.get("/queries/", response_model=List[QueryViewSchema])
+# def get_queries_by_status(
+#     status: QueryStatus = Query(QueryStatus.ALL),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     query = db.query(QueryView)  # Query the QueryView view
     
-    # Filter queries based on resolution status
-    if status == QueryStatus.RESOLVED:
-        query = query.filter(QueryView.is_resolved == 'yes')
-    elif status == QueryStatus.NOT_RESOLVED:
-        query = query.filter(QueryView.is_resolved == 'no')
+#     # Filter queries based on resolution status
+#     if status == QueryStatus.RESOLVED:
+#         query = query.filter(QueryView.is_resolved == 'yes')
+#     elif status == QueryStatus.NOT_RESOLVED:
+#         query = query.filter(QueryView.is_resolved == 'no')
     
-    # Execute the query and fetch results
-    queries = query.all()
+#     # Execute the query and fetch results
+#     queries = query.all()
     
-    return queries
+#     return queries
 
 
 
-@router.get("/queries/{id}", response_model=QueryViewSchema)
-def get_queries_by_id(id: int,
-                      db: Session = Depends(get_db),
-                      token: str = Depends(oauth2.oauth2_scheme)):
+# @router.get("/queries/{id}", response_model=QueryViewSchema)
+# def get_queries_by_id(id: int,
+#                       db: Session = Depends(get_db),
+#                       token: str = Depends(oauth2.oauth2_scheme)):
     
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-    query = db_common.get_queries_by_id(db, id)
-    if query is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+#     query = db_common.get_queries_by_id(db, id)
+#     if query is None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
-    return query
+#     return query
 
 
 @router.get("/get_usernames_with_names_and_ids", response_model=List[dict])
@@ -1730,3 +1781,38 @@ def delete_refund_reason(
 
 
 
+@router.post("/nationalities/{crud_operation}")
+def crud_nationality(crud_operation: CRUD, nationality_id: int = None, nationality_name: str = None, db: Session = Depends(get_db)):
+    if crud_operation == CRUD.CREATE:
+        nationality = NationalityDB(nationality_name=nationality_name)
+        db.add(nationality)
+        db.commit()
+        db.refresh(nationality)
+        return nationality
+    elif crud_operation == CRUD.READ:
+        nationality = db.query(NationalityDB).filter(NationalityDB.id == nationality_id).first()
+        if not nationality:
+            raise HTTPException(status_code=404, detail="Nationality not found")
+        return nationality
+    elif crud_operation == CRUD.UPDATE:
+        nationality = db.query(NationalityDB).filter(NationalityDB.id == nationality_id).first()
+        if not nationality:
+            raise HTTPException(status_code=404, detail="Nationality not found")
+        nationality.nationality_name = nationality_name
+        db.commit()
+        db.refresh(nationality)
+        return {"message": "Nationality updated successfully"}
+    elif crud_operation == CRUD.DELETE:
+        nationality = db.query(NationalityDB).filter(NationalityDB.id == nationality_id).first()
+        if not nationality:
+            raise HTTPException(status_code=404, detail="Nationality not found")
+        db.delete(nationality)
+        db.commit()
+        return {"message": "Nationality deleted successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid CRUD operation")
+    
+
+@router.get("/get/villages_by_pincode/", response_model=VillageResponse)
+def get_villages(pincode: str, db: Session = Depends(get_db)):
+    return db_common.get_villages_data(db, pincode)

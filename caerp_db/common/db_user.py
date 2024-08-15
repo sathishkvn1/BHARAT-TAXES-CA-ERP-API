@@ -1,10 +1,11 @@
 
 
 from caerp_schema.common.common_schema import UserCreateSchema
-from caerp_db.common.models import UserBase,Employee,SmsTemplates
+from caerp_db.common.models import UserBase,EmployeeMaster,SmsTemplates
 from fastapi import HTTPException , status     
 from caerp_db.hash import Hash
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import ActiveStatus
 
@@ -47,12 +48,12 @@ def save_user(db: Session,  request: UserCreateSchema, user_id: int):
 
 
 def get_user_by_mobile(db: Session, mobile: str):
-    return db.query(Employee).filter(Employee.mobile_phone == mobile).first()
+    return db.query(EmployeeMaster).filter(EmployeeMaster.mobile_phone == mobile).first()
 
 def get_user_by_id(db: Session, id: int):
     return db.query(UserBase).filter(UserBase.employee_id == id).first()
 def get_employee_by_id(db: Session, id: int):
-    return db.query(Employee).filter(Employee.employee_id == id).first()
+    return db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id).first()
 def get_user_by_user_name(db: Session,username: str):    
     return  db.query(UserBase).filter(UserBase.user_name == username).first()
     
@@ -113,8 +114,10 @@ def user_password_reset(db: Session, user_id: int, password: str):
     hashed_password =Hash.bcrypt(password)
     existing_user = db.query(UserBase).filter(UserBase.employee_id == user_id).first()
     print("Existing user : ",existing_user)
-  
-    existing_user.password= hashed_password
+    password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
+
+    existing_user.login_password= hashed_password
+    existing_user.password_reset_date = password_reset_date
    
     try:
         db.commit()  # Commit changes to the database

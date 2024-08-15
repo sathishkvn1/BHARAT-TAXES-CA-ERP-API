@@ -1,12 +1,16 @@
 from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import Employee
+from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeExperience, EmployeeProfessionalQualification, Gender, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, MaritalStatus, NationalityDB, UsersRole
 from caerp_db.database import get_db
+from caerp_db.hr_and_payroll.model import PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppHsnSacClasses, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup
+from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry, OffTaskPriority, OffTaskStatus, OffWorkOrderStatus
+
 
 from caerp_auth import oauth2
 
@@ -35,8 +39,42 @@ TABLE_MODEL_MAPPING = {
     "OffServiceGoodsSubGroup" : OffServiceGoodsSubGroup,
     "OffServiceGoodsCategory":  OffServiceGoodsCategory,
     "OffServiceGoodsSubCategory": OffServiceGoodsSubCategory,
-    "Employee":Employee
-     
+    "AppHsnSacMaster":AppHsnSacMaster,
+    "AppStockKeepingUnitCode":AppStockKeepingUnitCode,
+    "AppBusinessConstitution":AppBusinessConstitution,
+    "OffDocumentDataMaster":OffDocumentDataMaster,
+    "OffDocumentDataType":OffDocumentDataType,
+    "Gender":Gender,
+    "OffDocumentDataCategory":OffDocumentDataCategory,
+    "OffNatureOfPossession":OffNatureOfPossession,
+    "PrlCalculationFrequency":PrlCalculationFrequency,
+    "PrlCalculationMethod":PrlCalculationMethod,
+    "PrlSalaryComponent":PrlSalaryComponent,
+    "MaritalStatus":MaritalStatus,
+    "AppDesignation":AppDesignation,
+    "NationalityDB":NationalityDB,
+    "BloodGroupDB":BloodGroupDB,
+    "HrDocumentMaster":HrDocumentMaster,
+    "HrDepartmentMaster":HrDepartmentMaster,
+    "HrDesignationMaster":HrDesignationMaster,
+    "HrEmployeeCategory":HrEmployeeCategory,
+    "EmployeeEducationalQualification":EmployeeEducationalQualification,
+    "OffEnquiryStatus":OffEnquiryStatus,
+    "OffSourceOfEnquiry":OffSourceOfEnquiry,
+    "OffEnquirerType":OffEnquirerType,
+    "OffConsultationMode":OffConsultationMode,
+    "UsersRole":UsersRole,
+    "AppDayOfWeek":AppDayOfWeek,
+    "OffTaskPriority":OffTaskPriority,
+    "OffTaskStatus":OffTaskStatus,
+    "OffServiceGoodsMaster":OffServiceGoodsMaster,
+    "OffWorkOrderStatus":OffWorkOrderStatus,
+    "BusinessActivityType"       : BusinessActivityType,
+    "EmployeeProfessionalQualification":EmployeeProfessionalQualification,
+    "EmployeeExperience":EmployeeExperience,
+    "EmployeeDocuments" :EmployeeDocuments
+
+    
 }
 
 # Define a function to get the model class based on the provided model name
@@ -88,41 +126,7 @@ async def get_info(
 
 #........................fr delete
 
-# @router.get("/delete_undelete_by_id", operation_id="delete_undelete_record")
-# async def get_info(
-#     model_name: str = Query(..., description="Model name to fetch data from"),
-#     id: Optional[int] = Query(None, description="ID of the record to retrieve"),
-#     delete: Optional[str] = Query(None, description="Whether to delete the record ('true' or 'false')"),
-#     undelete: Optional[str] = Query(None, description="Whether to undelete the record ('true' or 'false')"),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Get appointment information based on provided fields, model name, and optional ID.
-#     """
-#     # Convert the fields string to a list of strings
- 
-    
-#     # Get the model class based on the provided model name
-#     table_model = get_model_by_model_name(model_name)
 
-#     # Check if the model exists
-#     if table_model is None:
-#         raise HTTPException(status_code=404, detail="Model not found")
-
-#     # Initialize DynamicAPI instance with the retrieved model
-#     dynamic_api = DynamicAPI(table_model)
-
-#     if delete and undelete:
-#         raise HTTPException(status_code=400, detail="Both delete and undelete cannot be True simultaneously")
-#     elif delete == 'true':
-#         # Delete the record
-#         dynamic_api.delete_record_by_id(db, id)
-#         return {"message": f"Record with ID {id} from model {model_name} has been deleted"}
-#     elif undelete == 'true':
-#         # Undelete the record
-#         dynamic_api.undelete_record_by_id(db, id)
-#         return {"message": f"Record with ID {id} from model {model_name} has been undeleted"}
-    
 
 
 @router.get("/delete_undelete_by_id", operation_id="modify_records")
@@ -228,5 +232,35 @@ async def save_record(
 #         # Insert a new record if ID is not provided or 0
 #         dynamic_api.save_record(db, data)
 #         return {"message": "New record inserted successfully"}
+
+
+@router.post("/check_duplicate")
+async def check_duplicate(
+    model_name: str = Query(..., description="Model name to fetch data from"),
+    field: str = Query(..., description="Field to check for duplicates"),
+    name: str = Query(..., description="Name to check for duplicates"),
+    id: int = Query(0, description="ID to exclude from the duplicate check (0 to include all)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Search if the entered name already exists in the given table and field.
+    """
+    try:
+        # Retrieve the model from the mapping
+        model = TABLE_MODEL_MAPPING.get(model_name)
+        
+        if not model:
+            raise HTTPException(status_code=400, detail="Invalid model name")
+
+        # Initialize DynamicAPI instance with the retrieved model
+        dynamic_api = DynamicAPI(model)
+
+        # Check for duplicate
+        is_duplicate = dynamic_api.check_duplicate(db, field, name, id)
+        if is_duplicate:
+            return {"success": True, "message": "Duplicate entry"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500)
 
 
