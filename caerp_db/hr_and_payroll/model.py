@@ -182,3 +182,32 @@ class HrViewEmployeeTeamMembers(caerp_base):
     deleted_on           = Column(DateTime)
 
     
+
+    
+class HrDocumentMaster(caerp_base):
+    __tablename__ = "hr_document_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    document_name = Column(String(100), nullable=False)
+    has_expiry = Column(Enum('yes', 'no'), default='no', nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+class HrDepartmentMaster(caerp_base):
+    __tablename__ = "hr_department_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    department_name = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+class HrDesignationMaster(caerp_base):
+    __tablename__ = "hr_designation_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    designation = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+    
+class HrEmployeeCategory(caerp_base):
+    __tablename__ = "hr_employee_category"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    category_name = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+    
