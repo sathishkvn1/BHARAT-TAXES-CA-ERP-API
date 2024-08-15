@@ -885,7 +885,7 @@ def get_all_employee_team_master(
 def get_all_employee_team_members(
     team_id:int,
     # employee_status:str,
-    employee_status:  Optional[str] = Query(None, description="Filter by type: 'CURRENT_EMPLOYEE', 'OLD_EMPLOYEE'"),
+    employee_status:  Optional[str] = Query("CURRENT_EMPLOYEE", description="Filter by type: 'CURRENT_EMPLOYEE', 'OLD_EMPLOYEE'"),
    
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)

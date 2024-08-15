@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeExperience, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, UsersRole
 from caerp_db.database import get_db
-from caerp_db.hr_and_payroll.model import HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
+from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
 from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffSourceOfEnquiry, OffTaskPriority, OffTaskStatus, OffWorkOrderStatus
@@ -72,7 +72,8 @@ TABLE_MODEL_MAPPING = {
     "BusinessActivityType"       : BusinessActivityType,
     "EmployeeProfessionalQualification":EmployeeProfessionalQualification,
     "EmployeeExperience":EmployeeExperience,
-    "EmployeeDocuments" :EmployeeDocuments
+    "EmployeeDocuments" :EmployeeDocuments,
+    "EmployeeTeamMaster":EmployeeTeamMaster
 }
 
 # Define a function to get the model class based on the provided model name
