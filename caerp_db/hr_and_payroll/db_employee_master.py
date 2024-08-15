@@ -1,12 +1,12 @@
 
-from fastapi import HTTPException, Path, Query, File, UploadFile
+from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
 from caerp_db.common.models import EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema
+from sqlalchemy.exc import SQLAlchemyError
+from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -20,7 +20,7 @@ from pathlib import Path
 
 UPLOAD_EMP_DOCUMENTS = "uploads/employee_documents"
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_next_employee_number(db: Session) -> str:
     # Get the maximum employee number
     max_employee_number = db.query(func.max(EmployeeMaster.employee_number)).scalar()
@@ -33,7 +33,7 @@ def get_next_employee_number(db: Session) -> str:
     return next_employee_number_str
 
 
-
+#---------------------------------------------------------------------------------------------------------
 def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, user_id: int, employee_profile_component: Optional[str] = None):
     try:
         if id == 0:
@@ -141,113 +141,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
-
-# def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, user_id: int, employee_profile_component: Optional[str] = None):
-#     try:
-#         if id == 0:
-#             # Insertion logic
-#             data = request.employee_master.dict()
-#             data["created_by"] = user_id
-#             data["is_approved"] = 'yes'
-#             data["approved_by"] = user_id
-#             data["approved_on"] = datetime.utcnow()
-#             data['employee_number'] = get_next_employee_number(db)
-
-#             insert_stmt = insert(EmployeeMaster).values(**data)
-#             result = db.execute(insert_stmt)
-#             db.commit()
-#             emp_id = result.lastrowid
-
-#             contact_details_data = request.contact_details.dict()
-#             contact_details_data['effective_from_date'] = datetime.utcnow().date()
-#             contact_details_data['employee_id'] = emp_id
-
-#             insert_contact_stmt = insert(EmployeeContactDetails).values(**contact_details_data)
-#             db.execute(insert_contact_stmt)
-#             db.commit()
-
-#             users_new_dict = request.employee_security_credentials.dict()
-#             log_password = Hash.bcrypt(users_new_dict['login_password'])
-#             password_reset_date = datetime.utcnow().date() + relativedelta(months=3)
-
-#             users_new_data = {
-#                 "employee_id": emp_id,
-#                 "user_name": users_new_dict['user_name'],
-#                 "login_password": log_password,
-#                 "edit_password": log_password,
-#                 "delete_password": log_password,
-#                 "security_password": log_password,
-#                 "is_active": 'yes',
-#                 "password_reset_date": password_reset_date
-#             }
-#             insert_user_log_stmt = insert(UserBase).values(**users_new_data)
-#             db.execute(insert_user_log_stmt)
-#             db.commit()
-
-#             for role_id in request.user_roles.role_id:
-#                 user_role_data = {
-#                     "employee_id": emp_id,
-#                     "role_id": role_id
-#                 }
-#                 insert_user_role_stmt = insert(UserRole).values(**user_role_data)
-#                 db.execute(insert_user_role_stmt)
-#             db.commit()
-
-#             employement_details_data = request.employement_details.dict()
-#             employement_details_data["employee_id"] = emp_id
-#             employement_details_data['effective_from_date'] = datetime.utcnow().date()
-#             employement_details_data["created_by"] = user_id
-#             employement_details_data["approved_by"] = user_id
-#             employement_details_data["approved_on"] = datetime.utcnow()
-
-#             insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
-#             db.execute(insert_emp_det)
-#             db.commit()
-
-#             return emp_id
-
-#         else:
-#             # Update logic based on employee_profile_component
-#             update_emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == id, EmployeeMaster.is_deleted == 'no').first()
-#             if not update_emp:
-#                 raise HTTPException(status_code=404, detail="Employee not found")
-
-#             if employee_profile_component is None:
-#                 raise ValueError("Employee profile component is required for updation")
-
-#             components = employee_profile_component.split(',')
-
-#             # Update employee_master if present in the components
-#             if 'employee_master' in components and request.employee_master:
-#                 update_data = request.employee_master.dict(exclude_unset=True)
-#                 db.query(EmployeeMaster).filter(EmployeeMaster.id == id).update(update_data)
-#                 db.query(EmployeeMaster).filter(EmployeeMaster.id == id).update({
-#                     "modified_by": user_id,
-#                     "modified_on": datetime.utcnow()
-#                 })
-
-#             # Update contact_details if present in the components
-#             if 'contact_details' in components and request.contact_details:
-#                 contact_details_data = request.contact_details.dict(exclude_unset=True)
-#                 db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == id).update(contact_details_data)
-
-#             # Update employement_details if present in the components
-#             if 'employement_details' in components and request.employement_details:
-#                 employement_details_data = request.employement_details.dict(exclude_unset=True)
-#                 db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == id).update(employement_details_data)
-
-#             # You can add more conditions for other components if needed
-
-#             db.commit()
-
-#             return {
-#                 "success": True,
-#                 "message": "Updated successfully"
-#             }
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
+#---------------------------------------------------------------------------------------------------------
 
 
 
@@ -457,7 +351,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
      db.rollback()
      raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
-
+#---------------------------------------------------------------------------------------------------------
 def update_detail_record(db, model, request_data, record_id, updated_entities, entity_name):
   single_id = record_id[0]
   detail_record = db.query(model).filter(model.id == single_id, model.is_deleted == 'no').first()
@@ -466,6 +360,7 @@ def update_detail_record(db, model, request_data, record_id, updated_entities, e
   for field, value in request_data.dict(exclude={"effective_to_date"}).items():
      setattr(detail_record, field, value)
   updated_entities[entity_name] = detail_record
+#---------------------------------------------------------------------------------------------------------
 
 def update_multiple_detail_records(db, model, request_data_list, record_ids, updated_entities, entity_name):
     for record_id, request_data in zip(record_ids, request_data_list):
@@ -476,7 +371,7 @@ def update_multiple_detail_records(db, model, request_data_list, record_ids, upd
         setattr(det_multiple_record, field, value)
       updated_entities[entity_name] = det_multiple_record
 
-
+#---------------------------------------------------------------------------------------------------------
 def insert_detail_record(db, model, request_data, employee_id, user_id):
    detail_data = request_data.dict()
    
@@ -509,6 +404,8 @@ def insert_detail_record(db, model, request_data, employee_id, user_id):
    new_detail = model(**detail_data)
    db.add(new_detail)
 
+
+#---------------------------------------------------------------------------------------------------------
 def insert_multiple_detail_records(db, model, request_data_list, employee_id, user_id):
    for request_data in request_data_list:
      insert_detail = request_data.dict()
@@ -518,33 +415,7 @@ def insert_multiple_detail_records(db, model, request_data_list, employee_id, us
        insert_detail["created_by"] = user_id
      db.add(model(**insert_detail))
 
-  
-
-
-# def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
-#     try:
-#         emp_documents_data = request.dict()
-#         emp_documents_data["employee_id"] = employee_id
-#         emp_documents_data["created_by"] = user_id
-#         result = EmployeeDocuments(**emp_documents_data)
-#         db.add(result)
-#         db.commit()
-#         db.refresh(result)
-#         # Handle file upload
-#         if file:
-          
-#             file_path = os.path.join(UPLOAD_EMP_DOCUMENTS, str(result.id))
-
-#             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-#             with open(file_path, "wb") as buffer:
-#                 shutil.copyfileobj(file.file, buffer)
-#             db.commit()
-#         return result
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
-
-
+ #--------------------------------------------------------------------------------------------------------- 
 
 def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, employee_id: int, user_id: int, file: UploadFile = None):
     try:
@@ -579,7 +450,7 @@ def upload_employee_documents(db: Session, request: EmployeeDocumentsSchema, emp
         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
 
 
-
+#---------------------------------------------------------------------------------------------------------
 
 
 
@@ -681,7 +552,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
     #  else:
     #    raise HTTPException(status_code=400, detail=f"Invalid profile component: {employee_profile_component}")   
 
-
+#---------------------------------------------------------------------------------------------------------
 
 def search_employee_master_details(db: Session, user_status: Optional[ActiveStatus], approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
     query = db.query(
@@ -772,13 +643,13 @@ def search_employee_master_details(db: Session, user_status: Optional[ActiveStat
     result = query.all()    
     return result  
 
-
+#---------------------------------------------------------------------------------------------------------
 
 def get_employee_master_details(db: Session):
     return db.query(EmployeeMaster).all()
 
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_present_address_details(db: Session, employee_id: int):
     current_date = date.today()
     return db.query(EmployeePresentAddress).filter(
@@ -789,7 +660,7 @@ def get_present_address_details(db: Session, employee_id: int):
         EmployeePresentAddress.is_deleted == 'no'
     ).all()   
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_permanent_address_details(db: Session ,employee_id: int):
     current_date = date.today()
     return db.query(EmployeePermanentAddress).filter(
@@ -800,9 +671,7 @@ def get_permanent_address_details(db: Session ,employee_id: int):
         EmployeePermanentAddress.is_deleted == 'no'
     ).all()
 
-
-# def get_permanent_address_details(db: Session):
-    # return db.query(EmployeePermanentAddress).all()
+#---------------------------------------------------------------------------------------------------------
 
 def get_contact_details(db: Session , employee_id: int):
     current_date = date.today()
@@ -814,7 +683,7 @@ def get_contact_details(db: Session , employee_id: int):
         EmployeeContactDetails.is_deleted == 'no'
     ).all()
 
-    
+#---------------------------------------------------------------------------------------------------------    
 
 def get_bank_details(db: Session, employee_id: int):
     current_date = date.today()
@@ -827,7 +696,7 @@ def get_bank_details(db: Session, employee_id: int):
     ).all()
 
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_employement_details(db: Session, employee_id: int):
     current_date = date.today()
     return db.query(EmployeeEmployementDetails).filter(
@@ -838,7 +707,7 @@ def get_employement_details(db: Session, employee_id: int):
         EmployeeEmployementDetails.is_deleted == 'no'
     ).all()
     
-    
+#---------------------------------------------------------------------------------------------------------    
 def get_salary_details(db: Session,employee_id: int):
     current_date = date.today()
     return db.query(EmployeeSalaryDetails).filter(
@@ -849,7 +718,7 @@ def get_salary_details(db: Session,employee_id: int):
         EmployeeSalaryDetails.is_deleted == 'no'
     ).all()
     
-    
+#---------------------------------------------------------------------------------------------------------    
 
 
 def get_qualification_details(db: Session, employee_id: int):
@@ -858,19 +727,20 @@ def get_qualification_details(db: Session, employee_id: int):
         EmployeeEducationalQualification.is_deleted == 'no'
     ).all()
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_experience_details(db: Session, employee_id: int):
     return db.query(EmployeeExperience).filter(
         EmployeeExperience.employee_id == employee_id,
         EmployeeExperience.is_deleted == 'no'
     ).all()
-
+#---------------------------------------------------------------------------------------------------------
 def get_document_details(db: Session, employee_id: int):
     return db.query(EmployeeDocuments).filter(
         EmployeeDocuments.employee_id == employee_id,
         EmployeeDocuments.is_deleted == 'no'
     ).all()
 
+#---------------------------------------------------------------------------------------------------------
 def get_emergency_contact_details(db: Session , employee_id: int):
     current_date = date.today()
     return db.query(EmployeeEmergencyContactDetails).filter(
@@ -881,7 +751,7 @@ def get_emergency_contact_details(db: Session , employee_id: int):
         EmployeeEmergencyContactDetails.is_deleted == 'no'
     ).all()
     
-    
+ #---------------------------------------------------------------------------------------------------------   
 
 def get_dependent_details(db: Session , employee_id: int):
     current_date = date.today()
@@ -893,20 +763,20 @@ def get_dependent_details(db: Session , employee_id: int):
         EmployeeDependentsDetails.is_deleted == 'no'
     ).all()
     
-
+#---------------------------------------------------------------------------------------------------------
 def get_professional_qualification_details(db: Session, employee_id: int):
     return db.query(EmployeeProfessionalQualification).filter(
         EmployeeProfessionalQualification.employee_id == employee_id,
         EmployeeProfessionalQualification.is_deleted == 'no'
     ).all()
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_security_credentials(db: Session, employee_id: int):
     return db.query(UserBase).filter(
         UserBase.employee_id == employee_id
     ).all()
 
-
+#---------------------------------------------------------------------------------------------------------
 def get_user_role(db: Session, employee_id: int):
     return db.query(UserRole).filter(
         UserRole.employee_id == employee_id,
@@ -914,11 +784,7 @@ def get_user_role(db: Session, employee_id: int):
     ).all()
    
 
-
-
-
-
-
+#---------------------------------------------------------------------------------------------------------
 
 def get_user_roles(db: Session, employee_id: Optional[int]=None)->  List[UserRole]:  
     # if employee_id is None:
@@ -939,35 +805,7 @@ def get_user_roles(db: Session, employee_id: Optional[int]=None)->  List[UserRol
         }
   
     return result
-
-
-# def save_or_update_educational_qualifications(db: Session, employee_id: int, qualifications: List[EmployeeEducationalQualficationSchema], user_id: int):
-#     try:
-#         for qual in qualifications:
-#             if qual.id == 0:
-#                 # Insertion logic
-#                 qualification_data = qual.dict()
-#                 qualification_data['employee_id'] = employee_id
-#                 qualification_data['created_by'] = user_id
-#                 qualification_data['created_on'] = datetime.utcnow()
-#                 insert_stmt = insert(EmployeeEducationalQualification).values(**qualification_data)
-#                 db.execute(insert_stmt)
-#             else:
-#                 # Update logic
-#                 update_stmt = update(EmployeeEducationalQualification).where(EmployeeEducationalQualification.id == qual.id).values(
-#                     qualification_name=qual.qualification_name,
-#                     institution=qual.institution,
-#                     percentage_or_grade=qual.percentage_or_grade,
-#                     month_and_year_of_completion=qual.month_and_year_of_completion,
-#                     modified_by=user_id,
-#                     modified_on=datetime.utcnow()
-#                 )
-#                 db.execute(update_stmt)
-#         db.commit()
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
+#---------------------------------------------------------------------------------------------------------
 
 
 def save_or_update_educational_qualifications(
@@ -1028,7 +866,7 @@ def save_or_update_educational_qualifications(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
     
-
+#---------------------------------------------------------------------------------------------------------
 
 
 def update_employee_address_or_bank_details(
@@ -1295,3 +1133,169 @@ def get_employee_salary_details(db: Session,
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+#------------------------------------------------------------------------------------------------------
+def save_employee_team_master(
+    db: Session,
+    id: int,
+    data: SaveEmployeeTeamMaster,  
+    user_id: int
+):
+    try:
+        if id == 0:
+            # Insert new master data
+            new_master_data = data.master.dict()
+            new_master_data.update({
+                "created_by": user_id,
+                "created_on": datetime.now()
+            })
+            new_master = EmployeeTeamMaster(**new_master_data)
+            db.add(new_master)
+            db.flush()  # Ensure new_master.id is available for details
+
+            # Insert new details
+            for detail_data in data.details:
+                new_detail_data = detail_data.dict()
+                new_detail_data.update({
+                    "team_master_id": new_master.id,
+                    "created_by": user_id,
+                    "created_on": datetime.now()
+                })
+                new_detail = EmployeeTeamMembers(**new_detail_data)
+                db.add(new_detail)
+
+            db.commit()
+            return {"success": True, "message": "Saved successfully", "action": "insert"}
+
+        else:
+            # Update existing master data
+            existing_master = db.query(EmployeeTeamMaster).filter(EmployeeTeamMaster.id == id).first()
+            if not existing_master:
+                raise HTTPException(status_code=404, detail="Master record not found")
+
+            master_update_data = data.master.dict()
+            for key, value in master_update_data.items():
+                setattr(existing_master, key, value)
+            existing_master.modified_by = user_id
+            existing_master.modified_on = datetime.now()
+
+            # Update or insert new details
+            existing_details = db.query(EmployeeTeamMembers).filter(
+                EmployeeTeamMembers.team_master_id == existing_master.id
+            ).all()
+
+            existing_detail_dict = {detail.id: detail for detail in existing_details}
+            incoming_detail_dict = {detail.id: detail for detail in data.details}
+
+            for detail_data in data.details:
+                detail_data_dict = detail_data.dict()
+                existing_detail = existing_detail_dict.get(detail_data.id)
+
+                if existing_detail:
+                    # Update existing detail
+                    for key, value in detail_data_dict.items():
+                        setattr(existing_detail, key, value)
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.now()
+                else:
+                    # Insert new detail
+                    new_detail_data = detail_data_dict
+                    new_detail_data.update({
+                        "team_master_id": existing_master.id,
+                        "created_by": user_id,
+                        "created_on": datetime.now()
+                    })
+                    new_detail = EmployeeTeamMembers(**new_detail_data)
+                    db.add(new_detail)
+
+            # Mark deleted details
+            for detail_id, existing_detail in existing_detail_dict.items():
+                if detail_id not in incoming_detail_dict:
+                    existing_detail.is_deleted = "yes"
+                    existing_detail.deleted_by = user_id
+                    existing_detail.deleted_on = datetime.now()
+
+            db.commit()
+            return {"success": True, "message": "Updated successfully", "action": "update"}
+
+    except Exception as e:
+        db.rollback()
+        raise e
+
+#-------------------------------------
+
+
+def get_all_employee_team_master(
+    db: Session,
+    department_id: Union[int, str] = 'ALL',
+    team_id: Union[int, str] = 'ALL'
+) -> List[HrViewEmployeeTeamSchema]:
+    query = db.query(HrViewEmployeeTeamMaster).filter(HrViewEmployeeTeamMaster.is_deleted == 'no')
+
+    if department_id != 'ALL':
+        query = query.filter(HrViewEmployeeTeamMaster.department_id == department_id)
+
+    if team_id != 'ALL':
+        query = query.filter(HrViewEmployeeTeamMaster.team_id == team_id)
+
+    team_masters = query.all()
+
+    results = []
+
+    for team_master in team_masters:
+        members_query = db.query(HrViewEmployeeTeamMembers).filter(
+            HrViewEmployeeTeamMembers.team_master_id == team_master.team_id,
+            HrViewEmployeeTeamMembers.is_deleted == 'no'
+        )
+        members = members_query.all()
+
+        team_master_schema = HrViewEmployeeTeamMasterSchema.from_orm(team_master)
+        members_schema = [HrViewEmployeeTeamMemberSchema.from_orm(member) for member in members]
+
+        team_schema = HrViewEmployeeTeamSchema(
+            team=team_master_schema,
+            members=members_schema
+        )
+
+        results.append(team_schema)
+
+    return results
+
+#---------------------------------------
+
+def get_all_employee_team_members(
+    db: Session,
+    team_id: int,
+    # employee_status: str  # Accept as string and match with enum
+    employee_status: Optional[str] = None,  
+) -> List[EmployeeTeamMembersGet]:
+    
+
+    # Base query with common filters
+    query = db.query(HrViewEmployeeTeamMembers).filter(
+        HrViewEmployeeTeamMembers.team_master_id == team_id,
+        HrViewEmployeeTeamMembers.is_deleted == 'no'
+    )
+
+    # Filter by employee status
+    if employee_status == "CURRENT_EMPLOYEE":
+        query = query.filter(HrViewEmployeeTeamMembers.effective_to_date.is_(None))
+    elif employee_status == "OLD_EMPLOYEE":
+        query = query.filter(HrViewEmployeeTeamMembers.effective_to_date.isnot(None))
+
+    # Fetch results
+    team_members = query.all()
+
+    # Convert ORM objects to Pydantic models
+    team_members_schema = [
+        EmployeeTeamMembersGet.from_orm(member) for member in team_members
+    ]
+
+    return team_members_schema
+
+
+
+#--------------------------------------------------------

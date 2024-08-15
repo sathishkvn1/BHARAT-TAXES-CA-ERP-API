@@ -1,30 +1,25 @@
-from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments, EmployeeEmployementDetails, EmployeeProfessionalQualification, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, EmployeeContactDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,EmployeeMasterSchema, EmployeePresentAddressSchema, EmployeePermanentAddressSchema, EmployeeContactSchema, EmployeeBankAccountSchema, EmployeeMasterDisplay, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeEmployementSchema, EmployeeExperienceSchema, EmployeeEmergencyContactSchema, EmployeeDependentsSchema, EmployeeProfessionalQualificationSchema
+from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification,  HrDocumentMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
 from caerp_auth import oauth2
-from sqlalchemy.exc import SQLAlchemyError
+
 from typing import List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ApprovedStatus, ActiveStatus
-from collections import defaultdict
+
 import os
 from typing import List, Dict
 from settings import BASE_URL
-
-
-
-
 
 router = APIRouter(
     prefix ='/Employee',
     tags=['Employee']
 )
-
 
 UPLOAD_EMP_DOCUMENTS = "uploads/employee_documents"
 
@@ -87,42 +82,8 @@ def save_employee_master(
          } 
    except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
-   
-
-# @router.post('/save_employee_master_new')
-# def save_employee_master(
-   
-#     id: int = 0,
-#     employee_profile_component: Optional[str] = Query(None,
-#     description="Comma-separated list of components to Update",
-#     title="Components to Update"),
-#     request: EmployeeDetails = Body(...),
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme),
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info["user_id"]
-
-#     try:
-#         result = db_employee_master.save_employee_master_new(db, request,id, user_id, employee_profile_component)
-
-#         if id == 0:
-#             return {
-#                 "success": True,
-#                 "message": "Saved successfully",
-#                 "employee_id": result
-#             }
-#         else:
-#             return {
-#                 "success": True,
-#                 "message": "Updated successfully"
-#             }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
+  
+#---------------------------------------------------------------------------------------------------------
 @router.post('/save_employee_master_new')
 def save_employee_master(
    
@@ -172,41 +133,8 @@ def save_employee_master(
 
 
 
-# @router.post('/upload_document')
-# def upload_document(
-#    employee_id: int,
-#    request: EmployeeDocumentsSchema = Depends(),
-#    file: UploadFile = File(None),
-#    db: Session = Depends(get_db),
-#    token: str = Depends(oauth2.oauth2_scheme)
-#   ):
-#   """
-#   For uploading documents for a particular employee.
-     
-#     -**Request** : Data needed for uploading documents provided as schema "EmployeeDocumentsSchema".
 
-#     -**id**      : Integer parameter, employee_documents identifier.
-    
-#     -**file**    : for uploading file/document.
-
-#     -**db**      : database session for uploading documentss.
-#   """ 
-#   if not token:
-#     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#   auth_info = authenticate_user(token)
-#   user_id = auth_info["user_id"] 
-
-#   try:
-#       db_employee_master.upload_employee_documents(db, request, employee_id, user_id, file)
-#       return {
-#             "success": True,
-#             "message": "Uploaded successfully",
-#             }                  
-#   except Exception as e:    
-#      raise HTTPException(status_code=500, detail=str(e))
-
-
+#---------------------------------------------------------------------------------------------------------
 
 @router.post('/upload_document')
 def upload_document(
@@ -243,7 +171,7 @@ def upload_document(
      raise HTTPException(status_code=500, detail=str(e))
 
 
-
+#---------------------------------------------------------------------------------------------------------
 
 
 #delete employee details by id
@@ -291,8 +219,7 @@ def delete_employee_details_by_id(
      raise HTTPException(status_code=500, detail=str(e)) 
 
   
-
-
+#---------------------------------------------------------------------------------------------------------
 
 @router.get("/get_employee_details")
 def get_employee_details(
@@ -529,74 +456,8 @@ def get_employee_details(
 
         return employee_details
 
-# @router.get("/search_employee_details")
-# def search_employee_details(
-#     db: Session = Depends(get_db), 
-#     token: str = Depends(oauth2.oauth2_scheme),
-#     category: Optional[Union[str,int]] = Query("ALL", description="Filter by category"),
-#     department: Optional[Union[str,int]] = Query("ALL", description="Filter by department"),
-#     designation: Optional[Union[str,int]] = Query("ALL", description="Filter by designation"),
-#     user_status: Optional[ActiveStatus] = Query("ALL", description="Filter by status (yes/no)"),
-#     approval_status: Optional[ApprovedStatus] = Query("ALL", description="Filter by approval status (yes/no)"),
-#     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
-#     search: Optional[str] = Query(None, description="Search by employee details")
-# ):
-#     """
-#     Retrieve employee details with optional filters and search field.
 
-#     -**category** : retrieve employees with category filter.
-#     -**department** : retrieve employees with department filter.
-#     -**designation** : retrieve employees with designation filter.
-#     -**status** : filter employees by status(yes/no).
-#     -**approval_status** : filter employees by approval status(yes/no).
-#     -**is_consultant** : to check whether the employee is a consultant or not(yes/no).
-
-#     -**search** : to search for a particular employee by name, mobile_no, category, department and designation.
-        
-#     """
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     employees = db_employee_master.search_employee_master_details(db, user_status, approval_status, category, department, designation, is_consultant, search)
-       
-#     if not employees:
-#       raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No employees found with the given filters")
-    
-#     employee_details = []
-
-#     for emp in employees:
-#        emp_detail = {
-#                 "employee_id": emp.employee_id,
-#                 "first_name":emp.first_name,
-#                 "middle_name":emp.middle_name,
-#                 "last_name":emp.last_name,
-#                 "employee_name": f"{emp.first_name} {emp.middle_name} {emp.last_name}",
-#                 "gender_id": emp.gender_id, 
-#                 "gender": emp.gender, 
-#                 "date_of_birth":emp.date_of_birth,
-#                 "blood_group":emp.blood_group,
-#                 "nationality_id": emp.nationality_id,
-#                 "nationality": emp.nationality_name,
-#                 "marital_status_id": emp.marital_status_id,
-#                 "marital_status": emp.marital_status, 
-#                 "joining_date":emp.joining_date,
-#                 "remarks":emp.remarks,
-#                 "category_id" : emp.employee_category_id,
-#                 "category" : emp.category_name,
-#                 "department_id": emp.department_id,
-#                 "department": emp.department_name,
-#                 "designation_id": emp.designation_id,
-#                 "designation": emp.designation,
-#                 "contact_number": emp.personal_mobile_number,
-#                 "email_id":emp.personal_email_id,
-#                 "is_consultant": emp.is_consultant,
-#                 "status": emp.is_active
-#        }
-#        employee_details.append(emp_detail)
-   
-#     return employee_details
-
-
+#---------------------------------------------------------------------------------------------------------
 
 
 def add_employee_detail(employee_details, employee_id, key, value, db):
@@ -611,83 +472,7 @@ def add_employee_detail(employee_details, employee_id, key, value, db):
 
 
 
-
-# @router.get('/get_employee_uploaded_documents/{employee_id}', response_model=List[Dict[str, str]])
-# def view_documents(
-#     employee_id: int,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     """
-#     Fetch uploaded documents for a particular employee.
-    
-#     - **employee_id**: Integer parameter, employee identifier.
-#     - **db**: Database session.
-#     - **token**: Authentication token.
-#     """
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info["user_id"]
-
-#     try:
-#         documents = db.query(EmployeeDocuments).filter(
-#             EmployeeDocuments.employee_id == employee_id,
-#             EmployeeDocuments.is_deleted == 'no'
-#         ).all()
-
-#         if not documents:
-#             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No documents found for the given employee id")
-
-#         document_urls = []
-#         for doc in documents:
-#           filename_prefix = f"{doc.id}"
-
-#           for filename in os.listdir(UPLOAD_EMP_DOCUMENTS):
-#               if filename.startswith(filename_prefix):
-#                  document_urls.append({"document": f"{BASE_URL}/hr_and_payroll/Employee/upload_document/{filename}"})
-        
-#         return document_urls
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-# @router.get('/get_employee_document_details/{employee_id}', response_model=List[EmployeeDocumentResponse])
-# def get_employee_documents(employee_id: int, db: Session = Depends(get_db)):
-#     try:
-#         query = db.query(
-#             EmployeeDocuments.id,
-#             EmployeeDocuments.employee_id,
-#             EmployeeDocuments.document_id,
-#             EmployeeDocuments.document_number,
-#             HrDocumentMaster.document_name,
-#             EmployeeDocuments.issue_date,
-#             EmployeeDocuments.expiry_date,
-#             EmployeeDocuments.issued_by,
-#             EmployeeDocuments.remarks,
-
-#             EmployeeDocuments.is_deleted,
-          
-          
-#         ).join(
-#             HrDocumentMaster, EmployeeDocuments.document_id == HrDocumentMaster.id
-#         ).filter(
-#             EmployeeDocuments.employee_id == employee_id
-#         )
-
-#         employee_documents = query.all()
-
-#         if not employee_documents:
-#             raise HTTPException(status_code=404, detail="Employee documents not found")
-
-#         response = [EmployeeDocumentResponse(**doc._asdict()) for doc in employee_documents]
-#         return response
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
+#--------------------------------------------------------------------------------------------------------------
 @router.get('/get_employee_document_details_with_uploads/{employee_id}', response_model=List[EmployeeDocumentResponse])
 def get_employee_documents(employee_id: int, db: Session = Depends(get_db),token: str = Depends(oauth2.oauth2_scheme)):
 
@@ -755,7 +540,7 @@ def get_employee_documents(employee_id: int, db: Session = Depends(get_db),token
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
+#--------------------------------------------------------------------------------------------------------------
 @router.post('/employee_save_update')
 def employee_save_update(
     employee_id: int,
@@ -802,7 +587,7 @@ def employee_save_update(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-
+#--------------------------------------------------------------------------------------------------------------
 @router.post('/employee_save_update_qualification_and_experience')
 def employee_save_update(
     employee_id: int,
@@ -848,9 +633,12 @@ def employee_save_update(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+#--------------------------------------------------------------------------------------------------------------
 from pydantic import BaseModel
 from sqlalchemy import insert, update
+
 
 def save_or_update_records(
     db: Session,
@@ -911,7 +699,7 @@ def save_or_update_records(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
     
-
+#--------------------------------------------------------------------------------------------------------------
 @router.post('/update_employee_address_or_bank_details')
 def update_employee_address_or_bank_details(
     employee_id: int,
@@ -970,7 +758,7 @@ def update_employee_address_or_bank_details(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-#-----------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
 
 @router.post("/save_employee_salary_details/{id}")
 def save_employee_salary_details(
@@ -990,9 +778,145 @@ def save_employee_salary_details(
     
     return message
 
-#-----------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
 
 
+####------------------employee_team_master--------------------------------------------------------------------------
+
+@router.post("/save_employee_team_master/{id}")
+def save_employee_team_master(
+    id   : int,
+    data : SaveEmployeeTeamMaster,  # Expecting a single object, not a list
+    db   : Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):   
+    """
+    Save or Update Employee Team Master.
+
+    This endpoint allows you to create or update employee team master records along with their associated team members.
+
+    - **Creation of New Records**: If the `id` parameter is `0`, the endpoint creates a new team master record along with its associated team members.
+    - **Updating Existing Records**: If the `id` parameter is non-zero, the endpoint updates the existing team master record identified by `id`, including its team members.
+
+    **Path Parameters:**
+
+    - `id`: An integer parameter representing the team master record identifier.
+      - If `0`, a new record is created.
+      - If non-zero, the specified record is updated.
+
+    **Request Body:**
+
+    The request body is a JSON object containing the following keys:
+
+    - **master**: An object containing the main team information.
+      - **department_id**:  The ID of the department to which the team belongs.
+      - **team_name**:  The name of the team.
+      - **description**: A description of the team.
+      - **effective_from_date**: The date when the team becomes effective.
+                                 if no date given ,then set to current date
+
+    - **details**: A list of objects, each representing a team member.
+      - **id**: Integer, required. The team member record identifier. Use `0` for new records.
+          I non zero id,modify the particular record with the given id
+      - **employee_id**: The ID of the employee.
+      - **is_team_leader**: Indicates if the member is a team leader ('yes' or 'no').
+      - **team_leader_id**:The employee ID of the team leader.
+      - **effective_from_date**: The date when the team member's role becomes effective.
+                                if no date given ,then set to current date.
+   
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        result_message = ""
+        
+        result = db_employee_master.save_employee_team_master(
+            db, id, data, user_id  # Pass 'data' as a single object
+        )
+        result_message = result["message"]
+        
+        return {"success": True, "message": result_message}
+    
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+#----------------------------------------------------------------------------------------------------------
+
+@router.get('/get_all_employee_team_master', response_model=Union[List[HrViewEmployeeTeamSchema], dict])
+def get_all_employee_team_master(
+    department_id: Optional[str] = Query("ALL"),
+    team_id: Union[int, str] = Query("ALL"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+   
+    Get all employee team master records based on the provided department and team filters.
+
+    - **department_id**: (Optional) Filter by department ID. If "ALL", return records from all departments.
+    - **team_id**: (Optional) Filter by team ID. If "ALL", return records from all teams.
+    - **db**: SQLAlchemy database session (injected via dependency).
+    - **token**: OAuth2 token for authentication (injected via dependency).
+
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    
+
+    results = db_employee_master.get_all_employee_team_master(
+        db, department_id, team_id
+    )
+
+  
+    if not results:
+        return []
+
+    
+    return results
+#-----------------------------------------------------------------------------------------------------------
+@router.get('/get_all_employee_team_members', response_model=List[EmployeeTeamMembersGet])
+def get_all_employee_team_members(
+    team_id:int,
+    # employee_status:str,
+    employee_status:  Optional[str] = Query(None, description="Filter by type: 'CURRENT_EMPLOYEE', 'OLD_EMPLOYEE'"),
+   
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+   
+    """
+    Get all employee team members based on the provided team ID and employee status filter.
+
+    - **team_id**: (Required) The ID of the team for which you want to retrieve members.
+    - **employee_status**: (Optional) Filter by employee status:
+        - "CURRENT_EMPLOYEE": Return only current team members.
+        - "OLD_EMPLOYEE": Return only old team members.
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    
+
+    results = db_employee_master.get_all_employee_team_members(
+        db, team_id,employee_status
+    )
+
+  
+    if not results:
+        return []
+
+    
+    return results
+
+
+#----------------------------------------------------------------------------------------------------------
 
 
 
