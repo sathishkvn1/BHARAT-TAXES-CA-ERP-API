@@ -14,6 +14,7 @@ from typing import Union,List,Dict,Any
 from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
 from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
@@ -2248,11 +2249,11 @@ def save_work_order_service_details(
 #---------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_service_details')
 def get_work_order_service_details(
-    id: int,
+    work_order_detail_id: int,
     db:Session = Depends(get_db)
 ):
     
-    result  = db_office_master.get_work_order_service_details(db,id)
+    result  = db_office_master.get_work_order_service_details(db,work_order_detail_id)
     return result
 #-----------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_dependancy_service_details')
@@ -2306,4 +2307,3 @@ def save_work_order_dependancies(
   
     return result
 #--------------------------------------------------------------------------------------------------------------
-

@@ -1146,7 +1146,7 @@ class  WorkOrderBusinessPlaceDetailsScheema(BaseModel):
     business_place_type     : Optional[str] = 'GODOWN'  
     nature_of_possession_id : Optional[int] = None
     utility_document_id     : Optional[int] = None
-    is_deleted              : Optional[str] = None
+    is_deleted              : Optional[str] = 'no'
 
 
 class CreateWorkOrderSetDtailsRequest(BaseModel):
