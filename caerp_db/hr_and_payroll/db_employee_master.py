@@ -6,7 +6,7 @@ from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -1140,90 +1140,52 @@ def get_employee_salary_details(db: Session,
 #------------------------------------------------------------------------------------------------------
 def save_employee_team_master(
     db: Session,
-    id: int,
-    data: SaveEmployeeTeamMaster,  
+    data: List[EmployeeTeamMasterSchema], 
     user_id: int
 ):
+    not_found_ids = []
+
     try:
-        if id == 0:
-            # Insert new master data
-            new_master_data = data.master.dict()
-            new_master_data.update({
-                "created_by": user_id,
-                "created_on": datetime.now()
-            })
-            new_master = EmployeeTeamMaster(**new_master_data)
-            db.add(new_master)
-            db.flush()  # Ensure new_master.id is available for details
-
-            # Insert new details
-            for detail_data in data.details:
-                new_detail_data = detail_data.dict()
-                new_detail_data.update({
-                    "team_master_id": new_master.id,
-                    "created_by": user_id,
-                    "created_on": datetime.now()
-                })
-                new_detail = EmployeeTeamMembers(**new_detail_data)
-                db.add(new_detail)
-
-            db.commit()
-            return {"success": True, "message": "Saved successfully", "action": "insert"}
-
-        else:
-            # Update existing master data
-            existing_master = db.query(EmployeeTeamMaster).filter(EmployeeTeamMaster.id == id).first()
-            if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
-
-            master_update_data = data.master.dict()
-            for key, value in master_update_data.items():
-                setattr(existing_master, key, value)
-            existing_master.modified_by = user_id
-            existing_master.modified_on = datetime.now()
-
-            # Update or insert new details
-            existing_details = db.query(EmployeeTeamMembers).filter(
-                EmployeeTeamMembers.team_master_id == existing_master.id
-            ).all()
-
-            existing_detail_dict = {detail.id: detail for detail in existing_details}
-            incoming_detail_dict = {detail.id: detail for detail in data.details}
-
-            for detail_data in data.details:
-                detail_data_dict = detail_data.dict()
-                existing_detail = existing_detail_dict.get(detail_data.id)
-
-                if existing_detail:
-                    # Update existing detail
-                    for key, value in detail_data_dict.items():
-                        setattr(existing_detail, key, value)
-                    existing_detail.modified_by = user_id
-                    existing_detail.modified_on = datetime.now()
-                else:
-                    # Insert new detail
-                    new_detail_data = detail_data_dict
-                    new_detail_data.update({
-                        "team_master_id": existing_master.id,
+        # Start a transaction
+        with db.begin():
+            for record in data:
+                if record.id == 0:
+                    # Insert new master data
+                    new_master_data = record.dict(exclude_unset=True)
+                    new_master_data.update({
                         "created_by": user_id,
                         "created_on": datetime.now()
                     })
-                    new_detail = EmployeeTeamMembers(**new_detail_data)
-                    db.add(new_detail)
+                    new_master = EmployeeTeamMaster(**new_master_data)
+                    db.add(new_master)
+                else:
+                    # Update existing master data
+                    existing_master = db.query(EmployeeTeamMaster).filter(EmployeeTeamMaster.id == record.id).first()
+                    if not existing_master:
+                        # Collect IDs of records not found
+                        not_found_ids.append(record.id)
+                        continue  # Skip to the next record
 
-            # Mark deleted details
-            for detail_id, existing_detail in existing_detail_dict.items():
-                if detail_id not in incoming_detail_dict:
-                    existing_detail.is_deleted = "yes"
-                    existing_detail.deleted_by = user_id
-                    existing_detail.deleted_on = datetime.now()
+                    master_update_data = record.model_dump(exclude_unset=True)
+                    for key, value in master_update_data.items():
+                        setattr(existing_master, key, value)
+                    existing_master.modified_by = user_id
+                    existing_master.modified_on = datetime.now()
 
+            if not_found_ids:
+                # Return a custom response with IDs of records not found
+                return {"message": f"Master records with IDs {', '.join(map(str, not_found_ids))} not found"}
+
+            # Commit the transaction
             db.commit()
-            return {"success": True, "message": "Updated successfully", "action": "update"}
+
+        return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
+        # Rollback the transaction in case of an error
         db.rollback()
         raise e
+
 
 #-------------------------------------
 
@@ -1269,7 +1231,6 @@ def get_all_employee_team_master(
 def get_all_employee_team_members(
     db: Session,
     team_id: int,
-    # employee_status: str  # Accept as string and match with enum
     employee_status: Optional[str] = None,  
 ) -> List[EmployeeTeamMembersGet]:
     
@@ -1299,3 +1260,18 @@ def get_all_employee_team_members(
 
 
 #--------------------------------------------------------
+def get_team_leaders_by_team_id(db: Session, team_id: int):
+    leaders = db.query(
+        EmployeeTeamMembers.employee_id.label("team_member_id"),
+        EmployeeTeamMembers.team_leader_id,
+        EmployeeMaster.first_name.label("leader_first_name"),
+        EmployeeMaster.middle_name.label("leader_middle_name"),
+        EmployeeMaster.last_name.label("leader_last_name")
+    ).join(EmployeeMaster, EmployeeMaster.employee_id == EmployeeTeamMembers.team_leader_id).filter(
+        EmployeeTeamMembers.team_master_id == team_id,
+        EmployeeTeamMembers.is_team_leader == 'yes',
+        EmployeeTeamMembers.is_deleted == 'no',
+        EmployeeMaster.is_deleted == 'no'  # Ensuring that the team leader is not deleted
+    ).all()
+
+    return leaders

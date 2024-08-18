@@ -1,6 +1,6 @@
 from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification
 from caerp_db.hr_and_payroll.model import HrDocumentMaster
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -784,47 +784,30 @@ def save_employee_salary_details(
 
 ####------------------employee_team_master--------------------------------------------------------------------------
 
-@router.post("/save_employee_team_master/{id}")
+
+@router.post("/save_employee_team_master")
 def save_employee_team_master(
-    id   : int,
-    data : SaveEmployeeTeamMaster,  # Expecting a single object, not a list
-    db   : Session = Depends(get_db),
+    data: List[EmployeeTeamMasterSchema],  # Now accepting a list of EmployeeTeamMasterSchema objects
+    db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):   
     """
-    Save or Update Employee Team Master.
+    Save or Update Employee Team Master records.
 
-    This endpoint allows you to create or update employee team master records along with their associated team members.
-
-    - **Creation of New Records**: If the `id` parameter is `0`, the endpoint creates a new team master record along with its associated team members.
-    - **Updating Existing Records**: If the `id` parameter is non-zero, the endpoint updates the existing team master record identified by `id`, including its team members.
-
-    **Path Parameters:**
-
-    - `id`: An integer parameter representing the team master record identifier.
-      - If `0`, a new record is created.
-      - If non-zero, the specified record is updated.
+    This endpoint allows you to create or update multiple employee team master records.
 
     **Request Body:**
 
-    The request body is a JSON object containing the following keys:
+    The request body is a JSON array containing objects with the following keys:
 
-    - **master**: An object containing the main team information.
-      - **department_id**:  The ID of the department to which the team belongs.
-      - **team_name**:  The name of the team.
-      - **description**: A description of the team.
-      - **effective_from_date**: The date when the team becomes effective.
-                                 if no date given ,then set to current date
-
-    - **details**: A list of objects, each representing a team member.
-      - **id**: Integer, required. The team member record identifier. Use `0` for new records.
-          I non zero id,modify the particular record with the given id
-      - **employee_id**: The ID of the employee.
-      - **is_team_leader**: Indicates if the member is a team leader ('yes' or 'no').
-      - **team_leader_id**:The employee ID of the team leader.
-      - **effective_from_date**: The date when the team member's role becomes effective.
-                                if no date given ,then set to current date.
-   
+    - **id**: An integer representing the team master record identifier.
+      - If `0`, a new record is created.
+      - If non-zero, the specified record is updated.
+    - **department_id**:  The ID of the department to which the team belongs.
+    - **team_name**:  The name of the team.
+    - **description**: A description of the team.
+    - **effective_from_date**: The date when the team becomes effective.
+                               If no date is given, then set it to the current date.
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -833,22 +816,16 @@ def save_employee_team_master(
     user_id = auth_info.get("user_id")
 
     try:
-        result_message = ""
-        
         result = db_employee_master.save_employee_team_master(
-            db, id, data, user_id  # Pass 'data' as a single object
+            db, data, user_id  
         )
-        result_message = result["message"]
-        
-        return {"success": True, "message": result_message}
-    
+        return {"success": True, "message": result["message"]}
     
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 #----------------------------------------------------------------------------------------------------------
-
-@router.get('/get_all_employee_team_master', response_model=Union[List[HrViewEmployeeTeamSchema], dict])
+@router.get('/get_all_employee_team_master', response_model=List[HrViewEmployeeTeamSchema])
 def get_all_employee_team_master(
     department_id: Optional[str] = Query("ALL"),
     team_id: Union[int, str] = Query("ALL"),
@@ -856,7 +833,6 @@ def get_all_employee_team_master(
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-   
     Get all employee team master records based on the provided department and team filters.
 
     - **department_id**: (Optional) Filter by department ID. If "ALL", return records from all departments.
@@ -868,18 +844,16 @@ def get_all_employee_team_master(
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-    
-
     results = db_employee_master.get_all_employee_team_master(
         db, department_id, team_id
     )
 
-  
     if not results:
         return []
 
-    
     return results
+
+
 #-----------------------------------------------------------------------------------------------------------
 @router.get('/get_all_employee_team_members', response_model=List[EmployeeTeamMembersGet])
 def get_all_employee_team_members(
@@ -918,6 +892,25 @@ def get_all_employee_team_members(
 
 
 #----------------------------------------------------------------------------------------------------------
+
+@router.get("/get_team_leaders/{team_id}", response_model=List[HrViewEmployeeTeamMemberSchema])
+def get_team_leaders(
+    team_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all team leaders by team ID.
+    
+    - **team_id**: The ID of the team.
+    """
+    team_leaders = db_employee_master.get_team_leaders_by_team_id(db, team_id)
+
+    if not team_leaders:
+        return []
+
+    return team_leaders
+
+
 
 
 

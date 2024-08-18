@@ -508,7 +508,7 @@ class EmployeeDocumentResponse(BaseModel):
 
 
 class EmployeeTeamMasterSchema(BaseModel):
-    # id: Optional[int] = None
+    id: Optional[int] = None
     department_id        : int
     team_name            : Optional[str] = None
     description          : str
@@ -522,11 +522,12 @@ class EmployeeTeamMembersSchema(BaseModel):
     id                  : int
     employee_id         : int
     is_team_leader      : str
-    team_leader_id      : int
+    team_leader_id      : Optional[int]
     effective_from_date : Optional[date] = None
 
     class Config:
         orm_mode = True
+
 
 
 class SaveEmployeeTeamMaster(BaseModel):
@@ -537,66 +538,57 @@ class SaveEmployeeTeamMaster(BaseModel):
 
 
 class HrViewEmployeeTeamMemberSchema(BaseModel):
-    team_member_id       : int
-    team_master_id       : int
-    team_name            : Optional[str]
-    employee_id          : int
-    member_first_name    : str
-    member_middle_name   : Optional[str]
-    member_last_name     : str
-    department_id        : int
-    department_name      : Optional[str]
-    designation_id       : int
-    designation          : Optional[str]
-    is_team_leader       : str
-    team_leader_id       : int
-    leader_first_name    : str
-    leader_middle_name   : Optional[str]
-    leader_last_name     : str
-    effective_from_date  : date
-    effective_to_date    : Optional[date]
+    team_member_id: int
+    team_leader_id: Optional[int]
+    leader_first_name: str
+    leader_middle_name: Optional[str]
+    leader_last_name: str
+  
 
     class Config:
-        orm_mode         = True
-        from_attributes  = True 
+        orm_mode = True
+        from_attributes = True 
 
 
 class HrViewEmployeeTeamMasterSchema(BaseModel):
-    team_id              : int
-    department_id        : int
-    department_name      : Optional[str]
-    team_name            : Optional[str]
-    description          : str
-    effective_from_date  : date
-    effective_to_date    : Optional[date]
- 
+    team_id: int
+    department_id: int
+    department_name: Optional[str]
+    team_name: Optional[str]
+    description: str
+    effective_from_date: date
+    effective_to_date: Optional[date]
+   #  leaders: List[HrViewEmployeeTeamMemberSchema] 
+    leaders: Optional[List[HrViewEmployeeTeamMemberSchema]] = None
     class Config:
-        orm_mode         = True
-        from_attributes  = True 
+        orm_mode = True
+        from_attributes = True 
+
 
 
 class HrViewEmployeeTeamSchema(BaseModel):
-    team                 : HrViewEmployeeTeamMasterSchema
-    members              : List[HrViewEmployeeTeamMemberSchema]
+    teams: List[HrViewEmployeeTeamMasterSchema]
 
     class Config:
-        orm_mode         = True
-        from_attributes  = True 
-
+        orm_mode = True
+        from_attributes = True
+        
 
 class EmployeeTeamMembersGet(BaseModel):
-    employee_id          : int
-    member_first_name    : str
-    member_middle_name   : Optional[str]
-    member_last_name     : str
-    department_id        : int
-    department_name      : Optional[str]
-    designation_id       : int
-    designation          : Optional[str]
-    effective_from_date  : date
+    employee_id: int
+    member_first_name: str
+    member_middle_name: Optional[str]
+    member_last_name: str
+    department_id: int
+    department_name: Optional[str]
+    designation_id: int
+    designation: Optional[str]
+    effective_from_date: date
+
 
     class Config:
-        orm_mode         = True
-        from_attributes  = True 
+        orm_mode = True
+        from_attributes = True 
+
 
 
