@@ -2317,3 +2317,12 @@ def save_work_order_dependancies(
   
     return result
 #--------------------------------------------------------------------------------------------------------------
+@router.get('/get_work_order_dependancy_by_work_order_details_id')
+def get_work_order_dependancy_by_work_order_details_id(
+    work_order_details_id: int,
+    db: Session=Depends(get_db)
+):
+    result = db_office_master.get_work_order_dependancy_by_work_order_details_id(db,work_order_details_id)
+    return result
+
+#--------------------------------------------------------------------------------------------------------------

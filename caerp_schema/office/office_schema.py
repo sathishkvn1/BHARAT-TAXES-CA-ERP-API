@@ -879,7 +879,7 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     appointee_gender_id: int
     appointee_gender: str
     customer_number: Optional[str]
-    business_name: Optional[str]
+    legal_name: Optional[str]
     locality: Optional[str]
     pin_code: Optional[str]
     post_office_id: Optional[int]
@@ -1327,3 +1327,8 @@ class OffViewBusinessPlaceDetailsScheema(BaseModel):
 class WorkOrderSetDetailsResponseSchema(BaseModel):
     workOrderDetails : OffViewWorkOrderDetailsSchema
     businessPlaceDetails : List[OffViewBusinessPlaceDetailsScheema]
+
+
+class WorkOrderDependancyResponseSchema(BaseModel):
+    workOrderDetails : OffViewWorkOrderDetailsSchema
+    dipendancies : List[WorkOrderDependancySchema]

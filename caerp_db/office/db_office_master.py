@@ -13,7 +13,7 @@ from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppoin
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 
@@ -3392,3 +3392,40 @@ def save_work_order_dependancies(
         'Success': 'true' if results else 'false',
         'record_ids': results
     }
+
+#--------------------------------------------------------------------------------------------------
+def get_work_order_dependancy_by_work_order_details_id(
+        db: Session,
+        work_order_details_id: int
+) -> List[Dict]:
+    try:
+        data = []
+
+        # Query for work order details
+        work_order_details_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.is_deleted == 'no',
+            WorkOrderDetailsView.work_order_details_id == work_order_details_id  # Corrected variable name
+        ).first()
+
+        if not work_order_details_data:
+            raise HTTPException(status_code=404, detail="Service not found")  # Raising an exception for consistency
+
+        # Query for work order dependencies
+        dependancy_details_data = db.query(WorkOrderDependancy).filter(
+            WorkOrderDependancy.work_order_details_id == work_order_details_id,  # Corrected variable name
+            WorkOrderDependancy.is_deleted == 'no'
+        ).all()
+
+        # Create response object
+        work_order_dependancy_data = WorkOrderDependancyResponseSchema(
+            workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
+            dipendancies=[WorkOrderDependancySchema.model_validate(detail) for detail in dependancy_details_data]
+        )
+
+        data.append(work_order_dependancy_data.model_dump())  # Convert the response schema to a dictionary
+        return data
+
+    except SQLAlchemyError as e:
+        # Handle database exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+
