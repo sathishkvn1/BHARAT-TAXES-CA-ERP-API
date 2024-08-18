@@ -1326,7 +1326,8 @@ class OffViewBusinessPlaceDetailsScheema(BaseModel):
 
 class WorkOrderSetDetailsResponseSchema(BaseModel):
     workOrderDetails : OffViewWorkOrderDetailsSchema
-    businessPlaceDetails : List[OffViewBusinessPlaceDetailsScheema]
+    pricipalPlaceDetails :OffViewBusinessPlaceDetailsScheema
+    additionalPlaceDetails : List[OffViewBusinessPlaceDetailsScheema]
 
 
 class WorkOrderDependancyResponseSchema(BaseModel):

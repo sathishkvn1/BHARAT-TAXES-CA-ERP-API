@@ -3251,9 +3251,9 @@ def save_work_order_service_details(
 #-----------------------------------------------------------------------------------
 
 def get_work_order_service_details(
-        db:Session ,
-        id : int
-)-> List[Dict]:
+        db: Session,
+        id: int
+) -> List[Dict]:
     try:
         data = []
 
@@ -3264,20 +3264,29 @@ def get_work_order_service_details(
         ).first()
 
         if not work_order_details_data:
-            return {
+            return [{
                 'message': "Service not found"
-            }
+            }]
 
-        # Query for business place details
+        # Query for principal place data (Main Office)
+        princypal_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
+            OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == id,
+            OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no',
+            OffViewWorkOrderBusinessPlaceDetails.business_place_type == 'Main Office'
+        ).first()
+
+        # Query for all business place details
         business_place_details_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
             OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == id,
-            OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
+            OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no',
+            OffViewWorkOrderBusinessPlaceDetails.business_place_type != 'Main Office'
         ).all()
 
-        # Create response object
+        # Ensure principalPlaceDetails is always provided
         work_order_business_place_data = WorkOrderSetDetailsResponseSchema(
             workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
-            businessPlaceDetails=[OffViewBusinessPlaceDetailsScheema.model_validate(detail) for detail in business_place_details_data]
+            pricipalPlaceDetails=OffViewBusinessPlaceDetailsScheema.model_validate(princypal_place_data) if princypal_place_data else None,
+            additionalPlaceDetails=[OffViewBusinessPlaceDetailsScheema.model_validate(detail) for detail in business_place_details_data]
         )
 
         data.append(work_order_business_place_data.model_dump())  # Convert the response schema to a dictionary
@@ -3286,8 +3295,7 @@ def get_work_order_service_details(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
-
+    
 #-------------------------------------------------------------------------------------------------------
 
 def get_work_order_dependancy_service_details(
