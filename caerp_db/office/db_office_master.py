@@ -197,8 +197,9 @@ def save_services_goods_master(
         else:
             existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
             if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
-
+                # raise HTTPException(status_code=404, detail="Master record not found")
+                return {"message":" master record not found"}
+                
             master_update_data = data.master[0].model_dump()
             for key, value in master_update_data.items():
                 setattr(existing_master, key, value)
@@ -780,7 +781,8 @@ def save_service_document_data_master(
         else:
             existing_master = db.query(OffServiceDocumentDataMaster).filter(OffServiceDocumentDataMaster.id == id).first()
             if not existing_master:
-                raise HTTPException(status_code=404, detail="Master record not found")
+                # raise HTTPException(status_code=404, detail="Master record not found")
+                return {"message":" master record not found"}
             
             # Save master data
             for key, value in doc_data.Service.model_dump().items():
@@ -1015,7 +1017,7 @@ def save_off_document_master(
             document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
             if not document:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
-            
+               
             # Update the document type if needed
             if document.document_data_type_id != document_data_type_id:
                 document.document_data_type_id = document_data_type_id
@@ -1895,7 +1897,8 @@ def save_off_consultation_task_master(
             # Update existing task master
             existing_task_master = db.query(OffConsultationTaskMaster).filter(OffConsultationTaskMaster.id == id).first()
             if not existing_task_master:
-                raise HTTPException(status_code=404, detail="Task master record not found")
+                # raise HTTPException(status_code=404, detail="Task master record not found")
+                return {"message":" master record not found"}
 
             for key, value in data.model_dump(exclude={'details'}).items():
                 setattr(existing_task_master, key, value)
@@ -2553,7 +2556,9 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
     existing_offer = db.query(OffOfferMaster).filter(OffOfferMaster.id == offer_master_id).first()
 
     if existing_offer is None:
-        raise HTTPException(status_code=404, detail="Offer  not found")
+        # raise HTTPException(status_code=404, detail="Offer  not found")
+        return {"message":" Offer not found"}
+    
     
     if(action_type== 'DELETE'):
        existing_offer.is_deleted = 'yes'
@@ -2584,16 +2589,19 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
 
 
 #------------------WORKORDER---------------------------------------------------
-
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
                            id: int,
                            visit_master_id : Optional[int]= None,
-                           enquiry_details_id : Optional[int]= None
+                           enquiry_details_id : Optional[int]= None,
+                           work_order_details_id : Optional[int] = None,
                            ) -> List[Dict]:
 
-
+                        #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
+    
+   
+  
     if entry_point == 'WORK_ORDER':
             try:
                 data = []
@@ -2606,11 +2614,15 @@ def get_work_order_details(
                     return {
                         'message': "Work order not found",
                     }
-
-                work_order_details_data = db.query(WorkOrderDetailsView).filter(
-                    WorkOrderDetailsView.work_order_master_id == id,
-                    WorkOrderDetailsView.is_main_service == 'yes',
-                    WorkOrderDetailsView.is_deleted == 'no').all()
+                query = db.query(WorkOrderDetailsView).filter(
+                        WorkOrderDetailsView.work_order_master_id == id,
+                        WorkOrderDetailsView.is_main_service == 'yes',
+                        WorkOrderDetailsView.is_deleted == 'no')
+                if work_order_details_id :
+                    query = query.filter(
+                        
+                        WorkOrderDetailsView.work_order_details_id == work_order_details_id)
+                work_order_details_data = query.all()
                 
                 service_data = []
 
@@ -2756,14 +2768,6 @@ def get_work_order_details(
     # if data:
 
     return data
-    # else:
-    #     return {
-    #         'message': 'No data found',
-    #         'Success': 'false'
-    #     }
-
-       
-    
 #----------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
@@ -3090,6 +3094,14 @@ def save_work_order_dependancies(
                         db.commit()
                         db.refresh(new_record)
                         results.append(new_record.id)
+
+                        work_order_details = db.query(OffWorkOrderDetails).filter(
+                            OffWorkOrderDetails.id == work_order_dependancy.work_order_details_id
+                        ).first()
+                        
+                        if work_order_details:
+                            work_order_details.is_depended_service = 'yes'
+                            db.commit()
             elif action_type == RecordActionType.UPDATE_ONLY:
                 # Update existing records
                 for work_order_dependancy in depended_works:
@@ -3125,6 +3137,9 @@ def save_work_order_dependancies(
         'record_ids': results
     }
     # return results
+   
+
+
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(
         service_id: int,

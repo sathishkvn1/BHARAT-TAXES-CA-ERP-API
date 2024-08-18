@@ -2124,6 +2124,7 @@ def get_work_order_details(
     id          : int,
     visit_master_id : Optional[int] = None,
     enquiry_details_id : Optional[int]= None,
+    work_order_details_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token : str = Depends(oauth2.oauth2_scheme)
 ):
@@ -2145,6 +2146,7 @@ def get_work_order_details(
 
         - visit_master_id (optional, query parameter): Required when the `entry_point` is `CONSULTATION`. 
         - enquiry_details_id (optional, query parameter): Required when the `entry_point` is `ENQUIRY`.
+        - work_order_details_id (optional) : required when the edit option is selected
 
     """
 
@@ -2152,10 +2154,17 @@ def get_work_order_details(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
 
-    results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
+    results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id,work_order_details_id)
     
     return results
-#-------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
 @router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
  
