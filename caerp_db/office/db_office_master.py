@@ -3155,8 +3155,8 @@ def get_utility_document_by_nature_of_possession(
         ).first()
         # print("service_document_master data ---- ",service_document_master_id_row)
         # Check if service_document_master_id_row is None
-        # if service_document_master_id_row is None:
-        #     return {"error": "No service document master found for the given service_id and constitution_id"}
+        if service_document_master_id_row is None:
+            return []
 
         # Extract the actual ID from the row
         service_document_master_id = service_document_master_id_row.id
@@ -3166,13 +3166,17 @@ def get_utility_document_by_nature_of_possession(
             OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
         ).all()
 
-        return service_document_details_data
+        if service_document_details_data:
+            return service_document_details_data
+        else:
+            return []
 
     except SQLAlchemyError as e:
         return {"error": str(e)}
 
     except Exception as e:
         return {"error": str(e)}
+
 
 #---------------------------------------------------------------------------------------------------------------
 
@@ -3393,7 +3397,7 @@ def save_work_order_dependancies(
         'record_ids': results
     }
 
-#--------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 def get_work_order_dependancy_by_work_order_details_id(
         db: Session,
         work_order_details_id: int
@@ -3428,4 +3432,7 @@ def get_work_order_dependancy_by_work_order_details_id(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+#--------------------------------------------------------------------------------------------------------------
 
