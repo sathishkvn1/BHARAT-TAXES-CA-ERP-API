@@ -3102,21 +3102,36 @@ def save_work_order_dependancies(
                         if work_order_details:
                             work_order_details.is_depended_service = 'yes'
                             db.commit()
-            elif action_type == RecordActionType.UPDATE_ONLY:
-                # Update existing records
+            elif action_type == RecordActionType.UPDATE_AND_INSERT:
+            # Update existing records
+                existing_records = db.query(WorkOrderDependancy).filter(
+                    WorkOrderDependancy.work_order_details_id == depended_works[0].work_order_details_id,
+                    WorkOrderDependancy.is_deleted == 'no'
+                ).all()
+
+                existing_ids = {record.id for record in existing_records}
+                incoming_ids = {work_order_dependancy.id for work_order_dependancy in depended_works if work_order_dependancy.id}
+
+                # Mark records as deleted if they are not in the incoming list
+                records_to_delete = existing_ids - incoming_ids
+                if records_to_delete:
+                    db.query(WorkOrderDependancy).filter(
+                        WorkOrderDependancy.id.in_(records_to_delete)
+                    ).update({'is_deleted': 'yes'}, synchronize_session=False)
+                    db.commit()
+
+                # Update existing records or add new ones
                 for work_order_dependancy in depended_works:
                     if work_order_dependancy.id and work_order_dependancy.id != 0:
                         existing_record = db.query(WorkOrderDependancy).filter(
-                            # WorkOrderDependancy.id == id
                             WorkOrderDependancy.id == work_order_dependancy.id
                         ).first()
 
                         if not existing_record:
                             return {
-                                'message' : f"Work order dependency with id {work_order_dependancy.id} not found",
-                                'Success' : 'false'
+                                'message': f"Work order dependency with id {work_order_dependancy.id} not found",
+                                'Success': 'false'
                             }
-                            # raise HTTPException(status_code=404, detail=f"Work order dependency with id {work_order_dependancy.id} not found")
 
                         for key, value in work_order_dependancy.model_dump(exclude_unset=True).items():
                             setattr(existing_record, key, value)
@@ -3125,9 +3140,23 @@ def save_work_order_dependancies(
                         db.refresh(existing_record)
                         results.append(existing_record.id)
 
-                    # else:
-                    #     raise HTTPException(status_code=400, detail="Cannot update record without an ID.")
+                    else:
+                        # Add new dependency
+                        new_record = WorkOrderDependancy(**work_order_dependancy.model_dump(exclude={"id"}))
+                        db.add(new_record)
+                        db.commit()
+                        db.refresh(new_record)
+                        results.append(new_record.id)
 
+                        work_order_details = db.query(OffWorkOrderDetails).filter(
+                            OffWorkOrderDetails.id == work_order_dependancy.work_order_details_id
+                        ).first()
+
+                        if work_order_details:
+                            work_order_details.is_depended_service = 'yes'
+                            db.commit()
+
+         
     except SQLAlchemyError as e:
         db.rollback()  # Rollback the transaction in case of error
         raise HTTPException(status_code=500, detail="Failed to save or update work order dependencies. Error: " + str(e))
@@ -3136,8 +3165,6 @@ def save_work_order_dependancies(
         'Success': 'true' if results else 'false',
         'record_ids': results
     }
-    # return results
-   
 
 
 #-------------------------------------------------------------------------------------------------------------
@@ -3368,60 +3395,6 @@ def get_work_order_dependancy_service_details(
         raise HTTPException(status_code=500, detail=str(e))
     
 #-----------------------------------------------------------------------------------------------------------
-def save_work_order_dependancies( 
-         depended_works: List[WorkOrderDependancySchema],
-         action_type : RecordActionType,
-         db: Session ,
-         
-):
-    try:
-            results = []   
-        # with db.begin():
-            if action_type == RecordActionType.INSERT_ONLY:
-
-                
-                # Save new records
-                for work_order_dependancy in depended_works:
-                    new_record = WorkOrderDependancy(**work_order_dependancy.model_dump(exclude={"id"}))
-                    db.add(new_record)
-                    db.commit()
-                    db.refresh(new_record)
-                    results.append(new_record.id)
-                    print('new_record',new_record.id)
-            elif action_type == RecordActionType.UPDATE_ONLY:
-                # Update existing records
-                for work_order_dependancy in depended_works:
-                    if work_order_dependancy.id and work_order_dependancy.id != 0:
-                        existing_record = db.query(WorkOrderDependancy).filter(
-                            # WorkOrderDependancy.id == id
-                            WorkOrderDependancy.id == work_order_dependancy.id
-                        ).first()
-
-                        if not existing_record:
-                            return {
-                                'message' : f"Work order dependency with id {work_order_dependancy.id} not found",
-                                'Success' : 'false'
-                            }
-                            # raise HTTPException(status_code=404, detail=f"Work order dependency with id {work_order_dependancy.id} not found")
-
-                        for key, value in work_order_dependancy.model_dump(exclude_unset=True).items():
-                            setattr(existing_record, key, value)
-                        
-                        db.commit()
-                        db.refresh(existing_record)
-                        results.append(existing_record.id)
-
-                    # else:
-                    #     raise HTTPException(status_code=400, detail="Cannot update record without an ID.")
-
-    except SQLAlchemyError as e:
-        db.rollback()  # Rollback the transaction in case of error
-        raise HTTPException(status_code=500, detail="Failed to save or update work order dependencies. Error: " + str(e))
-    return {
-        'message': 'Successfully Saved' if results else 'No Records Processed',
-        'Success': 'true' if results else 'false',
-        'record_ids': results
-    }
 
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_dependancy_by_work_order_details_id(

@@ -2216,7 +2216,7 @@ def get_business_activity_by_master_id(
 ):
     business_activities = db_office_master.get_business_activity_by_master_id(db, activity_master_id)
     return business_activities
-#-------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------
 @router.get('/get_utility_document_by_nature_of_possession', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
 def get_utility_document_by_nature_of_possession(
         service_id: int,
@@ -2225,7 +2225,7 @@ def get_utility_document_by_nature_of_possession(
         db:Session = Depends(get_db)
 ):
     return db_office_master.get_utility_document_by_nature_of_possession(service_id,constitution_id,nature_of_possession,db)
-#-------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 @router.post('/save_work_order')
 def save_work_order(
     request: CreateWorkOrderRequest,
@@ -2289,6 +2289,7 @@ def get_work_order_dependancy_service_details(
     return result
 
 #-----------------------------------------------------------------------------------------------------------
+
 @router.post('/save_work_order_dependancies')
 def save_work_order_dependancies(
     depended_works: List[WorkOrderDependancySchema],
@@ -2300,7 +2301,7 @@ def save_work_order_dependancies(
     Save or update work order dependencies based on the action type.
 
     - depended_works: List of `WorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
-    - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_ONLY'`.
+    - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_AND_INSERT'`.
     - db: Database session dependency.
 
     **Returns**:
@@ -2314,8 +2315,10 @@ def save_work_order_dependancies(
     # user_id = auth_info.get("user_id")
 
     result = db_office_master.save_work_order_dependancies(depended_works, record_action,db)
-  
+    
     return result
+
+
 #--------------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_dependancy_by_work_order_details_id')
 def get_work_order_dependancy_by_work_order_details_id(
