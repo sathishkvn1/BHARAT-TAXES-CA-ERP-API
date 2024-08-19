@@ -1,6 +1,6 @@
 from caerp_db.common.models import EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification
 from caerp_db.hr_and_payroll.model import HrDocumentMaster
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -782,7 +782,7 @@ def save_employee_salary_details(
 #--------------------------------------------------------------------------------------------------------------
 
 
-####------------------employee_team_master--------------------------------------------------------------------------
+#=============================================EMPLOYEE TEAM MASTER====================================================================
 
 
 @router.post("/save_employee_team_master")
@@ -910,6 +910,51 @@ def get_team_leaders(
 
     return team_leaders
 
+#---------------------------------------------------------------------------------------------------------
+
+@router.post("/save_team_members/{team_id}")
+def add_employee_to_team(
+    team_id: int,
+    department_id: int,  
+    data: AddEmployeeToTeam, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Add or Update Employees in a Team.
+
+    This endpoint allows you to add new employees to a team or update existing employee details in the team.
+
+    **Path Parameters:**
+
+    - `team_id`: The ID of the team to which employees will be added or updated.
+    - `department_id`: The ID of the department from which  employee select.
+
+    **Request Body:**
+
+    The request body should be a JSON object containing a list of team members with the following keys:
+
+    - `id`: The ID of the team member record. Use `0` to create a new record.
+            if nonzero,update the specified record
+    - `employee_id`: The ID of the employee.
+    - `is_team_leader`: Indicates if the employee is a team leader ('yes' or 'no').
+    - `team_leader_id`: The ID of the team leader (optional).
+    - `effective_from_date`: The date when the team member becomes effective (default current date).
+
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+       
+        result = db_employee_master.save_team_members(db, team_id, department_id, data, user_id)
+        return {"success": True, "message": result.get("message", "Saved successfully")}
+    
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 

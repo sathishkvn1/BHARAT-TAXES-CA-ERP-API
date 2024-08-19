@@ -6,7 +6,7 @@ from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -1136,8 +1136,8 @@ def get_employee_salary_details(db: Session,
 
 
 
+#=============================================EMPLOYEE TEAM MASTER====================================================================
 
-#------------------------------------------------------------------------------------------------------
 def save_employee_team_master(
     db: Session,
     data: List[EmployeeTeamMasterSchema], 
@@ -1187,26 +1187,31 @@ def save_employee_team_master(
         raise e
 
 
-#-------------------------------------
-
+#--------------------------------------------------------------------------------------------------------------
 
 def get_all_employee_team_master(
     db: Session,
     department_id: Union[int, str] = 'ALL',
     team_id: Union[int, str] = 'ALL'
 ) -> List[HrViewEmployeeTeamSchema]:
+    # Initial query to get the team masters
     query = db.query(HrViewEmployeeTeamMaster).filter(HrViewEmployeeTeamMaster.is_deleted == 'no')
 
+    # Filter by department_id if specified
     if department_id != 'ALL':
         query = query.filter(HrViewEmployeeTeamMaster.department_id == department_id)
 
+    # Filter by team_id if specified
     if team_id != 'ALL':
         query = query.filter(HrViewEmployeeTeamMaster.team_id == team_id)
 
+    # Fetch all matching team masters
     team_masters = query.all()
 
+    # Prepare results list
     results = []
 
+    # Iterate over each team master to gather associated team members
     for team_master in team_masters:
         members_query = db.query(HrViewEmployeeTeamMembers).filter(
             HrViewEmployeeTeamMembers.team_master_id == team_master.team_id,
@@ -1214,39 +1219,65 @@ def get_all_employee_team_master(
         )
         members = members_query.all()
 
-        team_master_schema = HrViewEmployeeTeamMasterSchema.from_orm(team_master)
-        members_schema = [HrViewEmployeeTeamMemberSchema.from_orm(member) for member in members]
+        # Map members to HrViewEmployeeTeamMemberSchema
+        leaders = [
+            HrViewEmployeeTeamMemberSchema(
+                team_member_id=member.team_member_id,
+                team_leader_id=member.team_leader_id,
+                leader_first_name=member.leader_first_name,
+                leader_middle_name=member.leader_middle_name,
+                leader_last_name=member.leader_last_name,
+            )
+            for member in members
+        ]
 
-        team_schema = HrViewEmployeeTeamSchema(
-            team=team_master_schema,
-            members=members_schema
-        )
+        # Create the dictionary for the team master schema
+        team_dict = {
+            "team_id": team_master.team_id,
+            "department_id": team_master.department_id,
+            "department_name": team_master.department_name,
+            "team_name": team_master.team_name,
+            "description": team_master.description,
+            "effective_from_date": team_master.effective_from_date,
+            "effective_to_date": team_master.effective_to_date,
+            "leaders": leaders if leaders else []
+        }
 
-        results.append(team_schema)
+        # Append the new schema object to the results list
+        results.append(HrViewEmployeeTeamMasterSchema(**team_dict))
 
-    return results
+    # Return the results as a list of HrViewEmployeeTeamSchema
+    return [HrViewEmployeeTeamSchema(teams=results)]
+
 
 #---------------------------------------
-
 def get_all_employee_team_members(
     db: Session,
     team_id: int,
     employee_status: Optional[str] = None,  
 ) -> List[EmployeeTeamMembersGet]:
     
-
+    
     # Base query with common filters
     query = db.query(HrViewEmployeeTeamMembers).filter(
         HrViewEmployeeTeamMembers.team_master_id == team_id,
         HrViewEmployeeTeamMembers.is_deleted == 'no'
     )
 
+    # Get current date
+    current_date = datetime.now().date()
+
     # Filter by employee status
     if employee_status == "CURRENT_EMPLOYEE":
-        query = query.filter(HrViewEmployeeTeamMembers.effective_to_date.is_(None))
+        query = query.filter(
+            HrViewEmployeeTeamMembers.effective_from_date <= current_date,
+            (HrViewEmployeeTeamMembers.effective_to_date >= current_date) | 
+            (HrViewEmployeeTeamMembers.effective_to_date.is_(None))
+        )
     elif employee_status == "OLD_EMPLOYEE":
-        query = query.filter(HrViewEmployeeTeamMembers.effective_to_date.isnot(None))
-
+        query = query.filter(
+            HrViewEmployeeTeamMembers.effective_to_date < current_date
+        )
     # Fetch results
     team_members = query.all()
 
@@ -1256,7 +1287,6 @@ def get_all_employee_team_members(
     ]
 
     return team_members_schema
-
 
 
 #--------------------------------------------------------
@@ -1275,3 +1305,95 @@ def get_team_leaders_by_team_id(db: Session, team_id: int):
     ).all()
 
     return leaders
+
+
+
+def add_employee_to_team(
+    db: Session,
+    team_id: int,
+    department_id :int,
+    employee_id: int,
+    is_team_leader: str,
+    team_leader_id: int,
+    effective_from_date: date,
+    user_id: int
+):
+    try:
+        # Check if employee already exists in the team and is not marked as deleted
+        existing_member = db.query(EmployeeTeamMembers).filter(
+            EmployeeTeamMembers.team_master_id == team_id,
+            EmployeeTeamMembers.employee_id == employee_id,
+            EmployeeTeamMembers.is_deleted == 'no'  # Ensure the record is not deleted
+        ).first()
+
+        if existing_member:
+            return {"status": "exists", "message": "Employee is already in the team."}
+
+        # Proceed with adding the employee
+        new_member = EmployeeTeamMembers(
+            team_master_id=team_id,
+            employee_id=employee_id,
+            is_team_leader=is_team_leader,
+            team_leader_id=team_leader_id,
+            effective_from_date=effective_from_date,
+            created_by=user_id
+        )
+        db.add(new_member)
+        db.commit()
+
+        return {"status": "success", "message": "Employee added to team successfully."}
+    
+    except Exception as e:
+        db.rollback()
+        raise e
+#--------------------------------------------------------------------------------------------------
+
+
+def save_team_members(
+    db: Session,
+    team_id: int,
+    department_id: int,  
+    data: AddEmployeeToTeam,  
+    user_id: int
+):
+    not_found_ids = []
+
+    try:
+        with db.begin():
+            for member in data.team_members:  # Access the team_members list from the AddEmployeeToTeam schema
+                if member.id == 0:
+                    # Insert new team member
+                    new_member_data = member.model_dump(exclude_unset=True)
+                    new_member_data.update({
+                        "team_master_id": team_id,
+                        "created_by": user_id,
+                        "created_on": datetime.now()
+                    })
+                    new_member = EmployeeTeamMembers(**new_member_data)
+                    db.add(new_member)
+                else:
+                    # Update existing team member
+                    existing_member = db.query(EmployeeTeamMembers).filter(EmployeeTeamMembers.id == member.id).first()
+                    if not existing_member:
+                        # Collect IDs of records not found
+                        not_found_ids.append(member.id)
+                        continue  # Skip to the next record
+
+                    member_update_data = member.model_dump(exclude_unset=True)
+                    for key, value in member_update_data.items():
+                        setattr(existing_member, key, value)
+                    existing_member.modified_by = user_id
+                    existing_member.modified_on = datetime.now()
+
+            if not_found_ids:
+                # Return a custom response with IDs of records not found
+                return {"message": f"Team members with IDs {', '.join(map(str, not_found_ids))} not found"}
+
+            # Commit the transaction
+            db.commit()
+
+        return {"success": True, "message": "Team members saved successfully"}
+
+    except Exception as e:
+        db.rollback()
+        raise e

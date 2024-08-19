@@ -584,9 +584,15 @@ class EmployeeTeamMembersGet(BaseModel):
     designation_id: int
     designation: Optional[str]
     effective_from_date: date
-
+    effective_to_date :Optional[date] = None 
 
     class Config:
+        orm_mode = True
+        from_attributes = True 
+
+class AddEmployeeToTeam(BaseModel):
+   team_members: List[EmployeeTeamMembersSchema]
+   class Config:
         orm_mode = True
         from_attributes = True 
 
