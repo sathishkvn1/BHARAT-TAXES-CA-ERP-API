@@ -1290,22 +1290,22 @@ def get_all_employee_team_members(
 
 
 #--------------------------------------------------------
+
 def get_team_leaders_by_team_id(db: Session, team_id: int):
-    leaders = db.query(
-        EmployeeTeamMembers.employee_id.label("team_member_id"),
-        EmployeeTeamMembers.team_leader_id,
-        EmployeeMaster.first_name.label("leader_first_name"),
-        EmployeeMaster.middle_name.label("leader_middle_name"),
-        EmployeeMaster.last_name.label("leader_last_name")
-    ).join(EmployeeMaster, EmployeeMaster.employee_id == EmployeeTeamMembers.team_leader_id).filter(
-        EmployeeTeamMembers.team_master_id == team_id,
-        EmployeeTeamMembers.is_team_leader == 'yes',
-        EmployeeTeamMembers.is_deleted == 'no',
-        EmployeeMaster.is_deleted == 'no'  # Ensuring that the team leader is not deleted
+    return db.query(
+        HrViewEmployeeTeamMembers.team_member_id,
+        HrViewEmployeeTeamMembers.team_leader_id,
+        HrViewEmployeeTeamMembers.leader_first_name,
+        HrViewEmployeeTeamMembers.leader_middle_name,
+        HrViewEmployeeTeamMembers.leader_last_name
+    ).filter(
+        HrViewEmployeeTeamMembers.team_master_id == team_id,
+        HrViewEmployeeTeamMembers.is_team_leader == 'yes',
+        HrViewEmployeeTeamMembers.is_deleted == 'no'
     ).all()
 
-    return leaders
 
+#---------------------------------------------------------------------
 
 
 def add_employee_to_team(
@@ -1392,7 +1392,7 @@ def save_team_members(
             # Commit the transaction
             db.commit()
 
-        return {"success": True, "message": "Team members saved successfully"}
+        return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
         db.rollback()
