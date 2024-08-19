@@ -3179,43 +3179,42 @@ def get_utility_document_by_nature_of_possession(
 
 
 #---------------------------------------------------------------------------------------------------------------
-
 def save_work_order_service_details(
-        db:Session,
+        db: Session,
         request: CreateWorkOrderSetDtailsRequest,
-        work_order_details_id:int,
-        user_id:int,
-        business_place_details_id:Optional[int] = None
-        ):
+        work_order_details_id: int,
+        user_id: int,
+        business_place_details_id: Optional[int] = None
+):
 
     try:
         if work_order_details_id == 0:
-            return 'error'
-        
-        
+            return {'message': 'Error, please provide work order details id'}
+
+        # Fetch work order details
+        work_order_details = db.query(OffWorkOrderDetails).filter(
+            OffWorkOrderDetails.id == work_order_details_id
+        ).first()
+
+        if not work_order_details:
+            return {'message': 'Work order details not found'}
         else:
-            work_order_details = db.query(OffWorkOrderDetails).filter(
-                OffWorkOrderDetails.id == work_order_details_id
-            ).first()
+            # Update work order details
+            detail_data_dict = request.workOrderDetails.model_dump()
+            for key, value in detail_data_dict.items():
+                if key == "remarks" and work_order_details.remarks:
+                    setattr(work_order_details, key, work_order_details.remarks + "\n" + value)
+                elif key != "id": 
+                    setattr(work_order_details, key, value)
 
-            if not work_order_details:
-                return 'error'
-            else:
-                detail_data_dict = request.workOrderDetails.model_dump()
-                for key, value in detail_data_dict.items():
-                    if key == "remarks" and work_order_details.remarks:
-                        setattr(work_order_details, key, work_order_details.remarks + "\n" + value)
-                    elif key != "id": 
-                        setattr(work_order_details, key, value)
-
-                # Update the modified_by and modified_on fields
-                # work_order_details.modified_by = user_id
-                work_order_details.modified_on = datetime.utcnow()
+            # Update the modified_on field
+            work_order_details.modified_on = datetime.utcnow()
 
         db.commit()
-
         db.flush()
+
         if business_place_details_id:
+            # Update existing business place details
             business_place_detail = db.query(WorkOrderBusinessPlaceDetails).filter(
                 WorkOrderBusinessPlaceDetails.id == business_place_details_id
             ).first()
@@ -3227,18 +3226,33 @@ def save_work_order_service_details(
             
             for detail in request.businessPlaceDetails:
                 detail_data = detail.model_dump()
-            # Update fields dynamically
                 for key, value in detail_data.items():
-                        if key != "id": 
-                            setattr(business_place_detail, key, value)
+                    if key != "id": 
+                        setattr(business_place_detail, key, value)
+                # Check and update nature_of_possession
+                if detail_data.get('business_place_type') == 'GODOWN':
+                    work_order_details.has_godowns = 'yes'
+                    work_order_details.number_of_godowns = (work_order_details.number_of_godowns or 0) + 1
+                elif detail_data.get('nature_of_possession') == 'BRANCH':
+                    work_order_details.has_branches = 'yes'
+                    work_order_details.number_of_branches = (work_order_details.number_of_branches or 0) + 1
 
             db.commit()
+
         else:
-            # Insert a new record if business_place_details_id is not provided
-          for detail in request.businessPlaceDetails:
-            detail_data = detail.dict()            
-            work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
-            db.add(work_order_business_place)
+            # Insert a new business place detail
+            for detail in request.businessPlaceDetails:
+                detail_data = detail.model_dump()
+                work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
+                db.add(work_order_business_place)
+                # Check and update nature_of_possession
+                if detail_data.get('business_place_type') == 'GODOWN':
+                    work_order_details.has_godowns = 'yes'
+                    work_order_details.number_of_godowns = (work_order_details.number_of_godowns or 0) + 1
+                elif detail_data.get('business_place_type') == 'BRANCH':
+                    work_order_details.has_branches = 'yes'
+                    work_order_details.number_of_branches = (work_order_details.number_of_branches or 0) + 1
+
             db.commit()
 
         return {"message": "Work order set details saved successfully"}
@@ -3246,8 +3260,9 @@ def save_work_order_service_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-            # db.refresh(master)
 
+
+   
 #-----------------------------------------------------------------------------------
 
 def get_work_order_service_details(
@@ -3264,9 +3279,7 @@ def get_work_order_service_details(
         ).first()
 
         if not work_order_details_data:
-            return [{
-                'message': "Service not found"
-            }]
+            return []
 
         # Query for principal place data (Main Office)
         princypal_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
@@ -3275,6 +3288,9 @@ def get_work_order_service_details(
             OffViewWorkOrderBusinessPlaceDetails.business_place_type == 'Main Office'
         ).first()
 
+        if princypal_place_data is None or princypal_place_data == []:
+            return []
+
         # Query for all business place details
         business_place_details_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
             OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == id,
@@ -3282,7 +3298,10 @@ def get_work_order_service_details(
             OffViewWorkOrderBusinessPlaceDetails.business_place_type != 'Main Office'
         ).all()
 
-        # Ensure principalPlaceDetails is always provided
+        if business_place_details_data:
+            return []
+
+        
         work_order_business_place_data = WorkOrderSetDetailsResponseSchema(
             workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
             pricipalPlaceDetails=OffViewBusinessPlaceDetailsScheema.model_validate(princypal_place_data) if princypal_place_data else None,
@@ -3295,7 +3314,9 @@ def get_work_order_service_details(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+   
 #-------------------------------------------------------------------------------------------------------
 
 def get_work_order_dependancy_service_details(
