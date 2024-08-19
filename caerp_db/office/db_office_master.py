@@ -3277,7 +3277,6 @@ def get_work_order_service_details(
             WorkOrderDetailsView.is_deleted == 'no',
             WorkOrderDetailsView.work_order_details_id == id
         ).first()
-
         if not work_order_details_data:
             return []
 
@@ -3298,10 +3297,10 @@ def get_work_order_service_details(
             OffViewWorkOrderBusinessPlaceDetails.business_place_type != 'Main Office'
         ).all()
 
-        if business_place_details_data:
+        if business_place_details_data is None or business_place_details_data == []:
             return []
 
-        
+        # Ensure principalPlaceDetails is always provided
         work_order_business_place_data = WorkOrderSetDetailsResponseSchema(
             workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
             pricipalPlaceDetails=OffViewBusinessPlaceDetailsScheema.model_validate(princypal_place_data) if princypal_place_data else None,
@@ -3314,9 +3313,7 @@ def get_work_order_service_details(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
-
-   
+    
 #-------------------------------------------------------------------------------------------------------
 
 def get_work_order_dependancy_service_details(
