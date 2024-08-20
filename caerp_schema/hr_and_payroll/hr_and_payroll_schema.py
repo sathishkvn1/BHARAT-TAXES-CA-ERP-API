@@ -574,6 +574,7 @@ class HrViewEmployeeTeamSchema(BaseModel):
         from_attributes = True
         
 class EmployeeTeamMembersGet(BaseModel):
+    team_member_id      :int
     employee_id         : int
     member_first_name   : str
     member_middle_name  : Optional[str]
