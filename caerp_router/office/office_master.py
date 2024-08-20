@@ -16,7 +16,7 @@ from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffCons
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -2292,7 +2292,7 @@ def get_work_order_dependancy_service_details(
 
 @router.post('/save_work_order_dependancies')
 def save_work_order_dependancies(
-    depended_works: List[WorkOrderDependancySchema],
+    depended_works: List[CreateWorkOrderDependancySchema],
     record_action : RecordActionType,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -2300,7 +2300,7 @@ def save_work_order_dependancies(
     """
     Save or update work order dependencies based on the action type.
 
-    - depended_works: List of `WorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
+    - depended_works: List of `CreateWorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
     - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_AND_INSERT'`.
     - db: Database session dependency.
 
@@ -2317,7 +2317,6 @@ def save_work_order_dependancies(
     result = db_office_master.save_work_order_dependancies(depended_works, record_action,db)
     
     return result
-
 
 #--------------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_dependancy_by_work_order_details_id')

@@ -13,7 +13,7 @@ from caerp_db.office.models import AppDayOfWeek, OffAppointmentMaster, OffAppoin
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 
@@ -1016,8 +1016,9 @@ def save_off_document_master(
         else:
             document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
             if not document:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
-               
+                # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
+                return {"success": True, "message": "Document with the given ID was not found"}
+
             # Update the document type if needed
             if document.document_data_type_id != document_data_type_id:
                 document.document_data_type_id = document_data_type_id
@@ -1925,7 +1926,8 @@ def save_off_consultation_task_master(
                         # existing_detail.modified_on = datetime.now()
                         existing_detail.is_deleted = 'no'
                     else:
-                        raise HTTPException(status_code=404, detail=f"Detail with id {detail.id} not found")
+                        # raise HTTPException(status_code=404, detail=f"Detail with id {detail.id} not found")
+                        return {"message":" detail  with given id  not found"}
                 else:
                     # Insert new detail
                     new_detail = OffConsultationTaskDetails(
@@ -3078,7 +3080,7 @@ def save_work_order(
 
 #====================================================================================
 def save_work_order_dependancies( 
-         depended_works: List[WorkOrderDependancySchema],
+         depended_works: List[CreateWorkOrderDependancySchema],
          action_type : RecordActionType,
          db: Session ,
          
@@ -3181,8 +3183,7 @@ def save_work_order_dependancies(
         'Success': 'true' if results else 'false',
         'record_ids': results
     }
-
-
+   
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(
         service_id: int,
@@ -3416,11 +3417,8 @@ def get_work_order_dependancy_by_work_order_details_id(
             raise HTTPException(status_code=404, detail="Service not found")  # Raising an exception for consistency
 
         # Query for work order dependencies
-        dependancy_details_data = db.query(WorkOrderDependancy).filter(
-            WorkOrderDependancy.work_order_details_id == work_order_details_id,  # Corrected variable name
-            WorkOrderDependancy.is_deleted == 'no'
-        ).all()
-
+        
+        dependancy_details_data= get_dependencies(db,work_order_details_id)
         # Create response object
         work_order_dependancy_data = WorkOrderDependancyResponseSchema(
             workOrderDetails=OffViewWorkOrderDetailsSchema.model_validate(work_order_details_data),
@@ -3433,7 +3431,7 @@ def get_work_order_dependancy_by_work_order_details_id(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-    
+  
 
 #--------------------------------------------------------------------------------------------------------------
 

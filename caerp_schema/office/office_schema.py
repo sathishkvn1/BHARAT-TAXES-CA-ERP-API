@@ -1336,3 +1336,17 @@ class WorkOrderSetDetailsResponseSchema(BaseModel):
 class WorkOrderDependancyResponseSchema(BaseModel):
     workOrderDetails : OffViewWorkOrderDetailsSchema
     dipendancies : List[WorkOrderDependancySchema]
+
+
+
+class CreateWorkOrderDependancySchema(BaseModel):
+    id : Optional[int]=None
+    work_order_master_id    : int
+    work_order_details_id   : int
+    dependent_on_work_id    : int
+    is_deleted              : Optional[str] ='no'
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
