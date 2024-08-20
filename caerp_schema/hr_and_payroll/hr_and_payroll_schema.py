@@ -573,22 +573,27 @@ class HrViewEmployeeTeamSchema(BaseModel):
         orm_mode = True
         from_attributes = True
         
-
 class EmployeeTeamMembersGet(BaseModel):
-    employee_id: int
-    member_first_name: str
-    member_middle_name: Optional[str]
-    member_last_name: str
-    department_id: int
-    department_name: Optional[str]
-    designation_id: int
-    designation: Optional[str]
-    effective_from_date: date
-    effective_to_date :Optional[date] = None 
+    employee_id         : int
+    member_first_name   : str
+    member_middle_name  : Optional[str]
+    member_last_name    : str
+    department_id       : int
+    department_name     : Optional[str]
+    designation_id      : int
+    designation         : Optional[str]
+    is_team_leader      : str
+    team_leader_id      : Optional[int]
+    leader_first_name   : str
+    leader_middle_name  : str
+    leader_last_name    : str
+    effective_from_date : date
+    effective_to_date   : Optional[date] = None
 
     class Config:
         orm_mode = True
-        from_attributes = True 
+        from_attributes = True
+
 
 class AddEmployeeToTeam(BaseModel):
    team_members: List[EmployeeTeamMembersSchema]
