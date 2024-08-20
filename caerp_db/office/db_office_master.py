@@ -2846,11 +2846,27 @@ def get_business_activity_master_by_type_id(
 
 
 def get_dependencies(db: Session,detail_id):
-    dependencies = db.query(WorkOrderDependancy).filter(
+    dependencies = db.query(WorkOrderDependancy.id,
+        WorkOrderDependancy.work_order_master_id,
+        WorkOrderDependancy.work_order_details_id,
+        WorkOrderDependancy.dependent_on_work_id,
+        WorkOrderDependancy.is_deleted,
+        OffViewServiceGoodsMaster.service_goods_name).join(
+        OffViewServiceGoodsMaster,
+        WorkOrderDependancy.dependent_on_work_id == OffViewServiceGoodsMaster.service_goods_master_id
+    ).filter(
         WorkOrderDependancy.work_order_details_id == detail_id
     ).all()
-    return [WorkOrderDependancySchema.model_validate(dep) for dep in dependencies]
-
+    # return [WorkOrderDependancySchema.model_validate(dep) for dep in dependencies]
+    return [WorkOrderDependancySchema(
+                id=dep.id,
+                work_order_master_id=dep.work_order_master_id,
+                work_order_details_id=dep.work_order_details_id,
+                dependent_on_work_id=dep.dependent_on_work_id,
+                is_deleted=dep.is_deleted,
+                service_goods_name=dep.service_goods_name  # Populate the service_goods_name
+            )
+            for dep in dependencies]
 
 #-------------------------------------------------------------------------------------------------------\
 def get_business_activity_by_master_id(
@@ -3256,13 +3272,7 @@ def save_work_order_service_details(
                 for key, value in detail_data.items():
                     if key != "id": 
                         setattr(business_place_detail, key, value)
-                # Check and update nature_of_possession
-                if detail_data.get('business_place_type') == 'GODOWN':
-                    work_order_details.has_godowns = 'yes'
-                    work_order_details.number_of_godowns = (work_order_details.number_of_godowns or 0) + 1
-                elif detail_data.get('nature_of_possession') == 'BRANCH':
-                    work_order_details.has_branches = 'yes'
-                    work_order_details.number_of_branches = (work_order_details.number_of_branches or 0) + 1
+               
 
             db.commit()
 
@@ -3272,14 +3282,7 @@ def save_work_order_service_details(
                 detail_data = detail.model_dump()
                 work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
                 db.add(work_order_business_place)
-                # Check and update nature_of_possession
-                if detail_data.get('business_place_type') == 'GODOWN':
-                    work_order_details.has_godowns = 'yes'
-                    work_order_details.number_of_godowns = (work_order_details.number_of_godowns or 0) + 1
-                elif detail_data.get('business_place_type') == 'BRANCH':
-                    work_order_details.has_branches = 'yes'
-                    work_order_details.number_of_branches = (work_order_details.number_of_branches or 0) + 1
-
+                
             db.commit()
 
         return {"message": "Work order set details saved successfully"}
@@ -3287,7 +3290,6 @@ def save_work_order_service_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
    
 #-----------------------------------------------------------------------------------

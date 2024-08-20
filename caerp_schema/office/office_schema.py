@@ -1075,6 +1075,7 @@ class WorkOrderDependancySchema(BaseModel):
     work_order_details_id   : int
     dependent_on_work_id    : int
     is_deleted              : Optional[str] ='no'
+    service_goods_name      : Optional[str] = None 
 
     class Config:
         orm_mode = True
