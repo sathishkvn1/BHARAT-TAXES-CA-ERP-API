@@ -37,8 +37,6 @@ router = APIRouter(
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 
 #--------------------save_appointment_details-------------------------------------------------------
-
-
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
@@ -81,11 +79,7 @@ def save_appointment_details(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 # # get all
 
-
-
-
 #---------------------------------------------------------------------------------------------------------------
-
 @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
 def get_appointment_details_by_id(
     appointment_master_id: int,
@@ -244,7 +238,7 @@ def get_all_service_goods_master(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 
 
 
@@ -770,7 +764,7 @@ def get_price_list(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
 def get_service_data_endpoint(
     service_id: int = Query(..., description="Service ID"),
@@ -887,7 +881,7 @@ def get_service_documents_list_by_group_category(
         
         # If the results are a list of Service_Group objects
         if isinstance(results[0], Service_Group):
-            return JSONResponse(status_code=200, content={"group": [result.dict() for result in results]})
+            return JSONResponse(status_code=200, content={"group": [result.model_dump() for result in results]})
 
         # Filter out null fields from each ServiceDocumentsList_Group object
         filtered_results = [
@@ -1430,7 +1424,7 @@ def get_and_search_enquiries(
         email_id=email_id
     )
 
-
+#------------------------------------------------------------------------------------------------------------
 
 @router.get("/get/consultation_tools/{mode_id}", response_model=Union[List[ConsultationModeSchema], List[ConsultationToolSchema]])
 def get_consultation_modes_with_tools(
@@ -2097,7 +2091,7 @@ def call_stored_procedure(service_id, input_date):
 # Example call
 # results = call_stored_procedure(1, '2024-01-01')
 # print("Resultcccccccc",results)
-
+#------------------------------------------------------------------------------------------------------------
 @router.get("/get_bundle_price_list")
 def get_bundle_price_list(request: ServiceRequest=Depends()):
     """
@@ -2161,7 +2155,7 @@ def get_work_order_details(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 
 
 
@@ -2244,7 +2238,7 @@ def save_work_order(
 def save_work_order_service_details(
     request: CreateWorkOrderSetDtailsRequest,
     work_order_details_id:int,
-    business_place_details_id:Optional[int] = 0,
+    # business_place_details_id:Optional[int] = 0,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 
@@ -2254,7 +2248,7 @@ def save_work_order_service_details(
    auth_info = authenticate_user(token)
    user_id = auth_info.get("user_id")
    
-   return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id,business_place_details_id)
+   return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id)
 
 #---------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_service_details')
