@@ -22,7 +22,7 @@ from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
 
-
+#------------------------------------------------------------------------------------------------------------
 def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
@@ -86,7 +86,7 @@ def save_appointment_visit_master(
             for field, value in appointment_data.visit_master.model_dump(exclude_unset=True).items():
                 if field == "remarks":
                     if visit_master.remarks:
-                        setattr(visit_master, field, visit_master.remarks + "\n" + value)
+                        setattr(visit_master, field, visit_master.remarks + "**" + value)
                     else:
                         setattr(visit_master, field, value)
                 else:
@@ -154,7 +154,7 @@ def save_appointment_visit_master(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 #///////////////////////////////////////////////////
 def get_appointment_details(appointment_id :int , db:Session):
     data =db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == appointment_id).first()
@@ -251,10 +251,6 @@ def save_services_goods_master(
     except Exception as e:
         db.rollback()
         raise e
-
-
-
-
 #--------------------------------------------------------------------------------------------------------
 def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
@@ -544,7 +540,7 @@ def get_appointments(
 
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
-
+#------------------------------------------------------------------------------------------------------------
 from time import time
 def get_all_service_goods_master(
     db: Session,
@@ -619,7 +615,7 @@ def get_all_service_goods_master(
         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
 
 
-
+#------------------------------------------------------------------------------------------------------------
 def get_all_service_goods_master_test(
     db: Session,
     deleted_status: Optional[str] = None,
@@ -693,13 +689,6 @@ def get_all_service_goods_master_test(
         raise HTTPException(status_code=500, detail="Internal Server Error: " + str(e))
 
 
-
-
-
-
-
-
-
 #--------------------------------------------------------------------------------------------------------------
 
 def search_off_document_data_master(
@@ -734,8 +723,7 @@ def search_off_document_data_master(
 
  
 
-
-# #-----------------------
+#------------------------------------------------------------------------------------------------------------
 
 def save_service_document_data_master(
     db: Session,
@@ -842,7 +830,7 @@ def save_service_document_data_master(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-#-------------------------------
+#------------------------------------------------------------------------------------------------------------
 def fetch_available_and_unavailable_dates_and_slots(
     consultant_id: Optional[int],
     consultation_mode_id: Optional[int],
@@ -983,7 +971,7 @@ def fetch_available_and_unavailable_dates_and_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-#-------------------------------
+#------------------------------------------------------------------------------------------------------------
 
 def save_off_document_master(
     db: Session,
@@ -1040,8 +1028,6 @@ def save_off_document_master(
 
 #-----------Aparna----------------------------------------------------------------------------------------------
 
-
-
 from sqlalchemy.sql import text
 def get_consultants(db: Session):
     sql = text("""
@@ -1067,19 +1053,9 @@ def get_consultants(db: Session):
     """)
     result = db.execute(sql)
     return result.fetchall()
+#------------------------------------------------------------------------------------------------------------
 
 
-# def get_all_employees(db: Session) -> List[Employee]:
-#     """
-#     Fetches all employees (non-consultants) from the database.
-
-#     Args:
-#         db (Session): Database session.
-
-#     Returns:
-#         List[Employee]: List of employees.
-#     """
-#     return db.query(Employee).filter(Employee.is_consultant == 'no').all()
 
 def get_all_non_consultant_employees(db: Session):
     query = (
@@ -1094,17 +1070,7 @@ def get_all_non_consultant_employees(db: Session):
     return query.all()
 
 
-# def get_all_employees(db: Session) -> List[Employee]:
-#     """
-#     Fetches all employees (non-consultants) from the database.
-
-#     Args:
-#         db (Session): Database session.
-
-#     Returns:
-#         List[Employee]: List of employees.
-#     """
-#     return db.query(Employee).filter(Employee.is_consultant == 'no').all()
+#------------------------------------------------------------------------------------------------------------
 
 def get_all_non_consultant_employees(db: Session):
     query = (
@@ -1158,7 +1124,7 @@ def get_all_services(db: Session) -> List[OffViewServiceGoodsPriceMaster]:
     Fetch all services or goods from the off_view_service_goods_price_master table.
     """
     return db.query(OffViewServiceGoodsPriceMaster).all()
-
+#------------------------------------------------------------------------------------------------------------
 def get_services_filtered(db: Session, 
                           service_type: Optional[str] = None, 
                           search: Optional[str] = None) -> List[OffViewServiceGoodsPriceMaster]:
@@ -1239,7 +1205,7 @@ def get_services_filtered(db: Session,
     
 #     return service_data
 
-
+#------------------------------------------------------------------------------------------------------------
 def get_service_data(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
     # Use the current date if query_date is not provided
     query_date = datetime.now().date()
@@ -1507,7 +1473,7 @@ def get_price_history(service_id: int, db: Session) -> List[ServiceModel]:
 #         db.rollback()
 #         raise HTTPException(status_code=400, detail=str(e))
 
-
+#------------------------------------------------------------------------------------------------------------
 def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int, db: Session):
     try:
         current_date = datetime.now().date()
@@ -1576,11 +1542,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
 
 
 
-#-----------------------------------------------------
-# --------------------------------------------------
-
-
-#--------------------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 
 
 def get_service_documents_data_details(db: Session, service_document_data_master_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
@@ -1691,14 +1653,14 @@ def get_service_documents_list_by_group_category(
     except Exception as e:
         raise e
         
-
+#------------------------------------------------------------------------------------------------------------
 
 def _get_all_groups(db: Session) -> List[Service_Group]:
     groups = db.query(OffServiceGoodsGroup).filter_by(is_deleted='no').all()
     return [Service_Group(id=group.id, group_name=group.group_name or "") for group in groups]
 
 
-#-----------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 
 def save_consultant_service_details_db(
     data: ConsultantService,
@@ -1773,12 +1735,12 @@ def save_consultant_service_details_db(
     except Exception as e:
         # db.rollback()
         raise e
-#------------------------------------------------------------------------------------------------------
 
 
+
+
+#------------------------------------------------------------------------------------------------------------
 from datetime import timedelta
-
-
 def save_consultant_schedule(
     schedule_data: ConsultantScheduleCreate,
     consultant_id: Optional[int],
@@ -1811,6 +1773,7 @@ def save_consultant_schedule(
         if action_type == RecordActionType.UPDATE_AND_INSERT:
             if consultant_id is None:
                 raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+               
             
             schedule_dict['consultant_id'] = consultant_id
 
@@ -1861,7 +1824,7 @@ def save_consultant_schedule(
 
 
 
-##################---------------------- TASK -swathi-------------------------------------
+#-------------- TASK #------------------------------------------------------------------------------------------------------------
 
 
 
@@ -2517,6 +2480,7 @@ def save_office_offer_details(
        logger.error("Exception: %s", str(e))
        raise e
 
+#------------------------------------------------------------------------------------------------------------
 def get_all_offer_list(
                         db : Session,
                         category_id : Optional[int]=None,
@@ -2553,7 +2517,7 @@ def get_all_offer_list(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-
+#------------------------------------------------------------------------------------------------------------
 def delete_offer_master(db, offer_master_id,action_type,deleted_by):
     existing_offer = db.query(OffOfferMaster).filter(OffOfferMaster.id == offer_master_id).first()
 
@@ -2590,7 +2554,7 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
             }
 
 
-#------------------WORKORDER---------------------------------------------------
+#------------------WORKORDER---------------------------------------------------------------------------
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
@@ -2658,7 +2622,7 @@ def get_work_order_details(
                     service_data=service_data
                 )
                 
-                data.append(work_order_data.dict())  # Convert to dictionary format if required
+                data.append(work_order_data.model_dump())  # Convert to dictionary format if required
                 return data
 
             except SQLAlchemyError as e:
@@ -2770,7 +2734,7 @@ def get_work_order_details(
     # if data:
 
     return data
-#----------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -2827,9 +2791,7 @@ def get_work_order_list(
             # except HTTPException as http_error:
             # raise http_error
 
-
-
-#-----------------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 
 def get_business_activity_master_by_type_id(
         db: Session,
@@ -2846,7 +2808,6 @@ def get_business_activity_master_by_type_id(
     return business_activities  
 #---------------------------------------------------------------------------------------------------------
 
-
 def get_dependencies(db: Session,detail_id):
     dependencies = db.query(WorkOrderDependancy.id,
         WorkOrderDependancy.work_order_master_id,
@@ -2857,7 +2818,8 @@ def get_dependencies(db: Session,detail_id):
         OffViewServiceGoodsMaster,
         WorkOrderDependancy.dependent_on_work_id == OffViewServiceGoodsMaster.service_goods_master_id
     ).filter(
-        WorkOrderDependancy.work_order_details_id == detail_id
+        WorkOrderDependancy.work_order_details_id == detail_id,
+        WorkOrderDependancy.is_deleted == 'no'
     ).all()
     # return [WorkOrderDependancySchema.model_validate(dep) for dep in dependencies]
     return [WorkOrderDependancySchema(
@@ -2897,7 +2859,7 @@ def save_work_order(
         try:
             work_order_number = generate_book_number('WORK_ORDER', db)
 
-            master_data = request.master.dict()
+            master_data = request.master.model_dump()
             master_data['created_on'] = datetime.now()
             master_data['created_by'] = user_id
             master_data['work_order_number'] = work_order_number
@@ -2907,7 +2869,7 @@ def save_work_order(
             db.flush()
 
             for main_detail in request.main_service:
-                detail_data = main_detail.dict()
+                detail_data = main_detail.model_dump()
                 detail_data['work_order_master_id'] = master.id
                 detail_data['created_by'] = user_id
                 detail_data['created_on'] = datetime.now()
@@ -2950,7 +2912,7 @@ def save_work_order(
                     'message': 'Work order master not found'
                 }
 
-            master_data = request.master.dict()  # Use .dict() for Pydantic models
+            master_data = request.master.model_dump()  # Use .dict() for Pydantic models
             for key, value in master_data.items():
                 if key != "id":
                     setattr(master, key, value)
@@ -3005,7 +2967,7 @@ def save_work_order(
                                     'message': f"Work order sub-detail with id {sub_detail.id} not found"
                                 }
 
-                            sub_detail_data = sub_detail.dict()  # Use .dict() for Pydantic models
+                            sub_detail_data = sub_detail.model_dump()  # Use .dict() for Pydantic models
                             for key, value in sub_detail_data.items():
                                 if key != "id":
                                     setattr(work_order_sub_detail, key, value)
@@ -3224,11 +3186,10 @@ def get_utility_document_by_nature_of_possession(
 
 #---------------------------------------------------------------------------------------------------------------
 def save_work_order_service_details(
-        db: Session,
-        request: CreateWorkOrderSetDtailsRequest,
-        work_order_details_id: int,
-        user_id: int,
-        business_place_details_id: Optional[int] = None
+    db: Session,
+    request: CreateWorkOrderSetDtailsRequest,
+    work_order_details_id: int,
+    user_id: int
 ):
 
     try:
@@ -3257,34 +3218,44 @@ def save_work_order_service_details(
         db.commit()
         db.flush()
 
-        if business_place_details_id:
-            # Update existing business place details
-            business_place_detail = db.query(WorkOrderBusinessPlaceDetails).filter(
-                WorkOrderBusinessPlaceDetails.id == business_place_details_id
-            ).first()
-            if not business_place_detail:
-                return {
-                    'message': 'Business place details not found',
-                    'Success': 'false'
-                }
-            
-            for detail in request.businessPlaceDetails:
-                detail_data = detail.model_dump()
+        # Fetch existing business place details for this work order detail
+        existing_business_place_details = db.query(WorkOrderBusinessPlaceDetails).filter(
+            WorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id
+        ).all()
+
+        # Track incoming business place detail IDs
+        incoming_ids = set(detail.id for detail in request.businessPlaceDetails if detail.id and detail.id != 0)
+
+        # Process business place details
+        for detail in request.businessPlaceDetails:
+            detail_data = detail.model_dump()
+            if detail_data.get("id") and detail_data["id"] != 0:
+                # Update existing business place details
+                business_place_detail = db.query(WorkOrderBusinessPlaceDetails).filter(
+                    WorkOrderBusinessPlaceDetails.id == detail_data["id"]
+                ).first()
+
+                if not business_place_detail:
+                    return {
+                        'message': 'Business place details not found',
+                        'Success': 'false'
+                    }
+                
                 for key, value in detail_data.items():
                     if key != "id": 
                         setattr(business_place_detail, key, value)
-               
 
-            db.commit()
-
-        else:
-            # Insert a new business place detail
-            for detail in request.businessPlaceDetails:
-                detail_data = detail.model_dump()
+            else:
+                # Insert a new business place detail
                 work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
                 db.add(work_order_business_place)
-                
-            db.commit()
+
+        # Set is_deleted to 'yes' for any existing business place details not in the incoming request
+        for existing_detail in existing_business_place_details:
+            if existing_detail.id not in incoming_ids:
+                existing_detail.is_deleted = 'yes'
+
+        db.commit()
 
         return {"message": "Work order set details saved successfully"}
     
@@ -3292,9 +3263,8 @@ def save_work_order_service_details(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-   
-#-----------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------------------------
 def get_work_order_service_details(
         db: Session,
         id: int
@@ -3354,7 +3324,7 @@ def get_work_order_dependancy_service_details(
 
 ) :
    try: 
-    print("service data ================",is_main_service)
+    # print("service data ================",is_main_service)
     existing_row =  db.query(WorkOrderDetailsView).filter(
         WorkOrderDetailsView.work_order_master_id == work_order_master_id,
         WorkOrderDetailsView.work_order_details_id == work_order_details_id,
@@ -3371,7 +3341,7 @@ def get_work_order_dependancy_service_details(
             WorkOrderDetailsView.is_main_service =='yes',
             WorkOrderDetailsView.is_deleted == 'no'
         ).all()
-        print("service data ================",service_data)
+        # print("service data ================",service_data)
         # return service_data
     else:
         query = db.query(WorkOrderDetailsView).filter(
@@ -3383,7 +3353,7 @@ def get_work_order_dependancy_service_details(
         )
         print(str(query.statement.compile(compile_kwargs={"literal_binds": True})))
         service_data = query.all()
-        print("service data ================",service_data)
+        # print("service data ================",service_data)
     result = [
             {
                 'work_order_details_id': service.work_order_details_id,
@@ -3397,8 +3367,6 @@ def get_work_order_dependancy_service_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
     
-#-----------------------------------------------------------------------------------------------------------
-
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_dependancy_by_work_order_details_id(
         db: Session,
