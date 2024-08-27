@@ -1540,10 +1540,7 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
-
-
 #------------------------------------------------------------------------------------------------------------
-
 
 def get_service_documents_data_details(db: Session, service_document_data_master_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
     try:
@@ -3288,7 +3285,7 @@ def get_work_order_service_details(
         ).first()
 
         if princypal_place_data is None or princypal_place_data == []:
-            return []
+            princypal_place_data == []
 
         # Query for all business place details
         business_place_details_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
@@ -3298,7 +3295,7 @@ def get_work_order_service_details(
         ).all()
 
         if business_place_details_data is None or business_place_details_data == []:
-            return []
+            business_place_details_data == []
 
         # Ensure principalPlaceDetails is always provided
         work_order_business_place_data = WorkOrderSetDetailsResponseSchema(
@@ -3307,13 +3304,14 @@ def get_work_order_service_details(
             additionalPlaceDetails=[OffViewBusinessPlaceDetailsScheema.model_validate(detail) for detail in business_place_details_data]
         )
 
+
         data.append(work_order_business_place_data.model_dump())  # Convert the response schema to a dictionary
         return data
 
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-    
+      
 #-------------------------------------------------------------------------------------------------------
 
 def get_work_order_dependancy_service_details(
