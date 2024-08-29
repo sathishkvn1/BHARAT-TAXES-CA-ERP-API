@@ -1,5 +1,5 @@
 from fastapi import HTTPException,Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,aliased
 from caerp_db.office.models import OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema
 from caerp_schema.accounts.quotation_schema import AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema
@@ -329,17 +329,36 @@ def send_proposal(
 def get_quotation_data(
     db: Session,
     status: Optional[str] = 'ALL',
+    work_order_master_id : Optional[int] = None,
     quotation_id: Optional[int] = None,
     from_date: Optional[date] = Query(date.today()),
     to_date: Optional[date] = None
 ) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
     try:
-        query = db.query(AccQuotationMaster)
+        latest_version_subquery = (
+            db.query(
+                AccQuotationMaster.work_order_master_id,
+                func.max(AccQuotationMaster.quotation_version).label("latest_version")
+            )
+            .group_by(AccQuotationMaster.work_order_master_id)
+            .subquery()
+        )
 
+        # Alias for AccQuotationMaster to join with the subquery
+        latest_version_alias = aliased(AccQuotationMaster, latest_version_subquery)
+
+        # Main query to get the latest version records
+        query = db.query(AccQuotationMaster).join(
+            latest_version_subquery,
+            (AccQuotationMaster.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
+            (AccQuotationMaster.quotation_version == latest_version_subquery.c.latest_version)
+        )
+        if work_order_master_id:
+            query = query.filter(AccQuotationMaster.work_order_master_id== work_order_master_id)
         # Apply filters based on provided parameters
         if quotation_id:
             query = query.filter(AccQuotationMaster.id == quotation_id)
-            quotation_data = query.first()
+            quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
             
             if not quotation_data:
                 return {"message": "Quotation not found."}
