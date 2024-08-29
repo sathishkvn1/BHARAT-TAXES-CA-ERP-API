@@ -1339,6 +1339,7 @@ class WorkOrderDependancyResponseSchema(BaseModel):
 
 
 
+
 class CreateWorkOrderDependancySchema(BaseModel):
     id : Optional[int]=None
     work_order_master_id    : int
@@ -1349,4 +1350,94 @@ class CreateWorkOrderDependancySchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+
+
+class OffViewServiceGoodsPriceMasterSchema(BaseModel):
+
+    service_goods_price_master_id : Optional[int]
+    service_goods_master_id      : Optional[int]
+    hsn_sac_class_id             : Optional[int]
+    hsn_sac_class                 : Optional[str]
+    group_id                     : Optional[int]
+    group_name                    : Optional[str]
+    sub_group_id                 : Optional[int]
+    sub_group_name                : Optional[str]
+    category_id                  : Optional[int]
+    category_name                 : Optional[str]
+    sub_category_id              : Optional[int]
+    sub_category_name             : Optional[str]
+    service_goods_name            : Optional[str]
+    hsn_sac_id                   : Optional[int]
+    hsn_sac_code                  : Optional[str]
+    hsn_sac_description           : Optional[str]
+    sku_code_id                  : Optional[int]
+    unit_code                     : Optional[str]
+    has_consultation             : Optional[str]
+    # is_consultancy_service: Optional[int]
+    is_bundled_service               : Optional[str]
+    services_goods_master_modified_by: Optional[int]
+    services_goods_master_modified_on : Optional[datetime]
+    services_goods_master_is_deleted : Optional[str]
+    services_goods_master_deleted_by: Optional[int]
+    services_goods_master_deleted_on : Optional[datetime]
+    constitution_id: Optional[int]
+    business_constitution_name : Optional[str]
+    business_constitution_code : Optional[str]
+    business_constitution_description : Optional[str]
+    pan_code : Optional[str]
+    service_charge  : Optional[float]
+    govt_agency_fee  : Optional[float]
+    stamp_duty : Optional[float]
+    stamp_fee  : Optional[float]
+    effective_from_date : Optional[date]
+    effective_to_date : Optional[date]
+    service_goods_price_master_created_by: Optional[int]
+    service_goods_price_master_created_on   : Optional[datetime]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class OffServiceGoodsPriceMasterSchema(BaseModel):
+
+    id : Optional[int] = None
+    service_goods_master_id : Optional[int] 
+    constitution_id : Optional[int] 
+    service_charge : Optional[float] = 0.00 
+    govt_agency_fee : Optional[float] = 0.00 
+    stamp_duty : Optional[float] = 0.00 
+    stamp_fee : Optional[float] = 0.00 
+    effective_from_date : Optional[date] 
+    effective_to_date : Optional[date] 
+    # created_by : Optional[int] 
+    # created_on 
+
+class ServiceGoodsPriceDetailsSchema(BaseModel):
+    service: OffViewWorkOrderDetailsSchema
+    prices: OffViewServiceGoodsPriceMasterSchema
+
+class ServiceGoodsPriceResponseSchema(BaseModel):
+    workOrderMaster: OffViewWorkOrderMasterSchema
+    workOrderDetails: List[ServiceGoodsPriceDetailsSchema]
+
+
+class UpdateCustomerDataDocumentSchema(BaseModel):
+    id: int
+    data: str
+    valid_from_date: Optional[date] = None
+    valid_to_date: Optional[date] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class DocumentsSchema(BaseModel):
+    valid_from_date: Optional[date] = None
+    valid_to_date: Optional[date] = None
+    remarks: Optional[str]=None
+
+
 
