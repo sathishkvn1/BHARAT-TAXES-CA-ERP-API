@@ -2,7 +2,7 @@ from enum import Enum
 from pydantic import BaseModel
 from typing import List,Optional
 from datetime import date, datetime
-from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewWorkOrderDetailsSchema
+from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewWorkOrderDetailsSchema,OffViewWorkOrderMasterSchema
 
 class AccQuotationMasterSchema(BaseModel):
 
@@ -31,6 +31,7 @@ class AccQuotationDetailsSchema(BaseModel):
     id                           : Optional[int] = None
     quotation_master_id          : Optional[int] = None
     service_goods_master_id      : Optional[int] = None
+    service_goods_name           : Optional[str] = None
     hsn_sac_code                 : Optional[str] = None
     is_bundle_service            : Optional[str] = 'no'
     bundle_service_id            : Optional[int] = None
@@ -64,6 +65,5 @@ class AccQuotationSchema(BaseModel):
     quotation_details : List[AccQuotationDetailsSchema]
 
 class AccQuotationResponseSchema(BaseModel):
-    work_order_master : OffWorkOrderMasterSchema
-    quotation_master: AccQuotationMasterSchema
+    work_order_master : OffViewWorkOrderMasterSchema
     quotation_details : List[AccQuotationDetailsSchema]

@@ -944,7 +944,7 @@ class  OffOfferCategoryResponse(BaseModel):
 
 
 class OffOfferMasterSchema(BaseModel):
-    
+
     offer_category_id   : int
     offer_name          : str
     offer_percentage    : Optional[float]= None
@@ -991,7 +991,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     enquiry_details_id     : Optional[int] = None
     work_order_number   : Optional[str] = None
     work_order_date     : Optional[date] = None
-    
     first_name          : Optional[str] = None
     middle_name         : Optional[str] = None
     last_name           : Optional[str] = None
@@ -1000,7 +999,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     mobile_number       : Optional[str] = None
     whatsapp_number     : Optional[str] = None
     email_id            : Optional[str] = None
-
     house_or_building_name  : Optional[str] = None
     road_or_street_name     : Optional[str] = None
     locality                : Optional[str] = None
@@ -1014,7 +1012,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     state_id                : Optional[int] = None
     country_id              : Optional[int] = None
     remarks                 : Optional[str] = None
-
     contact_person_name     : Optional[str] = None
     contact_person_mobile_number    : Optional[str] = None
     contact_person_whatsapp_number  : Optional[str] = None
@@ -1200,6 +1197,7 @@ class ServiceRequest(BaseModel):
     input_date: str
 
 
+
 class OffViewWorkOrderMasterSchema(BaseModel):
 
     work_order_master_id     : Optional[int] =None
@@ -1249,9 +1247,11 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     contact_person_whatsapp_number  : Optional[str] = None
     contact_person_email_id         : Optional[str] = None
     work_order_status_id            : Optional[int] = None
+    work_order_status               : Optional[str] = None
     class Config:
         orm_mode = True
         from_attributes = True
+  
 
 class OffViewWorkOrderDetailsSchema(BaseModel):
     
@@ -1355,44 +1355,44 @@ class CreateWorkOrderDependancySchema(BaseModel):
 
 class OffViewServiceGoodsPriceMasterSchema(BaseModel):
 
-    service_goods_price_master_id : Optional[int]
-    service_goods_master_id      : Optional[int]
-    hsn_sac_class_id             : Optional[int]
-    hsn_sac_class                 : Optional[str]
-    group_id                     : Optional[int]
-    group_name                    : Optional[str]
-    sub_group_id                 : Optional[int]
-    sub_group_name                : Optional[str]
-    category_id                  : Optional[int]
-    category_name                 : Optional[str]
-    sub_category_id              : Optional[int]
-    sub_category_name             : Optional[str]
-    service_goods_name            : Optional[str]
-    hsn_sac_id                   : Optional[int]
-    hsn_sac_code                  : Optional[str]
-    hsn_sac_description           : Optional[str]
-    sku_code_id                  : Optional[int]
-    unit_code                     : Optional[str]
-    has_consultation             : Optional[str]
+    service_goods_price_master_id   : Optional[int]
+    service_goods_master_id         : Optional[int]
+    hsn_sac_class_id                : Optional[int]
+    hsn_sac_class                   : Optional[str]
+    group_id                        : Optional[int]
+    group_name                      : Optional[str]
+    sub_group_id                    : Optional[int]
+    sub_group_name                  : Optional[str]
+    category_id                     : Optional[int]
+    category_name                   : Optional[str]
+    sub_category_id                 : Optional[int]
+    sub_category_name               : Optional[str]
+    service_goods_name              : Optional[str]
+    hsn_sac_id                      : Optional[int]
+    hsn_sac_code                    : Optional[str]
+    hsn_sac_description             : Optional[str]
+    sku_code_id                     : Optional[int]
+    unit_code                        : Optional[str]
+    has_consultation                 : Optional[str]
     # is_consultancy_service: Optional[int]
     is_bundled_service               : Optional[str]
-    services_goods_master_modified_by: Optional[int]
-    services_goods_master_modified_on : Optional[datetime]
-    services_goods_master_is_deleted : Optional[str]
-    services_goods_master_deleted_by: Optional[int]
-    services_goods_master_deleted_on : Optional[datetime]
-    constitution_id: Optional[int]
-    business_constitution_name : Optional[str]
-    business_constitution_code : Optional[str]
-    business_constitution_description : Optional[str]
-    pan_code : Optional[str]
-    service_charge  : Optional[float]
-    govt_agency_fee  : Optional[float]
-    stamp_duty : Optional[float]
-    stamp_fee  : Optional[float]
-    effective_from_date : Optional[date]
-    effective_to_date : Optional[date]
-    service_goods_price_master_created_by: Optional[int]
+    services_goods_master_modified_by   : Optional[int]
+    services_goods_master_modified_on   : Optional[datetime]
+    services_goods_master_is_deleted    : Optional[str]
+    services_goods_master_deleted_by    : Optional[int]
+    services_goods_master_deleted_on    : Optional[datetime]
+    constitution_id                     : Optional[int]
+    business_constitution_name          : Optional[str]
+    business_constitution_code          : Optional[str]
+    business_constitution_description   : Optional[str]
+    pan_code                            : Optional[str]
+    service_charge                      : Optional[float]
+    govt_agency_fee                     : Optional[float]
+    stamp_duty                          : Optional[float]
+    stamp_fee                           : Optional[float]
+    effective_from_date                 : Optional[date]
+    effective_to_date                   : Optional[date]
+    service_goods_price_master_created_by   : Optional[int]
     service_goods_price_master_created_on   : Optional[datetime]
 
     class Config:
