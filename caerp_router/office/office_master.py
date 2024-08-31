@@ -9,14 +9,14 @@ from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
 from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster
 from caerp_db.database import  get_db
-from caerp_db.hr_and_payroll.model import HrDepartmentMaster, HrDesignationMaster
+from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -35,6 +35,7 @@ router = APIRouter(
 )
 
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
+UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 #--------------------save_appointment_details-------------------------------------------------------
 @router.post("/save_appointment_details/{id}")
@@ -2322,3 +2323,394 @@ def get_work_order_dependancy_by_work_order_details_id(
     return result
 
 #--------------------------------------------------------------------------------------------------------------
+
+
+#-------------------------------SERVICE TASK-------------------------------------------------------------------------------
+
+
+@router.get('/services/get_all_service_task_list', response_model=List[OffViewServiceTaskMasterSchema])
+def get_all_service_task_list(
+    db: Session = Depends(get_db),
+    task_no: Optional[str] = None,
+    department_id: Union[int, str] = Query("ALL"),
+    team_id: Union[int, str] = Query("ALL"),
+    employee_id: Union[int, str] = Query("ALL"),
+    status_id: Union[int, str] = Query("ALL"),
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> List[OffViewServiceTaskMasterSchema]:
+    """
+    Retrieve a list of service tasks based on various filters.
+
+    Parameters:
+    - task_no (str): The task number to search for (partial match).
+    - department_id (int or str): The department ID to filter by, or "ALL" for no filtering.
+    - team_id (int or str): The team ID to filter by, or "ALL" for no filtering.
+    - employee_id (int or str): The employee ID to filter by, or "ALL" for no filtering.
+    - status_id (int or str): The status ID to filter by, or "ALL" for no filtering.
+    - from_date (date): The start date for filtering tasks.
+    - to_date (date): The end date for filtering tasks.
+    - token (str): The OAuth2 token for authentication.
+
+    Returns:
+    - A list of service tasks that match the given filters.
+    """
+
+    # Check if the token is provided; if not, raise an unauthorized exception.
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Authenticate the user using the provided token.
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    # Call the database function to retrieve the filtered task list.
+    service_tasks = db_office_master.get_all_service_task_list(
+        db, task_no, department_id, team_id, employee_id, status_id, from_date, to_date
+    )
+
+    return service_tasks
+
+#---------------------------------------------------------------------------------------------
+
+@router.post("/update_service_task/{id}")
+def update_service_task(
+    id: int,
+    task_data: OffServiceTaskMasterSchema, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Updates an existing service task and inserts a history record for the update.
+    
+    Parameters:
+    - id (int): The ID of the service task to update.
+    - task_data (OffServiceTaskMasterSchema): The data to update the service task with.
+    
+    Returns:
+    - A success message if the update is successful.
+    """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  # Extract the user ID from the authentication info
+
+    try:
+        db_office_master.update_service_task( db, id, task_data, user_id)
+
+        # Return a success message after the update is completed.
+        return {"success": True, "message": "Updated successfully"}
+    
+    except HTTPException as e:
+        # If an HTTPException occurs, re-raise it to be handled by FastAPI's error handling.
+        raise e
+
+#----------------------------------------------------------------------------------------------------------------------------
+
+
+
+@router.get('/services/get_service_task_history/{task_id}', response_model=List[OffServiceTaskHistorySchema])
+def get_service_task_history(
+    task_id: int,
+    db: Session = Depends(get_db)
+    # token: str = Depends(oauth2.oauth2_scheme)
+) -> List[OffServiceTaskHistorySchema]:
+    """
+    Retrieve all history entries for a given service_taskmaster_id.
+
+    Parameters:
+    - task_id (int): The ID of the service task master.
+
+    Returns:
+    - A list of service task history records.
+    """
+    
+    
+    # Query the database for all history entries with the given task_id
+    history_details = db.query(OffServiceTaskHistory).filter(
+        OffServiceTaskHistory.service_task_master_id == task_id
+    ).all()
+    
+    # If no history details found, return an empty list
+    if not history_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No history found for this service task")
+    
+    return history_details
+
+#------------------------------------------------------------------------------------------------------
+
+@router.get('/teams/get_by_department/{department_id}')
+def get_teams_by_department(
+    department_id: int,
+    db: Session = Depends(get_db)
+    # token: str = Depends(oauth2.oauth2_scheme)
+) -> List[dict]:
+    """
+    Retrieve all teams associated with a given department_id.
+
+    Parameters:
+    - department_id (int): The ID of the department.
+
+    Returns:
+    - A list of dictionaries representing teams associated with the department.
+    """
+    
+    teams = db.query(EmployeeTeamMaster).filter(
+        EmployeeTeamMaster.department_id == department_id,
+        EmployeeTeamMaster.is_deleted == 'no'
+    ).all()
+
+    # If no teams found, return an empty list
+    if not teams:
+        return []
+    
+    # Convert the result to a list of dictionaries
+    teams_list = [
+        {
+            "team_id": team.id,
+            "team_name": team.team_name
+           
+        }
+        for team in teams
+    ]
+    
+    return teams_list
+
+
+
+#------------------------------------------------------------------------------------------------------------------
+
+#-------------------------------SERVICE TASK-------------------------------------------------------------------------------
+@router.post('/services/assign_reassign_service_task')
+def assign_reassign_service_task(
+    task_data: ServiceTaskMasterAssign,
+    task_id: int,
+    assign_to: str = Query(enum=["DEPARTMENT", "TEAM", "EMPLOYEE"],description="Select to assign: DEPARTMENT,TEAM or EMPLOYEE"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Assign or reassign a service task to a department, team, or employee.
+
+    Parameters:
+    - task_id (int): The ID of the task to be assigned or reassigned.
+    - assign_to (str): Specifies whether to assign to a "DEPARTMENT", "TEAM", or "EMPLOYEE".
+    - task_data (ServiceTaskMasterAssign): The data for assignment, including department, team, and employee IDs.
+
+    Returns:
+    - A success message if the assignment is successful.
+    """
+
+    # Token verification
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    if not auth_info:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or authentication failed")
+
+    # Update the service task assignment in the master table
+    try:
+        db_office_master.assign_reassign_service_task(db, task_id, assign_to, task_data, user_id)
+        return {"success": True, "message": "Task assigned/reassigned successfully"}
+    except HTTPException as e:
+        raise e
+#--------------------------------------------------------------------------------------------------------------
+
+
+
+@router.post('/update_customer_data_document')
+def update_customer_data_document(
+    update_data: List[UpdateCustomerDataDocumentSchema],
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Endpoint to update customer data document master records.
+    
+    Updates records in the `customer_data_document_master` table based on the provided data.
+
+    **Parameters:**
+    - `update_data`: List of `UpdateCustomerDataDocumentSchema` objects containing update information.
+        - `id`: The ID of the record to update (required).
+        - `data`: The new data value (required).
+        - `valid_from_date`: Optional. The new start date of validity. Set to `null` to remove the date or omit the field to retain the existing date.
+        - `valid_to_date`: Optional. The new end date of validity. Set to `null` to remove the date or omit the field to retain the existing date.
+    - `db`: The SQLAlchemy database session (required).
+    - `token`: OAuth2 token for authorization (required).
+
+    **Request Examples:**
+
+    1. **Updating a Record with New Dates:**
+       ```json
+      [
+        {
+            "id": 4,
+            "data": "pan",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 5,
+            "data": "voter card",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        }
+    ]
+       ```
+
+    2. **Removing Dates (Setting to `null`):**
+       ```json
+       [
+         {
+           "id": 4,
+           "data": "data4",
+           "valid_from_date": null,
+           "valid_to_date": null
+         }
+       ]
+       ```
+
+    3. **Updating a Record Without Changing Dates:**
+       ```json
+       [
+        {
+            "id": 4,
+            "data": "pan",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 5,
+            "data": "voter card",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 6,
+            "data": "aahar ",
+            "valid_from_date": null,
+            "valid_to_date": null
+        }
+    ]
+       ```
+
+    **Returns:**
+    - A JSON object with a success status and a message:
+      ```json
+      {
+        "success": true,
+        "message": "Records successfully updated"
+      }
+      ```
+
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    try:
+        # Try to update the records
+        success = db_office_master.update_customer_data_documents(update_data, db)
+        return {
+            "success": success,
+            "message": "Records successfully updated" if success else "Failed to update records"
+        }
+    except HTTPException as e:
+        # If a specific exception is raised, handle it
+        return {
+            "success": False,
+            "message": str(e.detail)
+        }
+    except Exception as e:
+        # Catch any other exceptions and handle them
+        return {
+            "success": False,
+            "message": str(e)
+        }
+    
+#------------------------------------------------------------------------------------------------------
+
+@router.get("/get_documents_and_data")
+def get_documents(
+    type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    
+    """  Fetches a list of documents and data records based on an optional filter type.
+    **Parameters:**
+
+    - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
+    """
+    sql_query = text("""
+    SELECT
+        a.id,
+        a.work_order_master_id,
+        a.work_order_details_id,
+        a.document_data_category_id,
+        b.category_name,
+        a.document_data_master_id,
+        c.document_data_name,
+        d.id AS document_data_type_id, 
+        d.document_data_type, 
+        a.customer_id,
+        a.stake_holder_master_id,
+        a.data,
+        a.display_order,
+        a.is_document_uploded,
+        a.uploaded_date,
+        a.uploaded_by,
+        a.valid_from_date,
+        a.valid_to_date,
+        a.remarks,
+        a.is_deleted
+    FROM
+        customer_data_document_master a
+    LEFT JOIN
+        off_document_data_category b ON a.document_data_category_id = b.id
+    LEFT JOIN
+        off_document_data_master c ON a.document_data_master_id = c.id
+    LEFT JOIN
+        off_document_data_type d ON c.document_data_type_id = d.id 
+    WHERE
+        a.is_deleted = 'no'
+    AND 
+        (:type IS NULL OR d.document_data_type = :type)
+    """)
+
+    try:
+        result = db.execute(sql_query, {"type": type})
+        # Convert results to a list of dictionaries
+        results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
+        return results_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+#-------------------------------------------------------------------------------------------------------
+
+@router.post('/upload_document/{id}')
+def upload_document(
+   id: int,
+   request: DocumentsSchema = Depends(),
+   file: Optional[UploadFile] = File(None),
+   db: Session = Depends(get_db),
+   token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"] 
+
+    try:
+        updated_document = db_office_master.upload_documents(db, request, id, user_id, file)
+        return {
+            "success": True,
+            "message": "Uploaded  successfully",
+            # "file_url": updated_document.file_url  # Return file URL if needed
+        }                  
+    except Exception as e:    
+        raise HTTPException(status_code=500, detail=str(e))

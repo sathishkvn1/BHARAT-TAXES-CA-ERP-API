@@ -1,6 +1,6 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
-from caerp_db.office.models import OffViewServiceGoodsMaster,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_db.office.models import OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema
 from caerp_schema.accounts.quotation_schema import AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema
 from caerp_db.accounts.models import AccQuotationMaster,AccQuotationDetails
@@ -462,6 +462,21 @@ def get_quotation_data(
         )
         if work_order_master_id:
             query = query.filter(AccQuotationMaster.work_order_master_id == work_order_master_id)
+        if status != 'ALL':
+                query = query.filter(AccQuotationMaster.quotation_status == status)
+            
+            
+        if from_date and to_date:
+                query = query.filter(
+                    AccQuotationMaster.quotation_date >= from_date,
+                    AccQuotationMaster.quotation_date <= to_date
+                )
+        elif from_date:
+                query = query.filter(AccQuotationMaster.quotation_date >= from_date)
+        elif to_date:
+                query = query.filter(AccQuotationMaster.quotation_date <= to_date)
+
+
         # Apply filters based on provided parameters
         if quotation_id:
             query = query.filter(AccQuotationMaster.id == quotation_id)
@@ -470,28 +485,34 @@ def get_quotation_data(
             if not quotation_data:
                 return {"message": "Quotation not found."}
             
-            # Fetch related work order and details
+            # sFetch related work order and details
             work_order_master_data = db.query(WorkOrderMasterView).filter(
                 WorkOrderMasterView.work_order_master_id == quotation_data.work_order_master_id
             ).first()
             
             # Fetch quotation details with the join to get service names
-            quotation_details_data = db.query(
+            quotation_details_data1 = db.query(
                 AccQuotationDetails,
-                OffViewServiceGoodsMaster.service_goods_name
+                OffViewServiceGoodsMaster.service_goods_name,OffWorkOrderDetails.service_required,
+                OffWorkOrderDetails.service_required_date
             ).join(
                 OffViewServiceGoodsMaster,
                 AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
+            # ).join(
+                # OffWorkOrderDetails,
+                # AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
             ).filter(
                 AccQuotationDetails.quotation_master_id == quotation_data.id,
                 AccQuotationDetails.is_deleted == 'no'
-            ).all()
-
+            )
+            quotation_details_data = quotation_details_data1.all()
             # Correctly handle the results as tuples
             quotation_details_list = []
-            for detail, service_name in quotation_details_data:
+            for detail, service_name,service_required,service_required_date in quotation_details_data:
                 detail_dict = detail.__dict__.copy()  # Copy to modify
                 detail_dict['service_goods_name'] = service_name
+                detail_dict['service_required'] = service_required
+                detail_dict['service_required_date'] = service_required_date
                 quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
 
             # Construct response schema for a single quotation
@@ -503,18 +524,18 @@ def get_quotation_data(
             
             return quotation_service_price_data
         else:
-            if status != 'ALL':
-                query = query.filter(AccQuotationMaster.quotation_status == status)
+            # if status != 'ALL':
+            #     query = query.filter(AccQuotationMaster.quotation_status == status)
             
-            if from_date and to_date:
-                query = query.filter(
-                    AccQuotationMaster.quotation_date >= from_date,
-                    AccQuotationMaster.quotation_date <= to_date
-                )
-            elif from_date:
-                query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-            elif to_date:
-                query = query.filter(AccQuotationMaster.quotation_date <= to_date)
+            # if from_date and to_date:
+            #     query = query.filter(
+            #         AccQuotationMaster.quotation_date >= from_date,
+            #         AccQuotationMaster.quotation_date <= to_date
+            #     )
+            # elif from_date:
+            #     query = query.filter(AccQuotationMaster.quotation_date >= from_date)
+            # elif to_date:
+            #     query = query.filter(AccQuotationMaster.quotation_date <= to_date)
 
             # Fetch all filtered quotations
             quotation_master_list = query.all()
@@ -526,20 +547,22 @@ def get_quotation_data(
                     WorkOrderMasterView.work_order_master_id == quotation.work_order_master_id
                 ).first()
                 
-                # quotation_details_data = db.query(AccQuotationDetails).filter(
-                #     AccQuotationDetails.quotation_master_id == quotation.id,
-                #     AccQuotationDetails.is_deleted == 'no'
-                # ).all()
+              
                 quotation_details_data = db.query(
                 AccQuotationDetails,
-                    OffViewServiceGoodsMaster.service_goods_name
+                    OffViewServiceGoodsMaster.service_goods_name,
+                    # OffWorkOrderDetails.service_required,
+                    # OffWorkOrderDetails.service_required_date
                 ).join(
                     OffViewServiceGoodsMaster,
                     AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
+                # ).join(
+                #     OffWorkOrderDetails,
+                #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
                 ).filter(
-                    AccQuotationDetails.quotation_master_id == quotation.id,
-                    AccQuotationDetails.is_deleted == 'no'
-                ).all()
+                        AccQuotationDetails.quotation_master_id == quotation.id,
+                        AccQuotationDetails.is_deleted == 'no'
+                    ).all()
 
                 # Correctly handle the results as tuples
                 quotation_details_list = []

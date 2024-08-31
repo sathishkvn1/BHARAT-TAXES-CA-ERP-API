@@ -1441,3 +1441,72 @@ class DocumentsSchema(BaseModel):
 
 
 
+class OffServiceTaskMasterSchema(BaseModel):
+    task_status_id          : int
+    # task_priority_id        : int
+    remarks                 : Optional[str] = None
+    
+    class Config:
+        orm_mode            :  True
+
+
+
+class OffServiceTaskHistorySchema(BaseModel):
+    service_task_master_id    : int
+    history_updated_on        : datetime
+    history_update_by         : int
+    history_description       : str
+
+    class Config:
+        orm_mode              :True
+
+
+
+
+class OffViewServiceTaskMasterSchema(BaseModel):
+    task_id                        : int
+    work_order_master_id           : int
+    work_order_id                  : Optional[int] = None
+    task_work_order_details_id     : int
+    work_order_details_id          : Optional[int] = None
+    customer_id                    : Optional[int] = None
+    task_number                    : str
+    allocated_by                   : int
+    allocated_by_first_name        : Optional[str] = None
+    allocated_by_middle_name       : Optional[str] = None
+    allocated_by_last_name         : Optional[str] = None
+    allocated_on                   : datetime
+    department_allocated_on        : datetime
+    department_allocated_to        : int
+    department_name                : Optional[str] = None
+    team_allocated_on              : datetime
+    team_allocated_to              : int
+    team_name                      : Optional[str] = None
+    employee_allocated_on          : datetime
+    employee_allocated_to          : int
+    employee_allocated_first_name  : Optional[str] = None
+    employee_allocated_middle_name : Optional[str] = None
+    employee_allocated_last_name   : Optional[str] = None
+    task_status_id                 : int
+    task_status                    : Optional[str] = None
+    task_priority_id               : int
+    task_priority                  : Optional[str] = None
+    remarks                        : Optional[str] = None
+    # is_deleted                     : str
+    # deleted_by                     : Optional[int] = None
+    # deleted_on                     : Optional[datetime] = None
+
+    class Config:
+        orm_mode                   : True
+
+
+class ServiceTaskMasterAssign(BaseModel):  
+    department_id  : int
+    team_id        : Optional[int] = None                   
+    employee_id    : Optional[int] = None                
+    remarks        : Optional[str] = None                 
+
+    class Config:
+        orm_mode                   : True
+
+

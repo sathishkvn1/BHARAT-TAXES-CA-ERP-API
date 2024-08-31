@@ -58,6 +58,8 @@ class AccQuotationDetailsSchema(BaseModel):
     gst_amount                   : Optional[float] = None
     taxable_amount               : Optional[float] = None
     total_amount                 : Optional[float] = None
+    # service_required             : Optional[str] = 'YES'
+    # service_required_date        : Optional[date] = None
     is_deleted                   : Optional[str] = 'no'
 
 class AccQuotationSchema(BaseModel):
@@ -66,4 +68,5 @@ class AccQuotationSchema(BaseModel):
 
 class AccQuotationResponseSchema(BaseModel):
     work_order_master : OffViewWorkOrderMasterSchema
+    quotation_master : AccQuotationMasterSchema
     quotation_details : List[AccQuotationDetailsSchema]

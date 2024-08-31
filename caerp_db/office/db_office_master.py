@@ -1,5 +1,7 @@
 import logging
-from fastapi import HTTPException,status,Depends
+import os
+import shutil
+from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType, Status
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,19 +11,19 @@ from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
+from caerp_db.office.models import AppDayOfWeek, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
-
+from pathlib import Path 
 # from caerp_constants.caerp_constants import SearchCriteria
 from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
-
+UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #------------------------------------------------------------------------------------------------------------
 def save_appointment_visit_master(
     db: Session,
@@ -3454,8 +3456,9 @@ def update_customer_data_documents(
             # Update the data field
             record.data = data.data
             
-            # Update the dates based on the provided data
-            if 'valid_from_date' in data.__fields_set__:
+            # Update the dates based on the provided data model_fields_set
+            if 'valid_from_date' in data.__fields_set__: 
+                
                 record.valid_from_date = data.valid_from_date  # Set to NULL if null is provided
             if 'valid_to_date' in data.__fields_set__:
                 record.valid_to_date = data.valid_to_date  # Set to NULL if null is provided
@@ -3468,3 +3471,166 @@ def update_customer_data_documents(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    
+
+#----------------------------------------------------------------------------------------------------------------------
+def upload_documents(db: Session, 
+                     request: DocumentsSchema,
+                       id: int, 
+                       user_id: int, 
+                       file: UploadFile = None):
+    try:
+        # Update the document record
+        document_data = request.dict()  # Assuming request is a Pydantic model
+        document = db.query(CustomerDataDocumentMaster).filter_by(id=id).first()
+
+        if document is None:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        document.valid_from_date = request.valid_from_date
+        document.valid_to_date = request.valid_to_date
+        document.remarks = request.remarks
+        document.uploaded_date = datetime.now()
+        document.uploaded_by = user_id
+        document.is_document_uploded = 'yes'
+        
+        db.commit()
+        db.refresh(document)
+
+        # Handle file upload
+        if file:
+            # Extract original file name and extension
+            original_file_name = Path(file.filename).stem
+            file_extension = Path(file.filename).suffix
+
+            # Construct file name and path
+            file_name = f"{id}_{original_file_name}{file_extension}"
+            file_path = os.path.join(UPLOAD_WORK_ORDER_DOCUMENTS, file_name)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Save the file
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        
+        return document
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
+    
+#---------------------------------------------------------------------------------------------------------------------
+
+
+#--------------------------------------------------------------------------------------------------------------
+
+
+
+def update_service_task(
+    db: Session, 
+    task_id: int, 
+    task_data: OffServiceTaskMasterSchema,
+    user_id: int):
+    # Fetch the existing task
+    task = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == task_id, OffServiceTaskMaster.is_deleted == 'no').first()
+
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    
+    # Update the task details
+    task.task_status_id = task_data.task_status_id
+    task.remarks = task_data.remarks
+   
+    
+    # Insert into the service task history table
+    task_history = OffServiceTaskHistory(
+        service_task_master_id=task.id,
+        history_updated_on=datetime.now(),
+        history_update_by=user_id,
+        history_description=task_data.remarks
+    )
+
+    db.add(task_history)  # Add the history record to the session
+    db.commit()           # Commit all changes (both task update and history insert)
+    db.refresh(task)     
+
+    return task
+
+#-----------------------------------------------------------------
+def get_all_service_task_list(
+    db: Session,
+    task_no: Optional[str] = None,
+    department_id: Union[int, str] = "ALL",
+    team_id: Union[int, str] = "ALL",
+    employee_id: Union[int, str] = "ALL",
+    status_id: Union[int, str] = "ALL",
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None
+) -> List[OffViewServiceTaskMaster]:
+    
+
+   
+    query = db.query(OffViewServiceTaskMaster)
+
+    if task_no:
+        query = query.filter(OffViewServiceTaskMaster.task_number.ilike(f"%{task_no}%"))
+    
+    if department_id != "ALL":
+        query = query.filter(OffViewServiceTaskMaster.department_allocated_to == department_id)
+    
+    if team_id != "ALL":
+        query = query.filter(OffViewServiceTaskMaster.team_allocated_to == team_id)
+    
+    if employee_id != "ALL":
+        query = query.filter(OffViewServiceTaskMaster.employee_allocated_to == employee_id)
+    
+    if status_id != "ALL":
+        query = query.filter(OffViewServiceTaskMaster.task_status_id == status_id)
+    
+    if from_date:
+        query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) >= from_date)
+    
+    if to_date:
+        # Add one day to the `to_date` to include the end of the specified day
+        query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) <= to_date)
+    # Execute the query and fetch the results.
+    return query.all()
+
+#----------------------------------------------------------------------------
+
+
+def assign_reassign_service_task(
+    db: Session,
+    task_id: int,
+    assign_to: str,
+    task_data: ServiceTaskMasterAssign,
+    user_id: int
+):
+   
+    
+    # Retrieve the task from the database
+    task = (db.query(OffServiceTaskMaster)
+    .filter(OffServiceTaskMaster.id == task_id,OffServiceTaskMaster.is_deleted == 'no').first())
+
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    # Update the task based on the assignment type
+    if assign_to == "DEPARTMENT":
+        task.department_allocated_to = task_data.department_id
+        task.team_allocated_to = None
+        task.employee_allocated_to = None
+    elif assign_to == "TEAM":
+        task.department_allocated_to = task_data.department_id
+        task.team_allocated_to = task_data.team_id
+        task.employee_allocated_to = None
+    elif assign_to == "EMPLOYEE":
+        task.department_allocated_to = task_data.department_id
+        task.team_allocated_to = task_data.team_id
+        task.employee_allocated_to = task_data.employee_id
+
+    # Update remarks, modified_by, and modified_on fields
+    task.remarks = task_data.remarks
+    
+    db.commit()
