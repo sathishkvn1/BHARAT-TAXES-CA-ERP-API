@@ -1,0 +1,260 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quotation PDF</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #dddddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .total-row td {
+        font-weight: bold;
+      }
+      .note {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Quotation</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>SERVICES</th>
+          <th>FEE</th>
+          <th>DISCOUNT</th>
+          <th>GST AMT</th>
+          <th>TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in quotations %}
+        <tr>
+          <td>{{ item.service_goods_name }}</td>
+          <td>{{ item.service_charge }}</td>
+          <td>{{ item.discount_amount }}</td>
+          <td>{{ item.gst_amount }}</td>
+          <td>{{ item.total_amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <table>
+      <tbody>
+        <tr class="total-row">
+          <td>TOTAL</td>
+          <td colspan="3"></td>
+          <td>{{ total_amount }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>ADVANCE</td>
+          <td>{{ advance }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>ADDITIONAL DISCOUNT</td>
+          <td>{{ additional_discount }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>GST %</td>
+          <td>{{ gst_percent }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>GST AMOUNT</td>
+          <td>{{ gst_amount }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3"></td>
+          <td>TOTAL AMOUNT</td>
+          <td>{{ total_amount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quotation PDF</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      th,
+      td {
+        padding: 10px;
+        text-align: left;
+        border: 1px solid #dddddd;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .total-row td {
+        font-weight: bold;
+      }
+      .note {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #555;
+      }
+
+      .details {
+        margin-top: 20px;
+        font-size: 18px;
+        min-width: 40px;
+        /* background-color: rgb(0, 255, 42); */
+      }
+      .details p {
+        margin: 0;
+        padding: 5px 0;
+      }
+      .details strong {
+        /* display: inline-block; */
+        width: 120px;
+        font-weight: bold;
+      }
+
+      .address {
+        display: flex;
+        gap: 14px;
+        min-width: 40px;
+        /* background-color: rgb(233, 159, 221); */
+      }
+
+      .label {
+        display: inline-block;
+        width: 120px; /* Adjust width as needed */
+        font-weight: bold;
+      }
+      p {
+        margin: 0 0 5px 0; /* Adds spacing between paragraphs */
+      }
+
+      strong {
+        display: inline-block;
+        width: 150px; /* Adjust width as needed */
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <h2 style="text-align: center">QUOTATION</h2>
+    <hr style="border: 1px solid #000" />
+    <div class="details">
+      <p>
+        <strong class="label">NAME:</strong> {{ work_order_master.first_name }}
+        {{ work_order_master.middle_name }} {{ work_order_master.last_name }}
+      </p>
+    </div>
+    <div class="address">
+      <div>
+        <p><strong class="label">ADDRESS:</strong></p>
+      </div>
+
+      <div>
+        <p>
+          {{ work_order_master.house_or_building_name }}<br />
+          {{ work_order_master.road_or_street_name }}<br />
+          {{ work_order_master.locality }}<br />
+          {{ work_order_master.village_name }}, {{ work_order_master.lsg_name
+          }}<br />
+          {{ work_order_master.taluk_name }}, {{ work_order_master.district_name
+          }}<br />
+          {{ work_order_master.state_name }}, {{ work_order_master.country_name
+          }} {{ work_order_master.pin_code }}
+        </p>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>SERVICES</th>
+          <th>FEE</th>
+          <th>DISCOUNT</th>
+          <th>GST AMT</th>
+          <th>TOTAL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in quotations %}
+
+        <tr>
+          <td>{{ item.service_goods_name }}</td>
+          <td>{{ item.service_charge }}</td>
+          <td>{{ item.discount_amount }}</td>
+          <td>{{ item.gst_amount }}</td>
+          <td>{{ item.total_amount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <table>
+      <tbody>
+        <tr class="total-row">
+          <td>TOTAL</td>
+          <td colspan="3"></td>
+          <td>{{ total_amount }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>ADVANCE</td>
+          <td>{{ advance }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>ADDITIONAL DISCOUNT</td>
+          <td>{{ additional_discount }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>GST %</td>
+          <td>{{ gst_percent }}</td>
+        </tr>
+        <tr>
+          <td colspan="3"></td>
+          <td>GST AMOUNT</td>
+          <td>{{ gst_amount }}</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3"></td>
+          <td>TOTAL AMOUNT</td>
+          <td>{{ total_amount }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

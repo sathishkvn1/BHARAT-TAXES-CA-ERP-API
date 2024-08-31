@@ -300,6 +300,8 @@ def update_quotation_status(
     if quotation_data:
         quotation_data.quotation_status = quotation_status
         quotation_data.modified_on = datetime.utcnow()
+        if quotation_status== 'ACCEPTED':
+            quotation_data.is_final_quotation  = 'yes'
             
             # Commit the changes to the database
         db.commit()
@@ -310,6 +312,9 @@ def update_quotation_status(
         return {'message': 'please provide a valid quotqtion id',
                 'success': False}
     
+
+
+
 def send_proposal(
         quotation_id: int,
         work_order_master_id: int,
@@ -327,114 +332,6 @@ def send_proposal(
     return result
 
 
-# def get_quotation_data(
-#     db: Session,
-#     status: Optional[str] = 'ALL',
-#     work_order_master_id : Optional[int] = None,
-#     quotation_id: Optional[int] = None,
-#     from_date: Optional[date] = Query(date.today()),
-#     to_date: Optional[date] = None
-# ) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
-#     try:
-#         latest_version_subquery = (
-#             db.query(
-#                 AccQuotationMaster.work_order_master_id,
-#                 func.max(AccQuotationMaster.quotation_version).label("latest_version")
-#             )
-#             .group_by(AccQuotationMaster.work_order_master_id)
-#             .subquery()
-#         )
-
-#         # Alias for AccQuotationMaster to join ith the subquery
-#         latest_version_alias = aliased(AccQuotationMaster, latest_version_subquery)
-
-#         # Main query to get the latest version records
-#         query = db.query(AccQuotationMaster).join(
-#             latest_version_subquery,
-#             (AccQuotationMaster.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
-#             (AccQuotationMaster.quotation_version == latest_version_subquery.c.latest_version)
-#         )
-#         if work_order_master_id:
-#             query = query.filter(AccQuotationMaster.work_order_master_id== work_order_master_id)
-#         # Apply filters based on provided parameters
-#         if quotation_id:
-#             query = query.filter(AccQuotationMaster.id == quotation_id)
-#             quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
-            
-#             if not quotation_data:
-#                 return {"message": "Quotation not found."}
-            
-#             # Fetch related work order and details
-#             work_order_master_data = db.query(WorkOrderMasterView).filter(
-#                 WorkOrderMasterView.work_order_master_id == quotation_data.work_order_master_id
-#             ).first()
-            
-#             # Fetch quotation details
-#             # quotation_details_data = db.query(AccQuotationDetails).filter(
-#             #     AccQuotationDetails.quotation_master_id == quotation_data.id,
-#             #     AccQuotationDetails.is_deleted == 'no'
-#             # ).all()
-#             quotation_details_data = db.query(
-#                 AccQuotationDetails,
-#                 OffViewServiceGoodsMaster.service_goods_name
-#             ).join(
-#                 OffViewServiceGoodsMaster,  # Joining with the alias defined
-#                 AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-#             ).filter(
-#                 AccQuotationDetails.quotation_master_id == quotation_data.id,
-#                 AccQuotationDetails.is_deleted == 'no'
-#             ).all()
-#             # print('Query Statement', query)
-#             print('quotation_details_data', quotation_details_data)
-#             # Construct response schema for a single quotation
-#             quotation_service_price_data = AccQuotationResponseSchema(
-#                 quotation_master=AccQuotationMasterSchema.model_validate(quotation_data.__dict__),
-#                 work_order_master=OffWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-#                 quotation_details=[AccQuotationDetailsSchema.model_validate(detail.__dict__) for detail in quotation_details_data]
-#             )
-            
-#             return quotation_service_price_data
-#         else:
-#             if status != 'ALL':
-#                 query = query.filter(AccQuotationMaster.quotation_status == status)
-            
-#             if from_date and to_date:
-#                 query = query.filter(
-#                     AccQuotationMaster.quotation_date >= from_date,
-#                     AccQuotationMaster.quotation_date <= to_date
-#                 )
-#             elif from_date:
-#                 query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-#             elif to_date:
-#                 query = query.filter(AccQuotationMaster.quotation_date <= to_date)
-
-#             # Fetch all filtered quotations
-#             quotation_master_list = query.all()
-           
-#             # Construct response schema for multiple quotations
-#             quotations_response = []
-#             for quotation in quotation_master_list:
-#                 work_order_master_data = db.query(WorkOrderMasterView).filter(
-#                     WorkOrderMasterView.work_order_master_id == quotation.work_order_master_id
-#                 ).first()
-                
-#                 quotation_details_data = db.query(AccQuotationDetails).filter(
-#                     AccQuotationDetails.quotation_master_id == quotation.id,
-#                     AccQuotationDetails.is_deleted == 'no'
-#                 ).all()
-                
-#                 # Add each quotation's data to the response list
-#                 quotations_response.append(AccQuotationResponseSchema(
-#                     quotation_master=AccQuotationMasterSchema.model_validate(quotation.__dict__),
-#                     work_order_master=OffWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-#                     quotation_details=[AccQuotationDetailsSchema.model_validate(detail.__dict__) for detail in quotation_details_data]
-#                 ))
-
-#             return quotations_response
-
-#     except SQLAlchemyError as e:
-#         # Handle database exceptions
-#         raise HTTPException(status_code=500, detail=str(e))
 
 def get_quotation_data(
     db: Session,
@@ -585,3 +482,146 @@ def get_quotation_data(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+def generate_profoma_invoice_details(
+        db: Session,
+        work_order_master_id: int) -> ServiceGoodsPriceResponseSchema:
+    try:
+        # Fetch master data
+        work_order_master_data = db.query(WorkOrderMasterView).filter(
+            WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        ).first()
+
+        work_order_details_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+            WorkOrderDetailsView.service_required == 'YES',
+            WorkOrderDetailsView.is_main_service == 'yes',
+            WorkOrderDetailsView.is_deleted == 'no'
+        ).all()
+
+        services = []
+
+        # Loop through each detail to fetch its price data
+        for details in work_order_details_data:
+            service_master_id = details.service_goods_master_id
+            constitution_id = details.constitution_id
+
+            # Initialize total values for each service
+            total_service_charge = 0.0
+            total_govt_agency_fee = 0.0
+            total_stamp_fee = 0.0
+            total_stamp_duty = 0.0
+            service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
+            if details.is_bundle_service == 'no':
+                if service_goods_price_data:
+                    total_service_charge = service_goods_price_data.service_charge
+                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
+                    total_stamp_fee = service_goods_price_data.stamp_fee
+                    total_stamp_duty = service_goods_price_data.stamp_duty
+            else:
+                if service_goods_price_data:
+                    total_service_charge = service_goods_price_data.service_charge
+                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
+                    total_stamp_fee = service_goods_price_data.stamp_fee
+                    total_stamp_duty = service_goods_price_data.stamp_duty
+
+                sub_services = db.query(WorkOrderDetailsView).filter(
+                    WorkOrderDetailsView.bundle_service_id == details.work_order_details_id,
+                    WorkOrderDetailsView.is_deleted == 'no'
+                ).all()
+
+                for sub_service in sub_services:
+                    sub_service_price_data = get_service_price_details_by_service_id(db, sub_service.service_goods_master_id, sub_service.constitution_id)
+                    if sub_service_price_data:
+                        total_service_charge += sub_service_price_data.service_charge
+                        total_govt_agency_fee += sub_service_price_data.govt_agency_fee
+                        total_stamp_fee += sub_service_price_data.stamp_fee
+                        total_stamp_duty += sub_service_price_data.stamp_duty
+
+            # Ensure service_goods_price_data is initialized correctly
+            if service_goods_price_data:
+                service_goods_price_data.service_charge = total_service_charge
+                service_goods_price_data.govt_agency_fee = total_govt_agency_fee
+                service_goods_price_data.stamp_duty = total_stamp_duty
+                service_goods_price_data.stamp_fee = total_stamp_fee
+
+            # Validate and append the work order detail with its price data
+            service_data = ServiceGoodsPriceDetailsSchema(
+                service=OffViewWorkOrderDetailsSchema.model_validate(details.__dict__),
+                prices=service_goods_price_data
+            )
+            services.append(service_data)
+            # quotation_master = AccQuotationMaster(
+            #     work_order_master_id=work_order_master_id,
+            #     quotation_version=1,
+            #     quotation_date=datetime.utcnow().date(),
+            #     quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
+            #     offer_total=0,
+            #     coupon_total=0,
+            #     product_discount_total=0,
+            #     bill_discount=0,
+            #     additional_discount=0,
+            #     round_off=total_service_charge,
+            #     net_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+            #     grand_total=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+            #     remarks='',
+            #     quotation_status='DRAFT',
+            #     is_final_quotation='no',
+            #     created_by= 1,
+            #     created_on=datetime.utcnow()
+            # )
+            # db.add(quotation_master)
+            # db.flush()  # To get the new quotation_master.id
+
+            # for service_data in services:
+            #     details = service_data.service
+            #     prices = service_data.prices
+
+            #     quotation_detail = AccQuotationDetails(
+            #         quotation_master_id=quotation_master.id,
+            #         service_goods_master_id=details.service_goods_master_id,
+            #         hsn_sac_code=prices.hsn_sac_code,
+            #         is_bundle_service=details.is_bundle_service,
+            #         bundle_service_id=details.bundle_service_id,
+            #         service_charge=prices.service_charge,
+            #         govt_agency_fee=prices.govt_agency_fee,
+            #         stamp_duty=prices.stamp_duty,
+            #         stamp_fee=prices.stamp_fee,
+            #         quantity=1,
+            #         offer_percentage = 0.0,
+            #         offer_amount = 0.0,
+            #         coupon_percentage = 0.0,
+            #         coupon_amount = 0.0,
+            #         discount_percentage = 0.0,
+            #         discount_amount = 0.0,
+            #         gst_percent=0.0,
+            #         gst_amount=0,
+            #         taxable_amount= 0.0,
+                   
+            #         total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+            #     )
+
+            #     db.add(quotation_detail)
+            # db.commit()
+
+        quotation_service_price_data = ServiceGoodsPriceResponseSchema(
+            workOrderMaster=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
+            workOrderDetails=services
+        )
+
+        return {'message ': 'Success',
+                # 'quotation_master_id' : quotation_master.id,
+                # 'quotation_details_id': quotation_detail.id,
+                'quotation_service_price_data' :quotation_service_price_data
+                }
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        # Handle database exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+

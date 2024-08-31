@@ -1462,7 +1462,6 @@ class OffServiceTaskHistorySchema(BaseModel):
 
 
 
-
 class OffViewServiceTaskMasterSchema(BaseModel):
     task_id                        : int
     work_order_master_id           : int
@@ -1476,20 +1475,20 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     allocated_by_middle_name       : Optional[str] = None
     allocated_by_last_name         : Optional[str] = None
     allocated_on                   : datetime
-    department_allocated_on        : datetime
-    department_allocated_to        : int
+    department_allocated_on        : Optional[datetime]
+    department_allocated_to        : Optional[int]
     department_name                : Optional[str] = None
-    team_allocated_on              : datetime
-    team_allocated_to              : int
+    team_allocated_on              : Optional[datetime]
+    team_allocated_to              : Optional[int]
     team_name                      : Optional[str] = None
-    employee_allocated_on          : datetime
-    employee_allocated_to          : int
+    employee_allocated_on          : Optional[datetime]
+    employee_allocated_to          : Optional[int]
     employee_allocated_first_name  : Optional[str] = None
     employee_allocated_middle_name : Optional[str] = None
     employee_allocated_last_name   : Optional[str] = None
-    task_status_id                 : int
+    task_status_id                 : Optional[int]
     task_status                    : Optional[str] = None
-    task_priority_id               : int
+    task_priority_id               : Optional[int]
     task_priority                  : Optional[str] = None
     remarks                        : Optional[str] = None
     # is_deleted                     : str
@@ -1498,6 +1497,8 @@ class OffViewServiceTaskMasterSchema(BaseModel):
 
     class Config:
         orm_mode                   : True
+
+
 
 
 class ServiceTaskMasterAssign(BaseModel):  

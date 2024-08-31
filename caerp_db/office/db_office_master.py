@@ -1999,10 +1999,10 @@ def get_all_consultation_task_master_details(
     to_date: Optional[date] = None  
 ) -> List[OffViewConsultationTaskMasterSchema]:
     search_conditions = [OffViewConsultationTaskMaster.is_deleted == 'no']
-
+    # print("1")
     if service_id != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.service_id == service_id)
-
+    # print(service_id)
     if task_status != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.task_status_id == task_status)
 
@@ -2061,6 +2061,8 @@ def get_all_consultation_task_master_details(
         task_master_details.append(OffViewConsultationTaskMasterSchema(**task_dict))
 
     return task_master_details
+
+
 
 
 
@@ -3558,6 +3560,7 @@ def update_service_task(
     return task
 
 #-----------------------------------------------------------------
+
 def get_all_service_task_list(
     db: Session,
     task_no: Optional[str] = None,
@@ -3568,9 +3571,7 @@ def get_all_service_task_list(
     from_date: Optional[date] = None,
     to_date: Optional[date] = None
 ) -> List[OffViewServiceTaskMaster]:
-    
 
-   
     query = db.query(OffViewServiceTaskMaster)
 
     if task_no:
@@ -3592,10 +3593,15 @@ def get_all_service_task_list(
         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) >= from_date)
     
     if to_date:
-        # Add one day to the `to_date` to include the end of the specified day
+        # Include the entire `to_date` day by ensuring the comparison is correct
         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) <= to_date)
-    # Execute the query and fetch the results.
+
+    # Ensure that is_deleted is not equal to 'yes'
+    query = query.filter(OffViewServiceTaskMaster.is_deleted == 'no')
+    
+    # Execute the query and fetch the results
     return query.all()
+
 
 #----------------------------------------------------------------------------
 

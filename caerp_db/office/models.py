@@ -1497,6 +1497,7 @@ class OffServiceTaskHistory(caerp_base):
 
 
 
+
 class OffViewServiceTaskMaster(caerp_base):
     __tablename__                = 'off_view_service_task_master'
 
@@ -1512,20 +1513,20 @@ class OffViewServiceTaskMaster(caerp_base):
     allocated_by_middle_name       = Column(String(50), nullable=True)
     allocated_by_last_name         = Column(String(50), nullable=True)
     allocated_on                   = Column(DateTime, nullable=False)
-    department_allocated_on        = Column(DateTime, nullable=False)
-    department_allocated_to        = Column(Integer, nullable=False)
+    department_allocated_on        = Column(DateTime, nullable=True)
+    department_allocated_to        = Column(Integer, nullable=True)
     department_name                = Column(String(200), nullable=True)
-    team_allocated_on              = Column(DateTime, nullable=False)
-    team_allocated_to              = Column(Integer, nullable=False)
+    team_allocated_on              = Column(DateTime, nullable=True)
+    team_allocated_to              = Column(Integer, nullable=True)
     team_name                      = Column(String(50), nullable=True)
-    employee_allocated_on          = Column(DateTime, nullable=False)
-    employee_allocated_to          = Column(Integer, nullable=False)
+    employee_allocated_on          = Column(DateTime, nullable=True)
+    employee_allocated_to          = Column(Integer, nullable=True)
     employee_allocated_first_name  = Column(String(50), nullable=True)
     employee_allocated_middle_name = Column(String(50), nullable=True)
     employee_allocated_last_name   = Column(String(50), nullable=True)
-    task_status_id                 = Column(Integer, nullable=False)
+    task_status_id                 = Column(Integer, nullable=True)
     task_status                    = Column(String(100), nullable=True)
-    task_priority_id               = Column(Integer, nullable=False)
+    task_priority_id               = Column(Integer, nullable=True)
     task_priority                  = Column(String(100), nullable=True)
     remarks                        = Column(String(1000), nullable=True)
     is_deleted                     = Column(Enum('yes', 'no'), nullable=False, default='no')

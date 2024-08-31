@@ -102,3 +102,4 @@ class EntryPoint(str, Enum):
     CONSULTATION    =   'CONSULTATION'
     ENQUIRY         =   'ENQUIRY'
     WORK_ORDER       =   'WORK_ORDER'
+    QUOTATION       =   'QUOTATION'
