@@ -2671,7 +2671,8 @@ def upload_document(
   
    db: Session = Depends(get_db),
    token: str = Depends(oauth2.oauth2_scheme),
-   file: Optional[UploadFile] = File(None)
+   file: UploadFile = File(None),
+#    file: Optional[UploadFile] = File(None)
 ):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
