@@ -35,12 +35,19 @@ def get_service_price_details_by_service_id(
         service_goods_price_data = OffViewServiceGoodsPriceMasterSchema.model_validate(service_goods_price_details_data.__dict__)
     return service_goods_price_data
 
+
 def generate_quotation_service_details(
     db: Session,
     work_order_master_id: int,
 ) -> ServiceGoodsPriceResponseSchema:
     try:
         # Fetch master data
+        existing_data  = db.query(AccQuotationMaster).filter(
+            AccQuotationMaster.work_order_master_id == work_order_master_id,
+            AccQuotationMaster.is_deleted =='no'
+        ).first()
+        if existing_data:
+            return {'message': 'Quotation is already exist'}
         work_order_master_data = db.query(WorkOrderMasterView).filter(
             WorkOrderMasterView.work_order_master_id == work_order_master_id
         ).first()
@@ -53,17 +60,20 @@ def generate_quotation_service_details(
 
         services = []
         service_goods_price_data = None
-
+                
+        for details in work_order_details_data:
+            service_master_id = details.service_goods_master_id
+            constitution_id = details.constitution_id
         # Loop through each detail to fetch its price data
         for details in work_order_details_data:
             service_master_id = details.service_goods_master_id
             constitution_id = details.constitution_id
-
             # Initialize total values for each service
             total_service_charge = 0.0
             total_govt_agency_fee = 0.0
             total_stamp_fee = 0.0
             total_stamp_duty = 0.0
+            hsn_sac_code = ''
 
             if details.is_bundle_service == 'no':
                 service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
@@ -72,6 +82,7 @@ def generate_quotation_service_details(
                     total_govt_agency_fee = service_goods_price_data.govt_agency_fee
                     total_stamp_fee = service_goods_price_data.stamp_fee
                     total_stamp_duty = service_goods_price_data.stamp_duty
+                    hsn_sac_code = service_goods_price_data.hsn_sac_code
             else:
                 service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
                 if service_goods_price_data:
@@ -79,6 +90,7 @@ def generate_quotation_service_details(
                     total_govt_agency_fee = service_goods_price_data.govt_agency_fee
                     total_stamp_fee = service_goods_price_data.stamp_fee
                     total_stamp_duty = service_goods_price_data.stamp_duty
+                    hsn_sac_code = service_goods_price_data.hsn_sac_code
 
                 sub_services = db.query(WorkOrderDetailsView).filter(
                     WorkOrderDetailsView.bundle_service_id == details.work_order_details_id,
@@ -92,12 +104,14 @@ def generate_quotation_service_details(
                         total_govt_agency_fee += sub_service_price_data.govt_agency_fee
                         total_stamp_fee += sub_service_price_data.stamp_fee
                         total_stamp_duty += sub_service_price_data.stamp_duty
+                        hsn_sac_code = sub_service_price_data.hsn_sac_code
 
             if service_goods_price_data:
                 service_goods_price_data.service_charge = total_service_charge
                 service_goods_price_data.govt_agency_fee = total_govt_agency_fee
                 service_goods_price_data.stamp_duty = total_stamp_duty
                 service_goods_price_data.stamp_fee = total_stamp_fee
+                service_goods_price_data.hsn_sac_code             = hsn_sac_code
 
             # Validate and append the work order detail with its price data
             service_data = ServiceGoodsPriceDetailsSchema(
@@ -107,57 +121,57 @@ def generate_quotation_service_details(
             services.append(service_data)
 
         # try:
-            quotation_master = AccQuotationMaster(
-                work_order_master_id=work_order_master_id,
-                quotation_version=1,
-                quotation_date=datetime.utcnow().date(),
-                quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
-                offer_total=0,
-                coupon_total=0,
-                product_discount_total=0,
-                bill_discount=0,
-                additional_discount=0,
-                round_off=total_service_charge,
-                net_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                grand_total=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                remarks='',
-                quotation_status='DRAFT',
-                is_final_quotation='no',
-                created_by= 1,
-                created_on=datetime.utcnow()
+        quotation_master = AccQuotationMaster(
+            work_order_master_id=work_order_master_id,
+            quotation_version=1,
+            quotation_date=datetime.utcnow().date(),
+            quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
+            offer_total=0,
+            coupon_total=0,
+            product_discount_total=0,
+            bill_discount=0,
+            additional_discount=0,
+            round_off=total_service_charge,
+            net_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+            grand_total=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+            remarks='',
+            quotation_status='DRAFT',
+            is_final_quotation='no',
+            created_by= 1,
+            created_on=datetime.utcnow()
+        )
+        db.add(quotation_master)
+        db.flush()  # To get the new quotation_master.id
+
+        for service_data in services:
+            details = service_data.service
+            prices = service_data.prices
+
+            quotation_detail = AccQuotationDetails(
+                quotation_master_id=quotation_master.id,
+                service_goods_master_id=details.service_goods_master_id,
+                hsn_sac_code=hsn_sac_code,
+                is_bundle_service=details.is_bundle_service,
+                bundle_service_id=details.bundle_service_id,
+                service_charge=prices.service_charge,
+                govt_agency_fee=prices.govt_agency_fee,
+                stamp_duty=prices.stamp_duty,
+                stamp_fee=prices.stamp_fee,
+                quantity=1,
+                offer_percentage = 0.0,
+                offer_amount = 0.0,
+                coupon_percentage = 0.0,
+                coupon_amount = 0.0,
+                discount_percentage = 0.0,
+                discount_amount = 0.0,
+                gst_percent=0.0,
+                gst_amount=0,
+                taxable_amount= 0.0,
+                
+                total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
             )
-            db.add(quotation_master)
-            db.flush()  # To get the new quotation_master.id
 
-            for service_data in services:
-                details = service_data.service
-                prices = service_data.prices
-
-                quotation_detail = AccQuotationDetails(
-                    quotation_master_id=quotation_master.id,
-                    service_goods_master_id=details.service_goods_master_id,
-                    # hsn_sac_code=details.hsn_sac_code,
-                    is_bundle_service=details.is_bundle_service,
-                    bundle_service_id=details.bundle_service_id,
-                    service_charge=prices.service_charge,
-                    govt_agency_fee=prices.govt_agency_fee,
-                    stamp_duty=prices.stamp_duty,
-                    stamp_fee=prices.stamp_fee,
-                    quantity=1,
-                    offer_percentage = 0.0,
-                    offer_amount = 0.0,
-                    coupon_percentage = 0.0,
-                    coupon_amount = 0.0,
-                    discount_percentage = 0.0,
-                    discount_amount = 0.0,
-                    gst_percent=0.0,
-                    gst_amount=0,
-                    taxable_amount= 0.0,
-                   
-                    total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                )
-
-                db.add(quotation_detail)
+            db.add(quotation_detail)
             db.commit()
             # return quotation_master.id
             return {"message": "Quotation saved successfully",
@@ -165,9 +179,7 @@ def generate_quotation_service_details(
                      "quotation_detail_id": quotation_detail.id}
 
      
-        # except Exception as e:
-        #     db.rollback()
-        #     raise HTTPException(status_code=500, detail=f"An unexpected error occurred, {str(e)}")
+        
 
     except SQLAlchemyError as e:
         db.rollback()
