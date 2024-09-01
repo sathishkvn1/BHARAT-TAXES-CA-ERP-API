@@ -403,26 +403,25 @@ def get_quotation_data(
             # Fetch quotation details with the join to get service names
             quotation_details_data1 = db.query(
                 AccQuotationDetails,
-                OffViewServiceGoodsMaster.service_goods_name,OffWorkOrderDetails.service_required,
-                OffWorkOrderDetails.service_required_date
+                OffViewServiceGoodsMaster.service_goods_name
             ).join(
                 OffViewServiceGoodsMaster,
                 AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
             # ).join(
-                # OffWorkOrderDetails,
-                # AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
+            #     OffWorkOrderDetails,
+            #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
             ).filter(
                 AccQuotationDetails.quotation_master_id == quotation_data.id,
                 AccQuotationDetails.is_deleted == 'no'
-            )
+            ).distinct()
             quotation_details_data = quotation_details_data1.all()
             # Correctly handle the results as tuples
             quotation_details_list = []
-            for detail, service_name,service_required,service_required_date in quotation_details_data:
+            for detail, service_name in quotation_details_data:
                 detail_dict = detail.__dict__.copy()  # Copy to modify
                 detail_dict['service_goods_name'] = service_name
-                detail_dict['service_required'] = service_required
-                detail_dict['service_required_date'] = service_required_date
+                # detail_dict['service_required'] = service_required
+                # detail_dict['service_required_date'] = service_required_date
                 quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
 
             # Construct response schema for a single quotation
@@ -434,19 +433,7 @@ def get_quotation_data(
             
             return quotation_service_price_data
         else:
-            # if status != 'ALL':
-            #     query = query.filter(AccQuotationMaster.quotation_status == status)
-            
-            # if from_date and to_date:
-            #     query = query.filter(
-            #         AccQuotationMaster.quotation_date >= from_date,
-            #         AccQuotationMaster.quotation_date <= to_date
-            #     )
-            # elif from_date:
-            #     query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-            # elif to_date:
-            #     query = query.filter(AccQuotationMaster.quotation_date <= to_date)
-
+           
             # Fetch all filtered quotations
             quotation_master_list = query.all()
            
@@ -472,7 +459,7 @@ def get_quotation_data(
                 ).filter(
                         AccQuotationDetails.quotation_master_id == quotation.id,
                         AccQuotationDetails.is_deleted == 'no'
-                    ).all()
+                    ).distinct().all()
 
                 # Correctly handle the results as tuples
                 quotation_details_list = []
@@ -495,7 +482,6 @@ def get_quotation_data(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-    
 
 
 def generate_profoma_invoice_details(
