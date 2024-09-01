@@ -1903,34 +1903,7 @@ import pdfkit
 TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
 UPLOAD_DIR_CONSULTANT_DETAILS = "uploads/consultant_details"
 
-# def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
-#     # Load the template environment
-#     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
-#     template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
-#     env = Environment(loader=FileSystemLoader(template_dir))
-#     template = env.get_template(template_name)
-    
-#     # Render the template with data
-#     html_content = template.render(employees=employee_list)
-    
-    
-#     # Configuration for pdfkit
-#     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
 
-#     print("Path is",config)
-    
-#     # PDF options
-#     options = {
-#         'footer-ce': 'Page [page] of [topage]',
-#         'footer-font-size': '8',
-#         'margin-bottom': '20mm',
-#         'no-outline': None
-#     }
-    
-#     # Convert HTML to PDF
-#     pdfkit.from_string(html_content, file_path, configuration=config, options=options)
-    
-#     return open(file_path, "rb")
 
 def generate_consultant_employees_pdf_template(employee_list, file_path):
     # Load the template environment
@@ -2695,9 +2668,10 @@ def get_documents(
 def upload_document(
    id: int,
    request: DocumentsSchema = Depends(),
-   file: Optional[UploadFile] = File(None),
+  
    db: Session = Depends(get_db),
-   token: str = Depends(oauth2.oauth2_scheme)
+   token: str = Depends(oauth2.oauth2_scheme),
+   file: Optional[UploadFile] = File(None)
 ):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
