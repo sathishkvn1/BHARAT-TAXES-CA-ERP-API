@@ -64,6 +64,8 @@ def generate_quotation_service_details(
         for details in work_order_details_data:
             service_master_id = details.service_goods_master_id
             constitution_id = details.constitution_id
+
+            
         # Loop through each detail to fetch its price data
         for details in work_order_details_data:
             service_master_id = details.service_goods_master_id
@@ -172,20 +174,19 @@ def generate_quotation_service_details(
             )
 
             db.add(quotation_detail)
-            db.commit()
+        db.commit()
             # return quotation_master.id
-            return {"message": "Quotation saved successfully",
+        return {"message": "Quotation saved successfully",
                      "quotation_master_id": quotation_master.id,
                      "quotation_detail_id": quotation_detail.id}
 
      
-        
+       
 
     except SQLAlchemyError as e:
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 def save_quotation_data(
