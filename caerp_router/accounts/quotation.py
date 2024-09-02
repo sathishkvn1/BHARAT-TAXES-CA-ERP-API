@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
-from caerp_schema.accounts.quotation_schema import AccQuotationSchema
+from caerp_schema.accounts.quotation_schema import AccQuotationSchema, ServiceRequirementSchema
 from typing import Optional
 from datetime import date
 from caerp_auth import oauth2
@@ -185,3 +185,40 @@ def get_quotation_pdf(
     pdf_buffer = generate_quotation_pdf(quotations, file_path)
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=quotations.pdf"})
+
+
+
+#-------------------------------------------------------------------------------------------------------------
+
+@router.post('/save_service_requirement_status')
+def save_service_requirement_status(
+    work_order_details_id : int,
+    request: ServiceRequirementSchema,
+    db: Session =Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+     Save the service requirement status for a work order.
+
+    Parameters:
+    - work_order_details_id (int): The ID of the work order details for which the service requirement status is being set.
+    - request (ServiceRequirementSchema): The schema containing the service requirement details.
+      - "service_required" (str): Indicates whether the service is required. Possible values are "LATER", "YES", or "NO".
+      - "service_required_date" (Optional[date]): If "service_required" is set to "LATER", this date field is required to specify when the service is needed.
+    - db (Session): The database session to use for the operation. Automatically injected by FastAPI's dependency injection system.
+    - token (str): The authentication token of the user making the request. Automatically injected by FastAPI's dependency injection system.
+
+    Returns:
+    - A JSON response indicating the result of the operation, typically the status or details of the saved service requirement.
+
+    Raises:
+    - HTTPException: If the authentication token is missing or invalid, a 401 Unauthorized error is raised.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    result = db_quotation.save_service_requirement_status( db, work_order_details_id,  request, user_id )
+    return result

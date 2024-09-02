@@ -2,7 +2,7 @@ from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
 from caerp_db.office.models import OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema
-from caerp_schema.accounts.quotation_schema import AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema
+from caerp_schema.accounts.quotation_schema import AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, ServiceRequirementSchema
 from caerp_db.accounts.models import AccQuotationMaster,AccQuotationDetails
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func
@@ -552,59 +552,7 @@ def generate_profoma_invoice_details(
                 prices=service_goods_price_data
             )
             services.append(service_data)
-            # quotation_master = AccQuotationMaster(
-            #     work_order_master_id=work_order_master_id,
-            #     quotation_version=1,
-            #     quotation_date=datetime.utcnow().date(),
-            #     quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
-            #     offer_total=0,
-            #     coupon_total=0,
-            #     product_discount_total=0,
-            #     bill_discount=0,
-            #     additional_discount=0,
-            #     round_off=total_service_charge,
-            #     net_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-            #     grand_total=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-            #     remarks='',
-            #     quotation_status='DRAFT',
-            #     is_final_quotation='no',
-            #     created_by= 1,
-            #     created_on=datetime.utcnow()
-            # )
-            # db.add(quotation_master)
-            # db.flush()  # To get the new quotation_master.id
-
-            # for service_data in services:
-            #     details = service_data.service
-            #     prices = service_data.prices
-
-            #     quotation_detail = AccQuotationDetails(
-            #         quotation_master_id=quotation_master.id,
-            #         service_goods_master_id=details.service_goods_master_id,
-            #         hsn_sac_code=prices.hsn_sac_code,
-            #         is_bundle_service=details.is_bundle_service,
-            #         bundle_service_id=details.bundle_service_id,
-            #         service_charge=prices.service_charge,
-            #         govt_agency_fee=prices.govt_agency_fee,
-            #         stamp_duty=prices.stamp_duty,
-            #         stamp_fee=prices.stamp_fee,
-            #         quantity=1,
-            #         offer_percentage = 0.0,
-            #         offer_amount = 0.0,
-            #         coupon_percentage = 0.0,
-            #         coupon_amount = 0.0,
-            #         discount_percentage = 0.0,
-            #         discount_amount = 0.0,
-            #         gst_percent=0.0,
-            #         gst_amount=0,
-            #         taxable_amount= 0.0,
-                   
-            #         total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-            #     )
-
-            #     db.add(quotation_detail)
-            # db.commit()
-
+           
         quotation_service_price_data = ServiceGoodsPriceResponseSchema(
             workOrderMaster=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
             workOrderDetails=services
@@ -621,6 +569,32 @@ def generate_profoma_invoice_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
+#-------------------------------------------------------------
 
 
 
+def save_service_requirement_status(
+        db: Session,
+        work_order_details_id: int,
+        request: ServiceRequirementSchema,
+        user_id : int
+):                    
+    
+    existing_record = db.query(OffWorkOrderDetails).filter(
+        OffWorkOrderDetails.id== work_order_details_id,
+        OffWorkOrderDetails.is_deleted == 'no'
+    ).first()
+
+    try:
+        if existing_record:
+                # If the record exists, update it with the new data
+                existing_record.service_required = request.service_required
+                existing_record.service_required_date = request.service_required_date
+                existing_record.modified_by           = user_id
+                existing_record.modified_on           = datetime.utcnow() 
+
+                db.commit()
+
+    except SQLAlchemyError as e:
+        db.rollback()  # Rollback the transaction in case of error
+        raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
