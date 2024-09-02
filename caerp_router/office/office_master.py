@@ -2612,17 +2612,80 @@ def update_customer_data_document(
     
 #------------------------------------------------------------------------------------------------------
 
+# @router.get("/get_documents_and_data")
+# def get_documents(
+#     type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
+#     db: Session = Depends(get_db)
+# ) -> List[Dict[str, Any]]:
+    
+#     """  Fetches a list of documents and data records based on an optional filter type.
+#     **Parameters:**
+
+#     - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
+#     """
+#     sql_query = text("""
+#     SELECT
+#         a.id,
+#         a.work_order_master_id,
+#         a.work_order_details_id,
+#         a.document_data_category_id,
+#         b.category_name,
+#         a.document_data_master_id,
+#         c.document_data_name,
+#         d.id AS document_data_type_id, 
+#         d.document_data_type, 
+#         c.has_expiry,
+#         a.customer_id,
+#         a.stake_holder_master_id,
+#         a.data,
+#         a.display_order,
+#         a.is_document_uploded,
+#         a.uploaded_date,
+#         a.uploaded_by,
+#         a.valid_from_date,
+#         a.valid_to_date,
+#         a.remarks,
+#         a.is_deleted
+#     FROM
+#         customer_data_document_master a
+#     LEFT JOIN
+#         off_document_data_category b ON a.document_data_category_id = b.id
+#     LEFT JOIN
+#         off_document_data_master c ON a.document_data_master_id = c.id
+#     LEFT JOIN
+#         off_document_data_type d ON c.document_data_type_id = d.id 
+#     WHERE
+#         a.is_deleted = 'no'
+#     AND 
+#         (:type IS NULL OR d.document_data_type = :type)
+#     """)
+
+#     try:
+#         result = db.execute(sql_query, {"type": type})
+#         # Convert results to a list of dictionaries
+#         results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
+#         return results_list
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
 @router.get("/get_documents_and_data")
 def get_documents(
+    work_order_master_id: int,  # Required parameter
     type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
     db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
     
-    """  Fetches a list of documents and data records based on an optional filter type.
+    """
+    Fetches a list of documents and data records based on work_order_master_id and an optional filter type.
+    
     **Parameters:**
 
-    - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
+    - **work_order_master_id** (int): Filter the results by the work order master ID.
+    - **type** (Optional, `str`): Further filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
     """
+
     sql_query = text("""
     SELECT
         a.id,
@@ -2657,17 +2720,21 @@ def get_documents(
     WHERE
         a.is_deleted = 'no'
     AND 
+        a.work_order_master_id = :work_order_master_id
+    AND 
         (:type IS NULL OR d.document_data_type = :type)
     """)
 
     try:
-        result = db.execute(sql_query, {"type": type})
+        result = db.execute(sql_query, {"work_order_master_id": work_order_master_id, "type": type})
         # Convert results to a list of dictionaries
         results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
         return results_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+
 #-------------------------------------------------------------------------------------------------------
 
 @router.post('/upload_document/{id}')
