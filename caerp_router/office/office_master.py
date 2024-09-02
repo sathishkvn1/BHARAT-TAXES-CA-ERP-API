@@ -2693,3 +2693,11 @@ def upload_document(
         }                  
     except Exception as e:    
         raise HTTPException(status_code=500, detail=str(e))
+
+#-----------------------------------------------------------------------------------------------------
+
+@router.get("/get_sub_services_by_bundled_id/{bundled_service_goods_id}")
+def get_bundled_service(bundled_service_goods_id: int, db: Session = Depends(get_db)):
+    sub_services = db_office_master.get_sub_services_by_bundled_id(db, bundled_service_goods_id)
+    
+    return {"bundled_service_goods_id": bundled_service_goods_id, "services": sub_services}

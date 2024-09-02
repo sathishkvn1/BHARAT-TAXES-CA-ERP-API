@@ -3650,3 +3650,33 @@ def assign_reassign_service_task(
 
     db.commit()
 
+#----------------------------------------------------------------------------------------------
+
+
+
+
+
+def get_sub_services_by_bundled_id(db: Session, bundled_service_goods_id: int):
+    sub_services = (
+        db.query(
+            OffServiceGoodsDetails.id,
+            OffServiceGoodsMaster.service_goods_name,
+            OffServiceGoodsMaster.is_bundled_service
+        )
+        .join(OffServiceGoodsMaster, OffServiceGoodsDetails.service_goods_master_id == OffServiceGoodsMaster.id)
+        .filter(OffServiceGoodsDetails.bundled_service_goods_id == bundled_service_goods_id)
+        .filter(OffServiceGoodsDetails.is_deleted == 'no')
+        .all()
+    )
+    
+    # Constructing the response format
+    response = [
+        {
+            "id": service_id,
+            "service_name": service_name,
+            "is_bundled_service": is_bundled_service
+        }
+        for service_id, service_name, is_bundled_service in sub_services
+    ]
+    
+    return response
