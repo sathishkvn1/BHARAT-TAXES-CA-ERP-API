@@ -2634,6 +2634,7 @@ def get_documents(
         c.document_data_name,
         d.id AS document_data_type_id, 
         d.document_data_type, 
+        c.has_expiry,
         a.customer_id,
         a.stake_holder_master_id,
         a.data,
