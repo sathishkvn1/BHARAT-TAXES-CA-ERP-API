@@ -1503,8 +1503,6 @@ class OffViewServiceTaskMaster(caerp_base):
 
     task_id                        = Column(Integer, primary_key=True)
     work_order_master_id           = Column(Integer, nullable=False)
-    work_order_id                  = Column(Integer, nullable=True)
-    task_work_order_details_id     = Column(Integer, nullable=False)
     work_order_details_id          = Column(Integer, nullable=True)
     customer_id                    = Column(Integer, nullable=True)
     task_number                    = Column(String(100), nullable=False)

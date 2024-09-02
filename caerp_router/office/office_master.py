@@ -2383,16 +2383,13 @@ def update_service_task(
 
 #----------------------------------------------------------------------------------------------------------------------------
 
-
-
 @router.get('/services/get_service_task_history/{task_id}', response_model=List[OffServiceTaskHistorySchema])
 def get_service_task_history(
     task_id: int,
     db: Session = Depends(get_db)
-    # token: str = Depends(oauth2.oauth2_scheme)
 ) -> List[OffServiceTaskHistorySchema]:
     """
-    Retrieve all history entries for a given service_taskmaster_id.
+    Retrieve all history entries for a given service_task_master_id.
 
     Parameters:
     - task_id (int): The ID of the service task master.
@@ -2400,18 +2397,45 @@ def get_service_task_history(
     Returns:
     - A list of service task history records.
     """
-    
-    
+
     # Query the database for all history entries with the given task_id
-    history_details = db.query(OffServiceTaskHistory).filter(
+    history_details = db.query(
+        OffServiceTaskHistory,
+        EmployeeMaster.first_name.label('history_update_by_first_name'),
+        EmployeeMaster.middle_name.label('history_update_by_middle_name'),
+        EmployeeMaster.last_name.label('history_update_by_last_name')
+    ).join(
+        EmployeeMaster, OffServiceTaskHistory.history_update_by == EmployeeMaster.employee_id
+    ).filter(
         OffServiceTaskHistory.service_task_master_id == task_id
     ).all()
-    
+
     # If no history details found, return an empty list
     if not history_details:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No history found for this service task")
-    
-    return history_details
+
+    # Convert the SQLAlchemy query results to the Pydantic schema
+    result = []
+    for history, first_name, middle_name, last_name in history_details:
+        history_data = OffServiceTaskHistorySchema(
+            service_task_master_id=history.service_task_master_id,
+            # history_updated_on=history.history_updated_on,
+            history_updated_date=history.history_updated_on.date(),
+            history_updated_time=history.history_updated_on.time(),
+            history_update_by=history.history_update_by,
+            history_update_by_first_name=first_name,
+            history_update_by_middle_name=middle_name,
+            history_update_by_last_name=last_name,
+            history_description=history.history_description
+        )
+        result.append(history_data)
+
+    return result
+
+
+
+
+
 
 #------------------------------------------------------------------------------------------------------
 
@@ -2498,8 +2522,6 @@ def assign_reassign_service_task(
 
 
 #--------------------------------------------------------------------------------------------------------------
-
-
 
 @router.post('/update_customer_data_document')
 def update_customer_data_document(
