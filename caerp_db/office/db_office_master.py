@@ -3605,7 +3605,6 @@ def get_all_service_task_list(
 
 #----------------------------------------------------------------------------
 
-
 def assign_reassign_service_task(
     db: Session,
     task_id: int,
@@ -3639,4 +3638,15 @@ def assign_reassign_service_task(
     # Update remarks, modified_by, and modified_on fields
     task.remarks = task_data.remarks
     
+    
+    # Insert into the ServiceTaskHistory table
+    history_entry = OffServiceTaskHistory(
+        service_task_master_id=task.id,
+        history_updated_on=datetime.now(),
+        history_update_by=user_id,
+        history_description=task_data.remarks
+    )
+    db.add(history_entry)
+
     db.commit()
+

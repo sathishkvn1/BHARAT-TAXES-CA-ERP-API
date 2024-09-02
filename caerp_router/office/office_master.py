@@ -2472,7 +2472,9 @@ def assign_reassign_service_task(
     - task_id (int): The ID of the task to be assigned or reassigned.
     - assign_to (str): Specifies whether to assign to a "DEPARTMENT", "TEAM", or "EMPLOYEE".
     - task_data (ServiceTaskMasterAssign): The data for assignment, including department, team, and employee IDs.
-
+       If 'DEPARTMENT' is selected, 'TEAM' and 'EMPLOYEE' fields must be null.
+       If 'TEAM' is selected, 'DEPARTMENT' field must benot  null, but 'EMPLOYEE' is null.
+       If 'EMPLOYEE' is selected, both 'DEPARTMENT' and 'TEAM' fields must be not null.
     Returns:
     - A success message if the assignment is successful.
     """
@@ -2492,6 +2494,9 @@ def assign_reassign_service_task(
         return {"success": True, "message": "Task assigned/reassigned successfully"}
     except HTTPException as e:
         raise e
+
+
+
 #--------------------------------------------------------------------------------------------------------------
 
 
