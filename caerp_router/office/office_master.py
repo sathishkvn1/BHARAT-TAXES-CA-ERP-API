@@ -2300,60 +2300,47 @@ def get_work_order_dependancy_by_work_order_details_id(
 
 #-------------------------------SERVICE TASK-------------------------------------------------------------------------------
 
+@router.get('/services/get_all_service_task_list', response_model=List[OffViewServiceTaskMasterSchema])
 def get_all_service_task_list(
-    db: Session,
+    db: Session = Depends(get_db),
     task_no: Optional[str] = None,
-    department_id: Union[int, str] = "ALL",
-    team_id: Union[int, str] = "ALL",
-    employee_id: Union[int, str] = "ALL",
-    status_id: Union[int, str] = "ALL",
+    department_id: Union[int, str] = Query("ALL"),
+    team_id: Union[int, str] = Query("ALL"),
+    employee_id: Union[int, str] = Query("ALL"),
+    status_id: Union[int, str] = Query("ALL"),
     from_date: Optional[date] = None,
-    to_date: Optional[date] = None
+    to_date: Optional[date] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
 ) -> List[OffViewServiceTaskMasterSchema]:
+    """
+    Retrieve a list of service tasks based on various filters.
 
-    query = db.query(OffViewServiceTaskMaster)
+    Parameters:
+    - task_no (str): The task number to search for (partial match).
+    - department_id (int or str): The department ID to filter by, or "ALL" for no filtering.
+    - team_id (int or str): The team ID to filter by, or "ALL" for no filtering.
+    - employee_id (int or str): The employee ID to filter by, or "ALL" for no filtering.
+    - status_id (int or str): The status ID to filter by, or "ALL" for no filtering.
+    - from_date (date): The start date for filtering tasks.
+    - to_date (date): The end date for filtering tasks.
+    - token (str): The OAuth2 token for authentication.
 
-    if task_no:
-        query = query.filter(OffViewServiceTaskMaster.task_number.ilike(f"%{task_no}%"))
-    
-    if department_id != "ALL":
-        query = query.filter(OffViewServiceTaskMaster.department_allocated_to == department_id)
-    
-    if team_id != "ALL":
-        query = query.filter(OffViewServiceTaskMaster.team_allocated_to == team_id)
-    
-    if employee_id != "ALL":
-        query = query.filter(OffViewServiceTaskMaster.employee_allocated_to == employee_id)
-    
-    if status_id != "ALL":
-        query = query.filter(OffViewServiceTaskMaster.task_status_id == status_id)
-    
-    if from_date:
-        query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) >= from_date)
-    
-    if to_date:
-        query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) <= to_date)
+    Returns:
+    - A list of service tasks that match the given filters.
+    """
 
-    # Ensure that is_deleted is not equal to 'yes'
-    query = query.filter(OffViewServiceTaskMaster.is_deleted == 'no')
-    
-    results = query.all()
+    # Authenticate the user using the provided token.
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
 
-    for task in results:
-        task.employee_allocated_first_name = task.employee_allocated_first_name or ""
-        task.employee_allocated_middle_name = task.employee_allocated_middle_name or ""
-        task.employee_allocated_last_name = task.employee_allocated_last_name or ""
-        task.team_name = task.team_name or ""
-        task.department_name = task.department_name or ""
-        task.task_status = task.task_status or ""
-        task.task_priority = task.task_priority or ""
-        task.allocated_by_first_name = task.allocated_by_first_name or ""
-        task.allocated_by_middle_name = task.allocated_by_middle_name or ""
-        task.allocated_by_last_name = task.allocated_by_last_name or ""
-        task.remarks = task.remarks or ""
-         
+    # Call the database function to retrieve the filtered task list.
+    service_tasks = db_office_master.get_all_service_task_list(
+        db, task_no, department_id, team_id, employee_id, status_id, from_date, to_date
+    )
 
-    return results
+    return service_tasks
+
+
 
 
 #---------------------------------------------------------------------------------------------

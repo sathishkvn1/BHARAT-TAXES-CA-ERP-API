@@ -15,7 +15,7 @@ from caerp_db.office.models import AppDayOfWeek, CustomerDataDocumentMaster, Off
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 from pathlib import Path 
@@ -3561,6 +3561,7 @@ def update_service_task(
 
 #-----------------------------------------------------------------
 
+
 def get_all_service_task_list(
     db: Session,
     task_no: Optional[str] = None,
@@ -3570,7 +3571,7 @@ def get_all_service_task_list(
     status_id: Union[int, str] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None
-) -> List[OffViewServiceTaskMaster]:
+) -> List[OffViewServiceTaskMasterSchema]:
 
     query = db.query(OffViewServiceTaskMaster)
 
@@ -3593,15 +3594,28 @@ def get_all_service_task_list(
         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) >= from_date)
     
     if to_date:
-        # Include the entire `to_date` day by ensuring the comparison is correct
         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) <= to_date)
 
     # Ensure that is_deleted is not equal to 'yes'
     query = query.filter(OffViewServiceTaskMaster.is_deleted == 'no')
     
-    # Execute the query and fetch the results
-    return query.all()
+    results = query.all()
 
+    for task in results:
+        task.employee_allocated_first_name = task.employee_allocated_first_name or ""
+        task.employee_allocated_middle_name = task.employee_allocated_middle_name or ""
+        task.employee_allocated_last_name = task.employee_allocated_last_name or ""
+        task.team_name = task.team_name or ""
+        task.department_name = task.department_name or ""
+        task.task_status = task.task_status or ""
+        task.task_priority = task.task_priority or ""
+        task.allocated_by_first_name = task.allocated_by_first_name or ""
+        task.allocated_by_middle_name = task.allocated_by_middle_name or ""
+        task.allocated_by_last_name = task.allocated_by_last_name or ""
+        task.remarks = task.remarks or ""
+         
+
+    return results
 
 #----------------------------------------------------------------------------
 
