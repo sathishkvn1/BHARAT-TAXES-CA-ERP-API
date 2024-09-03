@@ -2789,3 +2789,84 @@ def get_bundled_service(bundled_service_goods_id: int, db: Session = Depends(get
     sub_services = db_office_master.get_sub_services_by_bundled_id(db, bundled_service_goods_id)
     
     return {"bundled_service_goods_id": bundled_service_goods_id, "services": sub_services}
+
+
+#------------------------------------------------------------------------------------------------------
+
+@router.get("/get_dependent_services")
+def get_dependent_services(
+    work_order_details_id: int,
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """
+    Fetches a list of dependent services for a given work_order_details_id.
+
+    **Parameters:**
+
+    - **work_order_details_id** (int): The ID of the work order detail to check for dependencies.
+
+    **Returns:**
+    - List of dependent services with their details.
+    """
+    try:
+        # Step 1: Check if the work_order_details_id is a dependent service in work_order_details table
+        dependent_service_check_query = text("""
+        SELECT is_depended_service 
+        FROM work_order_details 
+        WHERE id = :work_order_details_id 
+        AND is_deleted = 'no'
+        """)
+        result = db.execute(dependent_service_check_query, {"work_order_details_id": work_order_details_id}).fetchone()
+
+        if not result or result[0] != 'yes':
+            return []  # Return empty list if it's not a dependent service or doesn't exist
+
+        # Step 2: Fetch dependent service IDs from the work_order_dependency table
+        dependency_query = text("""
+        SELECT dependent_on_work_id 
+        FROM work_order_dependency 
+        WHERE work_order_details_id = :work_order_details_id 
+        AND is_deleted = 'no'
+        """)
+        dependent_ids = db.execute(dependency_query, {"work_order_details_id": work_order_details_id}).fetchall()
+        dependent_ids = [row[0] for row in dependent_ids]
+
+        if not dependent_ids:
+            return []
+
+        # Step 3: Fetch the dependent service details from the off_view_work_order_details view
+        # Convert the tuple of IDs into a comma-separated string for the SQL query
+        dependent_ids_str = ','.join(map(str, dependent_ids))
+
+        dependent_services_query = text(f"""
+        SELECT 
+            work_order_details_id,
+            service_goods_name,
+            trade_name,
+            leagal_name,
+            business_activity_type,
+            business_activity_master,
+            business_activity
+        FROM off_view_work_order_details
+        WHERE work_order_details_id IN ({dependent_ids_str})
+        """)
+        result = db.execute(dependent_services_query).fetchall()
+
+        # Convert results to a list of dictionaries
+        results_list = [
+            {
+                "work_order_details_id": row[0],
+                "service_goods_name": row[1],
+                "trade_name": row[2],
+                "leagal_name": row[3],
+                # "business_activity_type": row[4],
+                # "business_activity_master": row[5],
+                # "business_activity": row[6],
+            }
+            for row in result
+        ]
+        
+        return results_list
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
