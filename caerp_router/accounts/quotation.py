@@ -7,7 +7,7 @@ from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
 from caerp_schema.accounts.quotation_schema import AccQuotationSchema, ServiceRequirementSchema
-from typing import Optional
+from typing import List, Optional
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
@@ -189,11 +189,10 @@ def get_quotation_pdf(
 
 
 #-------------------------------------------------------------------------------------------------------------
-
 @router.post('/save_service_requirement_status')
 def save_service_requirement_status(
-    work_order_details_id : int,
-    request: ServiceRequirementSchema,
+    # work_order_details_id : int,
+    request: List[ServiceRequirementSchema],
     db: Session =Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -201,8 +200,9 @@ def save_service_requirement_status(
      Save the service requirement status for a work order.
 
     Parameters:
-    - work_order_details_id (int): The ID of the work order details for which the service requirement status is being set.
+    
     - request (ServiceRequirementSchema): The schema containing the service requirement details.
+      - work_order_details_id (int): The ID of the work order details for which the service requirement status is being set.
       - "service_required" (str): Indicates whether the service is required. Possible values are "LATER", "YES", or "NO".
       - "service_required_date" (Optional[date]): If "service_required" is set to "LATER", this date field is required to specify when the service is needed.
     - db (Session): The database session to use for the operation. Automatically injected by FastAPI's dependency injection system.
@@ -220,5 +220,5 @@ def save_service_requirement_status(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
-    result = db_quotation.save_service_requirement_status( db, work_order_details_id,  request, user_id )
+    result = db_quotation.save_service_requirement_status( db,   request, user_id )
     return result

@@ -1,10 +1,9 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-
+from caerp_db.common.models import BookNumber
+from caerp_db.accounts.models import AccVoucherId
 from fastapi import  HTTPException
 from sqlalchemy.exc import SQLAlchemyError
-
-from caerp_db.common.models import BookNumber
 
 # def generate_book_number(db: Session, column) -> str:
 #     # Get the maximum number from the specified column in the table
@@ -100,3 +99,13 @@ def generate_book_number(book_type,db:Session  ):
     
         # db.flush()
         return new_book_number
+
+def generate_voucher_id(db:Session):
+     
+    last_voucher = db.query(AccVoucherId).filter(AccVoucherId.id == 1).first()
+    new_voucher_id = last_voucher.voucher_id + 1
+    last_voucher.voucher_id = new_voucher_id
+    db.add(last_voucher)
+    db.flush()
+
+    return new_voucher_id

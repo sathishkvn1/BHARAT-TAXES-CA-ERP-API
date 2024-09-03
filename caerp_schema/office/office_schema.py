@@ -1025,7 +1025,7 @@ class OffWorkOrderMasterSchema(BaseModel):
 
 class WorkOrderDetailsSchema(BaseModel):
     
-    id                          : Optional[int] = None
+    id                        : Optional[int] = None
     work_order_master_id        : Optional[int] = None
     service_goods_master_id     : Optional[int] = None
     # service_goods_name          : Optional[str] = None
@@ -1049,7 +1049,7 @@ class WorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'NO'
+    service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id    : Optional[int] = None
     file_opened_on        : Optional[date] = None
@@ -1059,7 +1059,7 @@ class WorkOrderDetailsSchema(BaseModel):
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
     # depended_on: List['WorkOrderDependancySchema'] = []
-    sub_services        : List['WorkOrderDetailsSchema'] = []
+    sub_services: List['WorkOrderDetailsSchema'] = []
 
     class Config:
         orm_mode = True
@@ -1283,7 +1283,7 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'NO'
+    service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id       : Optional[int] = None
     service_status          : Optional[str] = None
@@ -1510,3 +1510,27 @@ class ServiceTaskMasterAssign(BaseModel):
         orm_mode                   : True
 
 
+class ServiceRequirementSchema(BaseModel):
+    work_order_details_id: int
+    service_required: Optional[str] = 'YES'
+    service_required_date   : Optional[date] = None
+
+
+class ServiceTaskMasterSchema(BaseModel):
+
+    id                      : Optional[int] = None
+    work_order_master_id    : Optional[int] = None
+    work_order_details_id   : Optional[int] = None
+    customer_id             : Optional[int] = None
+    task_number             : Optional[str] = None
+    allocated_by            : Optional[int] = None
+    allocated_on            : Optional[datetime] = None
+    department_allocated_on : Optional[datetime] = None
+    department_allocated_to : Optional[int] = None
+    team_allocated_on       : Optional[datetime] = None
+    team_allocated_to       : Optional[int] = None
+    employee_allocated_on   : Optional[datetime] = None
+    employee_allocated_to   : Optional[int] = None
+    task_status_id          : Optional[int] = None
+    task_priority_id        : Optional[int] = None
+    remarks                 : Optional[str] = None

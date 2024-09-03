@@ -1,17 +1,17 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
-from caerp_db.office.models import OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_db.office.models import CustomerDataDocumentMaster, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema
 from caerp_schema.accounts.quotation_schema import AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, ServiceRequirementSchema
-from caerp_db.accounts.models import AccQuotationMaster,AccQuotationDetails
+from caerp_db.accounts.models import AccInvoiceDetails, AccInvoiceMaster, AccQuotationMaster,AccQuotationDetails
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import and_,or_, func
+from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
 from caerp_constants.caerp_constants import EntryPoint
 from caerp_functions.send_email import send_email
 from caerp_schema.common.common_schema import Email
 from sqlalchemy.exc import IntegrityError
-from caerp_functions.generate_book_number import generate_book_number
+from caerp_functions.generate_book_number import generate_book_number, generate_voucher_id
 from typing import Optional,Union,List
 
 def get_service_price_details_by_service_id(
@@ -573,28 +573,240 @@ def generate_profoma_invoice_details(
 
 
 
+
 def save_service_requirement_status(
         db: Session,
-        work_order_details_id: int,
-        request: ServiceRequirementSchema,
+        # work_order_details_id: int,
+        request: List[ServiceRequirementSchema],
         user_id : int
 ):                    
-    
-    existing_record = db.query(OffWorkOrderDetails).filter(
-        OffWorkOrderDetails.id== work_order_details_id,
-        OffWorkOrderDetails.is_deleted == 'no'
-    ).first()
+    for data in request:
+        existing_record = db.query(OffWorkOrderDetails).filter(
+            OffWorkOrderDetails.id== data.work_order_details_id,
+            OffWorkOrderDetails.is_deleted == 'no'
+        ).first()
 
+        try:
+            if existing_record:
+                    # If the record exists, update it with the new data
+                    existing_record.service_required = data.service_required
+                    existing_record.service_required_date = data.service_required_date
+                    existing_record.modified_by           = user_id
+                    existing_record.modified_on           = datetime.utcnow() 
+
+                    db.commit()
+            return {'message': 'Sussess'}
+
+        except SQLAlchemyError as e:
+            db.rollback()  # Rollback the transaction in case of error
+            raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
+
+
+  
+def save_service_task_details(
+        db: Session,
+        work_order_master_id: int,
+        work_order_details_id: int,
+        user_id:int
+):
+    try: 
+        task_number = generate_book_number('TASK',db)
+        new_task = OffServiceTaskMaster(
+            work_order_master_id=work_order_master_id,
+            work_order_details_id=work_order_details_id,
+            task_number=task_number,
+            allocated_by=user_id,
+            allocated_on=datetime.utcnow(), 
+            task_status_id=1, 
+            task_priority_id=1, 
+            remarks='Initial task creation')
+        
+        db.add(new_task)
+        
+        db.commit()
+        return new_task.id
+    except SQLAlchemyError as e:
+        db.rollback()
+        # Handle database exceptions
+        raise HTTPException(status_code=500, detail=str(e))
+   
+
+def save_customer_data_document_master(
+        db: Session,
+        work_order_master_id: int,
+        work_order_details_id: int,
+        service_id: int,
+        consultation_id: int
+):
+    # SQL query to fetch document data
+    sql = text("""
+        SELECT 
+            d.*, b.document_data_category_id
+        FROM 
+            off_service_document_data_master a
+        JOIN 
+            off_service_document_data_details b ON a.id = b.service_document_data_master_id
+        JOIN 
+            off_document_data_master d ON b.document_data_master_id = d.id
+        WHERE 
+            a.service_goods_master_id = :service_id 
+            AND a.constitution_id = :consultation_id
+    """)
+
+    # Execute the query and fetch results as dictionaries
+    result = db.execute(sql, {'service_id': service_id, 'consultation_id': consultation_id}).mappings()
+
+    # Loop through the query results and insert into CustomerDataDocumentMaster
+    for row in result:
+        # Access columns by name
+        document_data_master_id = row['id']  # Assuming 'id' is the column name for document_data_master_id
+        document_data_category_id = row['document_data_category_id']
+
+        # Create a new instance of CustomerDataDocumentMaster
+        new_document = CustomerDataDocumentMaster(
+            work_order_master_id=work_order_master_id,
+            work_order_details_id=work_order_details_id,
+            document_data_category_id=document_data_category_id,
+            document_data_master_id=document_data_master_id,          
+            is_deleted='no' 
+        )
+
+        db.add(new_document)
+   
+    db.commit()
+
+    # Optionally, return something or just None
+    return {'message' : 'success'}
+
+
+
+
+def generate_profoma_invoice_details(
+        db: Session,
+        work_order_master_id: int,
+        user_id: int) -> ServiceGoodsPriceResponseSchema:
     try:
-        if existing_record:
-                # If the record exists, update it with the new data
-                existing_record.service_required = request.service_required
-                existing_record.service_required_date = request.service_required_date
-                existing_record.modified_by           = user_id
-                existing_record.modified_on           = datetime.utcnow() 
+        # Fetch master data
+        work_order_master_data = db.query(WorkOrderMasterView).filter(
+            WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        ).first()
 
-                db.commit()
+        work_order_details_data = db.query(WorkOrderDetailsView).filter(
+            WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+            WorkOrderDetailsView.service_required == 'YES',
+            WorkOrderDetailsView.is_main_service == 'yes',
+            WorkOrderDetailsView.is_deleted == 'no'
+        ).all()
+       
+        services = []
+       
+        new_voucher_id = generate_voucher_id(db)
+        # Create Invoice Master Entrynew_voucher_id = last_voucher.voucher_id + 1
+        invoice_number = generate_book_number('INVOICE',db)
+        invoice_master = AccInvoiceMaster(
+            voucher_id=new_voucher_id,  
+            service_type='NON_CONSULTATION',
+            work_order_master_id=work_order_master_id,
+            invoice_number = invoice_number,
+            invoice_date=datetime.now(),
+            account_head_id=1,            
+            created_by=user_id,
+            created_on=datetime.now(),
+            is_deleted='no'
+        )
+        # This will generate the invoice_master_id
+        db.add(invoice_master)
+        db.flush()
+        total_invoice_amount = 0.0
+
+        # Loop through each detail to fetch its price data
+        for details in work_order_details_data:
+            service_master_id = details.service_goods_master_id
+            constitution_id = details.constitution_id
+
+            # Initialize total values for each service
+            total_service_charge = 0.0
+            total_govt_agency_fee = 0.0
+            total_stamp_fee = 0.0
+            total_stamp_duty = 0.0
+
+            # Save service task details and customer data document
+            task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, user_id)
+            service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, service_master_id, constitution_id)
+            
+            # Fetch service price details
+            service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
+            if service_goods_price_data:
+                if details.is_bundle_service == 'no':
+                    total_service_charge = service_goods_price_data.service_charge
+                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
+                    total_stamp_fee = service_goods_price_data.stamp_fee
+                    total_stamp_duty = service_goods_price_data.stamp_duty
+                else:
+                    total_service_charge = service_goods_price_data.service_charge
+                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
+                    total_stamp_fee = service_goods_price_data.stamp_fee
+                    total_stamp_duty = service_goods_price_data.stamp_duty
+
+                    sub_services = db.query(WorkOrderDetailsView).filter(
+                        WorkOrderDetailsView.bundle_service_id == details.work_order_details_id,
+                        WorkOrderDetailsView.is_deleted == 'no'
+                    ).all()
+
+                    for sub_service in sub_services:
+                        sub_service_price_data = get_service_price_details_by_service_id(db, sub_service.service_goods_master_id, sub_service.constitution_id)
+                        if sub_service_price_data:
+                            total_service_charge += sub_service_price_data.service_charge
+                            total_govt_agency_fee += sub_service_price_data.govt_agency_fee
+                            total_stamp_fee += sub_service_price_data.stamp_fee
+                            total_stamp_duty += sub_service_price_data.stamp_duty
+
+            # Create Invoice Details Entry
+            invoice_detail = AccInvoiceDetails(
+                invoice_master_id=invoice_master.id,
+                service_goods_master_id=service_master_id,
+                is_bundle_service=details.is_bundle_service,
+                bundle_service_id=details.work_order_details_id,
+                service_charge=total_service_charge,
+                govt_agency_fee=total_govt_agency_fee,
+                stamp_duty=total_stamp_duty,
+                stamp_fee=total_stamp_fee,
+                quantity=1,  # Assuming quantity is 1, modify as necessary
+                # gst_percent=service_goods_price_data.gst_percent if service_goods_price_data else 0.0,
+                # gst_amount=service_goods_price_data.gst_amount if service_goods_price_data else 0.0,
+                # taxable_amount=service_goods_price_data.taxable_amount if service_goods_price_data else 0.0,
+                total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+                is_deleted='no'
+            )
+            db.add(invoice_detail)
+            total_invoice_amount += invoice_detail.total_amount
+
+            # Append service data for response
+            service_data = ServiceGoodsPriceDetailsSchema(
+                service=OffViewWorkOrderDetailsSchema.model_validate(details.__dict__),
+                prices=service_goods_price_data
+            )
+            services.append(service_data)
+         
+        # Update Invoice Master with Total Amount
+        invoice_master.total_amount = total_invoice_amount
+        invoice_master.service_task_master_id = task_id
+        
+        db.commit()
+        work_order_master_data = db.query(WorkOrderMasterView).filter(
+            WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        ).first()
+        quotation_service_price_data = ServiceGoodsPriceResponseSchema(
+            workOrderMaster=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
+            workOrderDetails=services
+        )
+
+        return {
+            'message': 'Success',
+            'quotation_service_price_data': quotation_service_price_data
+        }
 
     except SQLAlchemyError as e:
-        db.rollback()  # Rollback the transaction in case of error
-        raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+

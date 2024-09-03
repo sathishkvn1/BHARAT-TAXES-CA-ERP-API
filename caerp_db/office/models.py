@@ -1268,7 +1268,7 @@ class OffWorkOrderDetails(caerp_base):
     bundle_service_id           = Column(Integer, nullable=True)
     is_depended_service         = Column(Enum('yes', 'no'), nullable=False, default='no')
     processing_order            = Column(Integer, nullable=True)
-    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='no')
+    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
     service_required_date       = Column(Date, nullable=True)
     service_status_id           = Column(Integer, nullable=False)
     file_opened_on              = Column(DateTime, nullable=True)
@@ -1284,8 +1284,6 @@ class OffWorkOrderDetails(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
-
-
 
 
 class OffWorkOrderStatus(caerp_base):
@@ -1360,6 +1358,7 @@ class WorkOrderMasterView(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
+
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
     
@@ -1391,7 +1390,7 @@ class WorkOrderDetailsView(caerp_base):
     bundle_service_id           = Column(Integer, nullable=True)
     is_depended_service         = Column(Enum('yes', 'no'), nullable=False, default='no')
     processing_order            = Column(Integer, nullable=True)
-    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='no')
+    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
     service_required_date       = Column(Date, nullable=True)
     service_status_id           = Column(Integer, nullable=False)
     service_status           = Column(String, nullable=True)
@@ -1408,6 +1407,7 @@ class WorkOrderDetailsView(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
+
 
 class WorkOrderBusinessPlaceDetails(caerp_base):
     __tablename__ = 'work_order_business_place_details'

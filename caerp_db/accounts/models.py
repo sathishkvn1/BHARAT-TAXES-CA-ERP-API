@@ -1,5 +1,5 @@
 from caerp_db.database import caerp_base
-from sqlalchemy import Column, Integer, String,Date,Float,Enum,Time, func
+from sqlalchemy import Column, DateTime, Integer, String,Date,Float,Enum,Time, func
 
 
 class AccQuotationMaster(caerp_base):
@@ -67,3 +67,73 @@ class AccQuotationDetails(caerp_base):
     total_amount                = Column(Float, nullable=True)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     
+
+
+
+class AccInvoiceMaster(caerp_base):
+    __tablename__ = 'acc_invoice_master'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    voucher_id                  = Column(Integer, nullable=False)
+    service_type                = Column(Enum('CONSULTATION', 'NON_CONSULTATION', 'GOODS'), nullable=False, default='no' )
+
+    appointment_master_id       = Column(Integer, nullable=True)
+    visit_master_id             = Column(Integer, nullable=True)
+
+    work_order_master_id        = Column(Integer, nullable=True)
+    service_task_master_id      = Column(Integer, nullable=True)
+
+    invoice_date                = Column(Date, nullable=True)
+    invoice_number              = Column(String, nullable=True)
+    account_head_id             = Column(Integer, nullable=True)
+    total_amount                = Column(Float, nullable=False,default=0.0)
+    discount_amount             = Column(Float, nullable=False,default=0.0)
+    additional_discount_amount  = Column(Float, nullable=False,default=0.0)
+    advance_amount              = Column(Float, nullable=False,default=0.0)
+    round_off_amount            = Column(Float, nullable=False,default=0.0)
+    bill_amount                 = Column(Float, nullable=False,default=0.0)
+    remarks                     = Column(String, nullable=True)
+
+    created_by          = Column(Integer, nullable=False)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, nullable=True)
+    modified_on         = Column(Date, nullable=True)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, nullable=True)
+    deleted_on          = Column(Date, nullable=True)
+
+
+class AccInvoiceDetails(caerp_base):
+    __tablename__ = 'acc_invoice_details'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    invoice_master_id           = Column(Integer, nullable=False)
+    service_goods_master_id     = Column(Integer, nullable=False)
+    is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
+    bundle_service_id           = Column(Integer, nullable=False)
+    service_charge              = Column(Float, nullable=False, default=0.0)
+    govt_agency_fee             = Column(Float, nullable=False, default=0.0)
+    stamp_duty                  = Column(Float, nullable=False, default=0.0)
+    stamp_fee                   = Column(Float, nullable=False, default=0.0)
+    quantity                    = Column(Integer, nullable=False, default=1.0)
+
+    offer_master_id             = Column(Integer, nullable=True)
+    offer_name                  = Column(String, nullable=True)
+    offer_percentage            = Column(Float, nullable=False, default=0.0)
+    offer_amount                = Column(Float, nullable=False, default=0.0)
+
+    discount_percentage         = Column(Float, nullable=False, default=0.0)
+    discount_amount             = Column(Float, nullable=False, default=0.0)
+
+    gst_percent                 = Column(Float, nullable=False, default=0.0)
+    gst_amount                  = Column(Float, nullable=False, default=0.0)
+    taxable_amount              = Column(Float, nullable=False, default=0.0)
+    total_amount                = Column(Float, nullable=False, default=0.0)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AccVoucherId(caerp_base):
+    __tablename__ = 'acc_voucher_id'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    voucher_id           = Column(Integer, nullable=False)
