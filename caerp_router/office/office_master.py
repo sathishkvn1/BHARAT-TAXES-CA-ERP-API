@@ -2844,9 +2844,7 @@ def get_dependent_services(
             service_goods_name,
             trade_name,
             leagal_name,
-            business_activity_type,
-            business_activity_master,
-            business_activity
+            service_status
         FROM off_view_work_order_details
         WHERE work_order_details_id IN ({dependent_ids_str})
         """)
@@ -2859,9 +2857,8 @@ def get_dependent_services(
                 "service_goods_name": row[1],
                 "trade_name": row[2],
                 "leagal_name": row[3],
-                # "business_activity_type": row[4],
-                # "business_activity_master": row[5],
-                # "business_activity": row[6],
+                "service_status":row[4]
+              
             }
             for row in result
         ]
