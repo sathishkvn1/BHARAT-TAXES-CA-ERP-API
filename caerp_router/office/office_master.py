@@ -25,9 +25,11 @@ from sqlalchemy import text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
-
+from pathlib import Path 
 
 from sqlalchemy import select, func, and_
+
+from settings import BASE_URL
 
 
 router = APIRouter(
@@ -2753,10 +2755,7 @@ def get_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 #-------------------------------------------------------------------------------------------------------
-
 @router.post('/upload_document/{id}')
 def upload_document(
    id: int,
@@ -2783,16 +2782,30 @@ def upload_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-----------------------------------------------------------------------------------------------------
+@router.get("/get_upload_document/{id}", response_model=dict)
+def get_upload_document(id: int):
+    # Search for a file that starts with the given ID and has any extension
+    file_path = None
+    for file in Path(UPLOAD_WORK_ORDER_DOCUMENTS).glob(f"{id}.*"):
+        if file.is_file():
+            file_path = file
+            break
 
+    if not file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    
+    return {"photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}"}
+
+
+#------------------------------------------------------------------------------------
 @router.get("/get_sub_services_by_bundled_id/{bundled_service_goods_id}")
 def get_bundled_service(bundled_service_goods_id: int, db: Session = Depends(get_db)):
     sub_services = db_office_master.get_sub_services_by_bundled_id(db, bundled_service_goods_id)
     
     return {"bundled_service_goods_id": bundled_service_goods_id, "services": sub_services}
 
-
 #------------------------------------------------------------------------------------------------------
-
 @router.get("/get_dependent_services")
 def get_dependent_services(
     work_order_details_id: int,
@@ -2817,7 +2830,7 @@ def get_dependent_services(
         AND is_deleted = 'no'
         """)
         result = db.execute(dependent_service_check_query, {"work_order_details_id": work_order_details_id}).fetchone()
-
+        
         if not result or result[0] != 'yes':
             return []  # Return empty list if it's not a dependent service or doesn't exist
 
@@ -2829,6 +2842,7 @@ def get_dependent_services(
         AND is_deleted = 'no'
         """)
         dependent_ids = db.execute(dependency_query, {"work_order_details_id": work_order_details_id}).fetchall()
+        
         dependent_ids = [row[0] for row in dependent_ids]
 
         if not dependent_ids:
@@ -2850,6 +2864,8 @@ def get_dependent_services(
         """)
         result = db.execute(dependent_services_query).fetchall()
 
+        # print("result...............",result)
+
         # Convert results to a list of dictionaries
         results_list = [
             {
@@ -2867,3 +2883,5 @@ def get_dependent_services(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+#----------------------------------------------------------------------------------------------------------

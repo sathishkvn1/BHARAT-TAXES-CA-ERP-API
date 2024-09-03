@@ -94,7 +94,10 @@ app.mount("/common", app_common, name="common")
 app.mount("/office", app_office, name="office")
 app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 app.mount("/accounts/",accounts,name="accounts")
+
 app_common.mount("/captcha/generate_captcha", StaticFiles(directory="uploads/captcha_modified_images"), name="captcha_images")
+# app_office.mount("/upload_document", StaticFiles(directory="uploads/work_order_documents"), name="documents")
+app_office.mount("/upload_document", StaticFiles(directory="uploads/work_order_documents"), name="office_documents")
 hr_and_payroll.mount("/Employee/upload_document", StaticFiles(directory="uploads/employee_documents"), name="documents")
 
 
