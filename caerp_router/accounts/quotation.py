@@ -23,23 +23,14 @@ router  = APIRouter(
 @router.get('/generate_quotation_service_details')
 def generate_quotation_service_details(
     work_order_master_id: int,
-    entry_point : EntryPoint,
-    # work_order_details_id: int,
-    # service_goods_master_id : int,
-    # constitution_id :int,
+   
     db: Session = Depends(get_db)
 ):
-    if entry_point == 'QUOTATION':
-                result  = db_quotation.generate_profoma_invoice_details(db,work_order_master_id)
-    elif entry_point == 'WORK_ORDER':
+    
          
-        result   = db_quotation.generate_quotation_service_details(db,work_order_master_id)
-    else: 
-         return {'message ':'Invalid Entry point' }
-#   result  = db_quotation.generate_profoma_invoice_details(db,work_order_master_id)
+    result   = db_quotation.generate_quotation_service_details(db,work_order_master_id)
+    
     return result
-
-
 
 @router.post('/save_quotation_data')
 def save_quotation_data(
@@ -222,3 +213,21 @@ def save_service_requirement_status(
 
     result = db_quotation.save_service_requirement_status( db,   request, user_id )
     return result
+
+
+#--------------------------------------------------------------------------------------------
+
+@router.post('/generate_profoma_invoice')
+def generate_profoma_invoice(
+    work_order_master_id,
+    db : Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)):
+
+            if not token:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+            auth_info = authenticate_user(token)
+            user_id = auth_info.get("user_id")
+            result   = db_quotation.generate_profoma_invoice_details(db,work_order_master_id,user_id)
+            return result
+
