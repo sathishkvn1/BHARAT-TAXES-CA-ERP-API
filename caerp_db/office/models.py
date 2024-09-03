@@ -1503,6 +1503,8 @@ class OffViewServiceTaskMaster(caerp_base):
 
     task_id                        = Column(Integer, primary_key=True)
     work_order_master_id           = Column(Integer, nullable=False)
+    work_order_number              = Column(String(50), nullable=True)   
+    work_order_date                = Column(Date, nullable=True)  
     work_order_details_id          = Column(Integer, nullable=True)
     customer_id                    = Column(Integer, nullable=True)
     task_number                    = Column(String(100), nullable=False)
@@ -1530,3 +1532,4 @@ class OffViewServiceTaskMaster(caerp_base):
     is_deleted                     = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                     = Column(Integer, nullable=True)
     deleted_on                     = Column(DateTime, nullable=True)
+

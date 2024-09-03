@@ -1466,37 +1466,35 @@ class OffServiceTaskHistorySchema(BaseModel):
 
 
 
-
 class OffViewServiceTaskMasterSchema(BaseModel):
     task_id                        : int
     work_order_master_id           : int
-    work_order_details_id          : Optional[int] 
-    customer_id                    : Optional[int] 
+    work_order_number              : Optional[str] 
+    work_order_date                : Optional[date] 
+    work_order_details_id          : Optional[int] = None
+    customer_id                    : Optional[int] = None
     task_number                    : str
     allocated_by                   : int
-    allocated_by_first_name        : Optional[str] 
-    allocated_by_middle_name       : Optional[str] 
-    allocated_by_last_name         : Optional[str] 
+    allocated_by_first_name        : Optional[str] = ""
+    allocated_by_middle_name       : Optional[str] = ""
+    allocated_by_last_name         : Optional[str] = ""
     allocated_on                   : datetime
-    department_allocated_on        : Optional[datetime]
-    department_allocated_to        : Optional[int]
-    department_name                : Optional[str] 
-    team_allocated_on              : Optional[datetime]
-    team_allocated_to              : Optional[int]
-    team_name                      : Optional[str] 
-    employee_allocated_on          : Optional[datetime]
-    employee_allocated_to          : Optional[int]
-    employee_allocated_first_name  : Optional[str] 
-    employee_allocated_middle_name : Optional[str] 
-    employee_allocated_last_name   : Optional[str] 
-    task_status_id                 : Optional[int]
-    task_status                    : Optional[str] 
-    task_priority_id               : Optional[int]
-    task_priority                  : Optional[str] 
-    remarks                        : Optional[str] 
-    # is_deleted                     : str
-    # deleted_by                     : Optional[int] = None
-    # deleted_on                     : Optional[datetime] = None
+    department_allocated_on        : Optional[datetime] = None
+    department_allocated_to        : Optional[int] = None
+    department_name                : Optional[str] = ""
+    team_allocated_on              : Optional[datetime] = None
+    team_allocated_to              : Optional[int] = None
+    team_name                      : Optional[str] = ""
+    employee_allocated_on          : Optional[datetime] = None
+    employee_allocated_to          : Optional[int] = None
+    employee_allocated_first_name  : Optional[str] = ""
+    employee_allocated_middle_name : Optional[str] = ""
+    employee_allocated_last_name   : Optional[str] = ""
+    task_status_id                 : Optional[int] = None
+    task_status                    : Optional[str] = ""
+    task_priority_id               : Optional[int] = None
+    task_priority                  : Optional[str] = ""
+    remarks                        : Optional[str] = ""
 
     class Config:
         orm_mode                   : True
