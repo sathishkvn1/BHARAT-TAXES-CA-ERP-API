@@ -70,5 +70,62 @@ class AccQuotationResponseSchema(BaseModel):
     work_order_master : OffViewWorkOrderMasterSchema
     quotation_master : AccQuotationMasterSchema
     quotation_details : List[AccQuotationDetailsSchema]
+class AccProformaInvoiceMasterSchema(BaseModel):
+
+    id                      : Optional[int]= None
+    voucher_id              : Optional[int]= None
+    service_type            : Optional[str]= 'NON_CONSULTATION'
+
+    appointment_master_id   : Optional[int]= None
+    visit_master_id         : Optional[int]= None
+
+    work_order_master_id    : Optional[int]= None
+    service_task_master_id  : Optional[int]= None
+
+    invoice_date            : Optional[date]= None
+    invoice_number          : Optional[str]= None
+    account_head_id         : Optional[int]= None
+    total_amount            : Optional[float]= None
+    discount_amount         : Optional[float]= None
+    additional_discount_amount  : Optional[float]= None
+    advance_amount              : Optional[float]= None
+    round_off_amount            : Optional[float]= None
+    bill_amount                 : Optional[float]= None
+    remarks                     : Optional[str]= None
+
+class AccProformaInvoiceDetailsSchema(BaseModel):
+
+    id                           : Optional[int]= None
+    invoice_master_id           : Optional[int]= None
+    service_goods_master_id     : Optional[int]= None
+    is_bundle_service           : Optional[str]= 'no'
+    bundle_service_id           : Optional[int]= None
+    service_charge              : Optional[float]= None
+    govt_agency_fee             : Optional[float]= None
+    stamp_duty                  : Optional[float]= None
+    stamp_fee                   : Optional[float]= None
+    quantity                    : Optional[int]= None
+
+    offer_master_id             : Optional[int]= None
+    offer_name                  : Optional[str]= None
+    offer_percentage            : Optional[float]= None
+    offer_amount                : Optional[float]= None
+
+    discount_percentage         : Optional[float]= None
+    discount_amount             : Optional[float]= None
+
+    gst_percent                 : Optional[float]= None
+    gst_amount                  : Optional[float]= None
+    taxable_amount              : Optional[float]= None
+    total_amount                : Optional[float]= None
+    is_deleted                  : Optional[str]= None
 
 
+class AccProformaInvoiceShema(BaseModel):
+    invoice_master : AccProformaInvoiceMasterSchema
+    invoice_details : List[AccProformaInvoiceDetailsSchema]
+class AccInvoiceResponceSchema(BaseModel):
+    work_order_master : OffViewWorkOrderMasterSchema
+    invoice_master : AccProformaInvoiceMasterSchema
+    invoice_details : List[AccProformaInvoiceDetailsSchema]
+    

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
-from caerp_schema.accounts.quotation_schema import AccQuotationSchema
+from caerp_schema.accounts.quotation_schema import AccProformaInvoiceShema, AccQuotationSchema
 from typing import List, Optional
 from datetime import date
 from caerp_auth import oauth2
@@ -15,6 +15,7 @@ from caerp_constants.caerp_constants import EntryPoint
 import pdfkit
 
 from caerp_schema.office.office_schema import ServiceRequirementSchema
+
 
 
 router  = APIRouter(
@@ -233,3 +234,31 @@ def generate_profoma_invoice(
             result   = db_quotation.generate_profoma_invoice_details(db,work_order_master_id,user_id)
             return result
 
+#----------------------------------------------------------------------------------------
+
+@router.post('/save_proforma_invoice')
+def save_proforma_invoice(
+    work_order_master_id: int,
+    request:AccProformaInvoiceShema,
+    db:Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)):
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+        auth_info = authenticate_user(token)
+        user_id = auth_info.get("user_id")
+        result = db_quotation.save_profoma_invoice( db, work_order_master_id,request,user_id)
+        return result
+
+
+
+
+#---------------------------------------------------------------------------------------------
+@router.get('/get_proforma_invoice')
+def get_proforma_invoice(
+     work_order_master_id : int,
+     invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,invoice_master_id)
+     return result
