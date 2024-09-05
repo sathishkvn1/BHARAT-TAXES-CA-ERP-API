@@ -71,7 +71,4 @@ class AccQuotationResponseSchema(BaseModel):
     quotation_master : AccQuotationMasterSchema
     quotation_details : List[AccQuotationDetailsSchema]
 
-class ServiceRequirementSchema(BaseModel):
-    # work_order_details_id: int
-    service_required: Optional[str] = 'YES'
-    service_required_date   : Optional[date] = None
+

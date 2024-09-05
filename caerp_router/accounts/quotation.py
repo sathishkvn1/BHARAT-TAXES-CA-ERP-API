@@ -6,13 +6,15 @@ from sqlalchemy.orm import Session
 from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
-from caerp_schema.accounts.quotation_schema import AccQuotationSchema, ServiceRequirementSchema
+from caerp_schema.accounts.quotation_schema import AccQuotationSchema
 from typing import List, Optional
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import EntryPoint
 import pdfkit
+
+from caerp_schema.office.office_schema import ServiceRequirementSchema
 
 
 router  = APIRouter(
