@@ -1510,6 +1510,7 @@ class ServiceTaskMasterAssign(BaseModel):
         orm_mode                   : True
 
 
+
 class ServiceRequirementSchema(BaseModel):
     work_order_details_id: int
     service_required: Optional[str] = 'YES'
