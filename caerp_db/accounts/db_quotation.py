@@ -1049,13 +1049,16 @@ def get_demand_notice(
         db: Session
 ):
     sql = text("""
-            SELECT * FROM off_document_data_master WHERE id 
-               IN ( SELECT document_data_master_id FROM customer_data_document_master 
-                    WHERE work_order_master_id = :work_order_master_id)
+           SELECT A.*, B.document_data_type FROM off_document_data_master  AS A
+
+            JOIN off_document_data_type AS B ON A.document_data_type_id = B.id
+
+            WHERE A.id IN (
+
+            SELECT document_data_master_id FROM customer_data_document_master WHERE work_order_master_id = 1)
         
             """)
     result = db.execute(sql, {'work_order_master_id': work_order_master_id}).mappings().all()
     
     return result
-
-
+#-------------------------------------------------------------------------------------------------------------

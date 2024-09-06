@@ -98,6 +98,7 @@ class AccProformaInvoiceDetailsSchema(BaseModel):
     id                           : Optional[int]= None
     invoice_master_id           : Optional[int]= None
     service_goods_master_id     : Optional[int]= None
+    service_goods_name          : Optional[str] =None
     is_bundle_service           : Optional[str]= 'no'
     bundle_service_id           : Optional[int]= None
     service_charge              : Optional[float]= None
@@ -129,3 +130,5 @@ class AccInvoiceResponceSchema(BaseModel):
     invoice_master : AccProformaInvoiceMasterSchema
     invoice_details : List[AccProformaInvoiceDetailsSchema]
     
+
+
