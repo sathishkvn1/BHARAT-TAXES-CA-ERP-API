@@ -2,6 +2,7 @@ import os
 from fastapi import APIRouter, Depends,HTTPException,status,Query
 from fastapi.responses import StreamingResponse
 from jinja2 import Environment, FileSystemLoader
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
@@ -220,9 +221,9 @@ def save_service_requirement_status(
 
 #--------------------------------------------------------------------------------------------
 
-@router.post('/generate_profoma_invoice')
+@router.get('/generate_profoma_invoice')
 def generate_profoma_invoice(
-    work_order_master_id,
+    work_order_master_id : int,
     db : Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)):
 
@@ -262,3 +263,17 @@ def get_proforma_invoice(
 ):
      result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,invoice_master_id)
      return result
+
+
+#---------------------------------------------------------------------------------------------------
+
+
+@router.get('/get_demand_notice')
+def get_demand_notice(
+     work_order_master_id : int,
+     db: Session = Depends(get_db)
+):
+     
+     result = db_quotation.get_demand_notice(work_order_master_id,db)
+     return result
+

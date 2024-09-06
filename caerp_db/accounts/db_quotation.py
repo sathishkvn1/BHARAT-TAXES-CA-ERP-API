@@ -595,7 +595,7 @@ def save_service_requirement_status(
                     existing_record.modified_on           = datetime.utcnow() 
 
                     db.commit()
-            return {'message': 'Sussess'}
+            return {'message': 'Success'}
 
         except SQLAlchemyError as e:
             db.rollback()  # Rollback the transaction in case of error
@@ -1041,4 +1041,21 @@ def save_profoma_invoice(
         except SQLAlchemyError as e:
             db.rollback()  # Rollback the transaction in case of error
             raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
+
+#-------------------------------------------------------------------------------------------------------
+
+def get_demand_notice(
+        work_order_master_id: int,
+        db: Session
+):
+    sql = text("""
+            SELECT * FROM off_document_data_master WHERE id 
+               IN ( SELECT document_data_master_id FROM customer_data_document_master 
+                    WHERE work_order_master_id = :work_order_master_id)
+        
+            """)
+    result = db.execute(sql, {'work_order_master_id': work_order_master_id}).mappings().all()
+    
+    return result
+
 
