@@ -1046,7 +1046,7 @@ def get_demand_notice(
 
             WHERE A.id IN (
 
-            SELECT document_data_master_id FROM customer_data_document_master WHERE work_order_master_id = 1)
+            SELECT document_data_master_id FROM customer_data_document_master WHERE work_order_master_id = :work_order_master_id)
         
             """)
     result = db.execute(sql, {'work_order_master_id': work_order_master_id}).mappings().all()
