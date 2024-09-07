@@ -255,17 +255,7 @@ def save_proforma_invoice(
 
 
 #---------------------------------------------------------------------------------------------
-@router.get('/get_proforma_invoice')
-def get_proforma_invoice(
-     work_order_master_id : int,
-     invoice_master_id : int,
-     db: Session = Depends(get_db)
-):
-     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,invoice_master_id)
-     return result
 
-
-#---------------------------------------------------------------------------------------------------
 
 @router.get('/get_demand_notice')
 def get_demand_notice(
@@ -293,3 +283,14 @@ def consultation_invoice_generation(
      
     result = db_quotation.consultation_invoice_generation(work_order_master_id,appointment_master_id,db,user_id)
     return result
+
+#--------------------------------------------------------------------
+
+@router.get('/get_invoice_details')
+def get_invoice_details(
+     work_order_master_id : int,
+     invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     result = db_quotation.get_invoice_details(db,work_order_master_id,invoice_master_id)
+     return result
