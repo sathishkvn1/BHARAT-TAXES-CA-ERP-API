@@ -267,7 +267,6 @@ def get_proforma_invoice(
 
 #---------------------------------------------------------------------------------------------------
 
-
 @router.get('/get_demand_notice')
 def get_demand_notice(
      work_order_master_id : int,
@@ -277,3 +276,20 @@ def get_demand_notice(
      result = db_quotation.get_demand_notice(work_order_master_id,db)
      return result
 
+#----------------------------------------------------------------------------------------------------
+
+@router.post('/consultation_invoice_generation')
+def consultation_invoice_generation(
+     work_order_master_id: int,
+     appointment_master_id: int,
+     db: Session = Depends(get_db),
+     token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+     
+    result = db_quotation.consultation_invoice_generation(work_order_master_id,appointment_master_id,db,user_id)
+    return result
