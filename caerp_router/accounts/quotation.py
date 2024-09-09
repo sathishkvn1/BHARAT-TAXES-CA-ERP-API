@@ -19,6 +19,13 @@ from caerp_schema.office.office_schema import ServiceRequirementSchema
 
 
 
+TEMPLATE_INVOICE_DETAILS  = "D:/BHARAT-TAXES-CA-ERP-API/templates/invoice_template.html"
+
+
+UPLOAD_DIR_INVOICE_DETAILS          = "uploads/invoice"
+
+
+
 router  = APIRouter(
     tags=['Quotation']
 )
@@ -294,3 +301,96 @@ def get_invoice_details(
 ):
      result = db_quotation.get_invoice_details(db,work_order_master_id,invoice_master_id)
      return result
+
+
+#-----------------------------------------------------------------------------------------
+
+
+def generate_invoice_pdf(invoice, file_path):
+
+    # Load the template environment
+    template_dir = os.path.dirname(TEMPLATE_INVOICE_DETAILS)
+    template_name = os.path.basename(TEMPLATE_INVOICE_DETAILS)
+    env = Environment(loader=FileSystemLoader(template_dir))
+    template = env.get_template(template_name)
+
+    # Prepare data for the template
+    if invoice:
+
+        # Extract and format data from the quotations object
+        details = invoice.invoice_details
+        work_order_master = invoice.work_order_master 
+        total = sum(item.total_amount for item in details)
+        advance = invoice.invoice_master.advance_amount
+        additional_discount = invoice.invoice_master.additional_discount_amount
+        gst_amount = sum(item.gst_amount for item in details)
+        total_amount = invoice.invoice_master.total_amount
+
+        # Debug print: Check the content of details
+        # print("Quotation Details:", details)
+        # print("Work Order Master Details:", work_order_master)
+
+        data = {
+            'invoice': details,
+            'total': total,
+            'advance': advance,
+            'additional_discount': additional_discount,
+            'gst_amount': gst_amount,
+            'total_amount': total_amount,
+            'current_date': date.today(),
+            'work_order_master': work_order_master 
+        }
+
+        # Render the template with data
+        html_content = template.render(data)
+
+        # Debug print: Check the HTML content generated
+        print("Generated HTML content:", html_content)
+
+        # Configuration for pdfkit
+        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        if not os.path.isfile(wkhtmltopdf_path):
+            raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
+        
+        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+
+        # PDF options
+        options = {
+            'footer-center': 'Page [page] of [topage]',
+            'footer-font-size': '8',
+            'margin-bottom': '20mm',
+            'no-outline': None
+        }
+        
+        try:
+            # Convert HTML to PDF
+            pdfkit.from_string(html_content, file_path, configuration=config, options=options)
+        except Exception as e:
+            raise RuntimeError(f'Error generating PDF: {e}')
+
+        return open(file_path, "rb")
+
+
+
+@router.get('/get_invoice_pdf')
+def get_invoice_pdf(
+     work_order_master_id : int,
+     invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     invoice  = db_quotation.get_invoice_details(db,work_order_master_id,invoice_master_id)
+     if not invoice:
+                  raise HTTPException(status_code=404, detail="No invoice found")
+     
+     file_path = os.path.join(UPLOAD_DIR_INVOICE_DETAILS , "invoice.pdf")
+     os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+     pdf_buffer = generate_invoice_pdf(invoice, file_path)
+    
+     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=invoice.pdf"})
+
+     
+     
+    #  return result
+
+#----------------------------------------------------------------------------------------------------

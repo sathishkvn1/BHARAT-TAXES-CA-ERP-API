@@ -2850,6 +2850,7 @@ def get_business_activity_by_master_id(
    
 
 #----------------------------------------------------------------------------------------------------
+
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session,
@@ -2881,7 +2882,6 @@ def save_work_order(
                 work_order_detail = OffWorkOrderDetails(**detail_data)
                 db.add(work_order_detail)
                 db.flush()
-
                 for sub_detail in sub_services:
                     sub_detail_data = sub_detail  # Already a dictionary
                     sub_detail_data['work_order_master_id'] = master.id
@@ -2896,7 +2896,7 @@ def save_work_order(
                     db.add(work_order_sub_detail)
 
             db.commit()
-            return {"message": "Work order created successfully", "master_id": master.id, "success": "success"}
+            return {"message": "Work order created successfully", "work_order_master_id": master.id, "success": "success"}
 
         except SQLAlchemyError as e:
             db.rollback()
@@ -2968,7 +2968,7 @@ def save_work_order(
                                     'message': f"Work order sub-detail with id {sub_detail.id} not found"
                                 }
 
-                            sub_detail_data = sub_detail.model_dump()  # Use .dict() for Pydantic models
+                            sub_detail_data = sub_detail.dict()  # Use .dict() for Pydantic models
                             for key, value in sub_detail_data.items():
                                 if key != "id":
                                     setattr(work_order_sub_detail, key, value)
@@ -3035,7 +3035,7 @@ def save_work_order(
 
             db.commit()  # Commit all changes at once
 
-            return {"message": "Work order updated successfully", "master_id": master.id, "success": "success"}
+            return {"message": "Work order updated successfully", "work_order_master_id": master.id, "success": "success"}
 
         except SQLAlchemyError as e:
             db.rollback()
@@ -3506,7 +3506,8 @@ def upload_documents(db: Session,
             file_extension = Path(file.filename).suffix
 
             # Construct file name and path
-            file_name = f"{id}_{original_file_name}{file_extension}"
+            # file_name = f"{id}_{original_file_name}{file_extension}"
+            file_name = f"{id}{file_extension}"
             file_path = os.path.join(UPLOAD_WORK_ORDER_DOCUMENTS, file_name)
 
             # Ensure directory exists
