@@ -9,59 +9,64 @@ from caerp_schema.services.gst_schema import BusinessDetailsSchema, CustomerRequ
 
 
 
-#-------------------------business details
-
+#-------------------------business details--------------------------------------------------------------
 
 def save_business_details(
     db: Session,
     business_details_data: BusinessDetailsSchema,
     task_id: int,  # 0 for insert, non-zero for update
     user_id: int,
-    id: int  # 0 for insert, non-zero for update
+    id: int  # 0 for insert (new), non-zero for update
 ):
     try:
         if id == 0:
             # Insert new CustomerMaster
             customer_master = CustomerMaster(
                 **business_details_data.model_dump(exclude_unset=True), 
-                created_by=user_id, # Load data directly from schema
-                created_on=datetime.now()
+                created_by=user_id,  # Set created_by field
+                created_on=datetime.now()  # Set created_on to current datetime
             )
             db.add(customer_master)
-            # Ensure we have customer_id for further use
-
+            db.flush()  # Ensure we have the customer_id for further use
         else:
             # Update existing CustomerMaster
             customer_master = db.query(CustomerMaster).filter(CustomerMaster.customer_id == id).first()
             if not customer_master:
-                return {"detail":"customer master not found"}
+                return {"detail": "Customer master not found"}
 
-            # Update fields using dict unpacking
+            # Update fields using the provided data
             for key, value in business_details_data.model_dump(exclude_unset=True).items():
                 setattr(customer_master, key, value)
-            customer_master.modified_by=user_id,
-            customer_master.modified_on = datetime.now()
+            customer_master.modified_by = user_id  # Set modified_by field
+            customer_master.modified_on = datetime.now()  # Set modified_on field
 
-        # Update OffServiceTaskMaster if task_id is provided
+        db.flush()  # Ensure the customer_id is available for task update
+
+        # Update OffServiceTaskMaster with the new customer_id if task_id is provided
         if task_id != 0:
             service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == task_id).first()
             if not service_task_master:
-                return {"detail":"service task not found"}
+                return {"detail": "Service task not found"}
 
+            # Update the task's customer_id with the current customer_id
             service_task_master.customer_id = customer_master.customer_id
             db.add(service_task_master)
 
-        db.commit()
-        return {"business_details":customer_master}
+        db.commit()  # Commit transaction
+
+        # Return the customer_id and a success message
+        return {"customer_id": customer_master.customer_id, "message": " saved successfully"}
 
     except Exception as e:
-        db.rollback()  # Rollback in case of an exception
+        db.rollback()  # Rollback the transaction in case of an error
         raise HTTPException(status_code=500, detail=str(e))
 
 
 
 
-#-------CUSTOMER / BUSINESS DETAILS
+
+
+#-------CUSTOMER / BUSINESS DETAILS-------------------------------------------------------------------
 
 def handle_customer_details(customer_id: int, customer_data: CustomerRequestSchema, db: Session):
     try:

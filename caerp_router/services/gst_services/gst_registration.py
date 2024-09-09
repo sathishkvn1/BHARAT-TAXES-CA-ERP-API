@@ -23,15 +23,15 @@ router = APIRouter(
 
 @router.post("/save_business_details")
 def save_business_details(
-    business_details: List[BusinessDetailsSchema], 
+    business_details: BusinessDetailsSchema,  # Now a single BusinessDetailsSchema
     task_id: int,
     id: int,  # 0 for insert, non-zero for update
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    Save business details. 
-    Expects a list of business details to save.
+    Save business details and update the customer_id in the task master.
+    
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -40,18 +40,16 @@ def save_business_details(
     user_id = auth_info.get("user_id")
 
     try:
-        for details in business_details:
-            # Call save_business_details with all required arguments
-            result = db_gst.save_business_details(db, details, task_id,user_id, id)
-           
+        # Call save_business_details with the required arguments
+        result = db_gst.save_business_details(db, business_details, task_id, user_id, id)
 
-        return {"success": True, "message": "Saved successfully"}
+        return {"success": True, "message": "Saved successfully", "customer_id": result["customer_id"]}
 
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 
 #--------------
 
