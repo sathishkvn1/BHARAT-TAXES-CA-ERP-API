@@ -3769,6 +3769,7 @@ def get_sub_services_by_bundled_id(db: Session, bundled_service_goods_id: int):
     sub_services = (
         db.query(
             OffServiceGoodsDetails.id,
+            OffServiceGoodsDetails.service_goods_master_id,
             OffServiceGoodsMaster.service_goods_name,
             OffServiceGoodsMaster.is_bundled_service
         )
@@ -3782,10 +3783,11 @@ def get_sub_services_by_bundled_id(db: Session, bundled_service_goods_id: int):
     response = [
         {
             "id": service_id,
+            "service_goods_master_id":service_goods_master_id,
             "service_name": service_name,
             "is_bundled_service": is_bundled_service
         }
-        for service_id, service_name, is_bundled_service in sub_services
+        for service_id,service_goods_master_id, service_name, is_bundled_service in sub_services
     ]
     
     return response
