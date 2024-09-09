@@ -4,6 +4,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from caerp_auth import authentication
 from caerp_router.common import user,otp_process,common,common_functions
 from caerp_router.office import office_master
+from caerp_router.services.gst_services import gst_registration
+
 from caerp_router.accounts import quotation
 from caerp_router.hr_and_payroll import employee_master
 from caerp_functions import captcha
@@ -48,6 +50,7 @@ app_common=FastAPI(debug=True)
 app_office=FastAPI(debug=True)
 hr_and_payroll=FastAPI(debug=True)
 accounts=FastAPI(debug=True)
+gst_services=FastAPI(debug=True)
 
 
 app.add_middleware(
@@ -90,10 +93,16 @@ hr_and_payroll.include_router(employee_master.router)
 accounts.include_router(authentication.router)
 accounts.include_router(quotation.router)
 
+
+# for gst service
+gst_services.include_router(authentication.router)
+gst_services.include_router(gst_registration.router) 
+
 app.mount("/common", app_common, name="common")
 app.mount("/office", app_office, name="office")
 app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 app.mount("/accounts/",accounts,name="accounts")
+app.mount("/services/",gst_services,name="services")
 
 app_common.mount("/captcha/generate_captcha", StaticFiles(directory="uploads/captcha_modified_images"), name="captcha_images")
 # app_office.mount("/upload_document", StaticFiles(directory="uploads/work_order_documents"), name="documents")
