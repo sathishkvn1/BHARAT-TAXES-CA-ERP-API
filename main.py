@@ -30,6 +30,7 @@ app = FastAPI(
         - [Common Module](/common/docs): Documentation for endpoints related to the common process.
         - [Hr and Payroll Module](/hr_and_payroll/docs): Documentation for endpoints related to the  hr_and_payroll process.
         - [Accounts Module](/accounts/docs): Documentation for endpoints related to the  accounts related process.
+        - [Service Module](/services/docs): Documentation for endpoints related to the  accounts related process.
        """
 )
 

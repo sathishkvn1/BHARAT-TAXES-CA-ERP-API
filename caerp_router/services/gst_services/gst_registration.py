@@ -14,7 +14,8 @@ from caerp_auth.authentication import authenticate_user
 
 
 router = APIRouter(
-    tags=['Office Master']
+    prefix ='/gst',
+    tags=['GST Services']
 )
 
 
@@ -54,7 +55,7 @@ def save_business_details(
 
 #--------------
 
-@router.post("/customer/{customer_id}/details")
+@router.post("/save_customer_details/{customer_id}")
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           db: Session = Depends(get_db),
