@@ -183,6 +183,8 @@ def handle_customer_details(customer_id: int, customer_data: CustomerRequestSche
 
 
 #-get''
+
+#-get''
 def get_customer_details(db: Session, customer_id: int):
     try:
         # Query the main customer record
@@ -249,14 +251,16 @@ def get_customer_details(db: Session, customer_id: int):
                 },
                 "reason_to_obtain_registration": {
                     "id": gst_other_details.id if gst_other_details else None,
-                    "reason_to_obtain_gst_registration_id": gst_other_details.reason_to_obtain_gst_registration_id if gst_other_details else None,
-                     "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason).filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id).scalar() if gst_other_details.reason_to_obtain_gst_registration_id else None,
-                    "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
-                    "liability_to_register_arises_date": gst_other_details.liability_to_register_arises_date if gst_other_details else None
+                    "reason_to_obtain_gst_registration_id": gst_other_details.reason_to_obtain_gst_registration_id if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id is not None else None,
+                     "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason)
+                                                .filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id)
+                                                .scalar() if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id else None,
+    "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
+    "liability_to_register_arises_date": gst_other_details.liability_to_register_arises_date if gst_other_details else None
                 },
                 "existing_registrations": [
                     {
-                        "registration_type_id": reg.registration_type_id,
+                        "registration_type_id": reg.registration_type_id if reg.registration_type_id is not None else None, 
                         "registration_type": db.query(GstTypeOfRegistration.type_of_registration).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
                         "registration_number": reg.registration_number,
                         "registration_date": reg.registration_date
@@ -270,3 +274,102 @@ def get_customer_details(db: Session, customer_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+#-------------api
+
+def get_customer_details(db: Session, customer_id: int):
+    try:
+        # Query the main customer record
+        customer = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
+        
+        if not customer:
+            return {"detail":"customer not found"}
+
+        # Query related details
+        additional_trade_names = db.query(CustomerAdditionalTradeName).filter_by(customer_id=customer_id).all()
+        casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(customer_id=customer_id).first()
+        composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(customer_id=customer_id).first()
+        gst_other_details = db.query(CustomerGSTOtherDetails).filter_by(customer_id=customer_id).first()
+        existing_registrations = db.query(CustomerExistingRegistrationDetails).filter_by(customer_id=customer_id).all()
+
+        # Assemble response data
+        response = {
+            "customer_business_details": {
+                "pan_number": customer.pan_number,
+                "pan_creation_date": customer.pan_creation_date,
+                "state_id": customer.state_id,
+                "state_name": db.query(StateDB.state_name).filter_by(id=customer.state_id).scalar() if customer.state_id else None,
+                "district_id": customer.district_id,
+                "district_name": db.query(DistrictDB.district_name).filter_by(id=customer.district_id).scalar() if customer.district_id else None,
+                "legal_name": customer.legal_name,
+                "email_address": customer.email_address,
+                "mobile_number": customer.mobile_number,
+                "tan_number": customer.tan_number,
+                "passport_number": customer.passport_number,
+                "tin_number": customer.tin_number,
+                "authorised_signatory_name_as_in_pan": customer.authorized_signatory_name_as_in_pan,
+                "authorised_signatory_pan_number": customer.authorized_signatory_pan_number,
+                "constitution_id": customer.constitution_id,
+                "has_authorized_signatory": customer.has_authorized_signatory,
+                "has_authorized_representative": customer.has_authorized_representative,
+                "is_mother_customer": customer.is_mother_customer
+            },
+            "customer_other_details": {
+                "additional_trade_name": [
+                    {
+                        "id": trade.id,
+                        "trade_name": trade.additional_trade_name
+                    }
+                    for trade in additional_trade_names
+                ],
+                "casual_taxable_person": {
+                    "id": casual_taxable_person.id if casual_taxable_person else None,
+                    "is_applying_as_casual_taxable_person": casual_taxable_person.is_applying_as_casual_taxable_person if casual_taxable_person else None,
+                    "estimated_igst_turnover": casual_taxable_person.estimated_igst_turnover if casual_taxable_person else None,
+                    "estimated_net_igst_liability": casual_taxable_person.estimated_net_igst_liability if casual_taxable_person else None,
+                    "estimated_cgst_turnover": casual_taxable_person.estimated_cgst_turnover if casual_taxable_person else None,
+                    "estimated_net_cgst_liability": casual_taxable_person.estimated_net_cgst_liability if casual_taxable_person else None,
+                    "estimated_sgst_turnover": casual_taxable_person.estimated_sgst_turnover if casual_taxable_person else None,
+                    "estimated_net_sgst_liability": casual_taxable_person.estimated_net_sgst_liability if casual_taxable_person else None,
+                    "estimated_cess_turnover": casual_taxable_person.estimated_cess_turnover if casual_taxable_person else None,
+                    "estimated_net_cess_liability": casual_taxable_person.estimated_net_cess_liability if casual_taxable_person else None
+                },
+                "option_for_composition": {
+                    "id": composition_option.id if composition_option else None,
+                    "is_applying_as_composition_taxable_person": composition_option.is_applying_as_composition_taxable_person if composition_option else None,
+                    "option_1": composition_option.option_1 if composition_option else None,
+                    "option_2": composition_option.option_2 if composition_option else None,
+                    "option_3": composition_option.option_3 if composition_option else None
+                },
+                "reason_to_obtain_registration": {
+                    "id": gst_other_details.id if gst_other_details else None,
+                    "reason_to_obtain_gst_registration_id": gst_other_details.reason_to_obtain_gst_registration_id if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id is not None else None,
+                     "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason)
+                                                .filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id)
+                                                .scalar() if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id else None,
+    "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
+    "liability_to_register_arises_date": gst_other_details.liability_to_register_arises_date if gst_other_details else None
+                },
+                "existing_registrations": [
+                    {
+                        "registration_type_id": reg.registration_type_id if reg.registration_type_id is not None else None, 
+                        "registration_type": db.query(GstTypeOfRegistration.type_of_registration).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
+                        "registration_number": reg.registration_number,
+                        "registration_date": reg.registration_date
+                    }
+                    for reg in existing_registrations
+                ]
+            }
+        }
+        
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
