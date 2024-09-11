@@ -2740,7 +2740,7 @@ def get_work_order_list(
     db: Session,
     search_value: Union[str, int] = "ALL",
     work_order_number: Optional[int] = None,
-    status_id: Optional[int] = None,
+    status_id:  Optional[Union[int, str]] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
 ) :
@@ -2760,9 +2760,9 @@ def get_work_order_list(
             
             if work_order_number != None:
                 search_conditions.append(WorkOrderMasterView.work_order_number == work_order_number)
-
+            
             # Add condition for status ID if provided
-            if status_id != None:
+            if status_id !='ALL':
                 search_conditions.append(WorkOrderMasterView.work_order_status_id == status_id)
 
             # Add condition for search value if it's not 'ALL'
@@ -2773,7 +2773,7 @@ def get_work_order_list(
                         WorkOrderMasterView.email_id.like(f"%{search_value}%")
                     )
                 )
-
+            
             # Execute the query
             query_result = db.query(WorkOrderMasterView).filter(and_(*search_conditions)).all()
 
@@ -2791,7 +2791,6 @@ def get_work_order_list(
          
             # except HTTPException as http_error:
             # raise http_error
-
 #------------------------------------------------------------------------------------------------------------
 
 def get_business_activity_master_by_type_id(
@@ -3760,11 +3759,6 @@ def assign_reassign_service_task(
     db.commit()
 
 #----------------------------------------------------------------------------------------------
-
-
-
-
-
 def get_sub_services_by_bundled_id(db: Session, bundled_service_goods_id: int):
     sub_services = (
         db.query(

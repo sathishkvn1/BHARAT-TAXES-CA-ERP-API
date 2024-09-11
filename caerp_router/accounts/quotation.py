@@ -19,9 +19,7 @@ from caerp_schema.office.office_schema import ServiceRequirementSchema
 
 
 
-TEMPLATE_INVOICE_DETAILS  = "D:/BHARAT-TAXES-CA-ERP-API/templates/invoice_template.html"
-
-
+TEMPLATE_INVOICE_DETAILS            = "C:/BHARAT-TAXES-CA-ERP-API/templates/invoice_template.html"
 UPLOAD_DIR_INVOICE_DETAILS          = "uploads/invoice"
 
 
@@ -40,7 +38,7 @@ def generate_quotation_service_details(
     
          
     result   = db_quotation.generate_quotation_service_details(db,work_order_master_id)
-    
+ 
     return result
 
 @router.post('/save_quotation_data')

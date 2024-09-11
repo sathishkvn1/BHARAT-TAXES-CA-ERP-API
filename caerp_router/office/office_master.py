@@ -2134,17 +2134,16 @@ def get_work_order_details(
 #------------------------------------------------------------------------------------------------------------
 
 
-
 @router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
- 
- 
+    
+   
     work_order_number 	    : Optional[str]= None,
     search_value            :  Union[str, int] = "ALL",
 
     work_order_from_date  	: Optional[date]= None,
     work_order_to_date  	: Optional[date]= None,
-    work_order_status_id 	: Optional[int]= None,
+    work_order_status_id 	: Optional[Union[int, str]] = "ALL",
     # mobile_number  	    : Optional[str]= None,
     # email_id            : Optional[str]= None,
     db: Session = Depends(get_db),
@@ -2168,8 +2167,10 @@ def get_work_order_list(
     """
     results = db_office_master.get_work_order_list(
          db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
-  
+    
     return results
+
+
 #-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
 def get_business_activity_master_by_type_id(
@@ -2798,7 +2799,7 @@ def get_upload_document(id: int):
     return {"photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}"}
 
 
-#------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------
 @router.get("/get_sub_services_by_bundled_id/{bundled_service_goods_id}")
 def get_bundled_service(bundled_service_goods_id: int, db: Session = Depends(get_db)):
     sub_services = db_office_master.get_sub_services_by_bundled_id(db, bundled_service_goods_id)
@@ -2874,14 +2875,13 @@ def get_dependent_services(
                 "trade_name": row[2],
                 "leagal_name": row[3],
                 "service_status":row[4]
-              
             }
             for row in result
         ]
-        
+
         return results_list
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-#----------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
