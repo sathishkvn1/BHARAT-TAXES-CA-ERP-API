@@ -346,7 +346,8 @@ def generate_invoice_pdf(invoice, file_path):
         print("Generated HTML content:", html_content)
 
         # Configuration for pdfkit
-        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
