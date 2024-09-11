@@ -1175,19 +1175,19 @@ class OffAppointmentMasterSchema(BaseModel):
 
 
 class ServiceDetail(BaseModel):
-    row_id: int
-    price_master_id: int
-    service_id: int
-    service_goods_name: str
-    is_bundled_service: str
-    constitution_id: int
-    business_constitution_name: str
-    service_charge: float
-    govt_agency_fee: float
-    stamp_duty: float
-    stamp_fee: float
-    effective_from_date: str
-    effective_to_date: str
+    row_id              : int
+    price_master_id     : int
+    service_id          : int
+    service_goods_name  : str
+    is_bundled_service  : str
+    constitution_id     : int
+    business_constitution_name  : str
+    service_charge              : float
+    govt_agency_fee             : float
+    stamp_duty                  : float
+    stamp_fee                   : float
+    effective_from_date         : str
+    effective_to_date           : str
 
 class ServiceDetailListResponse(BaseModel):
     data: List[ServiceDetail]
@@ -1402,15 +1402,15 @@ class OffViewServiceGoodsPriceMasterSchema(BaseModel):
 
 class OffServiceGoodsPriceMasterSchema(BaseModel):
 
-    id : Optional[int] = None
-    service_goods_master_id : Optional[int] 
-    constitution_id : Optional[int] 
-    service_charge : Optional[float] = 0.00 
-    govt_agency_fee : Optional[float] = 0.00 
-    stamp_duty : Optional[float] = 0.00 
-    stamp_fee : Optional[float] = 0.00 
-    effective_from_date : Optional[date] 
-    effective_to_date : Optional[date] 
+    id                          : Optional[int] = None
+    service_goods_master_id     : Optional[int] 
+    constitution_id             : Optional[int] 
+    service_charge              : Optional[float] = 0.00 
+    govt_agency_fee             : Optional[float] = 0.00 
+    stamp_duty                  : Optional[float] = 0.00 
+    stamp_fee                   : Optional[float] = 0.00 
+    effective_from_date         : Optional[date] 
+    effective_to_date           : Optional[date] 
     # created_by : Optional[int] 
     # created_on 
 
@@ -1419,15 +1419,15 @@ class ServiceGoodsPriceDetailsSchema(BaseModel):
     prices: OffViewServiceGoodsPriceMasterSchema
 
 class ServiceGoodsPriceResponseSchema(BaseModel):
-    workOrderMaster: OffViewWorkOrderMasterSchema
-    workOrderDetails: List[ServiceGoodsPriceDetailsSchema]
+    workOrderMaster         : OffViewWorkOrderMasterSchema
+    workOrderDetails        : List[ServiceGoodsPriceDetailsSchema]
 
 
 class UpdateCustomerDataDocumentSchema(BaseModel):
-    id: int
-    data: str
-    valid_from_date: Optional[date] = None
-    valid_to_date: Optional[date] = None
+    id                  : int
+    data                : str
+    valid_from_date     : Optional[date] = None
+    valid_to_date       : Optional[date] = None
 
     class Config:
         orm_mode = True
@@ -1435,9 +1435,9 @@ class UpdateCustomerDataDocumentSchema(BaseModel):
 
 
 class DocumentsSchema(BaseModel):
-    valid_from_date: Optional[date] = None
-    valid_to_date: Optional[date] = None
-    remarks: Optional[str]=None
+    valid_from_date         : Optional[date] = None
+    valid_to_date           : Optional[date] = None
+    remarks                 : Optional[str]=None
 
 
 
@@ -1472,6 +1472,16 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     work_order_number              : Optional[str] 
     work_order_date                : Optional[date] 
     work_order_details_id          : Optional[int] = None
+    service_goods_master_id        : int  
+    service_goods_name             : str   
+    group_id                       : int   
+    group_name                     : str   
+    sub_group_id                   : int   
+    sub_group_name                 : str   
+    category_id                    : int   
+    category_name                  : str   
+    sub_category_id                : int   
+    sub_category_name              : str   
     customer_id                    : Optional[int] = None
     task_number                    : str
     allocated_by                   : int
@@ -1495,9 +1505,9 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     task_priority_id               : Optional[int] = None
     task_priority                  : Optional[str] = ""
     remarks                        : Optional[str] = ""
-
+    
     class Config:
-        orm_mode                   : True
+        orm_mode = True
 
 
 class ServiceTaskMasterAssign(BaseModel):  
@@ -1511,10 +1521,11 @@ class ServiceTaskMasterAssign(BaseModel):
 
 
 
+
 class ServiceRequirementSchema(BaseModel):
-    work_order_details_id: int
-    service_required: Optional[str] = 'YES'
-    service_required_date   : Optional[date] = None
+    work_order_details_id           : int
+    service_required                : Optional[str] = 'YES'
+    service_required_date           : Optional[date] = None
 
 
 class ServiceTaskMasterSchema(BaseModel):
@@ -1535,3 +1546,6 @@ class ServiceTaskMasterSchema(BaseModel):
     task_status_id          : Optional[int] = None
     task_priority_id        : Optional[int] = None
     remarks                 : Optional[str] = None
+
+
+
