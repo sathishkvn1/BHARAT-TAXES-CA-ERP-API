@@ -230,6 +230,7 @@ def get_customer_details(db: Session, customer_id: int):
         # Assemble response data
         response = {
             "customer_business_details": {
+                "id": customer.customer_id,
                 "pan_number": customer.pan_number,
                 "pan_creation_date": customer.pan_creation_date,
                 "state_id": customer.state_id,
@@ -287,6 +288,7 @@ def get_customer_details(db: Session, customer_id: int):
                 },
                 "existing_registrations": [
                     {
+                        "id": reg.id if existing_registrations else None,
                         "registration_type_id": reg.registration_type_id if reg.registration_type_id is not None else None, 
                         "registration_type": db.query(GstTypeOfRegistration.type_of_registration).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
                         "registration_number": reg.registration_number,
@@ -351,7 +353,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 stake_holder_master.modified_by = user_id  # Set modified_by field
                 stake_holder_master.modified_on = datetime.now()
             else:
-                raise HTTPException(status_code=404, detail="StakeHolderMaster not found")
+                return {"detail": "stake_holder_master not found"}
 
         db.flush()  # Flush to get `stake_holder_master.id`
 
@@ -378,7 +380,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 contact_detail_entry.modified_by = user_id  # Set modified_by field
                 contact_detail_entry.modified_on = datetime.now()
             else:
-                raise HTTPException(status_code=404, detail="Contact details not found")
+                return {"detail": "contact_detail not found"}
 
         db.flush()  # Flush to get `contact_detail_entry.id`
 
@@ -431,7 +433,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         address_entry.modified_by = user_id  # Set modified_by field
                         address_entry.modified_on = datetime.now()
                     else:
-                        raise HTTPException(status_code=404, detail="Address details not found")
+                        return {"detail": "address_detail not found"}
 
                 db.flush()  # Flush to get `address_entry.id`
 
