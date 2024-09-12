@@ -1096,7 +1096,13 @@ def get_all_service(db: Session) -> List[Dict[str, any]]:
     """
     Fetch all services from the off_service_goods_master table.
     """
-    services = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.is_deleted == 'no').all()
+    services = db.query(OffServiceGoodsMaster).filter(
+        and_(
+            OffServiceGoodsMaster.is_deleted == 'no',
+            OffServiceGoodsMaster.has_consultation == 'yes'
+        )
+    ).all()
+    
     services_data = [{"id": service.id, "name": service.service_goods_name} for service in services]
     return services_data
 #---------------------------------------------------------------------------------------------------------------
