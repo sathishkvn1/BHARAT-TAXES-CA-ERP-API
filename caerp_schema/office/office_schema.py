@@ -720,6 +720,7 @@ class OffViewEnquiryMasterSchema(BaseModel):
     
 class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_details_id      : int
+    enquiry_master_id        : int
     financial_year_id       : Optional[int]
     financial_year          : Optional[str]
     enquiry_number          : Optional[str]
