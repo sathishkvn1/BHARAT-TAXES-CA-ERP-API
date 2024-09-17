@@ -91,6 +91,8 @@ def save_customer_details(customer_id: int,
             casual_taxable_person = CustomerGSTCasualTaxablePersonDetails(
                 customer_id=customer_id,
                 is_applying_as_casual_taxable_person=customer_data.casual_taxable_person.is_applying_as_casual_taxable_person,
+                gst_registration_required_from_date=customer_data.casual_taxable_person.gst_registration_required_from_date,
+                gst_registration_required_to_date=customer_data.casual_taxable_person.gst_registration_required_to_date,
                 estimated_igst_turnover=customer_data.casual_taxable_person.estimated_igst_turnover,
                 estimated_net_igst_liability=customer_data.casual_taxable_person.estimated_net_igst_liability,
                 estimated_cgst_turnover=customer_data.casual_taxable_person.estimated_cgst_turnover,
@@ -261,6 +263,8 @@ def get_customer_details(db: Session, customer_id: int):
                 "casual_taxable_person": {
                     "id": casual_taxable_person.id if casual_taxable_person else None,
                     "is_applying_as_casual_taxable_person": casual_taxable_person.is_applying_as_casual_taxable_person if casual_taxable_person else None,
+                    "gst_registration_required_from_date":casual_taxable_person.gst_registration_required_from_date if casual_taxable_person else None,
+                    "gst_registration_required_to_date":casual_taxable_person.gst_registration_required_to_date if casual_taxable_person else None,
                     "estimated_igst_turnover": casual_taxable_person.estimated_igst_turnover if casual_taxable_person else None,
                     "estimated_net_igst_liability": casual_taxable_person.estimated_net_igst_liability if casual_taxable_person else None,
                     "estimated_cgst_turnover": casual_taxable_person.estimated_cgst_turnover if casual_taxable_person else None,
@@ -305,7 +309,7 @@ def get_customer_details(db: Session, customer_id: int):
         raise HTTPException(status_code=500, detail=str(e))
     
 
-    #-save stskeholder
+    #-save stakeholder
 
 
 def save_stakeholder_details(request: StakeHolderMasterSchema, 

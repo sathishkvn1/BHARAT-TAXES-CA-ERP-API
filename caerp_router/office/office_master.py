@@ -163,23 +163,26 @@ def get_and_search_appointments(
     consultant_id: Optional[str] = "ALL",
     service_id: Optional[str] = "ALL",
     status_id: Optional[str] = "ALL",
-    from_date: Optional[date]  = Query(date.today()),
-    to_date: Optional[date]  = Query(date.today()),
-    # search_criteria: SearchCriteriaConstants = "ALL",
-    id:Optional[int]=0,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    mobile_number: Optional[str] = None,
+    id: Optional[int] = 0,
     search_value: Union[str, int] = "ALL",
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve appointments based on Parameters.
+    Retrieve Appointment based on Parameters.
 
     Parameters:
-    - **consultant_id**: Consultant ID.
-    - **service_id**: Service ID.
-    - **status_id**: Status ID.
+    
+    - **consultant_id**: consultant ID.
+    - **service_id**: service ID.
+    - **status_id**: status ID.
     - **effective_from_date**: Effective from date (default: today's date).
     - **effective_to_date**: Effective to date (default: today's date).
     - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
+    - **mobile_number**: Search with 'mobile_number' to get the specific details.
+
     """
     result = db_office_master.get_appointments(
         db,
@@ -188,12 +191,13 @@ def get_and_search_appointments(
         status_id=status_id,
         from_date=from_date,
         to_date=to_date,
+        mobile_number=mobile_number,
         id=id,
         search_value=search_value
     )
     return {"Appointments": result}
 
-     
+
 
 
 #-------------------------swathy-------------------------------------------------------------------------------
