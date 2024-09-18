@@ -17,6 +17,8 @@ from caerp_auth import oauth2
 from typing import Optional
 from datetime import date
 
+from caerp_db.services.model import GstReasonToObtainRegistration, GstTypeOfRegistration
+
 router = APIRouter(
     tags=['LIBRARY FUNCTIONS']
 )
@@ -73,7 +75,10 @@ TABLE_MODEL_MAPPING = {
     "EmployeeProfessionalQualification":EmployeeProfessionalQualification,
     "EmployeeExperience":EmployeeExperience,
     "EmployeeDocuments" :EmployeeDocuments,
-    "EmployeeTeamMaster":EmployeeTeamMaster
+    "EmployeeTeamMaster":EmployeeTeamMaster,
+    "GstReasonToObtainRegistration":GstReasonToObtainRegistration,
+    "GstTypeOfRegistration":GstTypeOfRegistration
+
 }
 
 # Define a function to get the model class based on the provided model name
