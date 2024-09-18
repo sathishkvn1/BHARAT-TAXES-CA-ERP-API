@@ -47,7 +47,8 @@ def generate_quotation_service_details(
             AccQuotationMaster.is_deleted =='no'
         ).first()
         if existing_data:
-            return {'message': 'Quotation is already exist'}
+            return {'message': 'Quotation is already exist',
+                    'quotation_master_id' : existing_data.id}
         work_order_master_data = db.query(WorkOrderMasterView).filter(
             WorkOrderMasterView.work_order_master_id == work_order_master_id
         ).first()
@@ -59,11 +60,7 @@ def generate_quotation_service_details(
         ).all()
 
         services = []
-        service_goods_price_data = None
-                
-        for details in work_order_details_data:
-            service_master_id = details.service_goods_master_id
-            constitution_id = details.constitution_id
+        service_goods_price_data = None                   
 
             
         # Loop through each detail to fetch its price data
@@ -181,12 +178,15 @@ def generate_quotation_service_details(
                      "quotation_detail_id": quotation_detail.id}
 
      
-       
+        # except Exception as e:
+        #     db.rollback()
+        #     raise HTTPException(status_code=500, detail=f"An unexpected error occurred, {str(e)}")
 
     except SQLAlchemyError as e:
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 def save_quotation_data(
@@ -1151,6 +1151,8 @@ def consultation_invoice_generation(
     # Return the generated invoice ID
     if new_invoice.id:
         return new_invoice.id
+
+
 #-------------------------------------------------------------------------------------------
 
 def consultation_invoice_generation(
@@ -1254,6 +1256,8 @@ def consultation_invoice_generation(
             'invoice_master_id': new_invoice.id,
             'work_order_master_id': work_order_master_id
         }
+
+
 #---------------------------------------------------------------------------------------------------
 
 def get_invoice_details(

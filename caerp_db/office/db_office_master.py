@@ -2759,8 +2759,6 @@ def get_work_order_details(
     # if data:
 
     return data
-
-
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
