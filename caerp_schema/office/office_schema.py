@@ -1476,13 +1476,13 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     service_goods_master_id        : int  
     service_goods_name             : str   
     group_id                       : int   
-    group_name                     : str   
+    group_name                     : Optional[str] = None   
     sub_group_id                   : int   
-    sub_group_name                 : str   
+    sub_group_name                 : Optional[str] = None      
     category_id                    : int   
-    category_name                  : str   
+    category_name                  : Optional[str] = None      
     sub_category_id                : int   
-    sub_category_name              : str   
+    sub_category_name              : Optional[str] = None   
     customer_id                    : Optional[int] = None
     task_number                    : str
     allocated_by                   : int
