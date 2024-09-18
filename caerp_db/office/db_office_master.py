@@ -437,11 +437,17 @@ def get_appointments(
 
         # Filter appointments based on the visit details
         valid_appointment_ids = visit_details_dict.keys()
+        # appointment_query = db.query(OffAppointmentVisitMasterView).filter(
+        #     OffAppointmentVisitMasterView.appointment_master_id.in_(valid_appointment_ids),
+        #     *search_conditions
+        # ).all()
         appointment_query = db.query(OffAppointmentVisitMasterView).filter(
             OffAppointmentVisitMasterView.appointment_master_id.in_(valid_appointment_ids),
             *search_conditions
+        ).order_by(
+            OffAppointmentVisitMasterView.appointment_date.desc(),  # Order by appointment date descending
+            OffAppointmentVisitMasterView.full_name.asc()            # Order by full_name ascending
         ).all()
-
         # Check if appointments were found
         if not appointment_query:
             return []
@@ -469,7 +475,6 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #---service-goods-master  swathy---------------------------
 
@@ -2199,7 +2204,6 @@ def save_enquiry_master(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 #-------------------------------------------------------------------------------------------------------------
-
 def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -2241,11 +2245,17 @@ def get_enquiries(
             search_conditions.append(OffViewEnquiryMaster.email_id == email_id)
 
         # Execute the query
+        # query_result = db.query(OffViewEnquiryDetails).join(
+        #     OffViewEnquiryMaster,
+        #     OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
+        # ).filter(and_(*search_conditions)).all()
         query_result = db.query(OffViewEnquiryDetails).join(
             OffViewEnquiryMaster,
             OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
-        ).filter(and_(*search_conditions)).all()
-
+        ).filter(and_(*search_conditions)).order_by(
+            OffViewEnquiryDetails.enquiry_date.desc(),  # Order by enquiry_date descending
+            OffViewEnquiryMaster.first_name.asc()        # Order by full_name ascending
+        ).all()
         if not query_result:
             return []
 
@@ -2289,7 +2299,6 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
