@@ -2576,10 +2576,6 @@ def get_work_order_details(
                            work_order_details_id : Optional[int] = None,
                            ) -> List[Dict]:
 
-                        #    id: int) -> Union[WorkOrderResponseSchema, OffAppointmentMasterSchema,OffEnquiryResponseSchema]:
-    
-   
-  
     if entry_point == 'WORK_ORDER':
             try:
                 data = []
@@ -2609,7 +2605,6 @@ def get_work_order_details(
                     
                     if detail.is_depended_service == 'yes':
                         detail_data.depended_on = get_dependencies(db, detail.work_order_details_id)
-                    
                     if detail.is_bundle_service == 'yes':
                         sub_services = db.query(WorkOrderDetailsView).filter(
                             WorkOrderDetailsView.bundle_service_id == detail.work_order_details_id,
@@ -2634,7 +2629,7 @@ def get_work_order_details(
                     service_data=service_data
                 )
                 
-                data.append(work_order_data.model_dump())  # Convert to dictionary format if required
+                data.append(work_order_data.dict())  # Convert to dictionary format if required
                 return data
 
             except SQLAlchemyError as e:
@@ -2709,6 +2704,15 @@ def get_work_order_details(
                     'message ': "enquiry_details_id is required for ENQUIRY entry point",
                     'Success' : 'false'
                 }
+        existing_data = db.query(OffWorkOrderMaster).filter(
+            OffWorkOrderMaster.enquiry_master_id == id,
+            OffWorkOrderMaster.enquiry_details_id == enquiry_details_id
+        ).first()
+        if existing_data :
+            return {
+                'message': 'work_order already exist',
+                'work_order_master_id':existing_data.id
+            }
             # raise HTTPException(status_code=400, detail="enquiry_details_id is required for ENQUIRY entry point")        
         enquiry_master_data = db.query(OffViewEnquiryMaster).filter(
             OffViewEnquiryMaster.is_deleted == 'no',
@@ -2746,6 +2750,8 @@ def get_work_order_details(
     # if data:
 
     return data
+
+
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
@@ -3721,6 +3727,69 @@ def get_all_service_task_list(
          
 
     return results
+
+
+
+
+# def get_all_service_task_list(
+#     db: Session,
+#     task_no: Optional[str] = None,
+#     department_id: Union[int, str] = "ALL",
+#     team_id: Union[int, str] = "ALL",
+#     employee_id: Union[int, str] = "ALL",
+#     status_id: Union[int, str] = "ALL",
+#     from_date: Optional[date] = None,
+#     to_date: Optional[date] = None
+# ) -> List[OffViewServiceTaskMasterSchema]:
+
+#     query = db.query(OffViewServiceTaskMaster)
+
+#     if task_no:
+#         query = query.filter(OffViewServiceTaskMaster.task_number.ilike(f"%{task_no}%"))
+    
+#     if department_id != "ALL":
+#         query = query.filter(OffViewServiceTaskMaster.department_allocated_to == department_id)
+    
+#     if team_id != "ALL":
+#         query = query.filter(OffViewServiceTaskMaster.team_allocated_to == team_id)
+    
+#     if employee_id != "ALL":
+#         query = query.filter(OffViewServiceTaskMaster.employee_allocated_to == employee_id)
+    
+#     if status_id != "ALL":
+#         query = query.filter(OffViewServiceTaskMaster.task_status_id == status_id)
+    
+#     if from_date:
+#         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) >= from_date)
+    
+#     if to_date:
+#         query = query.filter(func.date(OffViewServiceTaskMaster.allocated_on) <= to_date)
+
+#     # Ensure that is_deleted is not equal to 'yes'
+#     query = query.filter(OffViewServiceTaskMaster.is_deleted == 'no')
+    
+#     results = query.all()
+
+#     # Convert SQLAlchemy model instances to Pydantic schema
+#     tasks = []
+#     for task in results:
+#         task.employee_allocated_first_name = task.employee_allocated_first_name or ""
+#         task.employee_allocated_middle_name = task.employee_allocated_middle_name or ""
+#         task.employee_allocated_last_name = task.employee_allocated_last_name or ""
+#         task.team_name = task.team_name or ""
+#         task.department_name = task.department_name or ""
+#         task.task_status = task.task_status or ""
+#         task.task_priority = task.task_priority or ""
+#         task.allocated_by_first_name = task.allocated_by_first_name or ""
+#         task.allocated_by_middle_name = task.allocated_by_middle_name or ""
+#         task.allocated_by_last_name = task.allocated_by_last_name or ""
+#         task.remarks = task.remarks or ""
+
+#         # Append the converted Pydantic schema
+#         tasks.append(OffViewServiceTaskMasterSchema.from_orm(task))
+
+#     return tasks
+
 
 #----------------------------------------------------------------------------
 
