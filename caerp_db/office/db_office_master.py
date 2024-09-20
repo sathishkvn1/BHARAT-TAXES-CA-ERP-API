@@ -2653,6 +2653,15 @@ def get_work_order_details(
                     'message ': "visit master id is required for CONSULTATION entry point",
                     'Success' : 'false'
                 }
+            existing_data = db.query(OffWorkOrderMaster).filter(
+                OffWorkOrderMaster.appointment_master_id == id,
+                OffWorkOrderMaster.visit_master_id == visit_master_id
+            ).first()
+            if existing_data :
+                return {
+                    'message': 'work_order already exist',
+                    'work_order_master_id':existing_data.id
+                }
             # appointment_data = db.query(OffAppointmentMaster).filter(OffAppointmentMaster.id == id).first()
             visit_data       = db.query(OffAppointmentVisitMasterView).filter(
                 OffAppointmentVisitMasterView.appointment_master_id == id,
@@ -2759,6 +2768,7 @@ def get_work_order_details(
     # if data:
 
     return data
+    
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,

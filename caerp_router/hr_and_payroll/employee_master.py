@@ -222,6 +222,241 @@ def delete_employee_details_by_id(
   
 #---------------------------------------------------------------------------------------------------------
 
+# @router.get("/get_employee_details")
+# def get_employee_details(
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     employee_id: Optional[int] = None,
+#     employee_profile_component: Optional[str] = Query(
+#         None,
+#         description=(
+#             "Comma-separated list of components to view employee details. "
+#             "Valid options are: [present_address, permanent_address, bank_details, contact_details, "
+#             "employment_details, emergency_contact_details, dependent_details, employee_salary, "
+#             "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+#         )
+#     ),
+#     category: Optional[Union[str, int]] = Query(None, description="Filter by category or 'ALL' "),
+#     department: Optional[Union[str, int]] = Query(None, description="Filter by department or 'ALL'"),
+#     designation: Optional[Union[str, int]] = Query(None, description="Filter by designation or 'ALL'"),
+#     user_status: Optional[ActiveStatus] = Query(None, description="Filter by status (yes/no) or 'ALL'"),
+#     approval_status: Optional[ApprovedStatus] = Query(None, description="Filter by approval status (yes/no)" or 'ALL'),
+#     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
+#     search: Optional[str] = Query(None, description="Search by employee details")
+# ):
+#     """
+#     Retrieve employee details with optional filters, search, and profile components.
+
+#     - If both **employee_id** and **employee_profile_component** are provided, retrieve details for the specified employee using the given profile components.
+#     - If **employee_id** is provided without **employee_profile_component**, return an error indicating the need for profile components.
+#     - If neither **employee_id** nor **employee_profile_component** is provided, execute the search logic to retrieve employees based on filters and search criteria.
+
+#     -**employee_id** : Integer parameter, the Employee Master identifier.
+
+#     -**employee_profile_component** : A text field to add components for retrieving employee profiles.
+#     - Components: present_address, permanent_address, bank_details, contact_details, employment_details, 
+#     emergency_contact_details, dependent_details, employee_salary, educational_qualification, 
+#     employee_experience, employee_documents, professional_qualification.
+
+#     -**category** : Retrieve employees with category filter.
+#     -**department** : Retrieve employees with department filter.
+#     -**designation** : Retrieve employees with designation filter.
+#     -**status** : Filter employees by status(yes/no).
+#     -**approval_status** : Filter employees by approval status(yes/no).
+#     -**is_consultant** : To check whether the employee is a consultant or not(yes/no).
+#     -**search** : To search for a particular employee by name, category, department, and designation.
+#     """
+
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+  
+#     if employee_id is not None:
+#         if employee_profile_component:
+#             # Execute profile component logic
+#             employee_details = []
+
+#             emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
+#             if not emp:
+#                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee with id {employee_id} not found")
+#             employee_details.append({
+#                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+#             })
+
+#             schema_names = EmployeeDetailsGet.__fields__.keys()
+#             schemas_list = employee_profile_component.split(",")
+#             valid_options = [option for option in schemas_list if option in schema_names]
+
+#             if not valid_options:
+#                 raise HTTPException(status_code=422, detail="Invalid employee profile component")
+
+#             for option in valid_options:
+#                 if option == "present_address":
+#                     present_addresses = db_employee_master.get_present_address_details(db, employee_id=employee_id)
+#                     if present_addresses:
+#                         employee_details.append({
+#                             'present_address': EmployeePresentAddressGet(**present_addresses[0].__dict__)
+#                         })
+
+#                 if option == "permanent_address":
+#                     permanent_addresses = db_employee_master.get_permanent_address_details(db, employee_id=employee_id)
+#                     if permanent_addresses:
+#                         employee_details.append({
+#                             'permanent_address': EmployeePermanentAddressGet(**permanent_addresses[0].__dict__)
+#                         })
+
+#                 if option == "contact_details":
+#                     contact_info = db_employee_master.get_contact_details(db, employee_id=employee_id)
+#                     if contact_info:
+#                         employee_details.append({
+#                             'contact_details': EmployeeContactGet(**contact_info[0].__dict__)
+#                         })
+
+#                 if option == "bank_details":
+#                     bank_info = db_employee_master.get_bank_details(db, employee_id=employee_id)
+#                     if bank_info:
+#                         employee_details.append({
+#                             'bank_details': EmployeeBankAccountGet(**bank_info[0].__dict__)
+#                         })
+
+#                 if option == "employment_details":
+#                     employment_info = db_employee_master.get_employment_details(db, employee_id=employee_id)
+#                     if employment_info:
+#                         employee_details.append({
+#                             'employment_details': EmployeeEmployementGet(**employment_info[0].__dict__)
+#                         })
+
+#                 if option == "employee_salary":
+#                     salary_info = db_employee_master.get_employee_salary_details(db, employee_id=employee_id)
+#                     if salary_info:
+#                         employee_details.append({
+#                             'employee_salary': EmployeeSalaryGet(**salary_info[0].__dict__)
+#                         })
+
+#                 if option == "educational_qualification":
+#                     edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
+#                     if edu_qual_info:
+#                         # Create a list of EmployeeEducationalQualificationGet objects
+#                         qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
+#                         employee_details.append({
+#                               'educational_qualification': qualifications
+#                             })
+        
+
+#                 if option == "employee_experience":
+#                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
+#                     if exp_info:
+
+#                         # Create a list of EmployeeExperienceGet objects
+#                         experiences = [EmployeeExperienceGet(**exp.__dict__) for exp in exp_info]
+#                         employee_details.append({
+#                             'employee_experience': experiences
+#                         })
+
+#                 if option == "employee_documents":
+#                     doc_info = db_employee_master.get_document_details(db, employee_id=employee_id)
+#                     if doc_info:
+#                        # Create a list of EmployeeDocumentsGet objects
+#                         documents = [EmployeeDocumentsGet(**doc.__dict__) for doc in doc_info]
+#                         employee_details.append({
+#                              'employee_documents': documents
+#                         })
+                
+#                 if option == "emergency_contact_details":
+#                     emer_contact = db_employee_master.get_emergency_contact_details(db, employee_id=employee_id)
+#                     if emer_contact:
+#                         employee_details.append({
+#                             'emergency_contact_details': EmployeeEmergencyContactGet(**emer_contact[0].__dict__)
+#                         })
+
+#                 if option == "dependent_details":
+#                     dep_details = db_employee_master.get_dependent_details(db, employee_id=employee_id)
+#                     if dep_details:
+#                         employee_details.append({
+#                             'dependent_details': EmployeeDependentsGet(**dep_details[0].__dict__)
+#                         })
+
+#                 if option == "professional_qualification":
+#                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
+#                     if prof_qual_info:
+#                          # Create a list of EmployeeProfessionalQualificationGet objects
+#                         prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
+#                         employee_details.append({
+#                                 'professional_qualification': prof_qualifications
+#                         })
+       
+
+#                 if option == "employee_security_credentials":
+#                     sec_credentials = db_employee_master.get_security_credentials(db, employee_id=employee_id)
+#                     if sec_credentials:
+#                        # Create a list of EmployeeSecurityCredentialsGet objects
+#                         credentials = [EmployeeSecurityCredentialsGet(**cred.__dict__) for cred in sec_credentials]
+#                         employee_details.append({
+#                               'employee_security_credentials': credentials
+#                         })
+        
+
+
+                
+#                 if option == "user_roles":
+#                     user_roles = db_employee_master.get_user_role(db, employee_id=employee_id)
+#                     if user_roles:
+#                  # Create a list of EmployeeUserRolesGet objects
+#                         roles = [EmployeeUserRolesGet(**role.__dict__) for role in user_roles]
+#                         employee_details.append({
+#                                   'user_roles': roles
+#                         })
+
+#             return employee_details
+
+#         else:
+#             # If only employee_id is provided without components
+#             raise HTTPException(status_code=400, detail="Profile component is required to fetch details for a specific employee.")
+
+#     else:
+#         employees = db_employee_master.search_employee_master_details(
+#             db, user_status, approval_status, category, department, designation, is_consultant, search
+#         )
+
+#         if not employees:
+#             return []
+
+        
+#         employee_details = []
+
+#         for emp in employees:
+#             emp_detail = {
+#                 "employee_id": emp.employee_id,
+#                 "first_name": emp.first_name,
+#                 "middle_name": emp.middle_name,
+#                 "last_name": emp.last_name,
+#                 "employee_name": f"{emp.first_name} {emp.middle_name} {emp.last_name}",
+#                 "gender_id": emp.gender_id,
+#                 "gender": emp.gender,
+#                 "date_of_birth": emp.date_of_birth,
+#                 "blood_group": emp.blood_group,
+#                 "nationality_id": emp.nationality_id,
+#                 "nationality": emp.nationality_name,
+#                 "marital_status_id": emp.marital_status_id,
+#                 "marital_status": emp.marital_status,
+#                 "joining_date": emp.joining_date,
+#                 "remarks": emp.remarks,
+#                 "category_id": emp.employee_category_id,
+#                 "category": emp.category_name,
+#                 "department_id": emp.department_id,
+#                 "department": emp.department_name,
+#                 "designation_id": emp.designation_id,
+#                 "designation": emp.designation,
+#                 "contact_number": emp.personal_mobile_number,
+#                 "email_id": emp.personal_email_id,
+#                 "is_consultant": emp.is_consultant,
+#                 "user_status": emp.is_active,
+#                 "approval_status": emp.is_approved
+#             }
+#             employee_details.append(emp_detail)
+
+#         return employee_details
+
 @router.get("/get_employee_details")
 def get_employee_details(
     db: Session = Depends(get_db),
@@ -236,49 +471,27 @@ def get_employee_details(
             "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
         )
     ),
-    category: Optional[Union[str, int]] = Query(None, description="Filter by category or 'ALL' "),
-    department: Optional[Union[str, int]] = Query(None, description="Filter by department or 'ALL'"),
-    designation: Optional[Union[str, int]] = Query(None, description="Filter by designation or 'ALL'"),
-    user_status: Optional[ActiveStatus] = Query(None, description="Filter by status (yes/no) or 'ALL'"),
-    approval_status: Optional[ApprovedStatus] = Query(None, description="Filter by approval status (yes/no)" or 'ALL'),
-    is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
-    search: Optional[str] = Query(None, description="Search by employee details")
+    category: Optional[Union[str, int]] = Query("ALL", description="Filter by category or 'ALL'"),
+    department: Optional[Union[str, int]] = Query("ALL", description="Filter by department or 'ALL'"),
+    designation: Optional[Union[str, int]] = Query("ALL", description="Filter by designation or 'ALL'"),
+    user_status: Optional[ActiveStatus] = Query("ALL", description="Filter by status (yes/no) or 'ALL'"),
+    approval_status: Optional[ApprovedStatus] = Query("ALL", description="Filter by approval status (yes/no)" or 'ALL'),
+    is_consultant: Optional[str] = Query("ALL", description="Filter by consultant status (yes/no) or ALL"),
+    search: Optional[str] = Query(None, description="Search by employee details"),
+    page: Optional[int] = Query(1, description="Page number"),
+    page_size: Optional[int] = Query(10, description="Number of records per page")
 ):
-    """
-    Retrieve employee details with optional filters, search, and profile components.
-
-    - If both **employee_id** and **employee_profile_component** are provided, retrieve details for the specified employee using the given profile components.
-    - If **employee_id** is provided without **employee_profile_component**, return an error indicating the need for profile components.
-    - If neither **employee_id** nor **employee_profile_component** is provided, execute the search logic to retrieve employees based on filters and search criteria.
-
-    -**employee_id** : Integer parameter, the Employee Master identifier.
-
-    -**employee_profile_component** : A text field to add components for retrieving employee profiles.
-    - Components: present_address, permanent_address, bank_details, contact_details, employment_details, 
-    emergency_contact_details, dependent_details, employee_salary, educational_qualification, 
-    employee_experience, employee_documents, professional_qualification.
-
-    -**category** : Retrieve employees with category filter.
-    -**department** : Retrieve employees with department filter.
-    -**designation** : Retrieve employees with designation filter.
-    -**status** : Filter employees by status(yes/no).
-    -**approval_status** : Filter employees by approval status(yes/no).
-    -**is_consultant** : To check whether the employee is a consultant or not(yes/no).
-    -**search** : To search for a particular employee by name, category, department, and designation.
-    """
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-  
     if employee_id is not None:
         if employee_profile_component:
-            # Execute profile component logic
+            # Logic for fetching employee details by components
             employee_details = []
-
             emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
             if not emp:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee with id {employee_id} not found")
+            
             employee_details.append({
                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
             })
@@ -322,10 +535,26 @@ def get_employee_details(
                 if option == "employment_details":
                     employment_info = db_employee_master.get_employment_details(db, employee_id=employee_id)
                     if employment_info:
-                        employee_details.append({
-                            'employment_details': EmployeeEmployementGet(**employment_info[0].__dict__)
-                        })
+                        employment_details = []
+                        for emp_detail, department_name, designation_name ,category_name in employment_info:
+                            employment_details.append({
+                                   'department_id': emp_detail.department_id,
+                                   'department_name': department_name,
+                                   'designation_id' : emp_detail.designation_id,
+                                   'designation_name': designation_name,
+                                   'employee_category_id' :emp_detail.employee_category_id,
+                                   'category_name' : category_name,
+                                   'effective_to_date': emp_detail.effective_to_date,
+                                   'remarks': emp_detail.remarks
+                                })
+              
 
+                  # Append employment_details to employee_details only once after the loop
+                        employee_details.append({
+                             'employment_details': employment_details
+                        })
+ 
+                
                 if option == "employee_salary":
                     salary_info = db_employee_master.get_employee_salary_details(db, employee_id=employee_id)
                     if salary_info:
@@ -336,18 +565,14 @@ def get_employee_details(
                 if option == "educational_qualification":
                     edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
                     if edu_qual_info:
-                        # Create a list of EmployeeEducationalQualificationGet objects
                         qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
                         employee_details.append({
                               'educational_qualification': qualifications
-                            })
-        
+                        })
 
                 if option == "employee_experience":
                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
                     if exp_info:
-
-                        # Create a list of EmployeeExperienceGet objects
                         experiences = [EmployeeExperienceGet(**exp.__dict__) for exp in exp_info]
                         employee_details.append({
                             'employee_experience': experiences
@@ -356,12 +581,11 @@ def get_employee_details(
                 if option == "employee_documents":
                     doc_info = db_employee_master.get_document_details(db, employee_id=employee_id)
                     if doc_info:
-                       # Create a list of EmployeeDocumentsGet objects
                         documents = [EmployeeDocumentsGet(**doc.__dict__) for doc in doc_info]
                         employee_details.append({
                              'employee_documents': documents
                         })
-                
+
                 if option == "emergency_contact_details":
                     emer_contact = db_employee_master.get_emergency_contact_details(db, employee_id=employee_id)
                     if emer_contact:
@@ -379,29 +603,22 @@ def get_employee_details(
                 if option == "professional_qualification":
                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
                     if prof_qual_info:
-                         # Create a list of EmployeeProfessionalQualificationGet objects
                         prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
                         employee_details.append({
                                 'professional_qualification': prof_qualifications
                         })
-       
 
                 if option == "employee_security_credentials":
                     sec_credentials = db_employee_master.get_security_credentials(db, employee_id=employee_id)
                     if sec_credentials:
-                       # Create a list of EmployeeSecurityCredentialsGet objects
                         credentials = [EmployeeSecurityCredentialsGet(**cred.__dict__) for cred in sec_credentials]
                         employee_details.append({
                               'employee_security_credentials': credentials
                         })
-        
 
-
-                
                 if option == "user_roles":
                     user_roles = db_employee_master.get_user_role(db, employee_id=employee_id)
                     if user_roles:
-                 # Create a list of EmployeeUserRolesGet objects
                         roles = [EmployeeUserRolesGet(**role.__dict__) for role in user_roles]
                         employee_details.append({
                                   'user_roles': roles
@@ -410,20 +627,23 @@ def get_employee_details(
             return employee_details
 
         else:
-            # If only employee_id is provided without components
             raise HTTPException(status_code=400, detail="Profile component is required to fetch details for a specific employee.")
-
     else:
-        employees = db_employee_master.search_employee_master_details(
+        # Fetch employees based on the filter conditions
+        employees_query = db_employee_master.search_employee_master_details_with_page(
             db, user_status, approval_status, category, department, designation, is_consultant, search
         )
+
+        # Pagination logic applied on the list
+        total_records = len(employees_query)
+        offset = (page - 1) * page_size
+        employees = employees_query[offset:offset + page_size]
 
         if not employees:
             return []
 
-        
+        # Prepare employee details for response
         employee_details = []
-
         for emp in employees:
             emp_detail = {
                 "employee_id": emp.employee_id,
@@ -455,8 +675,14 @@ def get_employee_details(
             }
             employee_details.append(emp_detail)
 
-        return employee_details
-
+        # Return paginated response with metadata
+        return {
+            "page": page,
+            "page_size": page_size,
+            "total_records": total_records,
+            "total_pages": (total_records // page_size) + (1 if total_records % page_size else 0),
+            "data": employee_details
+        }
 
 #---------------------------------------------------------------------------------------------------------
 
@@ -672,7 +898,7 @@ def save_or_update_records(
             if rec.id == 0:
                 # Insertion logic
                 record_data['created_by'] = user_id
-                record_data['created_on'] = datetime.utcnow()
+                record_data['created_on'] = datetime.now()
                 insert_stmt = insert(model_class).values(**record_data)
                 db.execute(insert_stmt)
             else:
@@ -957,5 +1183,217 @@ def add_employee_to_team(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
+#---------------------------------------------------------------------------------------------------
+
+# @router.get("/test/get_employee_details")
+# def get_employee_details(
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     employee_id: Optional[int] = None,
+#     employee_profile_component: Optional[str] = Query(
+#         None,
+#         description=(
+#             "Comma-separated list of components to view employee details. "
+#             "Valid options are: [present_address, permanent_address, bank_details, contact_details, "
+#             "employment_details, emergency_contact_details, dependent_details, employee_salary, "
+#             "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+#         )
+#     ),
+#     category: Optional[Union[str, int]] = Query(None, description="Filter by category or 'ALL'"),
+#     department: Optional[Union[str, int]] = Query(None, description="Filter by department or 'ALL'"),
+#     designation: Optional[Union[str, int]] = Query(None, description="Filter by designation or 'ALL'"),
+#     user_status: Optional[ActiveStatus] = Query(None, description="Filter by status (yes/no) or 'ALL'"),
+#     approval_status: Optional[ApprovedStatus] = Query(None, description="Filter by approval status (yes/no)" or 'ALL'),
+#     is_consultant: Optional[str] = Query(None, description="Filter by consultant status (yes/no)"),
+#     search: Optional[str] = Query(None, description="Search by employee details"),
+#     page: Optional[int] = Query(1, description="Page number"),
+#     page_size: Optional[int] = Query(10, description="Number of records per page")
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     if employee_id is not None:
+#         if employee_profile_component:
+#             # Logic for fetching employee details by components
+#             employee_details = []
+#             emp = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == employee_id).first()
+#             if not emp:
+#                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Employee with id {employee_id} not found")
+            
+#             employee_details.append({
+#                 'employee_master': EmployeeMasterDisplay(**{k: v.isoformat() if isinstance(v, date) else v for k, v in emp.__dict__.items()})
+#             })
+
+#             schema_names = EmployeeDetailsGet.__fields__.keys()
+#             schemas_list = employee_profile_component.split(",")
+#             valid_options = [option for option in schemas_list if option in schema_names]
+
+#             if not valid_options:
+#                 raise HTTPException(status_code=422, detail="Invalid employee profile component")
+
+#             for option in valid_options:
+#                 if option == "present_address":
+#                     present_addresses = db_employee_master.get_present_address_details(db, employee_id=employee_id)
+#                     if present_addresses:
+#                         employee_details.append({
+#                             'present_address': EmployeePresentAddressGet(**present_addresses[0].__dict__)
+#                         })
+
+#                 if option == "permanent_address":
+#                     permanent_addresses = db_employee_master.get_permanent_address_details(db, employee_id=employee_id)
+#                     if permanent_addresses:
+#                         employee_details.append({
+#                             'permanent_address': EmployeePermanentAddressGet(**permanent_addresses[0].__dict__)
+#                         })
+
+#                 if option == "contact_details":
+#                     contact_info = db_employee_master.get_contact_details(db, employee_id=employee_id)
+#                     if contact_info:
+#                         employee_details.append({
+#                             'contact_details': EmployeeContactGet(**contact_info[0].__dict__)
+#                         })
+
+#                 if option == "bank_details":
+#                     bank_info = db_employee_master.get_bank_details(db, employee_id=employee_id)
+#                     if bank_info:
+#                         employee_details.append({
+#                             'bank_details': EmployeeBankAccountGet(**bank_info[0].__dict__)
+#                         })
+
+#                 if option == "employment_details":
+#                     employment_info = db_employee_master.get_employment_details(db, employee_id=employee_id)
+#                     if employment_info:
+#                         employee_details.append({
+#                             'employment_details': EmployeeEmployementGet(**employment_info[0].__dict__)
+#                         })
+
+#                 if option == "employee_salary":
+#                     salary_info = db_employee_master.get_employee_salary_details(db, employee_id=employee_id)
+#                     if salary_info:
+#                         employee_details.append({
+#                             'employee_salary': EmployeeSalaryGet(**salary_info[0].__dict__)
+#                         })
+
+#                 if option == "educational_qualification":
+#                     edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
+#                     if edu_qual_info:
+#                         qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
+#                         employee_details.append({
+#                               'educational_qualification': qualifications
+#                         })
+
+#                 if option == "employee_experience":
+#                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
+#                     if exp_info:
+#                         experiences = [EmployeeExperienceGet(**exp.__dict__) for exp in exp_info]
+#                         employee_details.append({
+#                             'employee_experience': experiences
+#                         })
+
+#                 if option == "employee_documents":
+#                     doc_info = db_employee_master.get_document_details(db, employee_id=employee_id)
+#                     if doc_info:
+#                         documents = [EmployeeDocumentsGet(**doc.__dict__) for doc in doc_info]
+#                         employee_details.append({
+#                              'employee_documents': documents
+#                         })
+
+#                 if option == "emergency_contact_details":
+#                     emer_contact = db_employee_master.get_emergency_contact_details(db, employee_id=employee_id)
+#                     if emer_contact:
+#                         employee_details.append({
+#                             'emergency_contact_details': EmployeeEmergencyContactGet(**emer_contact[0].__dict__)
+#                         })
+
+#                 if option == "dependent_details":
+#                     dep_details = db_employee_master.get_dependent_details(db, employee_id=employee_id)
+#                     if dep_details:
+#                         employee_details.append({
+#                             'dependent_details': EmployeeDependentsGet(**dep_details[0].__dict__)
+#                         })
+
+#                 if option == "professional_qualification":
+#                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
+#                     if prof_qual_info:
+#                         prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
+#                         employee_details.append({
+#                                 'professional_qualification': prof_qualifications
+#                         })
+
+#                 if option == "employee_security_credentials":
+#                     sec_credentials = db_employee_master.get_security_credentials(db, employee_id=employee_id)
+#                     if sec_credentials:
+#                         credentials = [EmployeeSecurityCredentialsGet(**cred.__dict__) for cred in sec_credentials]
+#                         employee_details.append({
+#                               'employee_security_credentials': credentials
+#                         })
+
+#                 if option == "user_roles":
+#                     user_roles = db_employee_master.get_user_role(db, employee_id=employee_id)
+#                     if user_roles:
+#                         roles = [EmployeeUserRolesGet(**role.__dict__) for role in user_roles]
+#                         employee_details.append({
+#                                   'user_roles': roles
+#                         })
+
+#             return employee_details
+
+#         else:
+#             raise HTTPException(status_code=400, detail="Profile component is required to fetch details for a specific employee.")
+#     else:
+#         # Fetch employees based on the filter conditions
+#         employees_query = db_employee_master.search_employee_master_details_test(
+#             db, user_status, approval_status, category, department, designation, is_consultant, search
+#         )
+
+#         # Pagination logic applied on the list
+#         total_records = len(employees_query)
+#         offset = (page - 1) * page_size
+#         employees = employees_query[offset:offset + page_size]
+
+#         if not employees:
+#             return []
+
+#         # Prepare employee details for response
+#         employee_details = []
+#         for emp in employees:
+#             emp_detail = {
+#                 "employee_id": emp.employee_id,
+#                 "first_name": emp.first_name,
+#                 "middle_name": emp.middle_name,
+#                 "last_name": emp.last_name,
+#                 "employee_name": f"{emp.first_name} {emp.middle_name} {emp.last_name}",
+#                 "gender_id": emp.gender_id,
+#                 "gender": emp.gender,
+#                 "date_of_birth": emp.date_of_birth,
+#                 "blood_group": emp.blood_group,
+#                 "nationality_id": emp.nationality_id,
+#                 "nationality": emp.nationality_name,
+#                 "marital_status_id": emp.marital_status_id,
+#                 "marital_status": emp.marital_status,
+#                 "joining_date": emp.joining_date,
+#                 "remarks": emp.remarks,
+#                 "category_id": emp.employee_category_id,
+#                 "category": emp.category_name,
+#                 "department_id": emp.department_id,
+#                 "department": emp.department_name,
+#                 "designation_id": emp.designation_id,
+#                 "designation": emp.designation,
+#                 "contact_number": emp.personal_mobile_number,
+#                 "email_id": emp.personal_email_id,
+#                 "is_consultant": emp.is_consultant,
+#                 "user_status": emp.is_active,
+#                 "approval_status": emp.is_approved
+#             }
+#             employee_details.append(emp_detail)
+
+#         # Return paginated response with metadata
+#         return {
+#             "page": page,
+#             "page_size": page_size,
+#             "total_records": total_records,
+#             "total_pages": (total_records // page_size) + (1 if total_records % page_size else 0),
+#             "data": employee_details
+#         }
 
 

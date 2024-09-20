@@ -130,7 +130,7 @@ def generate_quotation_service_details(
             product_discount_total=0,
             bill_discount=0,
             additional_discount=0,
-            round_off=total_service_charge,
+            round_off=0,
             net_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
             grand_total=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
             remarks='',
@@ -152,10 +152,14 @@ def generate_quotation_service_details(
                 hsn_sac_code=hsn_sac_code,
                 is_bundle_service=details.is_bundle_service,
                 bundle_service_id=details.bundle_service_id,
-                service_charge=prices.service_charge,
-                govt_agency_fee=prices.govt_agency_fee,
-                stamp_duty=prices.stamp_duty,
-                stamp_fee=prices.stamp_fee,
+                # service_charge=prices.service_charge,
+                service_charge= total_service_charge,
+                govt_agency_fee = total_govt_agency_fee,
+                stamp_duty = total_stamp_duty,
+                stamp_fee = total_stamp_fee,
+                # govt_agency_fee=prices.govt_agency_fee,
+                # stamp_duty=prices.stamp_duty,
+                # stamp_fee=prices.stamp_fee,
                 quantity=1,
                 offer_percentage = 0.0,
                 offer_amount = 0.0,
@@ -188,6 +192,8 @@ def generate_quotation_service_details(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+#=-------------------------------------------------------------------------------------------
+
 
 def save_quotation_data(
         request : AccQuotationSchema,
@@ -198,9 +204,12 @@ def save_quotation_data(
     try:
 
             if quotation_id != 0: 
+                
                 quotation_data = db.query(AccQuotationMaster).filter(
-                    AccQuotationMaster.id == quotation_id
-                ).first()
+                    AccQuotationMaster.id == quotation_id,
+                    AccQuotationMaster.is_deleted == 'no'
+                ).order_by(AccQuotationMaster.quotation_version.desc()).first()
+
 
                 if quotation_data:
                     quotation_status = quotation_data.quotation_status
@@ -226,7 +235,7 @@ def save_quotation_data(
                         db.commit()
                         return {"message": "Quotation saved successfully", "quotation_master_id": new_quotation_master.id}
 
-                    elif quotation_status == "DRAFT":
+                    elif quotation_status in ["DRAFT", "SENT"]:
                     # Update the existing quotation master
                         for key, value in request.quotation_master.model_dump(exclude_unset=True).items():
                             setattr(quotation_data, key, value)
@@ -255,7 +264,11 @@ def save_quotation_data(
 
                         db.commit()
                         return {"message": "Quotation updated successfully", "quotation_master_id": quotation_data.id}
-
+                    else:
+                        return {
+                            'message': 'quotation is already accepted ',
+                            'quotation_status': quotation_data.quotation_status
+                        }
             else:
                 raise HTTPException(status_code=404, detail="Quotation not found")
 
@@ -302,7 +315,7 @@ def save_quotation_data(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred,{ str(e)}")
 
-
+#--------------------------------------------------------------------------------------------------
 def update_quotation_status(
         quotation_id : int,
         quotation_status : str,
