@@ -904,39 +904,106 @@ def get_service_documents_list_by_group_category(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 # #---------------------------------------------------------------------------------------
+# @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
+# def get_service_documents_data_details(
+#     service_document_data_master_id: int,
+#     document_category: Optional[str] = Query(None, title="Select document category", 
+#                                             enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Retrieve service document details based on specified criteria.
+
+#     Parameters:
+#     - **service_id**: Required parameter to filter by service ID.
+#     - **document_category**: Optional parameter to filter by document category.
+#     - Return a list of documents details with the selected category for the specified service_id.
+    
+#     Possible values for `document_category` include:
+#     - 'PERSONAL DOC'
+#     - 'CONSTITUTION DOC'
+#     - 'PRINCIPAL PLACE DOC'
+#     - 'UTILITY DOC'
+#     - 'DATA TO BE SUBMITTED'
+
+#     Returns:
+#     - Returns all document details for the specified service_id and 'document_category'.
+#     - If no records are found, return {'message': 'No data found'}.
+#     """
+#     try:
+#         results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
+
+#         if not results:
+#             return []
+
+#         # Group the results by document category
+#         grouped_results = {}
+#         for result in results:
+#             if result.document_data_category_id not in grouped_results:
+#                 grouped_results[result.document_data_category_id] = {
+#                     "document_data_category_id": result.document_data_category_id,
+#                     "document_data_category_category_name": result.document_data_category_category_name,
+#                     "details": []
+#                 }
+#             grouped_results[result.document_data_category_id]["details"].append(result)
+
+#         # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
+#         final_results = list(grouped_results.values())
+
+#         return final_results
+
+#     except Exception as e:
+#         # logging.error(f"Error fetching service documents details: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+    
+    
+#  #-------------------------------------------------------------------------------------------------------------   
+
+
+
+
+
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
-    service_document_data_master_id: int,
-    document_category: Optional[str] = Query(None, title="Select document category", 
-                                            enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
+    service_document_data_master_id: Optional[int] = Query(None, title="Service Document Data Master ID"),
+    service_id: Optional[int] = Query(None, title="Service ID"),
+    constitution_id: Optional[int] = Query(None, title="Constitution ID"),
+    document_category: Optional[str] = Query("ALL", title="Select document category", 
+                                             enum=['ALL','PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),
+    nature_of_possession_id: Optional[int] = Query(None, title="Nature of Possession ID", 
+                                                   description="Only relevant if 'PRINCIPAL PLACE DOC' is selected."),
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve service document details based on specified criteria.
+   
+    Retrieve service document details based on various filter criteria.
 
-    Parameters:
-    - **service_id**: Required parameter to filter by service ID.
-    - **document_category**: Optional parameter to filter by document category.
-    - Return a list of documents details with the selected category for the specified service_id.
-    
-    Possible values for `document_category` include:
-    - 'PERSONAL DOC'
-    - 'CONSTITUTION DOC'
-    - 'PRINCIPAL PLACE DOC'
-    - 'UTILITY DOC'
-    - 'DATA TO BE SUBMITTED'
+    This endpoint allows users to fetch service document details by specifying optional filters such as 
+    service document data master ID, constitution ID, service ID, document category, and nature of possession ID. 
 
-    Returns:
-    - Returns all document details for the specified service_id and 'document_category'.
-    - If no records are found, return {'message': 'No data found'}.
+    - **document_category** (Optional[str], default="ALL"): The category of the document to filter the results.
+     Categories include 'PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 
+     and 'DATA TO BE SUBMITTED'. If 'ALL' is selected, documents from all categories will be retrieved.
+
+    - **nature_of_possession_id** (Optional[int]): The ID representing the nature of possession.
+    This filter is only relevant when 'PRINCIPAL PLACE DOC' is selected as the document category.
+  
     """
     try:
-        results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
+        results = db_office_master.get_service_documents_data_details(
+            db,
+            service_document_data_master_id,
+            service_id,
+            constitution_id,
+            document_category,
+            nature_of_possession_id,
+        )
 
         if not results:
             return []
 
-        # Group the results by document category
+        # Group results by document category
         grouped_results = {}
         for result in results:
             if result.document_data_category_id not in grouped_results:
@@ -947,18 +1014,12 @@ def get_service_documents_data_details(
                 }
             grouped_results[result.document_data_category_id]["details"].append(result)
 
-        # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
-        final_results = list(grouped_results.values())
-
-        return final_results
+        return list(grouped_results.values())
 
     except Exception as e:
-        # logging.error(f"Error fetching service documents details: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-    
-    
-    
- #-------------------------------------------------------------------------------------------------------------   
+        raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
+
+
 
 
 @router.get("/services/get_all_service_document_data_master")

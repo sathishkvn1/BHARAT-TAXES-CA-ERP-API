@@ -1560,34 +1560,80 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
 
 #------------------------------------------------------------------------------------------------------------
 
-def get_service_documents_data_details(db: Session, service_document_data_master_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
-    try:
-        # Query to fetch all records from master table for the given service_id
-        master_queries = db.query(OffViewServiceDocumentsDataMaster). \
-            filter(OffViewServiceDocumentsDataMaster.service_document_data_master_id == service_document_data_master_id). \
-            all()
+# def get_service_documents_data_details(db: Session, service_document_data_master_id: int, document_category: Optional[str] = None) -> List[OffViewServiceDocumentsDataDetailsDocCategory]:
+#     try:
+#         # Query to fetch all records from master table for the given service_id
+#         master_queries = db.query(OffViewServiceDocumentsDataMaster). \
+#             filter(OffViewServiceDocumentsDataMaster.service_document_data_master_id == service_document_data_master_id). \
+#             all()
 
-        if not master_queries:
-            return []  # Return empty list if no master record found for the given service_id
+#         if not master_queries:
+#             return []  # Return empty list if no master record found for the given service_id
 
-        # Collect all service_document_data_master_id
-        service_document_data_master_ids = [master.service_document_data_master_id for master in master_queries]
+#         # Collect all service_document_data_master_id
+#         service_document_data_master_ids = [master.service_document_data_master_id for master in master_queries]
 
-        # Query to fetch details based on the collected service_document_data_master_ids and optional document_category
-        details_query = db.query(OffViewServiceDocumentsDataDetails). \
-            filter(OffViewServiceDocumentsDataDetails.service_document_data_master_id.in_(service_document_data_master_ids))
+#         # Query to fetch details based on the collected service_document_data_master_ids and optional document_category
+#         details_query = db.query(OffViewServiceDocumentsDataDetails). \
+#             filter(OffViewServiceDocumentsDataDetails.service_document_data_master_id.in_(service_document_data_master_ids))
 
-        if document_category:
-            details_query = details_query.filter(
-                OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category)
+#         if document_category:
+#             details_query = details_query.filter(
+#                 OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category)
 
-        results = details_query.all()
+#         results = details_query.all()
         
-        return results
+#         return results
+
+#     except Exception as e:
+#         # logging.error(f"Error fetching service documents details: {e}")
+#         raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
+
+
+def get_service_documents_data_details(
+    db: Session,
+    service_document_data_master_id: Optional[int] = None,
+    service_id: Optional[int] = None,
+    constitution_id: Optional[int] = None,
+    document_category: Optional[str] = "ALL",
+    nature_of_possession_id: Optional[int] = None,
+) -> List[OffViewServiceDocumentsDataDetails]:
+    try:
+        # Base query and join 
+        query = db.query(OffViewServiceDocumentsDataDetails).join(
+            OffServiceDocumentDataMaster,
+            OffViewServiceDocumentsDataDetails.service_document_data_master_id == OffServiceDocumentDataMaster.id
+        )
+        
+        # Conditional filters based on provided arguments
+        if service_document_data_master_id is not None:
+            query = query.filter(
+                OffServiceDocumentDataMaster.id == service_document_data_master_id
+            )
+
+        if constitution_id is not None:
+            query = query.filter(OffServiceDocumentDataMaster.constitution_id == constitution_id)
+
+        if service_id is not None:
+            query = query.filter(OffServiceDocumentDataMaster.service_goods_master_id == service_id)
+
+        if document_category !='ALL':
+            query = query.filter(
+                OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category
+            )
+
+        if nature_of_possession_id is not None and document_category == 'PRINCIPAL PLACE DOC':
+            query = query.filter(
+                OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
+            )
+
+        # Return the filtered or non-filtered result set
+        return query.all()
 
     except Exception as e:
-        # logging.error(f"Error fetching service documents details: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
+        raise Exception(f"Error fetching service documents details: {e}")
+
+
 
 #---------------------------------------------------------------------------------------------
 def get_service_documents_list_by_group_category(
