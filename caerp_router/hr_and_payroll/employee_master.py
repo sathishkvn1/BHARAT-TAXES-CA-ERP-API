@@ -481,7 +481,30 @@ def get_employee_details(
     search: Optional[str] = Query(None, description="Search by employee details"),
     page: Optional[int] = Query(1, description="Page number"),
     page_size: Optional[int] = Query(10, description="Number of records per page")
-):
+):  
+    """
+    Retrieve employee details with optional filters, search, and profile components.
+
+    - If both **employee_id** and **employee_profile_component** are provided, retrieve details for the specified employee using the given profile components.
+    - If **employee_id** is provided without **employee_profile_component**, return an error indicating the need for profile components.
+    - If neither **employee_id** nor **employee_profile_component** is provided, execute the search logic to retrieve employees based on filters and search criteria.
+
+    -**employee_id** : Integer parameter, the Employee Master identifier.
+
+    -**employee_profile_component** : A text field to add components for retrieving employee profiles.
+    - Components: present_address, permanent_address, bank_details, contact_details, employment_details, 
+    emergency_contact_details, dependent_details, employee_salary, educational_qualification, 
+    employee_experience, employee_documents, professional_qualification.
+
+    -**category** : Retrieve employees with category filter.
+    -**department** : Retrieve employees with department filter.
+    -**designation** : Retrieve employees with designation filter.
+    -**status** : Filter employees by status(yes/no).
+    -**approval_status** : Filter employees by approval status(yes/no).
+    -**is_consultant** : To check whether the employee is a consultant or not(yes/no).
+    -**search** : To search for a particular employee by name, category, department, and designation.
+    """
+
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
@@ -545,6 +568,7 @@ def get_employee_details(
                                    'designation_name': designation_name,
                                    'employee_category_id' :emp_detail.employee_category_id,
                                    'category_name' : category_name,
+                                   'is_consultant'   : emp_detail.is_consultant,
                                    'effective_to_date': emp_detail.effective_to_date,
                                    'remarks': emp_detail.remarks
                                 })
@@ -684,6 +708,10 @@ def get_employee_details(
             "total_pages": (total_records // page_size) + (1 if total_records % page_size else 0),
             "data": employee_details
         }
+
+
+
+
 
 #---------------------------------------------------------------------------------------------------------
 
