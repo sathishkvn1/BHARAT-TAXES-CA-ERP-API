@@ -364,8 +364,6 @@ class EmployeeDependentsGet(BaseModel):
     class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
-  
-         
 
 class EmployeeProfessionalQualificationGet(BaseModel):
     id                  : int
@@ -460,13 +458,15 @@ class EmployeeDetails(BaseModel):
    user_roles                    : Optional[EmployeeUserRoles] = None
 
 
+
 class EmployeeDetailsGet(BaseModel):
+  
    employee_master         :   Optional[EmployeeMasterDisplay] = None
    present_address         :   Optional[EmployeePresentAddressGet] = None
    permanent_address       : Optional[EmployeePermanentAddressGet] = None
    contact_details         :   Optional[EmployeeContactGet] = None
    bank_details            :      Optional[EmployeeBankAccountGet] = None
-   employement_details     : Optional[EmployeeEmployementGet] = None
+   employment_details     : Optional[EmployeeEmployementGet] = None
    emergency_contact_details  : Optional[EmployeeEmergencyContactGet] = None
    dependent_details          : Optional[EmployeeDependentsGet] = None
    employee_salary            : Optional[EmployeeSalaryGet] = None

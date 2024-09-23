@@ -11,7 +11,6 @@ from caerp_constants.caerp_constants import RecordActionType, ActionType, Active
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
 from sqlalchemy.sql.operators import is_
-
 from caerp_db.hash import Hash
 import os
 import shutil

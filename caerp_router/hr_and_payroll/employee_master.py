@@ -222,6 +222,7 @@ def delete_employee_details_by_id(
   
 #---------------------------------------------------------------------------------------------------------
 
+
 # @router.get("/get_employee_details")
 # def get_employee_details(
 #     db: Session = Depends(get_db),
