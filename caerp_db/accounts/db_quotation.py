@@ -42,10 +42,15 @@ def generate_quotation_service_details(
 ) -> ServiceGoodsPriceResponseSchema:
     try:
         # Fetch master data
-        existing_data  = db.query(AccQuotationMaster).filter(
+        # existing_data  = db.query(AccQuotationMaster).filter(
+        #     AccQuotationMaster.work_order_master_id == work_order_master_id,
+        #     AccQuotationMaster.is_deleted =='no'
+        # ).first()
+        existing_data = db.query(AccQuotationMaster).filter(
             AccQuotationMaster.work_order_master_id == work_order_master_id,
-            AccQuotationMaster.is_deleted =='no'
-        ).first()
+            AccQuotationMaster.is_deleted == 'no'
+        ).order_by(AccQuotationMaster.quotation_version.desc()).first()
+
         if existing_data:
             return {'message': 'Quotation is already exist',
                     'quotation_master_id' : existing_data.id}
@@ -73,7 +78,8 @@ def generate_quotation_service_details(
             total_stamp_fee = 0.0
             total_stamp_duty = 0.0
             hsn_sac_code = ''
-
+            quotation_total_amount = 0.0
+            product_discount_total = 0.0
             if details.is_bundle_service == 'no':
                 service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
                 if service_goods_price_data:
@@ -167,14 +173,23 @@ def generate_quotation_service_details(
                 coupon_amount = 0.0,
                 discount_percentage = 0.0,
                 discount_amount = 0.0,
-                gst_percent=0.0,
+                gst_percent=10,
                 gst_amount=0,
-                taxable_amount= 0.0,
-                
+                # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
+                taxable_amount = total_service_charge,
                 total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
             )
-
+        
             db.add(quotation_detail)
+
+            quotation_total_amount += quotation_detail.total_amount 
+            gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
+            quotation_detail.gst_amount = gst_amount
+            quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
+            product_discount_total +=quotation_detail.discount_amount  
+           
+        quotation_master.grand_total = quotation_total_amount
+        quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount
         db.commit()
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
