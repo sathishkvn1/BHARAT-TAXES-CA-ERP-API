@@ -967,7 +967,7 @@ class OffTaskStatus(caerp_base):
 class OffConsultationTaskMaster(caerp_base):
     __tablename__ = 'off_consultation_task_master'
     id                      = Column(Integer, primary_key=True, autoincrement=True)
-    task_date               = Column(DateTime, nullable=False)
+    task_date               = Column(Date, nullable=False)
     consultant_id           = Column(Integer, nullable=False)
     appointment_master_id   = Column(Integer, nullable=False)
     visit_master_id         = Column(Integer, nullable=False)

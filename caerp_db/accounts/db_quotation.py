@@ -636,35 +636,44 @@ def generate_profoma_invoice_details(
 
 
 
-
 def save_service_requirement_status(
         db: Session,
-        # work_order_details_id: int,
         request: List[ServiceRequirementSchema],
-        user_id : int
+        user_id: int
 ):                    
+    all_later = True  # Flag to check if all services are set to 'LATER'
+
     for data in request:
         existing_record = db.query(OffWorkOrderDetails).filter(
-            OffWorkOrderDetails.id== data.work_order_details_id,
+            OffWorkOrderDetails.id == data.work_order_details_id,
             OffWorkOrderDetails.is_deleted == 'no'
         ).first()
 
         try:
             if existing_record:
-                    # If the record exists, update it with the new data
-                    existing_record.service_required = data.service_required
-                    existing_record.service_required_date = data.service_required_date
-                    existing_record.modified_by           = user_id
-                    existing_record.modified_on           = datetime.utcnow() 
+                # Update the existing record with the new data
+                existing_record.service_required = data.service_required
+                existing_record.service_required_date = data.service_required_date
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.utcnow()
 
-                    db.commit()
-            return {'message': 'Success'}
+                db.commit()
 
-        except SQLAlchemyError as e:
-            db.rollback()  # Rollback the transaction in case of error
-            raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
+                # If any service is NOT set to 'LATER', set the flag to False
+                if data.service_required != 'LATER':
+                    all_later = False
 
+        except Exception as e:
+            db.rollback()
+            print(f"Error updating service requirement: {str(e)}")
+            return {'message': 'Failed to update service requirements'}
 
+    # After looping, check if all services were set to 'LATER'
+    if all_later:
+        return {'message': 'No service is required now'}
+
+    return {'message': 'Success'}
+#----------------------------------------------------------------------------------------------------------
   
 def save_service_task_details(
         db: Session,

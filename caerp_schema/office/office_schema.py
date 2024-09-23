@@ -781,7 +781,7 @@ class OffConsultationTaskDetailsSchema(BaseModel):
 
 
 class OffConsultationTaskMasterSchema(BaseModel):
-    task_date            : Optional[datetime]
+    task_date            : Optional[date]
     consultant_id        : int
     appointment_master_id: int
     visit_master_id      : int
