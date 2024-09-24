@@ -35,6 +35,7 @@ def get_service_price_details_by_service_id(
         service_goods_price_data = OffViewServiceGoodsPriceMasterSchema.model_validate(service_goods_price_details_data.__dict__)
     return service_goods_price_data
 
+#--------------------------------------------------------------------------------------------------
 
 def generate_quotation_service_details(
     db: Session,
@@ -182,11 +183,11 @@ def generate_quotation_service_details(
         
             db.add(quotation_detail)
 
-            # quotation_total_amount += quotation_detail.total_amount 
+            quotation_total_amount += quotation_detail.total_amount 
             gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
             quotation_detail.gst_amount = gst_amount
             quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
-            quotation_total_amount += quotation_detail.total_amount +gst_amount - quotation_detail.discount_amount
+            # quotation_total_amount += quotation_detail.total_amount +gst_amount - quotation_detail.discount_amount
             product_discount_total +=quotation_detail.discount_amount  
             
         quotation_master.grand_total = quotation_total_amount 
@@ -207,7 +208,6 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #=-------------------------------------------------------------------------------------------
