@@ -173,7 +173,7 @@ def generate_quotation_service_details(
                 coupon_amount = 0.0,
                 discount_percentage = 0.0,
                 discount_amount = 0.0,
-                gst_percent=10,
+                gst_percent=10.0,
                 gst_amount=0,
                 # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
                 taxable_amount = total_service_charge,
@@ -182,14 +182,16 @@ def generate_quotation_service_details(
         
             db.add(quotation_detail)
 
-            quotation_total_amount += quotation_detail.total_amount 
+            # quotation_total_amount += quotation_detail.total_amount 
             gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
             quotation_detail.gst_amount = gst_amount
             quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
+            quotation_total_amount += quotation_detail.total_amount +gst_amount - quotation_detail.discount_amount
             product_discount_total +=quotation_detail.discount_amount  
-           
-        quotation_master.grand_total = quotation_total_amount
+            
+        quotation_master.grand_total = quotation_total_amount 
         quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount
+        quotation_master.product_discount_total = product_discount_total
         db.commit()
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
@@ -205,6 +207,7 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 #=-------------------------------------------------------------------------------------------
