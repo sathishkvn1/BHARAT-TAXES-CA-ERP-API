@@ -254,13 +254,14 @@ def save_services_goods_master(
         db.rollback()
         raise e
 #--------------------------------------------------------------------------------------------------------
+
 def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
                                      action: AppointmentStatusConstants, 
                                      visit_master_id: int):
     appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
     if not appointment:
-        raise HTTPException(status_code=404, detail="Appointment not found")
+        return {"message":"Appointment not found"}
     
     # Fetch the status ID based on the action
     status_name = ""
@@ -273,12 +274,12 @@ def reschedule_or_cancel_appointment(db: Session,
     
     status = db.query(OffAppointmentStatus).filter(OffAppointmentStatus.appointment_status == status_name).first()
     if not status:
-        raise HTTPException(status_code=404, detail=f"Status '{status_name}' not found")
+        return {"message":"Status '{status_name}' not found"}
     status_id = status.id
 
     if action == AppointmentStatusConstants.RESCHEDULED:
         if not request_data.date or not request_data.from_time or not request_data.to_time:
-            raise HTTPException(status_code=400, detail="Date and time are required for rescheduling")
+            return {"message":"Date and time are required for rescheduling"} 
         # Update appointment status to RESCHEDULED and update date and time
         appointment.appointment_status_id = status_id
         appointment.consultant_id = request_data.consultant_id
@@ -286,7 +287,7 @@ def reschedule_or_cancel_appointment(db: Session,
         appointment.appointment_time_from = request_data.from_time
         appointment.appointment_time_to = request_data.to_time
         if appointment.remarks:
-            appointment.remarks += f"\n{request_data.description}"
+            appointment.remarks += f"**{request_data.description}"
         else:
             appointment.remarks = request_data.description
         db.commit()
@@ -296,7 +297,7 @@ def reschedule_or_cancel_appointment(db: Session,
         # Update appointment status to CANCELED
         appointment.appointment_status_id = status_id
         if appointment.remarks:
-            appointment.remarks += f"\n{request_data.description}"
+            appointment.remarks += f"**{request_data.description}"
         else:
             appointment.remarks = request_data.description
         db.commit()
