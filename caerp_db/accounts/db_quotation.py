@@ -182,12 +182,12 @@ def generate_quotation_service_details(
             )
         
             db.add(quotation_detail)
-
-            quotation_total_amount += quotation_detail.total_amount 
+            # print('')
+            # quotation_total_amount += quotation_detail.total_amount 
             gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
             quotation_detail.gst_amount = gst_amount
             quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
-            # quotation_total_amount += quotation_detail.total_amount +gst_amount - quotation_detail.discount_amount
+            quotation_total_amount += quotation_detail.total_amount 
             product_discount_total +=quotation_detail.discount_amount  
             
         quotation_master.grand_total = quotation_total_amount 

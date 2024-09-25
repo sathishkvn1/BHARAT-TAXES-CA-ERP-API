@@ -343,7 +343,7 @@ def generate_invoice_pdf(invoice, file_path):
         html_content = template.render(data)
 
         # Debug print: Check the HTML content generated
-        print("Generated HTML content:", html_content)
+        # print("Generated HTML content:", html_content)
 
         # Configuration for pdfkit
         # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
@@ -393,3 +393,21 @@ def get_invoice_pdf(
     #  return result
 
 #----------------------------------------------------------------------------------------------------
+
+
+
+@router.get('/get_service_price_details_by_service_id')
+def get_service_price_details_by_service_id(
+     service_master_id :int,
+     constitution_id: int,
+     db: Session = Depends(get_db)
+):
+     result = db_quotation.get_service_price_details_by_service_id(db,service_master_id,constitution_id)
+     if result:
+        return result
+     else:
+          return {
+            'message': 'Service price details not found. Please ensure that the service price is set for the given service and constitution.',
+            'service_master_id': service_master_id,
+            'constitution_id': constitution_id
+        }
