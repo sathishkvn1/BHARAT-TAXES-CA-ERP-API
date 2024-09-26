@@ -2,8 +2,8 @@ from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
 from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
-from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema
-from caerp_db.accounts.models import AccInvoiceDetails, AccInvoiceMaster, AccQuotationMaster,AccQuotationDetails
+from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema
+from caerp_db.accounts.models import AccInvoiceDetails, AccInvoiceMaster, AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
@@ -517,139 +517,135 @@ def get_quotation_data(
 def generate_profoma_invoice_details(
         db: Session,
         work_order_master_id: int,
-        user_id: int) -> ServiceGoodsPriceResponseSchema:
+        user_id: int):
     try:
-        existing_data = db.query(AccInvoiceMaster).filter(
-            AccInvoiceMaster.work_order_master_id == work_order_master_id,
-            AccInvoiceMaster.is_deleted == 'no'
-        )
-        if existing_data:
-            return {'message': 'invoice is already exist'}
-        # Fetch master data
-        work_order_master_data = db.query(WorkOrderMasterView).filter(
-            WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        # Check if an invoice already exists
+        existing_data = db.query(AccProformaInvoiceMaster).filter(
+            AccProformaInvoiceMaster.work_order_master_id == work_order_master_id,
+            AccProformaInvoiceMaster.is_deleted == 'no'
         ).first()
 
+        if existing_data:
+            return {'message': 'Invoice already exists', 'invoice_id': existing_data.id}
+
+        # Fetch Work Order Master data
+        work_order_master_data = db.query(WorkOrderMasterView).filter(
+            WorkOrderMasterView.work_order_master_id == work_order_master_id
+        ).first()
+
+        if not work_order_master_data:
+            raise HTTPException(status_code=404, detail="Work Order Master not found")
+
+        # Fetch Work Order Details data (main services only, where service_required = 'YES')
         work_order_details_data = db.query(WorkOrderDetailsView).filter(
             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
-            WorkOrderDetailsView.service_required == 'YES',
+            WorkOrderDetailsView.service_required == 'YES', 
             WorkOrderDetailsView.is_main_service == 'yes',
             WorkOrderDetailsView.is_deleted == 'no'
         ).all()
-       
+
+        if not work_order_details_data:
+            raise HTTPException(status_code=404, detail="No work order details found")
+
+        # Fetch Quotation Master data
+        quotation_master_data = db.query(AccQuotationMaster).filter(
+            AccQuotationMaster.work_order_master_id == work_order_master_id,
+            AccQuotationMaster.is_deleted == 'no'
+        ).first()
+
+        if not quotation_master_data:
+            raise HTTPException(status_code=404, detail="No quotation master data found")
+
+        # Fetch Quotation Details data
+        quotation_details_data = db.query(AccQuotationDetails).filter(
+            AccQuotationDetails.quotation_master_id == quotation_master_data.id,
+            AccQuotationDetails.is_deleted == 'no'
+        ).all()
+
+        if not quotation_details_data:
+            raise HTTPException(status_code=404, detail="No quotation details found")
+
         services = []
        
+        # Generate new voucher ID and invoice number
         new_voucher_id = generate_voucher_id(db)
-        # Create Invoice Master Entrynew_voucher_id = last_voucher.voucher_id + 1
-        invoice_number = generate_book_number('INVOICE',db)
-        invoice_master = AccInvoiceMaster(
-            voucher_id=new_voucher_id,  
+        proforma_invoice_number = generate_book_number('INVOICE', db)
+
+        # Create Invoice Master Entry
+        proforma_invoice_master = AccProformaInvoiceMaster(
+            voucher_id=new_voucher_id,
             service_type='NON_CONSULTATION',
             work_order_master_id=work_order_master_id,
-            invoice_number = invoice_number,
-            invoice_date=datetime.now(),
-            account_head_id=1,            
+            proforma_invoice_number=proforma_invoice_number,
+            proforma_invoice_date=datetime.now(),
+            account_head_id=1,
             created_by=user_id,
             created_on=datetime.now(),
             is_deleted='no'
         )
-        # This will generate the invoice_master_id
-        db.add(invoice_master)
-        db.flush()
+
+        db.add(proforma_invoice_master)
+        db.flush()  # Ensure invoice_master.id is generated
+
         total_invoice_amount = 0.0
+        task_id = None
 
-        # Loop through each detail to fetch its price data
+        # Process each work order detail (only those required) and map it to the quotation details
         for details in work_order_details_data:
-            service_master_id = details.service_goods_master_id
-            constitution_id = details.constitution_id
-
-            # Initialize total values for each service
-            total_service_charge = 0.0
-            total_govt_agency_fee = 0.0
-            total_stamp_fee = 0.0
-            total_stamp_duty = 0.0
-
-            # Save service task details and customer data document
             task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, user_id)
-            service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, service_master_id, constitution_id)
+            service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
             
-            # Fetch service price details
-            service_goods_price_data = get_service_price_details_by_service_id(db, service_master_id, constitution_id)
-            if service_goods_price_data:
-                if details.is_bundle_service == 'no':
-                    total_service_charge = service_goods_price_data.service_charge
-                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
-                    total_stamp_fee = service_goods_price_data.stamp_fee
-                    total_stamp_duty = service_goods_price_data.stamp_duty
-                else:
-                    total_service_charge = service_goods_price_data.service_charge
-                    total_govt_agency_fee = service_goods_price_data.govt_agency_fee
-                    total_stamp_fee = service_goods_price_data.stamp_fee
-                    total_stamp_duty = service_goods_price_data.stamp_duty
+            # Filter quotation details based on the service_goods_master_id from the work order
+            relevant_quotation_details = [qd for qd in quotation_details_data if qd.service_goods_master_id == details.service_goods_master_id]
+            
+            for quotation_detail in relevant_quotation_details:
+                # Initialize totals
+                total_service_charge = quotation_detail.service_charge
+                total_govt_agency_fee = quotation_detail.govt_agency_fee
+                total_stamp_fee = quotation_detail.stamp_fee
+                total_stamp_duty = quotation_detail.stamp_duty
 
-                    sub_services = db.query(WorkOrderDetailsView).filter(
-                        WorkOrderDetailsView.bundle_service_id == details.work_order_details_id,
-                        WorkOrderDetailsView.is_deleted == 'no'
-                    ).all()
+                # Create Invoice Detail Entry
+                invoice_detail = AccProformaInvoiceDetails(
+                    proforma_invoice_master_id=proforma_invoice_master.id,
+                    service_goods_master_id=quotation_detail.service_goods_master_id,
+                    is_bundle_service=quotation_detail.is_bundle_service,
+                    bundle_service_id=quotation_detail.bundle_service_id,
+                    service_charge=total_service_charge,
+                    govt_agency_fee=total_govt_agency_fee,
+                    stamp_duty=total_stamp_duty,
+                    stamp_fee=total_stamp_fee,
+                    quantity=1,  
+                    gst_percent=10.0,  
+                    gst_amount=0,  # To be updated after calculation
+                    taxable_amount=total_service_charge,
+                    total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+                    is_deleted='no'
+                )
 
-                    for sub_service in sub_services:
-                        sub_service_price_data = get_service_price_details_by_service_id(db, sub_service.service_goods_master_id, sub_service.constitution_id)
-                        if sub_service_price_data:
-                            total_service_charge += sub_service_price_data.service_charge
-                            total_govt_agency_fee += sub_service_price_data.govt_agency_fee
-                            total_stamp_fee += sub_service_price_data.stamp_fee
-                            total_stamp_duty += sub_service_price_data.stamp_duty
+                db.add(invoice_detail)
+                total_invoice_amount += invoice_detail.total_amount
 
-            # Create Invoice Details Entry
-            invoice_detail = AccInvoiceDetails(
-                invoice_master_id=invoice_master.id,
-                service_goods_master_id=service_master_id,
-                is_bundle_service=details.is_bundle_service,
-                bundle_service_id=details.bundle_service_id,
-                service_charge=total_service_charge,
-                govt_agency_fee=total_govt_agency_fee,
-                stamp_duty=total_stamp_duty,
-                stamp_fee=total_stamp_fee,
-                quantity=1,  # Assuming quantity is 1, modify as necessary
-                # gst_percent=service_goods_price_data.gst_percent if service_goods_price_data else 0.0,
-                # gst_amount=service_goods_price_data.gst_amount if service_goods_price_data else 0.0,
-                # taxable_amount=service_goods_price_data.taxable_amount if service_goods_price_data else 0.0,
-                total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                is_deleted='no'
-            )
-            db.add(invoice_detail)
-            total_invoice_amount += invoice_detail.total_amount
+                # Calculate GST Amount and update the entry
+                gst_amount = invoice_detail.taxable_amount * (invoice_detail.gst_percent / 100)
+                invoice_detail.gst_amount = gst_amount
 
-            # Append service data for response
-            service_data = ServiceGoodsPriceDetailsSchema(
-                service=OffViewWorkOrderDetailsSchema.model_validate(details.__dict__),
-                prices=service_goods_price_data
-            )
-            services.append(service_data)
-         
-        # Update Invoice Master with Total Amount
-        invoice_master.total_amount = total_invoice_amount
-        invoice_master.service_task_master_id = task_id
+        # Update Invoice Master with total amount
+        proforma_invoice_master.total_amount = total_invoice_amount
         
         db.commit()
-        work_order_master_data = db.query(WorkOrderMasterView).filter(
-            WorkOrderMasterView.work_order_master_id == work_order_master_id,
-        ).first()
-        quotation_service_price_data = ServiceGoodsPriceResponseSchema(
-            workOrderMaster=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-            workOrderDetails=services
-        )
-        
 
         return {
             'message': 'Success',
-            # 'quotation_service_price_data': quotation_service_price_data,
-            'invoice_master_id': invoice_master.id
+            'proforma_invoice_master_id': proforma_invoice_master.id,
         }
 
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 #-------------------------------------------------------------
 
 
@@ -1037,6 +1033,7 @@ def generate_profoma_invoice_details(
 
 
  
+
 def save_profoma_invoice(
         db: Session,
         work_order_master_id: int,
@@ -1044,23 +1041,23 @@ def save_profoma_invoice(
         user_id : int
 ):                    
     
-        existing_record = db.query(AccInvoiceMaster).filter(
-            AccInvoiceMaster.work_order_master_id == work_order_master_id,
-            AccInvoiceMaster.is_deleted == 'no'
+        existing_record = db.query(AccProformaInvoiceMaster).filter(
+            AccProformaInvoiceMaster.work_order_master_id == work_order_master_id,
+            AccProformaInvoiceMaster.is_deleted == 'no'
         ).first()
 
         try:
             if existing_record:
-                    for key, value in request.invoice_master.model_dump(exclude_unset=True).items():
+                    for key, value in request.proforma_invoice_master.model_dump(exclude_unset=True).items():
                             setattr(existing_record, key, value)
                     existing_record.modified_by = user_id
                     existing_record.modified_on = datetime.utcnow()
 
-            for detail in request.invoice_details:
-                existing_detail = db.query(AccInvoiceDetails).filter(
-                    AccInvoiceDetails.id == detail.id,
-                    AccInvoiceDetails.invoice_master_id == existing_record.id,
-                    AccInvoiceDetails.is_deleted == 'no'
+            for detail in request.proforma_invoice_details:
+                existing_detail = db.query(AccProformaInvoiceDetails).filter(
+                    AccProformaInvoiceDetails.id == detail.id,
+                    AccProformaInvoiceDetails.proforma_invoice_master_id == existing_record.id,
+                    AccProformaInvoiceDetails.is_deleted == 'no'
                 ).first()
 
                 if existing_detail:
@@ -1072,7 +1069,6 @@ def save_profoma_invoice(
         except SQLAlchemyError as e:
             db.rollback()  # Rollback the transaction in case of error
             raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
-
 #-------------------------------------------------------------------------------------------------------
 
 def get_demand_notice(
@@ -1360,3 +1356,64 @@ def get_invoice_details(
         raise HTTPException(status_code=400, detail="Work Order Master ID is required")
 
  
+
+#-------------------------------------------------------------------------------------------------------------
+
+def get_proforma_invoice_details(
+    db: Session,
+    work_order_master_id: int,
+    proforma_invoice_master_id: int
+):
+    if work_order_master_id:
+        if proforma_invoice_master_id:
+            # Fetch the invoice master data
+            invoice_master_data = db.query(AccProformaInvoiceMaster).filter(
+                AccProformaInvoiceMaster.work_order_master_id == work_order_master_id,
+                AccProformaInvoiceMaster.id == proforma_invoice_master_id,
+                AccProformaInvoiceMaster.is_deleted == 'no'
+            ).first()
+
+            # Handle case when invoice master is not found
+            if not invoice_master_data:
+                raise HTTPException(status_code=404, detail="Invoice Master not found")
+
+            # Fetch the work order master data
+            work_order_master_data = db.query(WorkOrderMasterView).filter(
+                WorkOrderMasterView.work_order_master_id == work_order_master_id
+            ).first()
+
+            # Handle case when work order master data is not found
+            if not work_order_master_data:
+                raise HTTPException(status_code=404, detail="Work Order Master not found")
+
+            # Fetch the invoice details with the service name from joined table
+            invoice_details_data = db.query(
+                AccProformaInvoiceDetails,
+                OffViewServiceGoodsMaster.service_goods_name
+            ).join(
+                OffViewServiceGoodsMaster,
+                AccProformaInvoiceDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
+            ).filter(
+                AccProformaInvoiceDetails.proforma_invoice_master_id == invoice_master_data.id,
+                AccProformaInvoiceDetails.is_deleted == 'no'
+            ).all()
+
+            # Build the list of invoice details
+            invoice_details_list = []
+            for detail, service_name in invoice_details_data:
+                detail_dict = detail.__dict__.copy()  # Copy the details to modify
+                detail_dict['service_goods_name'] = service_name
+                invoice_details_list.append(AccProformaInvoiceDetailsSchema.model_validate(detail_dict))
+
+            # Construct response schema
+            invoice_response_data = AccProformaInvoiceResponceSchema(
+                proforma_invoice_master=AccProformaInvoiceMasterSchema.model_validate(invoice_master_data.__dict__),
+                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
+                proforma_invoice_details=invoice_details_list
+            )
+
+            return invoice_response_data
+        else:
+            raise HTTPException(status_code=400, detail="Invoice Master ID is required")
+    else:
+        raise HTTPException(status_code=400, detail="Work Order Master ID is required")

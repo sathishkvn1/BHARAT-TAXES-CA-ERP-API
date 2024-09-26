@@ -242,6 +242,17 @@ def generate_profoma_invoice(
 
 #----------------------------------------------------------------------------------------
 
+@router.get('/get_proforma_invoice_details')
+def get_proforma_invoice_details(
+     work_order_master_id : int,
+     proforma_invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id)
+     return result
+
+#---------------------------------------------------------------------------------
+
 @router.post('/save_proforma_invoice')
 def save_proforma_invoice(
     work_order_master_id: int,
@@ -255,8 +266,6 @@ def save_proforma_invoice(
         user_id = auth_info.get("user_id")
         result = db_quotation.save_profoma_invoice( db, work_order_master_id,request,user_id)
         return result
-
-
 
 
 #---------------------------------------------------------------------------------------------
@@ -302,6 +311,8 @@ def get_invoice_details(
 
 
 #-----------------------------------------------------------------------------------------
+
+
 
 
 def generate_invoice_pdf(invoice, file_path):

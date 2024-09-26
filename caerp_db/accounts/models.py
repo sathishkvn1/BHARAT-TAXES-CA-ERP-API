@@ -137,3 +137,66 @@ class AccVoucherId(caerp_base):
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
     voucher_id           = Column(Integer, nullable=False)
+
+
+
+#------------------------------------------------------------------------------
+
+class AccProformaInvoiceMaster(caerp_base):
+    __tablename__ = 'acc_proforma_invoice_master'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    voucher_id                  = Column(Integer, nullable=False)
+    service_type                = Column(Enum('CONSULTATION', 'NON_CONSULTATION', 'GOODS'), nullable=False, default='no' )
+
+    appointment_master_id       = Column(Integer, nullable=True)
+    visit_master_id             = Column(Integer, nullable=True)
+
+    work_order_master_id        = Column(Integer, nullable=True)
+
+    proforma_invoice_date       = Column(Date, nullable=True)
+    proforma_invoice_number     = Column(String(50), nullable=True)
+    account_head_id             = Column(Integer, nullable=True)
+    total_amount                = Column(Float, nullable=False,default=0.0)
+    discount_amount             = Column(Float, nullable=False,default=0.0)
+    additional_discount_amount  = Column(Float, nullable=False,default=0.0)
+    advance_amount              = Column(Float, nullable=False,default=0.0)
+    round_off_amount            = Column(Float, nullable=False,default=0.0)
+    bill_amount                 = Column(Float, nullable=False,default=0.0)
+    remarks                     = Column(String(50), nullable=True)
+
+    created_by          = Column(Integer, nullable=False)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, nullable=True)
+    modified_on         = Column(Date, nullable=True)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, nullable=True)
+    deleted_on          = Column(Date, nullable=True)
+
+class AccProformaInvoiceDetails(caerp_base):
+    __tablename__ = 'acc_proforma_invoice_details'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    proforma_invoice_master_id           = Column(Integer, nullable=False)
+    service_goods_master_id     = Column(Integer, nullable=False)
+    is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
+    bundle_service_id           = Column(Integer, nullable=True)
+    service_charge              = Column(Float, nullable=False, default=0.0)
+    govt_agency_fee             = Column(Float, nullable=False, default=0.0)
+    stamp_duty                  = Column(Float, nullable=False, default=0.0)
+    stamp_fee                   = Column(Float, nullable=False, default=0.0)
+    quantity                    = Column(Integer, nullable=False, default=1.0)
+
+    offer_master_id             = Column(Integer, nullable=True)
+    offer_name                  = Column(String(50), nullable=True)
+    offer_percentage            = Column(Float, nullable=False, default=0.0)
+    offer_amount                = Column(Float, nullable=False, default=0.0)
+
+    discount_percentage         = Column(Float, nullable=False, default=0.0)
+    discount_amount             = Column(Float, nullable=False, default=0.0)
+
+    gst_percent                 = Column(Float, nullable=False, default=0.0)
+    gst_amount                  = Column(Float, nullable=False, default=0.0)
+    taxable_amount              = Column(Float, nullable=False, default=0.0)
+    total_amount                = Column(Float, nullable=False, default=0.0)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
