@@ -518,7 +518,6 @@ def get_quotation_data(
 
 
 #-------------------------------------------------------------
-
 def generate_profoma_invoice_details(
         db: Session,
         work_order_master_id: int,
@@ -531,7 +530,7 @@ def generate_profoma_invoice_details(
         ).first()
 
         if existing_data:
-            return {'message': 'Invoice already exists', 'proforma_invoice_id': existing_data.id}
+            return {'message': 'Invoice already exists', 'proforma_invoice_master_id': existing_data.id}
 
         # Fetch Work Order Master data
         work_order_master_data = db.query(WorkOrderMasterView).filter(
@@ -652,6 +651,7 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #----------------------------------------------------------------------------------
 
