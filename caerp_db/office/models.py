@@ -1461,12 +1461,41 @@ class CustomerDataDocumentMaster(caerp_base):
 
 
 
+# class OffServiceTaskMaster(caerp_base):
+#     __tablename__               = 'off_service_task_master'
+
+#     id                          = Column(Integer, primary_key=True, autoincrement=True)
+#     work_order_master_id        = Column(Integer, nullable=False)
+#     work_order_details_id       = Column(Integer, nullable=False)
+#     customer_id                 = Column(Integer, nullable=True)
+#     task_number                 = Column(String(100), nullable=False)
+#     allocated_by                = Column(Integer, nullable=False)
+#     allocated_on                = Column(DateTime, nullable=False)
+#     department_allocated_on     = Column(DateTime, nullable=False)
+#     department_allocated_to     = Column(Integer, nullable=False)
+#     team_allocated_on           = Column(DateTime, nullable=False)
+#     team_allocated_to           = Column(Integer, nullable=False)
+#     employee_allocated_on       = Column(DateTime, nullable=False)
+#     employee_allocated_to       = Column(Integer, nullable=False)
+#     task_status_id              = Column(Integer, nullable=False)
+#     task_priority_id            = Column(Integer, nullable=False)
+#     remarks                     = Column(String(1000), nullable=True)
+#     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by                  = Column(Integer, nullable=True)
+#     deleted_on                  = Column(DateTime, nullable=True)
+
+
+
 class OffServiceTaskMaster(caerp_base):
     __tablename__               = 'off_service_task_master'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
     work_order_master_id        = Column(Integer, nullable=False)
     work_order_details_id       = Column(Integer, nullable=False)
+    
+    proforma_invoice_master_id  = Column(Integer, nullable=False)
+    proforma_invoice_detail_id  = Column(Integer, nullable = False)
+
     customer_id                 = Column(Integer, nullable=True)
     task_number                 = Column(String(100), nullable=False)
     allocated_by                = Column(Integer, nullable=False)
