@@ -14,7 +14,7 @@ class AccQuotationMaster(caerp_base):
 
     coupon_total            = Column(Float, nullable=True)
 
-    product_discount_total  = Column(Float, nullable=True)
+    product_discount_total  = Column(Float, nullable=False,default=0)
     bill_discount           = Column(Float, nullable=True)
     additional_discount     = Column(Float, nullable=True)
 
@@ -33,6 +33,7 @@ class AccQuotationMaster(caerp_base):
     deleted_by          = Column(Integer, nullable=True)
     deleted_on          = Column(Date, nullable=True)
 
+
 class AccQuotationDetails(caerp_base):
     __tablename__ = 'acc_quotation_details'
 
@@ -40,6 +41,7 @@ class AccQuotationDetails(caerp_base):
     quotation_master_id         = Column(Integer, nullable=True)
     service_goods_master_id     = Column(Integer, nullable=True)
     hsn_sac_code                = Column(String(50), nullable=True)
+    is_main_service             = Column(Enum('yes', 'no'), nullable=False, default='no')
     is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
     bundle_service_id           = Column(Integer, nullable=True)
     service_charge              = Column(Float, nullable=True)
@@ -50,8 +52,8 @@ class AccQuotationDetails(caerp_base):
 
     has_offer                   = Column(Enum('yes', 'no'), nullable=False, default='no')
     offer_name                  = Column(String(50), nullable=True)
-    offer_percentage            = Column(Float, nullable=True)
-    offer_amount                = Column(Float, nullable=True) 
+    offer_percentage            = Column(Float, nullable=False,default=0.0)
+    offer_amount                = Column(Float, nullable=False,default=0.0) 
 
     has_coupon                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     coupon_code                 = Column(String(50), nullable=True)
@@ -59,16 +61,14 @@ class AccQuotationDetails(caerp_base):
     coupon_amount               = Column(Float, nullable=True)
 
     discount_percentage         = Column(Float, nullable=True)
-    discount_amount             = Column(Float, nullable=True)
+    discount_amount             = Column(Float, nullable=False,default=0.0)
 
     gst_percent                 = Column(Float, nullable=True)
     gst_amount                  = Column(Float, nullable=True)
     taxable_amount              = Column(Float, nullable=True)
-    total_amount                = Column(Float, nullable=True)
+    total_amount                = Column(Float, nullable=False,default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     
-
-
 
 class AccInvoiceMaster(caerp_base):
     __tablename__ = 'acc_invoice_master'
@@ -157,12 +157,12 @@ class AccProformaInvoiceMaster(caerp_base):
     proforma_invoice_date       = Column(Date, nullable=True)
     proforma_invoice_number     = Column(String(50), nullable=True)
     account_head_id             = Column(Integer, nullable=True)
-    total_amount                = Column(Float, nullable=False,default=0.0)
+    grand_total                = Column(Float, nullable=False,default=0.0)
     discount_amount             = Column(Float, nullable=False,default=0.0)
     additional_discount_amount  = Column(Float, nullable=False,default=0.0)
     advance_amount              = Column(Float, nullable=False,default=0.0)
     round_off_amount            = Column(Float, nullable=False,default=0.0)
-    bill_amount                 = Column(Float, nullable=False,default=0.0)
+    net_amount                 = Column(Float, nullable=False,default=0.0)
     remarks                     = Column(String(50), nullable=True)
 
     created_by          = Column(Integer, nullable=False)
@@ -173,12 +173,14 @@ class AccProformaInvoiceMaster(caerp_base):
     deleted_by          = Column(Integer, nullable=True)
     deleted_on          = Column(Date, nullable=True)
 
+
 class AccProformaInvoiceDetails(caerp_base):
     __tablename__ = 'acc_proforma_invoice_details'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
-    proforma_invoice_master_id           = Column(Integer, nullable=False)
+    proforma_invoice_master_id  = Column(Integer, nullable=False)
     service_goods_master_id     = Column(Integer, nullable=False)
+    is_main_service             = Column(Enum('yes', 'no'), nullable=False, default='no')
     is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
     bundle_service_id           = Column(Integer, nullable=True)
     service_charge              = Column(Float, nullable=False, default=0.0)

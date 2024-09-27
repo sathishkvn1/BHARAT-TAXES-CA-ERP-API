@@ -42,11 +42,7 @@ def generate_quotation_service_details(
     work_order_master_id: int,
 ) -> ServiceGoodsPriceResponseSchema:
     try:
-        # Fetch master data
-        # existing_data  = db.query(AccQuotationMaster).filter(
-        #     AccQuotationMaster.work_order_master_id == work_order_master_id,
-        #     AccQuotationMaster.is_deleted =='no'
-        # ).first()
+        
         existing_data = db.query(AccQuotationMaster).filter(
             AccQuotationMaster.work_order_master_id == work_order_master_id,
             AccQuotationMaster.is_deleted == 'no'
@@ -134,7 +130,6 @@ def generate_quotation_service_details(
             quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
             offer_total=0,
             coupon_total=0,
-            product_discount_total=0,
             bill_discount=0,
             additional_discount=0,
             round_off=0,
@@ -192,7 +187,7 @@ def generate_quotation_service_details(
             
         quotation_master.grand_total = quotation_total_amount 
         quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount
-        quotation_master.product_discount_total = product_discount_total
+        # quotation_master.product_discount_total = product_discount_total
         db.commit()
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
@@ -208,7 +203,6 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #=-------------------------------------------------------------------------------------------
 
@@ -639,8 +633,8 @@ def generate_profoma_invoice_details(
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
 
         # Update Invoice Master with total amount
-        proforma_invoice_master.total_amount = total_invoice_amount
-        
+        proforma_invoice_master.grand_total = total_invoice_amount
+        proforma_invoice_master.net_amount = total_invoice_amount
         db.commit()
 
         return {
@@ -651,8 +645,6 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
 #----------------------------------------------------------------------------------
 
 
