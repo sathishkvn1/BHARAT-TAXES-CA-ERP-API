@@ -19,7 +19,7 @@ from caerp_schema.office.office_schema import ServiceRequirementSchema
 
 
 
-TEMPLATE_PROFORMA_INVOICE_DETAILS           = "C:/BHARAT-TAXES-CA-ERP-API/templates/proforma_invoice_template"
+TEMPLATE_PROFORMA_INVOICE_DETAILS   = "C:/BHARAT-TAXES-CA-ERP-API/templates/proforma_invoice_template.html"
 UPLOAD_DIR_INVOICE_DETAILS          = "uploads/invoice"
 
 
@@ -410,10 +410,12 @@ def get_invoice_details(
 
 
 def generate_proforma_invoice_pdf(invoice, file_path):
-
+    print("test............................")
     # Load the template environment
     template_dir = os.path.dirname(TEMPLATE_PROFORMA_INVOICE_DETAILS)
+    print("template_dir",template_dir)
     template_name = os.path.basename(TEMPLATE_PROFORMA_INVOICE_DETAILS)
+    print("template_name",template_name)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(template_name)
 
@@ -451,7 +453,8 @@ def generate_proforma_invoice_pdf(invoice, file_path):
         print("Generated HTML content:", html_content)
 
         # Configuration for pdfkit
-        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        # wkhtmltopdf_path = 'C:/wkhtmltox/bin/wkhtmltopdf.exe'
+        wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
