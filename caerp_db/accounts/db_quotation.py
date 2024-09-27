@@ -37,6 +37,7 @@ def get_service_price_details_by_service_id(
 
 #--------------------------------------------------------------------------------------------------
 
+
 def generate_quotation_service_details(
     db: Session,
     work_order_master_id: int,
@@ -645,6 +646,7 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 #----------------------------------------------------------------------------------
 
 

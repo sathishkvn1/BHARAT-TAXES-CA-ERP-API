@@ -34,6 +34,7 @@ class AccQuotationMaster(caerp_base):
     deleted_on          = Column(Date, nullable=True)
 
 
+
 class AccQuotationDetails(caerp_base):
     __tablename__ = 'acc_quotation_details'
 
@@ -141,7 +142,6 @@ class AccVoucherId(caerp_base):
 
 
 #------------------------------------------------------------------------------
-
 class AccProformaInvoiceMaster(caerp_base):
     __tablename__ = 'acc_proforma_invoice_master'
 

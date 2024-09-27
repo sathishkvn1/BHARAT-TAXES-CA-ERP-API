@@ -4,6 +4,7 @@ from typing import List,Optional
 from datetime import date, datetime
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewWorkOrderDetailsSchema,OffViewWorkOrderMasterSchema
 
+
 class AccQuotationMasterSchema(BaseModel):
 
     id                      : Optional[int] = None
@@ -25,6 +26,8 @@ class AccQuotationMasterSchema(BaseModel):
     remarks                 : Optional[str] = None
     quotation_status        : Optional[str] = 'DRAFT'
     is_final_quotation      : Optional[str] = 'no'
+
+
 
 class AccQuotationDetailsSchema(BaseModel):
 
@@ -124,6 +127,7 @@ class AccProformaInvoiceDetailsSchema(BaseModel):
     taxable_amount              : Optional[float]= None
     total_amount                : Optional[float]= None
     is_deleted                  : Optional[str]= None
+
 
 # class AccProformaInvoiceShema(BaseModel):
 #     invoice_master          : AccProformaInvoiceMasterSchema
