@@ -1549,4 +1549,53 @@ class ServiceTaskMasterSchema(BaseModel):
     remarks                 : Optional[str] = None
 
 
+#-----------------------------------
+# class BundlePriceResponse(BaseModel):
+#     constitution_id: int
+#     total_service_charge: float
+#     total_govt_agency_fee: float
+#     total_stamp_duty: float
+#     total_stamp_fee: float
+#     service_goods_name: str
+#     is_bundled_service: str
+#     business_constitution_name: str
+#     effective_from_date: Optional[str]
+#     effective_to_date: Optional[str]
 
+
+
+
+# class BundlePriceResponse(BaseModel):
+#     constitution_id: int
+#     total_service_charge: float
+#     total_govt_agency_fee: float
+#     total_stamp_duty: float
+#     total_stamp_fee: float
+#     service_goods_name: str
+#     is_bundled_service: str
+#     business_constitution_name: str
+#     effective_from_date: Optional[str]
+#     effective_to_date: Optional[str]
+#     row_id: int
+
+class BundledServiceData(BaseModel):
+    # row_id: int 
+    total_service_charge: float
+    total_govt_agency_fee: float
+    total_stamp_duty: float
+    total_stamp_fee: float
+    service_goods_name: Optional[str]
+    is_bundled_service: Optional[str]
+    constitution_id: Optional[int]
+    business_constitution_name: Optional[str]
+    effective_from_date: Optional[str]
+    effective_to_date: Optional[str]
+
+# Main service response model
+class ServiceResponse(BaseModel):
+    aggregated_data: Dict[int, BundledServiceData]
+
+
+# class ServiceResponse(BaseModel):
+#     data: List[BundlePriceResponse]
+#     aggregated_data: List[BundlePriceResponse] 

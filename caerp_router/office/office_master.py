@@ -16,7 +16,7 @@ from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffCons
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import   AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -28,7 +28,7 @@ from fastapi.encoders import jsonable_encoder
 from pathlib import Path 
 
 from sqlalchemy import select, func, and_
-
+from collections import defaultdict
 from settings import BASE_URL
 
 
@@ -1874,8 +1874,10 @@ def get_consultant_employees_pdf(
     query = db.query(
         EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
-        EmployeeMaster.middle_name,
-        EmployeeMaster.last_name,
+        # EmployeeMaster.middle_name,
+        # EmployeeMaster.last_name,
+        func.coalesce(EmployeeMaster.middle_name, '').label('middle_name'),  
+        func.coalesce(EmployeeMaster.last_name, '').label('last_name'),
         EmployeeMaster.employee_number,
         EmployeeContactDetails.personal_email_id.label('personal_email'),
         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -2147,6 +2149,56 @@ def get_bundle_price_list(request: ServiceRequest=Depends()):
 
 
 #------------------------------------------------------------------------------------------------------------
+@router.get("/get_bundled_price_history", response_model=ServiceResponse)
+def get_bundle_price_list(service_id: int, input_date: Optional[str] = None):
+    # Call stored procedure or some other DB fetching logic
+    results = call_stored_procedure(service_id, input_date)
+
+    # Initialize a dictionary to hold aggregated data
+    aggregated_data = defaultdict(lambda: {
+        "total_service_charge": 0,
+        "total_govt_agency_fee": 0,
+        "total_stamp_duty": 0,
+        "total_stamp_fee": 0,
+        "service_goods_name": None,
+        "is_bundled_service": None,
+        "constitution_id": None,
+        "business_constitution_name": None,
+        "effective_from_date": None,
+        "effective_to_date": None
+    })
+
+    # Iterate over the results and aggregate values
+    for item in results:
+        constitution_id = item['constitution_id']
+
+        # Aggregate values
+        aggregated_data[constitution_id]['total_service_charge'] += item['service_charge']
+        aggregated_data[constitution_id]['total_govt_agency_fee'] += item['govt_agency_fee']
+        aggregated_data[constitution_id]['total_stamp_duty'] += item['stamp_duty']
+        aggregated_data[constitution_id]['total_stamp_fee'] += item['stamp_fee']
+
+        # Set other fields (assuming they are the same across all items with the same constitution_id)
+        aggregated_data[constitution_id]['service_goods_name'] = item['service_goods_name']
+        aggregated_data[constitution_id]['is_bundled_service'] = item['is_bundled_service']
+        aggregated_data[constitution_id]['constitution_id'] = constitution_id
+        aggregated_data[constitution_id]['business_constitution_name'] = item['business_constitution_name']
+
+        # Convert date fields to ISO format strings
+        aggregated_data[constitution_id]['effective_from_date'] = item['effective_from_date'].isoformat() if item['effective_from_date'] else None
+        aggregated_data[constitution_id]['effective_to_date'] = item['effective_to_date'].isoformat() if item['effective_to_date'] else None
+
+    # Convert the defaultdict to a regular dict
+    aggregated_data = dict(aggregated_data)
+
+    # Return the response with aggregated data
+    if not aggregated_data:
+        raise HTTPException(status_code=404, detail="No data found for the given service ID")
+
+    # Match the response to the expected format of ServiceResponse
+    return {"aggregated_data": aggregated_data}
+
+
 
 
 ####################################WORKORDER####################################
@@ -2950,3 +3002,97 @@ def get_dependent_services(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------------------------------------------------------------------------------------------------------------
+# test
+
+
+
+
+
+
+
+
+# def call_stored_procedure(service_id: int, input_date: Optional[str] = None):
+#     connection = None
+#     cursor = None
+#     try:
+#         connection = mysql.connector.connect(
+#             user="root",
+#             password="brdb123",  # Consider using environment variables
+#             host="202.21.38.180",
+#             port="3306",
+#             database="bharat_taxes_ca_erp"
+#         )
+#         cursor = connection.cursor(dictionary=True)
+
+#         # Call the stored procedure
+#         cursor.callproc('GetServiceDetails', [service_id, input_date])
+
+#         # Fetch results from stored procedure
+#         results = []
+#         for result_set in cursor.stored_results():
+#             results.extend(result_set.fetchall())
+
+#         return results
+
+#     except Error as e:
+#         print(f"Error: {e}")  # Consider logging instead of printing
+#         raise
+
+#     finally:
+#         if cursor:
+#             cursor.close()
+#         if connection:
+#             connection.close()
+
+# @router.get("/test/get_bundle_price_list", response_model=ServiceResponse)
+# def get_bundle_price_list(service_id: int, input_date: Optional[str] = None):
+#     # Call stored procedure or some other DB fetching logic
+#     results = call_stored_procedure(service_id, input_date)
+
+#     # Initialize a dictionary to hold aggregated data
+#     aggregated_data = defaultdict(lambda: {
+#         "total_service_charge": 0,
+#         "total_govt_agency_fee": 0,
+#         "total_stamp_duty": 0,
+#         "total_stamp_fee": 0,
+#         "service_goods_name": None,
+#         "is_bundled_service": None,
+#         "constitution_id": None,
+#         "business_constitution_name": None,
+#         "effective_from_date": None,
+#         "effective_to_date": None
+#     })
+
+#     # Iterate over the results and aggregate values
+#     for item in results:
+#         constitution_id = item['constitution_id']
+
+#         # Aggregate values
+#         aggregated_data[constitution_id]['total_service_charge'] += item['service_charge']
+#         aggregated_data[constitution_id]['total_govt_agency_fee'] += item['govt_agency_fee']
+#         aggregated_data[constitution_id]['total_stamp_duty'] += item['stamp_duty']
+#         aggregated_data[constitution_id]['total_stamp_fee'] += item['stamp_fee']
+
+#         # Set other fields (assuming they are the same across all items with the same constitution_id)
+#         aggregated_data[constitution_id]['service_goods_name'] = item['service_goods_name']
+#         aggregated_data[constitution_id]['is_bundled_service'] = item['is_bundled_service']
+#         aggregated_data[constitution_id]['constitution_id'] = constitution_id
+#         aggregated_data[constitution_id]['business_constitution_name'] = item['business_constitution_name']
+
+#         # Convert date fields to ISO format strings
+#         aggregated_data[constitution_id]['effective_from_date'] = item['effective_from_date'].isoformat() if item['effective_from_date'] else None
+#         aggregated_data[constitution_id]['effective_to_date'] = item['effective_to_date'].isoformat() if item['effective_to_date'] else None
+
+#     # Convert the defaultdict to a regular dict
+#     aggregated_data = dict(aggregated_data)
+
+#     # Return the response with aggregated data
+#     if not aggregated_data:
+#         raise HTTPException(status_code=404, detail="No data found for the given service ID")
+
+#     # Match the response to the expected format of ServiceResponse
+#     return {"aggregated_data": aggregated_data}
+
+
+
+
