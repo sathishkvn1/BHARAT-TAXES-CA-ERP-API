@@ -19,7 +19,7 @@ from caerp_schema.office.office_schema import ServiceRequirementSchema
 
 
 
-TEMPLATE_PROFORMA_INVOICE_DETAILS           = "C:/BHARAT-TAXES-CA-ERP-API/templates/invoice_template.html"
+TEMPLATE_PROFORMA_INVOICE_DETAILS           = "C:/BHARAT-TAXES-CA-ERP-API/templates/proforma_invoice_template"
 UPLOAD_DIR_INVOICE_DETAILS          = "uploads/invoice"
 
 
@@ -427,7 +427,7 @@ def generate_proforma_invoice_pdf(invoice, file_path):
         advance = invoice.proforma_invoice_master.advance_amount
         additional_discount = invoice.proforma_invoice_master.additional_discount_amount
         gst_amount = sum(item.gst_amount for item in details)
-        total_amount = invoice.proforma_invoice_master.total_amount
+        total_amount = invoice.proforma_invoice_master.net_amount
 
         # Debug print: Check the content of details
         # print("Quotation Details:", details)
