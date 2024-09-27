@@ -36,8 +36,6 @@ def get_service_price_details_by_service_id(
     return service_goods_price_data
 
 #--------------------------------------------------------------------------------------------------
-
-
 def generate_quotation_service_details(
     db: Session,
     work_order_master_id: int,
@@ -138,45 +136,47 @@ def generate_quotation_service_details(
         # try:
          # To get the new quotation_master.id
 
-            for service_data in services:
-                details = service_data.service
-                prices = service_data.prices
-                quotation_detail = AccQuotationDetails(
-                    quotation_master_id=quotation_master.id,
-                    service_goods_master_id=details.service_goods_master_id,
-                    hsn_sac_code=hsn_sac_code,
-                    is_bundle_service=details.is_bundle_service,
-                    bundle_service_id=details.bundle_service_id,
-                    service_charge=prices.service_charge,
-                    # service_charge= total_service_charge,
-                    # govt_agency_fee = total_govt_agency_fee,
-                    # stamp_duty = total_stamp_duty,
-                    # stamp_fee = total_stamp_fee,
-                    govt_agency_fee=prices.govt_agency_fee,
-                    stamp_duty=prices.stamp_duty,
-                    stamp_fee=prices.stamp_fee,
-                    quantity=1,
-                    offer_percentage = 0.0,
-                    offer_amount = 0.0,
-                    coupon_percentage = 0.0,
-                    coupon_amount = 0.0,
-                    discount_percentage = 0.0,
-                    discount_amount = 0.0,
-                    gst_percent=10.0,
-                    gst_amount=0,
-                    # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
-                    taxable_amount = total_service_charge,
-                    total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                )
+        for service_data in services:
+            details = service_data.service
+            prices = service_data.prices
+            quotation_detail = AccQuotationDetails(
+                quotation_master_id=quotation_master.id,
+                service_goods_master_id=details.service_goods_master_id,
+                hsn_sac_code=hsn_sac_code,
+                is_bundle_service=details.is_bundle_service,
+                bundle_service_id=details.bundle_service_id,
+                service_charge=prices.service_charge,
+                # service_charge= total_service_charge,
+                # govt_agency_fee = total_govt_agency_fee,
+                # stamp_duty = total_stamp_duty,
+                # stamp_fee = total_stamp_fee,
+                govt_agency_fee=prices.govt_agency_fee,
+                stamp_duty=prices.stamp_duty,
+                stamp_fee=prices.stamp_fee,
+                quantity=1,
+                offer_percentage = 0.0,
+                offer_amount = 0.0,
+                coupon_percentage = 0.0,
+                coupon_amount = 0.0,
+                discount_percentage = 0.0,
+                discount_amount = 0.0,
+                gst_percent=10.0,
+                gst_amount=0,
+                # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
+                # taxable_amount = total_service_charge,
+                # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+                taxable_amount = prices.service_charge,
+                total_amount = prices.service_charge + prices.govt_agency_fee + prices.stamp_duty + prices.stamp_fee 
+            )
+        
+            db.add(quotation_detail)
+                
+            gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
+            quotation_detail.gst_amount = gst_amount
+            quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
+            quotation_total_amount += quotation_detail.total_amount 
+            product_discount_total +=quotation_detail.discount_amount  
             
-                db.add(quotation_detail)
-                
-                gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
-                quotation_detail.gst_amount = gst_amount
-                quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
-                quotation_total_amount += quotation_detail.total_amount 
-                product_discount_total +=quotation_detail.discount_amount  
-                
         quotation_master.grand_total = quotation_total_amount 
         quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount
         db.commit()
@@ -194,6 +194,7 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #=-------------------------------------------------------------------------------------------
 
