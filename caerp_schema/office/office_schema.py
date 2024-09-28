@@ -579,7 +579,7 @@ class TimeSlotResponse(BaseModel):
 class ConsultantEmployee(BaseModel):
     employee_id         : int
     first_name          :str
-    middle_name         :str
+    middle_name         :Optional[str]
     last_name           :str
     # employee_name: str
     employee_number     : str
