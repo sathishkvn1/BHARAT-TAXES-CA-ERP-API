@@ -802,11 +802,11 @@ def get_employment_details(db: Session, employee_id: int):
         db.query(
             EmployeeEmployementDetails,
             HrDepartmentMaster.department_name,  # Fetching department_name
-            AppDesignation.designation,      # Fetching designation_name
+            HrDesignationMaster.designation,      # Fetching designation_name
             HrEmployeeCategory.category_name
         )
         .join(HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id)
-        .join(AppDesignation, EmployeeEmployementDetails.designation_id == AppDesignation.id)
+        .join(HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id)
         .join(HrEmployeeCategory,EmployeeEmployementDetails.employee_category_id ==HrEmployeeCategory.id )
         .filter(
             EmployeeEmployementDetails.employee_id == employee_id,
