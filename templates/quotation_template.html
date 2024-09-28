@@ -194,9 +194,10 @@
           }}<br />
           {{ work_order_master.state_name }}, {{ work_order_master.country_name
           }} {{ work_order_master.pin_code }}
-        </p>
+        </p><br/>
       </div>
     </div>
+    
 
     <table>
       <thead>
@@ -227,12 +228,12 @@
         <tr class="total-row">
           <td>TOTAL</td>
           <td colspan="3"></td>
-          <td>{{ total_amount }}</td>
+          <td>{{ grand_total }}</td>
         </tr>
         <tr>
           <td colspan="3"></td>
-          <td>ADVANCE</td>
-          <td>{{ advance }}</td>
+          <td>DISCOUNT</td>
+          <td>{{ bill_discount }}</td>
         </tr>
         <tr>
           <td colspan="3"></td>
@@ -241,14 +242,14 @@
         </tr>
         <tr>
           <td colspan="3"></td>
-          <td>GST %</td>
-          <td>{{ gst_percent }}</td>
+          <td>ROUND OFF</td>
+          <td>{{ round_off }}</td>
         </tr>
-        <tr>
+        <!-- <tr>
           <td colspan="3"></td>
           <td>GST AMOUNT</td>
           <td>{{ gst_amount }}</td>
-        </tr>
+        </tr> -->
         <tr class="total-row">
           <td colspan="3"></td>
           <td>TOTAL AMOUNT</td>

@@ -593,6 +593,7 @@ def generate_profoma_invoice_details(
                 total_govt_agency_fee = quotation_detail.govt_agency_fee
                 total_stamp_fee = quotation_detail.stamp_fee
                 total_stamp_duty = quotation_detail.stamp_duty
+                total_amount = quotation_detail.total_amount
 
                 # Create Invoice Detail Entry
                 invoice_detail = AccProformaInvoiceDetails(
@@ -608,7 +609,8 @@ def generate_profoma_invoice_details(
                     gst_percent=10.0,  
                     gst_amount=0,  # To be updated after calculation
                     taxable_amount=total_service_charge,
-                    total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+                    # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+                    total_amount  = total_amount,
                     is_deleted='no'
                 )
 
@@ -637,6 +639,8 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 #----------------------------------------------------------------------------------
 

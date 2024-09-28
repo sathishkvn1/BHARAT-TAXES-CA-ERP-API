@@ -97,11 +97,75 @@ UPLOAD_DIR_QUOTATION_DETAILS       = "uploads/quotation_details"
 
 
 
+# def generate_quotation_pdf(quotations, file_path):
+#     from jinja2 import Environment, FileSystemLoader
+#     import pdfkit
+#     import os
+#     from datetime import date
+
+#     # Load the template environment
+#     template_dir = os.path.dirname(TEMPLATE_QUOTATION_DETAILS)
+#     template_name = os.path.basename(TEMPLATE_QUOTATION_DETAILS)
+#     env = Environment(loader=FileSystemLoader(template_dir))
+#     template = env.get_template(template_name)
+
+#     # Prepare data for the template
+#     if quotations:
+#         # Extract and format data from the quotations object
+#         details = quotations[0].quotation_details
+#         work_order_master = quotations[0].work_order_master 
+#         total = sum(item.total_amount for item in details)
+#         advance = quotations[0].quotation_master.net_amount
+#         additional_discount = quotations[0].quotation_master.additional_discount
+#         gst_amount = sum(item.gst_amount for item in details)
+#         total_amount = quotations[0].quotation_master.grand_total
+
+#         # Debug print: Check the content of details
+#         # print("Quotation Details:", details)
+#         # print("Work Order Master Details:", work_order_master)
+
+#         data = {
+#             'quotations': details,
+#             'total': total,
+#             'advance': advance,
+#             'additional_discount': additional_discount,
+#             'gst_amount': gst_amount,
+#             'total_amount': total_amount,
+#             'current_date': date.today(),
+#             'work_order_master': work_order_master 
+#         }
+
+#         # Render the template with data
+#         html_content = template.render(data)
+
+#         # Debug print: Check the HTML content generated
+#         print("Generated HTML content:", html_content)
+
+#         # Configuration for pdfkit
+#         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+#         if not os.path.isfile(wkhtmltopdf_path):
+#             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
+        
+#         config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+
+#         # PDF options
+#         options = {
+#             'footer-center': 'Page [page] of [topage]',
+#             'footer-font-size': '8',
+#             'margin-bottom': '20mm',
+#             'no-outline': None
+#         }
+        
+#         try:
+#             # Convert HTML to PDF
+#             pdfkit.from_string(html_content, file_path, configuration=config, options=options)
+#         except Exception as e:
+#             raise RuntimeError(f'Error generating PDF: {e}')
+
+#         return open(file_path, "rb")
+
+
 def generate_quotation_pdf(quotations, file_path):
-    from jinja2 import Environment, FileSystemLoader
-    import pdfkit
-    import os
-    from datetime import date
 
     # Load the template environment
     template_dir = os.path.dirname(TEMPLATE_QUOTATION_DETAILS)
@@ -112,27 +176,30 @@ def generate_quotation_pdf(quotations, file_path):
     # Prepare data for the template
     if quotations:
         # Extract and format data from the quotations object
-        details = quotations[0].quotation_details
-        work_order_master = quotations[0].work_order_master 
+        # details = quotations[0].quotation_details
+        details = quotations.quotation_details
+        work_order_master = quotations.work_order_master 
         total = sum(item.total_amount for item in details)
-        advance = quotations[0].quotation_master.net_amount
-        additional_discount = quotations[0].quotation_master.additional_discount
+        # advance = quotations.quotation_master.advance_amount
+        additional_discount = quotations.quotation_master.additional_discount
         gst_amount = sum(item.gst_amount for item in details)
-        total_amount = quotations[0].quotation_master.grand_total
-
-        # Debug print: Check the content of details
-        # print("Quotation Details:", details)
-        # print("Work Order Master Details:", work_order_master)
+        total_amount = quotations.quotation_master.net_amount
+        round_off  = quotations.quotation_master.round_off
+        bill_discount = quotations.quotation_master.bill_discount
+        grand_total = quotations.quotation_master.grand_total
 
         data = {
             'quotations': details,
             'total': total,
-            'advance': advance,
+            'grand_total': grand_total,
+            # 'advance': advance,
             'additional_discount': additional_discount,
             'gst_amount': gst_amount,
             'total_amount': total_amount,
             'current_date': date.today(),
-            'work_order_master': work_order_master 
+            'work_order_master': work_order_master,
+            'round_off':round_off,
+            'bill_discount': bill_discount  
         }
 
         # Render the template with data
@@ -143,6 +210,7 @@ def generate_quotation_pdf(quotations, file_path):
 
         # Configuration for pdfkit
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+    
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
@@ -163,6 +231,7 @@ def generate_quotation_pdf(quotations, file_path):
             raise RuntimeError(f'Error generating PDF: {e}')
 
         return open(file_path, "rb")
+
 
 
 @router.get('/get_quotation_pdf')
