@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
-from caerp_schema.accounts.quotation_schema import AccProformaInvoiceShema, AccQuotationSchema
+from caerp_schema.accounts.quotation_schema import AccProformaInvoiceShema, AccQuotationSchema, AccTaxInvoiceShema
 from typing import List, Optional
 from datetime import date
 from caerp_auth import oauth2
@@ -281,7 +281,6 @@ def get_demand_notice(
      return result
 
 #----------------------------------------------------------------------------------------------------
-
 @router.post('/consultation_invoice_generation')
 def consultation_invoice_generation(
      work_order_master_id: int,
@@ -520,3 +519,33 @@ def get_service_price_details_by_service_id(
             'service_master_id': service_master_id,
             'constitution_id': constitution_id
         }
+     
+
+    #-----------------------------------------------------
+
+
+@router.get('/get_tax_invoice_details')
+def get_tax_invoice_details(
+     work_order_master_id : int,
+     tax_invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id)
+     return result
+
+
+
+@router.post('/save_tax_invoice')
+def save_tax_invoice(
+    work_order_master_id: int,
+    request:AccTaxInvoiceShema,
+    db:Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)):
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+        auth_info = authenticate_user(token)
+        user_id = auth_info.get("user_id")
+        result = db_quotation.save_tax_invoice( db, work_order_master_id,request,user_id)
+        return result
+
