@@ -844,6 +844,7 @@ def save_service_document_data_master(
 
 
 #------------------------------------------------------------------------------------------------------------
+
 def fetch_available_and_unavailable_dates_and_slots(
     consultant_id: Optional[int],
     consultation_mode_id: Optional[int],
@@ -870,6 +871,10 @@ def fetch_available_and_unavailable_dates_and_slots(
             slot_duration = service_detail.slot_duration_in_minutes
             available_slots = []
 
+            # Adjust day_of_week_id to get Sunday as 1 and Saturday as 7
+            day_of_week_id = (check_date.weekday() + 1) % 7 + 1
+
+            # Fetch normal schedules considering the day of the week
             normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
@@ -878,9 +883,11 @@ def fetch_available_and_unavailable_dates_and_slots(
                 or_(
                     OffConsultantSchedule.effective_to_date >= check_date,
                     OffConsultantSchedule.effective_to_date.is_(None)
-                )
+                ),
+                OffConsultantSchedule.day_of_week_id == day_of_week_id  # Match day of the week with 1 for Sunday, 7 for Saturday
             ).all()
 
+            # Fetch non-normal schedules for the exact check_date
             non_normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
@@ -960,15 +967,20 @@ def fetch_available_and_unavailable_dates_and_slots(
 
             current_date = start_date
             while current_date <= end_date:
+                day_of_week_id = (current_date.weekday() + 1) % 7 + 1  # Adjust for 1-7 days of the week
+
                 is_available = any(
                     schedule.effective_from_date <= current_date and
-                    (schedule.effective_to_date is None or schedule.effective_to_date >= current_date)
+                    (schedule.effective_to_date is None or schedule.effective_to_date >= current_date) and
+                    schedule.day_of_week_id == day_of_week_id  # Check if the schedule matches the adjusted day of the week
                     for schedule in normal_schedules
                 )
+
                 if is_available:
                     available_dates.add(current_date)
                 else:
                     unavailable_dates.add(current_date)
+
                 current_date += timedelta(days=1)
 
             for schedule in non_normal_schedules:
@@ -984,6 +996,7 @@ def fetch_available_and_unavailable_dates_and_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 #------------------------------------------------------------------------------------------------------------
 
 def save_off_document_master(
