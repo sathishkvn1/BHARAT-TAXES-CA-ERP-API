@@ -942,7 +942,7 @@ def fetch_available_and_unavailable_dates_and_slots(
 
         else:
             start_date = datetime.now().date()
-            end_date = start_date + timedelta(days=10)
+            end_date = start_date + timedelta(days=30)
 
             normal_schedules = db.query(OffConsultantSchedule).filter(
                 OffConsultantSchedule.consultant_id == consultant_id,
