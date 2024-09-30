@@ -90,8 +90,13 @@ class AccProformaInvoiceMasterSchema(BaseModel):
     proforma_invoice_date            : Optional[date]= None
     proforma_invoice_number          : Optional[str]= None
     account_head_id         : Optional[int]= None
-    grand_total            : Optional[float]= None
-    discount_amount         : Optional[float]= None
+    total_offer_amount          : Optional[float]= None
+
+    total_coupon_amount         :  Optional[float]= None
+
+
+    grand_total_amount           : Optional[float]= None
+    bill_discount_amount         : Optional[float]= None
     additional_discount_amount  : Optional[float]= None
     advance_amount              : Optional[float]= None
     round_off_amount            : Optional[float]= None
@@ -128,7 +133,6 @@ class AccProformaInvoiceDetailsSchema(BaseModel):
     total_amount                : Optional[float]= None
     is_deleted                  : Optional[str]= None
 
-
 # class AccProformaInvoiceShema(BaseModel):
 #     invoice_master          : AccProformaInvoiceMasterSchema
 #     invoice_details         : List[AccProformaInvoiceDetailsSchema]
@@ -153,6 +157,7 @@ class AccProformaInvoiceResponceSchema(BaseModel):
 #----------------------------------------------------------------------------
 
 
+
 class AccTaxInvoiceMasterSchema(BaseModel):
 
     id                      : Optional[int]= None
@@ -170,7 +175,7 @@ class AccTaxInvoiceMasterSchema(BaseModel):
     offer_total             : Optional[float] = None
 
     coupon_total            : Optional[float] = None
-    grand_total_amont            : Optional[float]= None
+    grand_total_amount            : Optional[float]= None
     bill_discount_amount         : Optional[float]= None
     additional_discount_amount  : Optional[float]= None
     advance_amount              : Optional[float]= None

@@ -99,28 +99,28 @@ def get_customer_details(customer_id: int,
 def save_stake_holder_master(
     request_data: StakeHolderMasterSchema,
     customer_id: int,
-    address_type: str = Query(enum=['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']),
+    # address_type: str = Query(enum=['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']),
+    stakeholder_type: str = Query(enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     - 1.Insert Data into stake_holder_master and Capture the ID and Use the captured stake_holder_master_id to insert into the stake_holder_master_id 
         column in the customer_stake_holders table.
-    - 2.Insert Data into stake_holder_contact_details and Capture the ID:Use the captured contact_details_id to insert into the contact_details_id column in
+    - 2.Insert Data into stake_holder_contact_details and Capture the ID: Use the captured contact_details_id to insert into the contact_details_id column in
         the customer_stake_holders table.
-    - 3.Insert Address Data into stake_holder_address and Map the IDs Based on address_type:Based on the address_type, capture the inserted id of the address and store it
-        in the corresponding columns of the customer_stake_holders table
-   
-   
+    - 3.Insert Address Data into stake_holder_address and Map the IDs Based on address_type: Based on the address_type, capture the inserted id of the address and store it
+        in the corresponding columns of the customer_stake_holders table.
     """
+
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        # Pass customer_id and address_type to the save function
-        result= db_gst.save_stakeholder_details(request_data,user_id, db, customer_id)
+        # Pass customer_id, address_type, and stakeholder_type to the save function
+        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stakeholder_type)
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
@@ -128,23 +128,25 @@ def save_stake_holder_master(
 
 #-get stakeholder_details
 @router.get("/get_stakeholder_master/{customer_id}")
-def get_stakeholder_master(customer_id: int,
-                             db: Session = Depends(get_db)):
+def get_stakeholder_master(
+    customer_id: int,
+    stakeholder_type: str = Query(
+        ...,
+        enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']
+    ),
+    db: Session = Depends(get_db)
+):
     """
-    Get the details of a stakeholder by their customer_id.
+    Get the details of a stakeholder by their customer_id and type.
 
-   
     - customer_id (int): The ID of the customer.
-    
-
-   
+    - stakeholder_type (str): The type of stakeholder to filter by.
     """
-   
-        # Call your function to get stakeholder details
-    stakeholder_details = db_gst.get_stakeholder_details(db, customer_id)
-        
-    
-    if stakeholder_details is None:
+
+    # Call your function to get stakeholder details
+    stakeholder_details = db_gst.get_stakeholder_details(db, customer_id, stakeholder_type)
+
+    if not stakeholder_details:
         return []
-    
+
     return stakeholder_details

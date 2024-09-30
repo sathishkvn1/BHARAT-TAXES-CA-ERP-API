@@ -18,13 +18,12 @@ class BusinessDetailsSchema(BaseModel):
     tin_number                                 : Optional[str] 
     authorized_signatory_name_as_in_pan        : Optional[str] 
     authorized_signatory_pan_number            : Optional[str]
-
-
+   
 #--------------
 
 class TradeNameSchema(BaseModel):
-    id        : Optional[int]
-    trade_name: str
+    id                   : Optional[int]
+    additional_trade_name: str
 
 class CasualTaxablePersonSchema(BaseModel):
     id                                  : Optional[int]
@@ -55,7 +54,7 @@ class ReasonForGSTSchema(BaseModel):
 
 class RegistrationSchema(BaseModel):
     id                  : Optional[int]
-    registration_type_id: str
+    registration_type_id: int
     registration_number : str
     registration_date   : date
 
@@ -81,55 +80,56 @@ class CustomerRequestSchema(BaseModel):
 
 
 class PersonalInformationSchema(BaseModel):
-    id: Optional[int]
-    first_name: str
-    middle_name: Optional[str]
-    last_name: Optional[str]
+    id                : Optional[int]
+    first_name        : str
+    middle_name       : Optional[str]
+    last_name         : Optional[str]
     fathers_first_name: Optional[str]
-    marital_status_id: Optional[int]
-    date_of_birth: Optional[date]
-    gender_id: int
-    din_number: Optional[str]
+    marital_status_id : Optional[int]
+    date_of_birth     : Optional[date]
+    gender_id         : int
+    din_number        : Optional[str]
     is_citizen_of_india: Optional[str]
-    pan_number: Optional[str]
-    passport_number: Optional[str]
-    aadhaar_number: Optional[str]
+    pan_number         : Optional[str]
+    passport_number    : Optional[str]
+    aadhaar_number     : Optional[str]
 
 
 class ContactDetailsSchema(BaseModel):
-    id: Optional[int]
-    mobile_number: Optional[str]
-    email_address: Optional[str]
-    telephone_number_with_std_code: Optional[str]
+    id                               : Optional[int]
+    mobile_number                    : Optional[str]
+    email_address                    : Optional[str]
+    telephone_number_with_std_code   : Optional[str]
 
 
 class IdentityInformationSchema(BaseModel):
-    id: Optional[int]
+    id            : Optional[int]
     designation_id: Optional[int]
 
 
 class AddressSchema(BaseModel):
-    id: Optional[int]
-    address_type: str = "RESIDENTIAL" 
-    pin_code: Optional[str]
-    country_id: Optional[int]
-    state_id: Optional[int]
-    district_id: Optional[int]
-    city_id: Optional[int]
-    village_id: Optional[int]
-    post_office_id: Optional[int]
-    lsg_type_id: Optional[int]
-    lsg_id: Optional[int]
-    locality: Optional[str]
+    id             : Optional[int]
+    address_type   : str = "RESIDENTIAL" 
+    # address_type   : Optional[str]
+    pin_code       : Optional[str]
+    country_id     : Optional[int]
+    state_id       :  Optional[int]
+    district_id    : Optional[int]
+    city_id        : Optional[int]
+    village_id     : Optional[int]
+    post_office_id : Optional[int]
+    lsg_type_id    : Optional[int]
+    lsg_id         : Optional[int]
+    locality       : Optional[str]
     road_street_name: Optional[str]
     premises_building_name: Optional[str]
-    building_flat_number: Optional[str]
-    floor_number: Optional[str]
-    landmark: Optional[str]
+    building_flat_number  : Optional[str]
+    floor_number          : Optional[str]
+    landmark              : Optional[str]
 
 
 class StakeHolderMasterSchema(BaseModel):
     personal_information: PersonalInformationSchema
-    contact_details: ContactDetailsSchema
+    contact_details     : List[ContactDetailsSchema]
     identity_information: List[IdentityInformationSchema]
-    address: List[AddressSchema]
+    address             : List[AddressSchema]

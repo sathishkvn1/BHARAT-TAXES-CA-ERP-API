@@ -157,8 +157,11 @@ class AccProformaInvoiceMaster(caerp_base):
     proforma_invoice_date       = Column(Date, nullable=True)
     proforma_invoice_number     = Column(String(50), nullable=True)
     account_head_id             = Column(Integer, nullable=True)
-    grand_total                = Column(Float, nullable=False,default=0.0)
-    discount_amount             = Column(Float, nullable=False,default=0.0)
+    total_offer_amount          = Column(Float, nullable=False,default=0.0)
+    total_coupon_amount         = Column(Float, nullable=False,default=0.0)
+
+    grand_total_amount                = Column(Float, nullable=False,default=0.0)
+    bill_discount_amount             = Column(Float, nullable=False,default=0.0)
     additional_discount_amount  = Column(Float, nullable=False,default=0.0)
     advance_amount              = Column(Float, nullable=False,default=0.0)
     round_off_amount            = Column(Float, nullable=False,default=0.0)
@@ -189,10 +192,15 @@ class AccProformaInvoiceDetails(caerp_base):
     stamp_fee                   = Column(Float, nullable=False, default=0.0)
     quantity                    = Column(Integer, nullable=False, default=1.0)
 
-    offer_master_id             = Column(Integer, nullable=True)
+    has_offer                   = Column(Enum('yes', 'no'), nullable=False, default='no')
     offer_name                  = Column(String(50), nullable=True)
     offer_percentage            = Column(Float, nullable=False, default=0.0)
     offer_amount                = Column(Float, nullable=False, default=0.0)
+    
+    has_coupon                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    coupon_code                 = Column(String(50), nullable=True)
+    coupon_percentage           = Column(Float, nullable=False, default=0.0)
+    coupon_amount               = Column(Float, nullable=False, default=0.0)
 
     discount_percentage         = Column(Float, nullable=False, default=0.0)
     discount_amount             = Column(Float, nullable=False, default=0.0)
@@ -202,7 +210,6 @@ class AccProformaInvoiceDetails(caerp_base):
     taxable_amount              = Column(Float, nullable=False, default=0.0)
     total_amount                = Column(Float, nullable=False, default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-
 
 
 

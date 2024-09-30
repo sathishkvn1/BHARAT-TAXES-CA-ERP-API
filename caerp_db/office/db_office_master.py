@@ -1042,6 +1042,31 @@ def save_off_document_master(
 #-----------Aparna----------------------------------------------------------------------------------------------
 
 from sqlalchemy.sql import text
+# def get_consultants(db: Session):
+#     sql = text("""
+#     SELECT 
+  
+#         em.employee_id,
+#         em.first_name,
+#         em.middle_name,
+#         em.last_name
+#     FROM 
+#         employee_master em
+#     INNER JOIN 
+#         employee_employement_details eed
+#     ON 
+#         em.employee_id = eed.employee_id
+#     WHERE 
+#         eed.is_consultant = 'yes'
+#         AND eed.effective_from_date <= CURDATE()
+#         AND eed.effective_to_date IS NULL OR eed.effective_to_date >= CURDATE()
+        
+#         AND em.is_deleted = 'no'
+#         AND eed.is_deleted = 'no';
+#     """)
+#     result = db.execute(sql)
+#     return result.fetchall()
+
 def get_consultants(db: Session):
     sql = text("""
     SELECT 
@@ -1062,10 +1087,14 @@ def get_consultants(db: Session):
         AND eed.effective_to_date IS NULL OR eed.effective_to_date >= CURDATE()
         
         AND em.is_deleted = 'no'
-        AND eed.is_deleted = 'no';
+        AND eed.is_deleted = 'no'
+               ORDER BY 
+        em.first_name, em.middle_name, em.last_name;
     """)
     result = db.execute(sql)
     return result.fetchall()
+
+
 #------------------------------------------------------------------------------------------------------------
 
 
