@@ -2471,10 +2471,10 @@ def get_all_consultation_task_master_details(
     to_date: Optional[date] = None  
 ) -> List[OffViewConsultationTaskMasterSchema]:
     search_conditions = [OffViewConsultationTaskMaster.is_deleted == 'no']
-    # print("1")
+
     if service_id != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.service_id == service_id)
-    # print(service_id)
+
     if task_status != 'ALL':
         search_conditions.append(OffViewConsultationTaskMaster.task_status_id == task_status)
 
@@ -2493,9 +2493,12 @@ def get_all_consultation_task_master_details(
     if to_date is not None:
         search_conditions.append(func.date(OffViewConsultationTaskMaster.task_date) <= to_date)
 
-    # Query all tasks from the view
-    tasks_query = db.query(OffViewConsultationTaskMaster).filter(and_(*search_conditions)).all()
-    
+    # Query all tasks from the view with ordering by task_date descending
+    tasks_query = db.query(OffViewConsultationTaskMaster)\
+                    .filter(and_(*search_conditions))\
+                    .order_by(OffViewConsultationTaskMaster.task_date.desc())\
+                    .all()
+
     # Query the additional services
     additional_services_query = db.query(
         OffConsultationTaskDetails.id,
@@ -2527,13 +2530,11 @@ def get_all_consultation_task_master_details(
     task_master_details = []
    
     for task in tasks_query:
-        
         task_dict = task.__dict__.copy()
         task_dict["additional_services"] = additional_services_dict.get(task.consultation_task_master_id, [])
         task_master_details.append(OffViewConsultationTaskMasterSchema(**task_dict))
 
     return task_master_details
-
 
 
 

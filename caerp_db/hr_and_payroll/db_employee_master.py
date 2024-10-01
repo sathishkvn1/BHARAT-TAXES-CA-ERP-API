@@ -1379,6 +1379,7 @@ def get_all_employee_team_master(
 
 
 #------------------------------------------------------------------------------------------------------------
+
 def get_all_employee_team_members(
     db: Session,
     team_id: int,
@@ -1406,6 +1407,9 @@ def get_all_employee_team_members(
         query = query.filter(
             HrViewEmployeeTeamMembers.effective_to_date < current_date
         )
+    # Add sorting by employee first name in ascending order
+    query = query.order_by(HrViewEmployeeTeamMembers.member_first_name.asc())
+
     # Fetch results
     team_members = query.all()
 
@@ -1415,7 +1419,6 @@ def get_all_employee_team_members(
     ]
 
     return team_members_schema
-
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -1430,7 +1433,10 @@ def get_team_leaders_by_team_id(db: Session, team_id: int):
         HrViewEmployeeTeamMembers.team_master_id == team_id,
         HrViewEmployeeTeamMembers.is_team_leader == 'yes',
         HrViewEmployeeTeamMembers.is_deleted == 'no'
-    ).all()
+    ).order_by(
+        HrViewEmployeeTeamMembers.leader_first_name.asc()  # Ordering by leader_first_name in ascending order
+    ).all()    
+   
 
 
 #------------------------------------------------------------------------------------------------------------
