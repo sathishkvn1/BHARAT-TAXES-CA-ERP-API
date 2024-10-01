@@ -1642,11 +1642,15 @@ def get_service_documents_data_details(
     nature_of_possession_id: Optional[int] = None,
 ) -> List[OffViewServiceDocumentsDataDetails]:
     try:
-        # Base query and join 
+
         query = db.query(OffViewServiceDocumentsDataDetails).join(
             OffServiceDocumentDataMaster,
             OffViewServiceDocumentsDataDetails.service_document_data_master_id == OffServiceDocumentDataMaster.id
+        ).filter(
+            OffViewServiceDocumentsDataDetails.service_document_data_details_is_deleted == 'no'  
         )
+
+
         
         # Conditional filters based on provided arguments
         if service_document_data_master_id is not None:
@@ -1675,6 +1679,65 @@ def get_service_documents_data_details(
 
     except Exception as e:
         raise Exception(f"Error fetching service documents details: {e}")
+
+
+# def get_service_documents_data_details(
+#     db: Session,
+#     service_document_data_master_id: Optional[int] = None,
+#     service_id: Optional[int] = None,
+#     constitution_id: Optional[int] = None,
+#     document_category: Optional[str] = "ALL",
+#     nature_of_possession_id: Optional[int] = None,
+# ) -> List[OffViewServiceDocumentsDataDetails]:
+#     try:
+#         # query = db.query(OffViewServiceDocumentsDataDetails).join(
+#         #     OffServiceDocumentDataMaster,
+#         #     OffViewServiceDocumentsDataDetails.service_document_data_master_id == OffServiceDocumentDataMaster.id
+#         # ).filter(
+#         #     OffViewServiceDocumentsDataDetails.service_document_data_details_is_deleted == 'no'
+#         # )
+
+#         query = db.query(OffViewServiceDocumentsDataDetails).join(
+#             OffServiceDocumentDataMaster,
+#             OffViewServiceDocumentsDataDetails.service_document_data_master_id == OffServiceDocumentDataMaster.id
+#         )
+
+#         # Add the is_deleted filter
+#         query = query.filter(
+#             OffViewServiceDocumentsDataDetails.service_document_data_details_is_deleted == 'no'  # Correct field for is_deleted check
+#         )
+
+
+#         # Conditional filters based on provided arguments
+#         if service_document_data_master_id is not None:
+#             query = query.filter(
+#                 OffServiceDocumentDataMaster.id == service_document_data_master_id
+#             )
+            
+#         if constitution_id is not None:
+#             query = query.filter(OffServiceDocumentDataMaster.constitution_id == constitution_id)
+
+#         if service_id is not None:
+#             query = query.filter(OffServiceDocumentDataMaster.service_goods_master_id == service_id)
+
+#         if document_category != 'ALL':
+#             query = query.filter(
+#                 OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category
+#             )
+
+#         if nature_of_possession_id is not None and document_category == 'PRINCIPAL PLACE DOC':
+#             query = query.filter(
+#                 OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
+#             )
+
+#         # Print the SQL query
+#         print(str(query.statement))
+
+#         # Return the filtered or non-filtered result set
+#         return query.all()
+
+#     except Exception as e:
+#         raise Exception(f"Error fetching service documents details: {e}")
 
 
 
