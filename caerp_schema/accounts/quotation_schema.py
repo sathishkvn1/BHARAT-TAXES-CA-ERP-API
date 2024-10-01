@@ -156,8 +156,7 @@ class AccProformaInvoiceResponceSchema(BaseModel):
 
 #----------------------------------------------------------------------------
 
-
-
+   
 class AccTaxInvoiceMasterSchema(BaseModel):
 
     id                      : Optional[int]= None
@@ -179,9 +178,11 @@ class AccTaxInvoiceMasterSchema(BaseModel):
     bill_discount_amount         : Optional[float]= None
     additional_discount_amount  : Optional[float]= None
     advance_amount              : Optional[float]= None
+    additional_fee_required     : Optional[float]= None
     round_off_amount            : Optional[float]= None
     net_amount                 : Optional[float]= None
     remarks                     : Optional[str]= None
+
 
 class AccTaxInvoiceDetailsSchema(BaseModel):
 

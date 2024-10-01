@@ -237,6 +237,7 @@ class AccTaxInvoiceMaster(caerp_base):
     bill_discount_amount        = Column(Float, nullable=False,default=0.0)
     additional_discount_amount  = Column(Float, nullable=False,default=0.0)
     advance_amount              = Column(Float, nullable=False,default=0.0)
+    additional_fee_required     = Column(Float, nullable=False,default=0.0)
     round_off_amount            = Column(Float, nullable=False,default=0.0)
     net_amount                  = Column(Float, nullable=False,default=0.0)
     remarks                     = Column(String(50), nullable=True)

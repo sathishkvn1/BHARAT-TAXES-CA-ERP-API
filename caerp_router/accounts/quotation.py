@@ -402,7 +402,7 @@ def get_demand_notice(
      return result
 
 #----------------------------------------------------------------------------------------------------
-@router.post('/consultation_invoice_generation')
+@router.get('/consultation_invoice_generation')
 def consultation_invoice_generation(
      work_order_master_id: int,
      appointment_master_id: int,
