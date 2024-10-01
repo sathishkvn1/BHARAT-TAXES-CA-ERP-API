@@ -368,7 +368,7 @@ def send_proposal(
 #     status: Optional[str] = 'ALL',
 #     work_order_master_id: Optional[int] = None,
 #     quotation_id: Optional[int] = None,
-#     from_date: Optional[date] = Query(date.today()),
+#     from_date: Optional[date] =None,
 #     to_date: Optional[date] = None
 # ) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
 #     try:
@@ -500,7 +500,6 @@ def send_proposal(
 #         # Handle database exceptions
 #         raise HTTPException(status_code=500, detail=str(e))
 
-
 def get_quotation_data(
     db: Session,
     status: Optional[str] = 'ALL',
@@ -546,7 +545,6 @@ def get_quotation_data(
         if quotation_id:
             query = query.filter(AccQuotationMaster.id == quotation_id)
             quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
-            
             if not quotation_data:
                 return {"message": "Quotation not found."}
             
@@ -637,7 +635,6 @@ def get_quotation_data(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #-------------------------------------------------------------
 def generate_profoma_invoice_details(
