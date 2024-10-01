@@ -78,17 +78,31 @@ def send_proposal(
     result = db_quotation.send_proposal(quotation_id,work_order_master_id,db)
     return result
 
+# @router.get('/get_quotation_list')
+# def get_quotqtion_list(
+#     status: Optional[str]='ALL',
+#     work_order_master_id : Optional[int] = None,
+#     quotation_id : Optional[int] = None,
+#     from_date : Optional[date] = Query(date.today()),
+#     to_date : Optional[date] =None,
+#     db: Session = Depends(get_db)
+# ): 
+#    result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date)
+#    return result
+
+
 @router.get('/get_quotation_list')
 def get_quotqtion_list(
     status: Optional[str]='ALL',
     work_order_master_id : Optional[int] = None,
     quotation_id : Optional[int] = None,
-    from_date : Optional[date] = Query(date.today()),
+    from_date : Optional[date] = None,
     to_date : Optional[date] =None,
     db: Session = Depends(get_db)
 ): 
    result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date)
    return result
+
 
 #--------------------------------------------------------------------------------------------------
 

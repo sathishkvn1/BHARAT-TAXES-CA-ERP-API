@@ -636,6 +636,8 @@ def get_quotation_data(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
 #-------------------------------------------------------------
 def generate_profoma_invoice_details(
         db: Session,
