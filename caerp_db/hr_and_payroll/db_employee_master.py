@@ -548,7 +548,17 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 
 #---------------------------------------------------------------------------------------------------------
 
-# def search_employee_master_details(db: Session, user_status: Optional[ActiveStatus], approval_status: Optional[ApprovedStatus], category: Optional[Union[str,int]] = "ALL", department: Optional[Union[str,int]] = "ALL", designation: Optional[Union[str,int]] = "ALL", is_consultant: Optional[str] = None, search: Optional[str] = None):
+
+# def search_employee_master_details(
+#     db: Session,
+#     user_status: Optional[ActiveStatus], 
+#     approval_status: Optional[ApprovedStatus], 
+#     category: Optional[Union[str,int]] = "ALL",
+#     department: Optional[Union[str,int]] = "ALL", 
+#     designation: Optional[Union[str,int]] = "ALL", 
+#     is_consultant: Optional[str] = "ALL", 
+#     search: Optional[str] = None
+#     ):
 #     query = db.query(
 #         EmployeeMaster.employee_id,
 #         EmployeeMaster.first_name,
@@ -617,7 +627,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 #       query = query.filter(UserBase.is_active == user_status.value)
 #     if approval_status and approval_status != ApprovedStatus.ALL:
 #       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
-#     if is_consultant:
+#     if is_consultant and is_consultant != "ALL":
 #       query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
 #     if search:
 #       search = search.strip()
@@ -634,9 +644,10 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 #               # EmployeeContactDetails.personal_mobile_number.like(search_term)
 #             )
       
-#     result = query.all()    
+#     # result = query.all()
+#     result = query.order_by(EmployeeMaster.first_name.asc()).all()
+    
 #     return result  
-
 
 
 def search_employee_master_details(
@@ -677,7 +688,10 @@ def search_employee_master_details(
         EmployeeMaster.is_approved,
         UserBase.is_active
     ).join(
-        EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+        EmployeeEmployementDetails,
+        (EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id) &
+        EmployeeEmployementDetails.effective_to_date.is_(None),
+        isouter=True
   
     ).join(
         HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
@@ -688,7 +702,10 @@ def search_employee_master_details(
     ).join(
        UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter = True
     ).join(
-        EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id, isouter=True
+        EmployeeContactDetails, 
+        (EmployeeMaster.employee_id == EmployeeContactDetails.employee_id) & 
+        EmployeeContactDetails.effective_to_date.is_(None),
+        isouter=True
     ).join(
         Gender, EmployeeMaster.gender_id == Gender.id, isouter=True  
     ).join(
@@ -737,7 +754,8 @@ def search_employee_master_details(
     # result = query.all()
     result = query.order_by(EmployeeMaster.first_name.asc()).all()
     
-    return result  
+    return result 
+
 
 #---------------------------------------------------------------------------------------------------------
 
@@ -1513,106 +1531,106 @@ def save_team_members(
 
 
 
-def search_employee_master_details_test(
-    db: Session,
-    user_status: Optional[ActiveStatus],
-    approval_status: Optional[ApprovedStatus],
-    category: Optional[Union[str,int]] = "ALL",
-    department: Optional[Union[str,int]] = "ALL",
-    designation: Optional[Union[str,int]] = "ALL",
-    is_consultant: Optional[str] = None,
-    search: Optional[str] = None,
-    offset: int = 0,  # Pagination offset
-    page_size: int = 10  # Pagination page size
-):
-    query = db.query(
-        EmployeeMaster.employee_id,
-        EmployeeMaster.first_name,
-        EmployeeMaster.middle_name,
-        EmployeeMaster.last_name,
-        EmployeeMaster.gender_id,
-        Gender.gender,
-        EmployeeMaster.nationality_id,
-        NationalityDB.nationality_name, 
-        EmployeeMaster.date_of_birth,
-        EmployeeMaster.blood_group,
-        EmployeeMaster.nationality_id,
-        EmployeeMaster.marital_status_id,
-        MaritalStatus.marital_status, 
-        EmployeeMaster.joining_date,
-        EmployeeEmployementDetails.employee_category_id,
-        HrEmployeeCategory.category_name,
-        EmployeeEmployementDetails.department_id,
-        HrDepartmentMaster.department_name,
-        EmployeeEmployementDetails.designation_id,
-        HrDesignationMaster.designation,
-        EmployeeContactDetails.personal_mobile_number,
-        EmployeeContactDetails.personal_email_id,
-        EmployeeContactDetails.remarks,
-        EmployeeEmployementDetails.is_consultant,
-        EmployeeMaster.is_approved,
-        UserBase.is_active
-    ).join(
-        EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
-    ).join(
-        HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
-    ).join(
-        HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
-    ).join(
-        HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
-    ).join(
-        UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter=True
-    ).join(
-        EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id, isouter=True
-    ).join(
-        Gender, EmployeeMaster.gender_id == Gender.id, isouter=True  
-    ).join(
-        NationalityDB, EmployeeMaster.nationality_id == NationalityDB.id, isouter=True
-    ).join(
-        MaritalStatus, EmployeeMaster.marital_status_id == MaritalStatus.id, isouter=True
-    )
+# def search_employee_master_details_test(
+#     db: Session,
+#     user_status: Optional[ActiveStatus],
+#     approval_status: Optional[ApprovedStatus],
+#     category: Optional[Union[str,int]] = "ALL",
+#     department: Optional[Union[str,int]] = "ALL",
+#     designation: Optional[Union[str,int]] = "ALL",
+#     is_consultant: Optional[str] = None,
+#     search: Optional[str] = None,
+#     offset: int = 0,  # Pagination offset
+#     page_size: int = 10  # Pagination page size
+# ):
+#     query = db.query(
+#         EmployeeMaster.employee_id,
+#         EmployeeMaster.first_name,
+#         EmployeeMaster.middle_name,
+#         EmployeeMaster.last_name,
+#         EmployeeMaster.gender_id,
+#         Gender.gender,
+#         EmployeeMaster.nationality_id,
+#         NationalityDB.nationality_name, 
+#         EmployeeMaster.date_of_birth,
+#         EmployeeMaster.blood_group,
+#         EmployeeMaster.nationality_id,
+#         EmployeeMaster.marital_status_id,
+#         MaritalStatus.marital_status, 
+#         EmployeeMaster.joining_date,
+#         EmployeeEmployementDetails.employee_category_id,
+#         HrEmployeeCategory.category_name,
+#         EmployeeEmployementDetails.department_id,
+#         HrDepartmentMaster.department_name,
+#         EmployeeEmployementDetails.designation_id,
+#         HrDesignationMaster.designation,
+#         EmployeeContactDetails.personal_mobile_number,
+#         EmployeeContactDetails.personal_email_id,
+#         EmployeeContactDetails.remarks,
+#         EmployeeEmployementDetails.is_consultant,
+#         EmployeeMaster.is_approved,
+#         UserBase.is_active
+#     ).join(
+#         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+#     ).join(
+#         HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
+#     ).join(
+#         HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
+#     ).join(
+#         HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+#     ).join(
+#         UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter=True
+#     ).join(
+#         EmployeeContactDetails, EmployeeMaster.employee_id == EmployeeContactDetails.employee_id, isouter=True
+#     ).join(
+#         Gender, EmployeeMaster.gender_id == Gender.id, isouter=True  
+#     ).join(
+#         NationalityDB, EmployeeMaster.nationality_id == NationalityDB.id, isouter=True
+#     ).join(
+#         MaritalStatus, EmployeeMaster.marital_status_id == MaritalStatus.id, isouter=True
+#     )
 
-    # Applying filters at the end of the join statements
-    if category and category != "ALL":
-        query = query.filter(or_(
-            HrEmployeeCategory.id == category,
-            HrEmployeeCategory.category_name == category
-        ))
-    if department and department != "ALL":
-        query = query.filter(or_(
-            HrDepartmentMaster.id == department,
-            HrDepartmentMaster.department_name == department
-        ))
-    if designation and designation != "ALL":
-        query = query.filter(or_(
-            HrDesignationMaster.id == designation,
-            HrDesignationMaster.designation == designation
-        ))
-    if user_status and user_status != ActiveStatus.ALL:
-        query = query.filter(UserBase.is_active == user_status.value)
-    if approval_status and approval_status != ApprovedStatus.ALL:
-        query = query.filter(EmployeeMaster.is_approved == approval_status.value)
-    if is_consultant:
-        query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
-    if search:
-        search = search.strip()
-        search_term = f"%{search}%"
-        query = query.filter(
-            func.lower(EmployeeMaster.first_name).like(func.lower(search_term)) |
-            func.lower(EmployeeMaster.middle_name).like(func.lower(search_term)) |
-            func.lower(EmployeeMaster.last_name).like(func.lower(search_term)) |
-            func.lower(func.concat(EmployeeMaster.first_name, " ", EmployeeMaster.middle_name, " ", EmployeeMaster.last_name)).like(func.lower(search_term)) |
-            func.lower(HrEmployeeCategory.category_name).like(func.lower(search_term)) |
-            func.lower(HrDepartmentMaster.department_name).like(func.lower(search_term)) |
-            func.lower(HrDesignationMaster.designation).like(func.lower(search_term))
-        )
+#     # Applying filters at the end of the join statements
+#     if category and category != "ALL":
+#         query = query.filter(or_(
+#             HrEmployeeCategory.id == category,
+#             HrEmployeeCategory.category_name == category
+#         ))
+#     if department and department != "ALL":
+#         query = query.filter(or_(
+#             HrDepartmentMaster.id == department,
+#             HrDepartmentMaster.department_name == department
+#         ))
+#     if designation and designation != "ALL":
+#         query = query.filter(or_(
+#             HrDesignationMaster.id == designation,
+#             HrDesignationMaster.designation == designation
+#         ))
+#     if user_status and user_status != ActiveStatus.ALL:
+#         query = query.filter(UserBase.is_active == user_status.value)
+#     if approval_status and approval_status != ApprovedStatus.ALL:
+#         query = query.filter(EmployeeMaster.is_approved == approval_status.value)
+#     if is_consultant:
+#         query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+#     if search:
+#         search = search.strip()
+#         search_term = f"%{search}%"
+#         query = query.filter(
+#             func.lower(EmployeeMaster.first_name).like(func.lower(search_term)) |
+#             func.lower(EmployeeMaster.middle_name).like(func.lower(search_term)) |
+#             func.lower(EmployeeMaster.last_name).like(func.lower(search_term)) |
+#             func.lower(func.concat(EmployeeMaster.first_name, " ", EmployeeMaster.middle_name, " ", EmployeeMaster.last_name)).like(func.lower(search_term)) |
+#             func.lower(HrEmployeeCategory.category_name).like(func.lower(search_term)) |
+#             func.lower(HrDepartmentMaster.department_name).like(func.lower(search_term)) |
+#             func.lower(HrDesignationMaster.designation).like(func.lower(search_term))
+#         )
     
-    # Apply pagination before calling .all()
-    query = query.offset(offset).limit(page_size)
+#     # Apply pagination before calling .all()
+#     query = query.offset(offset).limit(page_size)
     
-    # Execute the query and return results
-    result = query.all()
-    return result
+#     # Execute the query and return results
+#     result = query.all()
+#     return result
 
 #------------------------------------------------------------------------------------------------------
 
