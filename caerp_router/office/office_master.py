@@ -1329,18 +1329,75 @@ def get_all_service_document_data_master(
 
 from datetime import datetime
 
+# @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+# def get_consultant_employees(
+#     db: Session = Depends(get_db),
+#     search_query: str = Query(None, description="Search query to filter consultant employees")
+# ):
+#     current_date = datetime.utcnow().date()
+#     query = db.query(
+#         EmployeeMaster.employee_id,
+#         EmployeeMaster.first_name,
+#         EmployeeMaster.middle_name,
+#          EmployeeMaster.last_name,
+#         # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+#         EmployeeMaster.employee_number,
+#         EmployeeContactDetails.personal_email_id.label('personal_email'),
+#         EmployeeContactDetails.official_email_id.label('official_email'),
+#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+#         EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+#         HrDepartmentMaster.department_name,
+#         HrDesignationMaster.designation
+#     ).join(
+#         EmployeeEmployementDetails,
+#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+#     ).join(
+#         EmployeeContactDetails,
+#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+#     ).join(
+#         HrDepartmentMaster,
+#         EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+#     ).join(
+#         HrDesignationMaster,
+#         EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+#     ).filter(
+#         EmployeeEmployementDetails.is_consultant == 'yes',
+#         EmployeeEmployementDetails.effective_from_date <= current_date,
+#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+#         EmployeeMaster.is_deleted == 'no',
+#         EmployeeEmployementDetails.is_deleted == 'no',
+#         EmployeeContactDetails.is_deleted == 'no'
+#     )
+
+#     if search_query:
+#         search_filter = (
+#             EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+#         )
+#         query = query.filter(search_filter)
+
+#     return query.all()
+
+
 @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 def get_consultant_employees(
     db: Session = Depends(get_db),
     search_query: str = Query(None, description="Search query to filter consultant employees")
 ):
     current_date = datetime.utcnow().date()
+    
+    # Initial query with necessary joins
     query = db.query(
         EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
-         EmployeeMaster.last_name,
-        # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+        EmployeeMaster.last_name,
         EmployeeMaster.employee_number,
         EmployeeContactDetails.personal_email_id.label('personal_email'),
         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -1364,6 +1421,8 @@ def get_consultant_employees(
         EmployeeEmployementDetails.is_consultant == 'yes',
         EmployeeEmployementDetails.effective_from_date <= current_date,
         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeContactDetails.effective_from_date <= current_date,
+        (EmployeeContactDetails.effective_to_date == None) | (EmployeeContactDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
         EmployeeEmployementDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
@@ -1383,7 +1442,6 @@ def get_consultant_employees(
         query = query.filter(search_filter)
 
     return query.all()
-
 
 
 #-------------------------------------------------------------------------------------------------------------
