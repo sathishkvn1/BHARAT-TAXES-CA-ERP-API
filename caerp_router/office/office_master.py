@@ -1022,6 +1022,152 @@ def get_service_documents_data_details(
 
 
 
+# @router.get("/services/get_all_service_document_data_master")
+# def get_all_service_document_data_master(
+#     db: Session = Depends(get_db),
+#     search: Optional[str] = None,
+#     service_id: Union[int, str] = 'ALL',
+#     group_id: Union[int, str] = 'ALL',
+#     sub_group_id: Union[int, str] = 'ALL',
+#     category_id: Union[int, str] = 'ALL',
+#     sub_category_id: Union[int, str] = 'ALL',
+#     constitution_id: Union[int, str] = 'ALL',
+#     doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
+# ) -> List[dict]:
+#     try:
+       
+
+#         search_conditions = []
+
+#         if search:
+#             search_like = f'%{search}%'
+#             search_conditions.append(
+#                 or_(
+#                     text("g.service_goods_name LIKE :search"),
+#                     text("b.group_name LIKE :search"),
+#                     text("d.category_name LIKE :search"),
+#                     text("c.sub_group_name LIKE :search"),
+#                     text("e.sub_category_name LIKE :search"),
+#                     text("f.business_constitution_name LIKE :search")
+#                 )
+#             )
+
+#         if service_id != 'ALL':
+#             search_conditions.append(text("g.id = :service_id"))
+        
+#         if group_id != 'ALL':
+#             search_conditions.append(text("g.group_id = :group_id"))
+        
+#         if sub_group_id != 'ALL':
+#             search_conditions.append(text("g.sub_group_id = :sub_group_id"))
+        
+#         if category_id != 'ALL':
+#             search_conditions.append(text("g.category_id = :category_id"))
+        
+#         if sub_category_id != 'ALL':
+#             search_conditions.append(text("g.sub_category_id = :sub_category_id"))
+        
+#         if constitution_id != 'ALL':
+#             search_conditions.append(text("f.id = :constitution_id"))
+        
+#         if doc_data_status != 'ALL':
+#             if doc_data_status == "CONFIGURED":
+#                 search_conditions.append(text("a.id IS NOT NULL"))
+#             elif doc_data_status == "NOT CONFIGURED":
+#                 search_conditions.append(text("a.id IS NULL"))
+
+#         base_query = """
+#         SELECT
+#             ROW_NUMBER() OVER (ORDER BY g.service_goods_name, f.business_constitution_name) AS unique_id,
+#             a.id AS service_document_data_master_id,
+#             g.id AS service_goods_master_id,
+#             g.service_goods_name,
+#             f.id AS constitution_id,
+#             f.business_constitution_name,
+#             b.id AS group_id,
+#             b.group_name,
+#             c.id AS sub_group_id,
+#             c.sub_group_name,
+#             d.id AS category_id,
+#             d.category_name,
+#             e.id AS sub_category_id,
+#             e.sub_category_name,
+#             CASE
+#                 WHEN a.id IS NOT NULL THEN 'Configured'
+#                 ELSE 'Not Configured'
+#             END AS document_status
+#         FROM 
+#             off_service_goods_master AS g
+#         CROSS JOIN app_business_constitution AS f
+#         LEFT JOIN off_service_document_data_master AS a 
+#             ON g.id = a.service_goods_master_id 
+#             AND f.id = a.constitution_id
+#         LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
+#         LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
+#         LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id
+#         LEFT JOIN off_service_goods_sub_category AS e ON g.sub_category_id = e.id
+#         """
+
+#         if search_conditions:
+#             base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
+        
+#         base_query += " ORDER BY g.service_goods_name, f.display_order"
+
+       
+
+#         query = text(base_query)
+
+#         params = {
+#             'search': f'%{search}%' if search else None,
+#             'service_id': service_id if service_id != 'ALL' else None,
+#             'group_id': group_id if group_id != 'ALL' else None,
+#             'sub_group_id': sub_group_id if sub_group_id != 'ALL' else None,
+#             'category_id': category_id if category_id != 'ALL' else None,
+#             'sub_category_id': sub_category_id if sub_category_id != 'ALL' else None,
+#             'constitution_id': constitution_id if constitution_id != 'ALL' else None
+#         }
+
+     
+
+#         result = db.execute(query, params)
+#         rows = result.fetchall()
+
+#         # Log keys and rows for debugging
+       
+#         if not rows:
+#             return []
+
+#         service_document_data_master = []
+#         for row in rows:
+#             service_document_data_master.append({
+#                 "unique_id": row.unique_id,
+#                 "service_goods_master_id": row.service_goods_master_id,
+#                 "service_goods_name": row.service_goods_name,
+#                 "service_document_data_master_id": row.service_document_data_master_id,  # Ensure this matches the alias in your SQL query
+#                 "group_id": row.group_id,
+#                 "group_name": row.group_name,
+#                 "sub_group_id": row.sub_group_id,
+#                 "sub_group_name": row.sub_group_name,
+#                 "category_id": row.category_id,
+#                 "category_name": row.category_name,
+#                 "sub_category_id": row.sub_category_id,
+#                 "sub_category_name": row.sub_category_name,
+#                 "constitution_id": row.constitution_id,
+#                 "business_constitution_name": row.business_constitution_name,
+#                 # "business_constitution_code": row.business_constitution_code,
+#                 # "description": row.description,
+#                 "status": row.document_status
+#             })
+
+#         return service_document_data_master
+
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+       
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 @router.get("/services/get_all_service_document_data_master")
 def get_all_service_document_data_master(
     db: Session = Depends(get_db),
@@ -1072,9 +1218,12 @@ def get_all_service_document_data_master(
         
         if doc_data_status != 'ALL':
             if doc_data_status == "CONFIGURED":
-                search_conditions.append(text("a.id IS NOT NULL"))
+                # search_conditions.append(text("a.id IS NOT NULL"))
+                search_conditions.append(text("a.id IS NOT NULL AND d.is_deleted = 'no'"))
             elif doc_data_status == "NOT CONFIGURED":
-                search_conditions.append(text("a.id IS NULL"))
+                # search_conditions.append(text("a.id IS NULL"))
+                search_conditions.append(text("a.id IS NULL OR (a.id IS NOT NULL AND d.is_deleted = 'yes')"))
+    
 
         base_query = """
         SELECT
@@ -1092,9 +1241,15 @@ def get_all_service_document_data_master(
             d.category_name,
             e.id AS sub_category_id,
             e.sub_category_name,
+            
             CASE
-                WHEN a.id IS NOT NULL THEN 'Configured'
-                ELSE 'Not Configured'
+                  WHEN a.id IS NOT NULL AND EXISTS (
+                      SELECT 1
+                      FROM off_service_document_data_details AS dd
+                      WHERE dd.service_document_data_master_id = a.id
+                      AND dd.is_deleted = 'no'
+                  ) THEN 'Configured'
+                  ELSE 'Not Configured'
             END AS document_status
         FROM 
             off_service_goods_master AS g
@@ -2178,7 +2333,7 @@ def get_bundle_price_list(service_id: int, input_date: Optional[str] = None):
         aggregated_data[constitution_id]['total_stamp_duty'] += item['stamp_duty']
         aggregated_data[constitution_id]['total_stamp_fee'] += item['stamp_fee']
 
-        # Set other fields (assuming they are the same across all items with the same constitution_id)
+        
         aggregated_data[constitution_id]['service_goods_name'] = item['service_goods_name']
         aggregated_data[constitution_id]['is_bundled_service'] = item['is_bundled_service']
         aggregated_data[constitution_id]['constitution_id'] = constitution_id
