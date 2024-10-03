@@ -90,7 +90,6 @@ class OffAppointmentCancellationReasonSchema(BaseModel):
 
 
 
-
 class OffAppointmentMasterViewSchema(BaseModel):
     appointment_master_id: int
     full_name            : str
@@ -127,10 +126,11 @@ class OffAppointmentMasterViewSchema(BaseModel):
         from_attributes = True
 
 
-
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     visit_master_id           : Optional[int]
+    appointment_master_id     : int
     financial_year_id         : Optional[int]
+    financial_year            : Optional[str]
     voucher_number            : Optional[str]
     appointment_date          : Optional[date]
     appointment_time_from     : Optional[str]
@@ -141,7 +141,9 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_status        : Optional[str]
     consultant_id             : Optional[int]
     consultation_mode_id      : Optional[int]
+    consultation_mode         : Optional[str]
     consultation_tool_id      : Optional[int]
+    consultation_tool         : Optional[str]
     employee_number           : Optional[str]
     first_name                : Optional[str]
     middle_name               : Optional[str]
@@ -156,7 +158,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     cgst_amount                : Optional[float]
     bill_amount                : Optional[float]
     remarks                    : Optional[str]
-
+    
     class Config:
         orm_mode = True
         from_attributes = True
@@ -164,6 +166,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
 
 
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
+    visit_master_id   : Optional[int]
     visit_details_id  : int
     service_id        : int
     service_goods_name: str
@@ -173,14 +176,10 @@ class OffAppointmentVisitDetailsViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master      : OffAppointmentVisitMasterViewSchema
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
-        
-
-
 
  
 
@@ -579,7 +578,7 @@ class TimeSlotResponse(BaseModel):
 class ConsultantEmployee(BaseModel):
     employee_id         : int
     first_name          :str
-    middle_name         :str
+    middle_name         :Optional[str]
     last_name           :str
     # employee_name: str
     employee_number     : str
@@ -720,6 +719,7 @@ class OffViewEnquiryMasterSchema(BaseModel):
     
 class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_details_id      : int
+    enquiry_master_id        : int
     financial_year_id       : Optional[int]
     financial_year          : Optional[str]
     enquiry_number          : Optional[str]
@@ -780,7 +780,7 @@ class OffConsultationTaskDetailsSchema(BaseModel):
 
 
 class OffConsultationTaskMasterSchema(BaseModel):
-    task_date            : Optional[datetime]
+    task_date            : Optional[date]
     consultant_id        : int
     appointment_master_id: int
     visit_master_id      : int
@@ -879,7 +879,7 @@ class OffViewConsultationTaskMasterSchema(BaseModel):
     appointee_gender_id: int
     appointee_gender: str
     customer_number: Optional[str]
-    business_name: Optional[str]
+    legal_name: Optional[str]
     locality: Optional[str]
     pin_code: Optional[str]
     post_office_id: Optional[int]
@@ -944,7 +944,7 @@ class  OffOfferCategoryResponse(BaseModel):
 
 
 class OffOfferMasterSchema(BaseModel):
-    
+
     offer_category_id   : int
     offer_name          : str
     offer_percentage    : Optional[float]= None
@@ -991,7 +991,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     enquiry_details_id     : Optional[int] = None
     work_order_number   : Optional[str] = None
     work_order_date     : Optional[date] = None
-    
     first_name          : Optional[str] = None
     middle_name         : Optional[str] = None
     last_name           : Optional[str] = None
@@ -1000,7 +999,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     mobile_number       : Optional[str] = None
     whatsapp_number     : Optional[str] = None
     email_id            : Optional[str] = None
-
     house_or_building_name  : Optional[str] = None
     road_or_street_name     : Optional[str] = None
     locality                : Optional[str] = None
@@ -1014,7 +1012,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     state_id                : Optional[int] = None
     country_id              : Optional[int] = None
     remarks                 : Optional[str] = None
-
     contact_person_name     : Optional[str] = None
     contact_person_mobile_number    : Optional[str] = None
     contact_person_whatsapp_number  : Optional[str] = None
@@ -1028,7 +1025,7 @@ class OffWorkOrderMasterSchema(BaseModel):
 
 class WorkOrderDetailsSchema(BaseModel):
     
-    id                          : Optional[int] = None
+    id                        : Optional[int] = None
     work_order_master_id        : Optional[int] = None
     service_goods_master_id     : Optional[int] = None
     # service_goods_name          : Optional[str] = None
@@ -1052,7 +1049,7 @@ class WorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'NO'
+    service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id    : Optional[int] = None
     file_opened_on        : Optional[date] = None
@@ -1062,7 +1059,7 @@ class WorkOrderDetailsSchema(BaseModel):
     file_number           : Optional[int] = None
     remarks               : Optional[str] = None
     # depended_on: List['WorkOrderDependancySchema'] = []
-    sub_services        : List['WorkOrderDetailsSchema'] = []
+    sub_services: List['WorkOrderDetailsSchema'] = []
 
     class Config:
         orm_mode = True
@@ -1075,6 +1072,7 @@ class WorkOrderDependancySchema(BaseModel):
     work_order_details_id   : int
     dependent_on_work_id    : int
     is_deleted              : Optional[str] ='no'
+    service_goods_name      : Optional[str] = None 
 
     class Config:
         orm_mode = True
@@ -1146,7 +1144,7 @@ class  WorkOrderBusinessPlaceDetailsScheema(BaseModel):
     business_place_type     : Optional[str] = 'GODOWN'  
     nature_of_possession_id : Optional[int] = None
     utility_document_id     : Optional[int] = None
-    is_deleted              : Optional[str] = None
+    is_deleted              : Optional[str] = 'no'
 
 
 class CreateWorkOrderSetDtailsRequest(BaseModel):
@@ -1177,19 +1175,19 @@ class OffAppointmentMasterSchema(BaseModel):
 
 
 class ServiceDetail(BaseModel):
-    row_id: int
-    price_master_id: int
-    service_id: int
-    service_goods_name: str
-    is_bundled_service: str
-    constitution_id: int
-    business_constitution_name: str
-    service_charge: float
-    govt_agency_fee: float
-    stamp_duty: float
-    stamp_fee: float
-    effective_from_date: str
-    effective_to_date: str
+    row_id              : int
+    price_master_id     : int
+    service_id          : int
+    service_goods_name  : str
+    is_bundled_service  : str
+    constitution_id     : int
+    business_constitution_name  : str
+    service_charge              : float
+    govt_agency_fee             : float
+    stamp_duty                  : float
+    stamp_fee                   : float
+    effective_from_date         : str
+    effective_to_date           : str
 
 class ServiceDetailListResponse(BaseModel):
     data: List[ServiceDetail]
@@ -1197,6 +1195,7 @@ class ServiceDetailListResponse(BaseModel):
 class ServiceRequest(BaseModel):
     service_id: int
     input_date: str
+
 
 
 class OffViewWorkOrderMasterSchema(BaseModel):
@@ -1248,9 +1247,11 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     contact_person_whatsapp_number  : Optional[str] = None
     contact_person_email_id         : Optional[str] = None
     work_order_status_id            : Optional[int] = None
+    work_order_status               : Optional[str] = None
     class Config:
         orm_mode = True
         from_attributes = True
+  
 
 class OffViewWorkOrderDetailsSchema(BaseModel):
     
@@ -1282,7 +1283,7 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'NO'
+    service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id       : Optional[int] = None
     service_status          : Optional[str] = None
@@ -1326,4 +1327,274 @@ class OffViewBusinessPlaceDetailsScheema(BaseModel):
 
 class WorkOrderSetDetailsResponseSchema(BaseModel):
     workOrderDetails : OffViewWorkOrderDetailsSchema
-    businessPlaceDetails : List[OffViewBusinessPlaceDetailsScheema]
+    pricipalPlaceDetails :OffViewBusinessPlaceDetailsScheema
+    
+    additionalPlaceDetails : List[OffViewBusinessPlaceDetailsScheema]
+
+
+
+class WorkOrderDependancyResponseSchema(BaseModel):
+    workOrderDetails : OffViewWorkOrderDetailsSchema
+    dipendancies : List[WorkOrderDependancySchema]
+
+
+
+
+class CreateWorkOrderDependancySchema(BaseModel):
+    id : Optional[int]=None
+    work_order_master_id    : int
+    work_order_details_id   : int
+    dependent_on_work_id    : int
+    is_deleted              : Optional[str] ='no'
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+
+class OffViewServiceGoodsPriceMasterSchema(BaseModel):
+
+    service_goods_price_master_id   : Optional[int]
+    service_goods_master_id         : Optional[int]
+    hsn_sac_class_id                : Optional[int]
+    hsn_sac_class                   : Optional[str]
+    group_id                        : Optional[int]
+    group_name                      : Optional[str]
+    sub_group_id                    : Optional[int]
+    sub_group_name                  : Optional[str]
+    category_id                     : Optional[int]
+    category_name                   : Optional[str]
+    sub_category_id                 : Optional[int]
+    sub_category_name               : Optional[str]
+    service_goods_name              : Optional[str]
+    hsn_sac_id                      : Optional[int]
+    hsn_sac_code                    : Optional[str]
+    hsn_sac_description             : Optional[str]
+    sku_code_id                     : Optional[int]
+    unit_code                        : Optional[str]
+    has_consultation                 : Optional[str]
+    # is_consultancy_service: Optional[int]
+    is_bundled_service               : Optional[str]
+    services_goods_master_modified_by   : Optional[int]
+    services_goods_master_modified_on   : Optional[datetime]
+    services_goods_master_is_deleted    : Optional[str]
+    services_goods_master_deleted_by    : Optional[int]
+    services_goods_master_deleted_on    : Optional[datetime]
+    constitution_id                     : Optional[int]
+    business_constitution_name          : Optional[str]
+    business_constitution_code          : Optional[str]
+    business_constitution_description   : Optional[str]
+    pan_code                            : Optional[str]
+    service_charge                      : Optional[float]
+    govt_agency_fee                     : Optional[float]
+    stamp_duty                          : Optional[float]
+    stamp_fee                           : Optional[float]
+    effective_from_date                 : Optional[date]
+    effective_to_date                   : Optional[date]
+    service_goods_price_master_created_by   : Optional[int]
+    service_goods_price_master_created_on   : Optional[datetime]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class OffServiceGoodsPriceMasterSchema(BaseModel):
+
+    id                          : Optional[int] = None
+    service_goods_master_id     : Optional[int] 
+    constitution_id             : Optional[int] 
+    service_charge              : Optional[float] = 0.00 
+    govt_agency_fee             : Optional[float] = 0.00 
+    stamp_duty                  : Optional[float] = 0.00 
+    stamp_fee                   : Optional[float] = 0.00 
+    effective_from_date         : Optional[date] 
+    effective_to_date           : Optional[date] 
+    # created_by : Optional[int] 
+    # created_on 
+
+class ServiceGoodsPriceDetailsSchema(BaseModel):
+    service: OffViewWorkOrderDetailsSchema
+    prices: OffViewServiceGoodsPriceMasterSchema
+
+class ServiceGoodsPriceResponseSchema(BaseModel):
+    workOrderMaster         : OffViewWorkOrderMasterSchema
+    workOrderDetails        : List[ServiceGoodsPriceDetailsSchema]
+
+
+class UpdateCustomerDataDocumentSchema(BaseModel):
+    id                  : int
+    data                : str
+    valid_from_date     : Optional[date] = None
+    valid_to_date       : Optional[date] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class DocumentsSchema(BaseModel):
+    valid_from_date         : Optional[date] = None
+    valid_to_date           : Optional[date] = None
+    remarks                 : Optional[str]=None
+
+
+
+class OffServiceTaskMasterSchema(BaseModel):
+    task_status_id          : int
+    # task_priority_id        : int
+    remarks                 : Optional[str] = None
+    
+    class Config:
+        orm_mode            :  True
+
+
+
+class OffServiceTaskHistorySchema(BaseModel):
+    service_task_master_id       : int
+    history_updated_date         : date
+    history_updated_time         : time
+    history_update_by            : int
+    history_update_by_first_name : str
+    history_update_by_middle_name: str
+    history_update_by_last_name  : str
+    history_description          : str
+
+    class Config:
+        orm_mode              :True
+
+
+
+class OffViewServiceTaskMasterSchema(BaseModel):
+    task_id                        : int
+    work_order_master_id           : int
+    work_order_number              : Optional[str] 
+    work_order_date                : Optional[date] 
+    work_order_details_id          : Optional[int] = None
+    service_goods_master_id        : int  
+    service_goods_name             : str   
+    group_id                       : int   
+    group_name                     : Optional[str] = None   
+    sub_group_id                   : int   
+    sub_group_name                 : Optional[str] = None      
+    category_id                    : int   
+    category_name                  : Optional[str] = None      
+    sub_category_id                : int   
+    sub_category_name              : Optional[str] = None   
+    customer_id                    : Optional[int] = None
+    task_number                    : str
+    allocated_by                   : int
+    allocated_by_first_name        : Optional[str] = ""
+    allocated_by_middle_name       : Optional[str] = ""
+    allocated_by_last_name         : Optional[str] = ""
+    allocated_on                   : datetime
+    department_allocated_on        : Optional[datetime] = None
+    department_allocated_to        : Optional[int] = None
+    department_name                : Optional[str] = ""
+    team_allocated_on              : Optional[datetime] = None
+    team_allocated_to              : Optional[int] = None
+    team_name                      : Optional[str] = ""
+    employee_allocated_on          : Optional[datetime] = None
+    employee_allocated_to          : Optional[int] = None
+    employee_allocated_first_name  : Optional[str] = ""
+    employee_allocated_middle_name : Optional[str] = ""
+    employee_allocated_last_name   : Optional[str] = ""
+    task_status_id                 : Optional[int] = None
+    task_status                    : Optional[str] = ""
+    task_priority_id               : Optional[int] = None
+    task_priority                  : Optional[str] = ""
+    remarks                        : Optional[str] = ""
+    
+    class Config:
+        orm_mode = True
+
+
+class ServiceTaskMasterAssign(BaseModel):  
+    department_id  : int
+    team_id        : Optional[int] = None                   
+    employee_id    : Optional[int] = None                
+    remarks        : Optional[str] = None                 
+
+    class Config:
+        orm_mode                   : True
+
+
+
+
+class ServiceRequirementSchema(BaseModel):
+    work_order_details_id           : int
+    service_required                : Optional[str] = 'YES'
+    service_required_date           : Optional[date] = None
+
+
+class ServiceTaskMasterSchema(BaseModel):
+
+    id                      : Optional[int] = None
+    work_order_master_id    : Optional[int] = None
+    work_order_details_id   : Optional[int] = None
+    customer_id             : Optional[int] = None
+    task_number             : Optional[str] = None
+    allocated_by            : Optional[int] = None
+    allocated_on            : Optional[datetime] = None
+    department_allocated_on : Optional[datetime] = None
+    department_allocated_to : Optional[int] = None
+    team_allocated_on       : Optional[datetime] = None
+    team_allocated_to       : Optional[int] = None
+    employee_allocated_on   : Optional[datetime] = None
+    employee_allocated_to   : Optional[int] = None
+    task_status_id          : Optional[int] = None
+    task_priority_id        : Optional[int] = None
+    remarks                 : Optional[str] = None
+
+
+#-----------------------------------
+# class BundlePriceResponse(BaseModel):
+#     constitution_id: int
+#     total_service_charge: float
+#     total_govt_agency_fee: float
+#     total_stamp_duty: float
+#     total_stamp_fee: float
+#     service_goods_name: str
+#     is_bundled_service: str
+#     business_constitution_name: str
+#     effective_from_date: Optional[str]
+#     effective_to_date: Optional[str]
+
+
+
+
+# class BundlePriceResponse(BaseModel):
+#     constitution_id: int
+#     total_service_charge: float
+#     total_govt_agency_fee: float
+#     total_stamp_duty: float
+#     total_stamp_fee: float
+#     service_goods_name: str
+#     is_bundled_service: str
+#     business_constitution_name: str
+#     effective_from_date: Optional[str]
+#     effective_to_date: Optional[str]
+#     row_id: int
+
+class BundledServiceData(BaseModel):
+    # row_id: int 
+    total_service_charge: float
+    total_govt_agency_fee: float
+    total_stamp_duty: float
+    total_stamp_fee: float
+    service_goods_name: Optional[str]
+    is_bundled_service: Optional[str]
+    constitution_id: Optional[int]
+    business_constitution_name: Optional[str]
+    effective_from_date: Optional[str]
+    effective_to_date: Optional[str]
+
+# Main service response model
+class ServiceResponse(BaseModel):
+    aggregated_data: Dict[int, BundledServiceData]
+
+
+# class ServiceResponse(BaseModel):
+#     data: List[BundlePriceResponse]
+#     aggregated_data: List[BundlePriceResponse] 

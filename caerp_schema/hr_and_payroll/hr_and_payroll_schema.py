@@ -364,8 +364,6 @@ class EmployeeDependentsGet(BaseModel):
     class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
-  
-         
 
 class EmployeeProfessionalQualificationGet(BaseModel):
     id                  : int
@@ -460,13 +458,15 @@ class EmployeeDetails(BaseModel):
    user_roles                    : Optional[EmployeeUserRoles] = None
 
 
+
 class EmployeeDetailsGet(BaseModel):
+  
    employee_master         :   Optional[EmployeeMasterDisplay] = None
    present_address         :   Optional[EmployeePresentAddressGet] = None
    permanent_address       : Optional[EmployeePermanentAddressGet] = None
    contact_details         :   Optional[EmployeeContactGet] = None
    bank_details            :      Optional[EmployeeBankAccountGet] = None
-   employement_details     : Optional[EmployeeEmployementGet] = None
+   employment_details     : Optional[EmployeeEmployementGet] = None
    emergency_contact_details  : Optional[EmployeeEmergencyContactGet] = None
    dependent_details          : Optional[EmployeeDependentsGet] = None
    employee_salary            : Optional[EmployeeSalaryGet] = None
@@ -500,5 +500,107 @@ class EmployeeDocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True 
+
+
+
+
+#------------------------------EmployeeTeam--------------------------------------------------------------------
+
+
+class EmployeeTeamMasterSchema(BaseModel):
+    id: Optional[int] = None
+    department_id        : int
+    team_name            : Optional[str] = None
+    description          : str
+    effective_from_date  : Optional[date] = None
+   
+    class Config:
+        orm_mode = True
+
+
+class EmployeeTeamMembersSchema(BaseModel):
+    id                  : int
+    employee_id         : int
+    is_team_leader      : str
+    team_leader_id      : Optional[int]
+    effective_from_date : Optional[date] = None
+
+    class Config:
+        orm_mode = True
+
+
+
+class SaveEmployeeTeamMaster(BaseModel):
+    master  : EmployeeTeamMasterSchema
+    details : List[EmployeeTeamMembersSchema]
+
+
+
+
+class HrViewEmployeeTeamMemberSchema(BaseModel):
+    team_member_id: int
+    team_leader_id: Optional[int]
+    leader_first_name: str
+    leader_middle_name: Optional[str]
+    leader_last_name: str
+  
+
+    class Config:
+        orm_mode = True
+        from_attributes = True 
+
+
+class HrViewEmployeeTeamMasterSchema(BaseModel):
+    team_id: int
+    department_id: int
+    department_name: Optional[str]
+    team_name: Optional[str]
+    description: str
+    effective_from_date: date
+    effective_to_date: Optional[date]
+   #  leaders: List[HrViewEmployeeTeamMemberSchema] 
+    leaders: Optional[List[HrViewEmployeeTeamMemberSchema]] = None
+    class Config:
+        orm_mode = True
+        from_attributes = True 
+
+
+
+class HrViewEmployeeTeamSchema(BaseModel):
+    teams: List[HrViewEmployeeTeamMasterSchema]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        
+class EmployeeTeamMembersGet(BaseModel):
+    team_member_id      :int
+    employee_id         : int
+    member_first_name   : str
+    member_middle_name  : Optional[str]
+    member_last_name    : str
+    department_id       : int
+    department_name     : Optional[str]
+    designation_id      : int
+    designation         : Optional[str]
+    is_team_leader      : str
+    team_leader_id      : Optional[int]
+    leader_first_name   : str
+    leader_middle_name  : str
+    leader_last_name    : str
+    effective_from_date : date
+    effective_to_date   : Optional[date] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class AddEmployeeToTeam(BaseModel):
+   team_members: List[EmployeeTeamMembersSchema]
+   class Config:
+        orm_mode = True
+        from_attributes = True 
+
 
 

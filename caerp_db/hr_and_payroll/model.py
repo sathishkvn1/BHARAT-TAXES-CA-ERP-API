@@ -92,3 +92,122 @@ class EmployeeSalaryDetailsView(caerp_base):
     deleted_on                         = Column(DateTime)
     
 
+#----------------------------EmployeeTeam---------------------------------------------------------------------
+class EmployeeTeamMaster(caerp_base):
+    __tablename__ = 'employee_team_master'
+
+    id                    = Column(Integer, primary_key=True, autoincrement=True)
+    department_id         = Column(Integer, nullable=False)
+    team_name             = Column(String(50), nullable=True)
+    description           = Column(String(1000), nullable=False)
+    effective_from_date   = Column(Date, nullable=False, default=datetime.now().date)
+    effective_to_date     = Column(Date, nullable=True)
+    created_by            = Column(Integer, nullable=False)
+    created_on            = Column(DateTime, nullable=False, default=datetime.now)
+    modified_by           = Column(Integer, nullable=True)
+    modified_on           = Column(DateTime, nullable=True)
+    is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by            = Column(Integer, nullable=True)
+    deleted_on            = Column(DateTime, nullable=True)
+
+
+class EmployeeTeamMembers(caerp_base):
+    __tablename__ = 'employee_team_members'
+
+    id                    = Column(Integer, primary_key=True, autoincrement=True)
+    team_master_id        = Column(Integer, nullable=False)
+    employee_id           = Column(Integer, nullable=False)
+    is_team_leader        = Column(Enum('yes', 'no'), nullable=False, default='no')
+    team_leader_id        = Column(Integer, nullable=False)
+    effective_from_date   = Column(Date, nullable=False, default=datetime.now().date)
+    effective_to_date     = Column(Date, nullable=True)
+    created_by            = Column(Integer, nullable=False)
+    created_on            = Column(DateTime, nullable=False, default=datetime.now)
+    modified_by           = Column(Integer, nullable=True)
+    modified_on           = Column(DateTime, nullable=True)
+    is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by            = Column(Integer, nullable=True)
+    deleted_on            = Column(DateTime, nullable=True)
+
+
+
+
+class HrViewEmployeeTeamMaster(caerp_base):
+    __tablename__ = 'hr_view_employee_team_master'
+
+    team_id               = Column(Integer, primary_key=True)
+    department_id         = Column(Integer, nullable=False)
+    department_name       = Column(String(200))
+    team_name             = Column(String(50))
+    description           = Column(String(1000), nullable=False)
+    effective_from_date   = Column(Date, nullable=False)
+    effective_to_date     = Column(Date)
+    created_by            = Column(Integer, nullable=False)
+    created_on            = Column(DateTime, nullable=False)
+    modified_by           = Column(Integer)
+    modified_on           = Column(DateTime)
+    is_deleted            = Column(Enum('yes', 'no'), nullable=False)
+    deleted_by            = Column(Integer)
+    deleted_on            = Column(DateTime)
+    
+
+
+class HrViewEmployeeTeamMembers(caerp_base):
+    __tablename__ = 'hr_view_employee_team_members'
+
+    team_member_id       = Column(Integer, primary_key=True)
+    team_master_id       = Column(Integer, nullable=False)
+    team_name            = Column(String(50))
+    employee_id          = Column(Integer, nullable=False)
+    member_first_name    = Column(String(50), nullable=False)
+    member_middle_name   = Column(String(50))
+    member_last_name     = Column(String(50), nullable=False)
+    department_id        = Column(Integer, nullable=False)
+    department_name      = Column(String(200))
+    designation_id       = Column(Integer, nullable=False)
+    designation          = Column(String(200))
+    is_team_leader       = Column(Enum('yes', 'no'), nullable=False)
+    team_leader_id       = Column(Integer, nullable=False)
+    leader_first_name    = Column(String(50), nullable=False)
+    leader_middle_name   = Column(String(50))
+    leader_last_name     = Column(String(50), nullable=False)
+    effective_from_date  = Column(Date, nullable=False)
+    effective_to_date    = Column(Date)
+    created_by           = Column(Integer, nullable=False)
+    created_on           = Column(DateTime, nullable=False)
+    modified_by          = Column(Integer)
+    modified_on          = Column(DateTime)
+    is_deleted           = Column(Enum('yes', 'no'), nullable=False)
+    deleted_by           = Column(Integer)
+    deleted_on           = Column(DateTime)
+
+    
+
+    
+class HrDocumentMaster(caerp_base):
+    __tablename__ = "hr_document_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    document_name = Column(String(100), nullable=False)
+    has_expiry = Column(Enum('yes', 'no'), default='no', nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+class HrDepartmentMaster(caerp_base):
+    __tablename__ = "hr_department_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    department_name = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+class HrDesignationMaster(caerp_base):
+    __tablename__ = "hr_designation_master"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    designation = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+    
+class HrEmployeeCategory(caerp_base):
+    __tablename__ = "hr_employee_category"
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    category_name = Column(String(200), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+    
+    

@@ -7,14 +7,16 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
-from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster, HrDepartmentMaster, HrDesignationMaster
+from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
 from caerp_db.database import  get_db
+from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster
+from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import  AppointmentStatusConstants,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, SetPriceModel,  TimeSlotResponse, WorkOrderDependancySchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
+from caerp_schema.office.office_schema import   AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -23,9 +25,11 @@ from sqlalchemy import text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
-
+from pathlib import Path 
 
 from sqlalchemy import select, func, and_
+from collections import defaultdict
+from settings import BASE_URL
 
 
 router = APIRouter(
@@ -33,10 +37,9 @@ router = APIRouter(
 )
 
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
+UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 #--------------------save_appointment_details-------------------------------------------------------
-
-
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
@@ -79,11 +82,7 @@ def save_appointment_details(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 # # get all
 
-
-
-
 #---------------------------------------------------------------------------------------------------------------
-
 @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
 def get_appointment_details_by_id(
     appointment_master_id: int,
@@ -164,23 +163,26 @@ def get_and_search_appointments(
     consultant_id: Optional[str] = "ALL",
     service_id: Optional[str] = "ALL",
     status_id: Optional[str] = "ALL",
-    from_date: Optional[date]  = Query(date.today()),
-    to_date: Optional[date]  = Query(date.today()),
-    # search_criteria: SearchCriteriaConstants = "ALL",
-    id:Optional[int]=0,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    mobile_number: Optional[str] = None,
+    id: Optional[int] = 0,
     search_value: Union[str, int] = "ALL",
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve appointments based on Parameters.
+    Retrieve Appointment based on Parameters.
 
     Parameters:
-    - **consultant_id**: Consultant ID.
-    - **service_id**: Service ID.
-    - **status_id**: Status ID.
+    
+    - **consultant_id**: consultant ID.
+    - **service_id**: service ID.
+    - **status_id**: status ID.
     - **effective_from_date**: Effective from date (default: today's date).
     - **effective_to_date**: Effective to date (default: today's date).
     - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
+    - **mobile_number**: Search with 'mobile_number' to get the specific details.
+
     """
     result = db_office_master.get_appointments(
         db,
@@ -189,12 +191,12 @@ def get_and_search_appointments(
         status_id=status_id,
         from_date=from_date,
         to_date=to_date,
+        mobile_number=mobile_number,
         id=id,
         search_value=search_value
     )
     return {"Appointments": result}
 
-     
 
 
 #-------------------------swathy-------------------------------------------------------------------------------
@@ -242,7 +244,7 @@ def get_all_service_goods_master(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 
 
 
@@ -768,7 +770,7 @@ def get_price_list(
 
 
 
-
+#------------------------------------------------------------------------------------------------------------
 @router.get("/get_service_data/", response_model=List[ServiceModelSchema])
 def get_service_data_endpoint(
     service_id: int = Query(..., description="Service ID"),
@@ -885,7 +887,7 @@ def get_service_documents_list_by_group_category(
         
         # If the results are a list of Service_Group objects
         if isinstance(results[0], Service_Group):
-            return JSONResponse(status_code=200, content={"group": [result.dict() for result in results]})
+            return JSONResponse(status_code=200, content={"group": [result.model_dump() for result in results]})
 
         # Filter out null fields from each ServiceDocumentsList_Group object
         filtered_results = [
@@ -901,39 +903,106 @@ def get_service_documents_list_by_group_category(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 # #---------------------------------------------------------------------------------------
+# @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
+# def get_service_documents_data_details(
+#     service_document_data_master_id: int,
+#     document_category: Optional[str] = Query(None, title="Select document category", 
+#                                             enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Retrieve service document details based on specified criteria.
+
+#     Parameters:
+#     - **service_id**: Required parameter to filter by service ID.
+#     - **document_category**: Optional parameter to filter by document category.
+#     - Return a list of documents details with the selected category for the specified service_id.
+    
+#     Possible values for `document_category` include:
+#     - 'PERSONAL DOC'
+#     - 'CONSTITUTION DOC'
+#     - 'PRINCIPAL PLACE DOC'
+#     - 'UTILITY DOC'
+#     - 'DATA TO BE SUBMITTED'
+
+#     Returns:
+#     - Returns all document details for the specified service_id and 'document_category'.
+#     - If no records are found, return {'message': 'No data found'}.
+#     """
+#     try:
+#         results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
+
+#         if not results:
+#             return []
+
+#         # Group the results by document category
+#         grouped_results = {}
+#         for result in results:
+#             if result.document_data_category_id not in grouped_results:
+#                 grouped_results[result.document_data_category_id] = {
+#                     "document_data_category_id": result.document_data_category_id,
+#                     "document_data_category_category_name": result.document_data_category_category_name,
+#                     "details": []
+#                 }
+#             grouped_results[result.document_data_category_id]["details"].append(result)
+
+#         # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
+#         final_results = list(grouped_results.values())
+
+#         return final_results
+
+#     except Exception as e:
+#         # logging.error(f"Error fetching service documents details: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+    
+    
+#  #-------------------------------------------------------------------------------------------------------------   
+
+
+
+
+
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
-    service_document_data_master_id: int,
-    document_category: Optional[str] = Query(None, title="Select document category", 
-                                            enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
+    service_document_data_master_id: Optional[int] = Query(None, title="Service Document Data Master ID"),
+    service_id: Optional[int] = Query(None, title="Service ID"),
+    constitution_id: Optional[int] = Query(None, title="Constitution ID"),
+    document_category: Optional[str] = Query("ALL", title="Select document category", 
+                                             enum=['ALL','PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),
+    nature_of_possession_id: Optional[int] = Query(None, title="Nature of Possession ID", 
+                                                   description="Only relevant if 'PRINCIPAL PLACE DOC' is selected."),
     db: Session = Depends(get_db)
 ):
     """
-    Retrieve service document details based on specified criteria.
+   
+    Retrieve service document details based on various filter criteria.
 
-    Parameters:
-    - **service_id**: Required parameter to filter by service ID.
-    - **document_category**: Optional parameter to filter by document category.
-    - Return a list of documents details with the selected category for the specified service_id.
-    
-    Possible values for `document_category` include:
-    - 'PERSONAL DOC'
-    - 'CONSTITUTION DOC'
-    - 'PRINCIPAL PLACE DOC'
-    - 'UTILITY DOC'
-    - 'DATA TO BE SUBMITTED'
+    This endpoint allows users to fetch service document details by specifying optional filters such as 
+    service document data master ID, constitution ID, service ID, document category, and nature of possession ID. 
 
-    Returns:
-    - Returns all document details for the specified service_id and 'document_category'.
-    - If no records are found, return {'message': 'No data found'}.
+    - **document_category** (Optional[str], default="ALL"): The category of the document to filter the results.
+     Categories include 'PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 
+     and 'DATA TO BE SUBMITTED'. If 'ALL' is selected, documents from all categories will be retrieved.
+
+    - **nature_of_possession_id** (Optional[int]): The ID representing the nature of possession.
+    This filter is only relevant when 'PRINCIPAL PLACE DOC' is selected as the document category.
+  
     """
     try:
-        results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
+        results = db_office_master.get_service_documents_data_details(
+            db,
+            service_document_data_master_id,
+            service_id,
+            constitution_id,
+            document_category,
+            nature_of_possession_id,
+        )
 
         if not results:
             return []
 
-        # Group the results by document category
+        # Group results by document category
         grouped_results = {}
         for result in results:
             if result.document_data_category_id not in grouped_results:
@@ -944,18 +1013,167 @@ def get_service_documents_data_details(
                 }
             grouped_results[result.document_data_category_id]["details"].append(result)
 
-        # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
-        final_results = list(grouped_results.values())
-
-        return final_results
+        return list(grouped_results.values())
 
     except Exception as e:
-        # logging.error(f"Error fetching service documents details: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
+
+
+
+
+# @router.get("/services/get_all_service_document_data_master")
+# def get_all_service_document_data_master(
+#     db: Session = Depends(get_db),
+#     search: Optional[str] = None,
+#     service_id: Union[int, str] = 'ALL',
+#     group_id: Union[int, str] = 'ALL',
+#     sub_group_id: Union[int, str] = 'ALL',
+#     category_id: Union[int, str] = 'ALL',
+#     sub_category_id: Union[int, str] = 'ALL',
+#     constitution_id: Union[int, str] = 'ALL',
+#     doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
+# ) -> List[dict]:
+#     try:
+       
+
+#         search_conditions = []
+
+#         if search:
+#             search_like = f'%{search}%'
+#             search_conditions.append(
+#                 or_(
+#                     text("g.service_goods_name LIKE :search"),
+#                     text("b.group_name LIKE :search"),
+#                     text("d.category_name LIKE :search"),
+#                     text("c.sub_group_name LIKE :search"),
+#                     text("e.sub_category_name LIKE :search"),
+#                     text("f.business_constitution_name LIKE :search")
+#                 )
+#             )
+
+#         if service_id != 'ALL':
+#             search_conditions.append(text("g.id = :service_id"))
+        
+#         if group_id != 'ALL':
+#             search_conditions.append(text("g.group_id = :group_id"))
+        
+#         if sub_group_id != 'ALL':
+#             search_conditions.append(text("g.sub_group_id = :sub_group_id"))
+        
+#         if category_id != 'ALL':
+#             search_conditions.append(text("g.category_id = :category_id"))
+        
+#         if sub_category_id != 'ALL':
+#             search_conditions.append(text("g.sub_category_id = :sub_category_id"))
+        
+#         if constitution_id != 'ALL':
+#             search_conditions.append(text("f.id = :constitution_id"))
+        
+#         if doc_data_status != 'ALL':
+#             if doc_data_status == "CONFIGURED":
+#                 # search_conditions.append(text("a.id IS NOT NULL"))
+#                 search_conditions.append(text("a.id IS NOT NULL AND d.is_deleted = 'no'"))
+#             elif doc_data_status == "NOT CONFIGURED":
+#                 # search_conditions.append(text("a.id IS NULL"))
+#                 search_conditions.append(text("a.id IS NULL OR (a.id IS NOT NULL AND d.is_deleted = 'yes')"))
     
-    
-    
- #-------------------------------------------------------------------------------------------------------------   
+
+#         base_query = """
+#         SELECT
+#             ROW_NUMBER() OVER (ORDER BY g.service_goods_name, f.business_constitution_name) AS unique_id,
+#             a.id AS service_document_data_master_id,
+#             g.id AS service_goods_master_id,
+#             g.service_goods_name,
+#             f.id AS constitution_id,
+#             f.business_constitution_name,
+#             b.id AS group_id,
+#             b.group_name,
+#             c.id AS sub_group_id,
+#             c.sub_group_name,
+#             d.id AS category_id,
+#             d.category_name,
+#             e.id AS sub_category_id,
+#             e.sub_category_name,
+            
+#             CASE
+#                   WHEN a.id IS NOT NULL AND EXISTS (
+#                       SELECT 1
+#                       FROM off_service_document_data_details AS dd
+#                       WHERE dd.service_document_data_master_id = a.id
+#                       AND dd.is_deleted = 'no'
+#                   ) THEN 'Configured'
+#                   ELSE 'Not Configured'
+#             END AS document_status
+#         FROM 
+#             off_service_goods_master AS g
+#         CROSS JOIN app_business_constitution AS f
+#         LEFT JOIN off_service_document_data_master AS a 
+#             ON g.id = a.service_goods_master_id 
+#             AND f.id = a.constitution_id
+#         LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
+#         LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
+#         LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id
+#         LEFT JOIN off_service_goods_sub_category AS e ON g.sub_category_id = e.id
+#         """
+
+#         if search_conditions:
+#             base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
+        
+#         base_query += " ORDER BY g.service_goods_name, f.display_order"
+
+       
+
+#         query = text(base_query)
+
+#         params = {
+#             'search': f'%{search}%' if search else None,
+#             'service_id': service_id if service_id != 'ALL' else None,
+#             'group_id': group_id if group_id != 'ALL' else None,
+#             'sub_group_id': sub_group_id if sub_group_id != 'ALL' else None,
+#             'category_id': category_id if category_id != 'ALL' else None,
+#             'sub_category_id': sub_category_id if sub_category_id != 'ALL' else None,
+#             'constitution_id': constitution_id if constitution_id != 'ALL' else None
+#         }
+
+     
+
+#         result = db.execute(query, params)
+#         rows = result.fetchall()
+
+#         # Log keys and rows for debugging
+       
+#         if not rows:
+#             return []
+
+#         service_document_data_master = []
+#         for row in rows:
+#             service_document_data_master.append({
+#                 "unique_id": row.unique_id,
+#                 "service_goods_master_id": row.service_goods_master_id,
+#                 "service_goods_name": row.service_goods_name,
+#                 "service_document_data_master_id": row.service_document_data_master_id,  # Ensure this matches the alias in your SQL query
+#                 "group_id": row.group_id,
+#                 "group_name": row.group_name,
+#                 "sub_group_id": row.sub_group_id,
+#                 "sub_group_name": row.sub_group_name,
+#                 "category_id": row.category_id,
+#                 "category_name": row.category_name,
+#                 "sub_category_id": row.sub_category_id,
+#                 "sub_category_name": row.sub_category_name,
+#                 "constitution_id": row.constitution_id,
+#                 "business_constitution_name": row.business_constitution_name,
+#                 # "business_constitution_code": row.business_constitution_code,
+#                 # "description": row.description,
+#                 "status": row.document_status
+#             })
+
+#         return service_document_data_master
+
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+       
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.get("/services/get_all_service_document_data_master")
@@ -1008,9 +1226,22 @@ def get_all_service_document_data_master(
         
         if doc_data_status != 'ALL':
             if doc_data_status == "CONFIGURED":
-                search_conditions.append(text("a.id IS NOT NULL"))
+                search_conditions.append(text(
+                "a.id IS NOT NULL AND EXISTS ("
+                "SELECT 1 FROM off_service_document_data_details dd "
+                "WHERE dd.service_document_data_master_id = a.id "
+                "AND dd.is_deleted = 'no')"
+                 ))
+
+        # For Not Configured: No valid master or all details are deleted (is_deleted = 'yes')
             elif doc_data_status == "NOT CONFIGURED":
-                search_conditions.append(text("a.id IS NULL"))
+                search_conditions.append(text(
+                "(a.id IS NULL OR NOT EXISTS ("
+                "SELECT 1 FROM off_service_document_data_details dd "
+                "WHERE dd.service_document_data_master_id = a.id "
+                "AND dd.is_deleted = 'no'))"
+                 ))
+            
 
         base_query = """
         SELECT
@@ -1028,9 +1259,15 @@ def get_all_service_document_data_master(
             d.category_name,
             e.id AS sub_category_id,
             e.sub_category_name,
+            
             CASE
-                WHEN a.id IS NOT NULL THEN 'Configured'
-                ELSE 'Not Configured'
+                  WHEN a.id IS NOT NULL AND EXISTS (
+                      SELECT 1
+                      FROM off_service_document_data_details AS dd
+                      WHERE dd.service_document_data_master_id = a.id
+                      AND dd.is_deleted = 'no'
+                  ) THEN 'Configured'
+                  ELSE 'Not Configured'
             END AS document_status
         FROM 
             off_service_goods_master AS g
@@ -1110,18 +1347,75 @@ def get_all_service_document_data_master(
 
 from datetime import datetime
 
+# @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
+# def get_consultant_employees(
+#     db: Session = Depends(get_db),
+#     search_query: str = Query(None, description="Search query to filter consultant employees")
+# ):
+#     current_date = datetime.utcnow().date()
+#     query = db.query(
+#         EmployeeMaster.employee_id,
+#         EmployeeMaster.first_name,
+#         EmployeeMaster.middle_name,
+#          EmployeeMaster.last_name,
+#         # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+#         EmployeeMaster.employee_number,
+#         EmployeeContactDetails.personal_email_id.label('personal_email'),
+#         EmployeeContactDetails.official_email_id.label('official_email'),
+#         EmployeeContactDetails.personal_mobile_number.label('personal_mobile'),
+#         EmployeeContactDetails.official_mobile_number.label('official_mobile'),
+#         HrDepartmentMaster.department_name,
+#         HrDesignationMaster.designation
+#     ).join(
+#         EmployeeEmploymentDetails,
+#         EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
+#     ).join(
+#         EmployeeContactDetails,
+#         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
+#     ).join(
+#         HrDepartmentMaster,
+#         EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
+#     ).join(
+#         HrDesignationMaster,
+#         EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
+#     ).filter(
+#         EmployeeEmploymentDetails.is_consultant == 'yes',
+#         EmployeeEmploymentDetails.effective_from_date <= current_date,
+#         (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
+#         EmployeeMaster.is_deleted == 'no',
+#         EmployeeEmploymentDetails.is_deleted == 'no',
+#         EmployeeContactDetails.is_deleted == 'no'
+#     )
+
+#     if search_query:
+#         search_filter = (
+#             EmployeeMaster.first_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.middle_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.last_name.ilike(f"%{search_query}%") |
+#             EmployeeMaster.employee_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_email_id.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
+#             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
+#         )
+#         query = query.filter(search_filter)
+
+#     return query.all()
+
+
 @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 def get_consultant_employees(
     db: Session = Depends(get_db),
     search_query: str = Query(None, description="Search query to filter consultant employees")
 ):
     current_date = datetime.utcnow().date()
+    
+    # Initial query with necessary joins
     query = db.query(
         EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
-         EmployeeMaster.last_name,
-        # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+        EmployeeMaster.last_name,
         EmployeeMaster.employee_number,
         EmployeeContactDetails.personal_email_id.label('personal_email'),
         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -1130,23 +1424,25 @@ def get_consultant_employees(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
+        EmployeeContactDetails.effective_from_date <= current_date,
+        (EmployeeContactDetails.effective_to_date == None) | (EmployeeContactDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
@@ -1164,7 +1460,6 @@ def get_consultant_employees(
         query = query.filter(search_filter)
 
     return query.all()
-
 
 
 #-------------------------------------------------------------------------------------------------------------
@@ -1428,7 +1723,7 @@ def get_and_search_enquiries(
         email_id=email_id
     )
 
-
+#------------------------------------------------------------------------------------------------------------
 
 @router.get("/get/consultation_tools/{mode_id}", response_model=Union[List[ConsultationModeSchema], List[ConsultationToolSchema]])
 def get_consultation_modes_with_tools(
@@ -1810,8 +2105,10 @@ def get_consultant_employees_pdf(
     query = db.query(
         EmployeeMaster.employee_id,
         EmployeeMaster.first_name,
-        EmployeeMaster.middle_name,
-        EmployeeMaster.last_name,
+        # EmployeeMaster.middle_name,
+        # EmployeeMaster.last_name,
+        func.coalesce(EmployeeMaster.middle_name, '').label('middle_name'),  
+        func.coalesce(EmployeeMaster.last_name, '').label('last_name'),
         EmployeeMaster.employee_number,
         EmployeeContactDetails.personal_email_id.label('personal_email'),
         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -1820,23 +2117,23 @@ def get_consultant_employees_pdf(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
@@ -1906,34 +2203,7 @@ import pdfkit
 TEMPLATE_CONSULTANT_DETAILS = "C:/BHARAT-TAXES-CA-ERP-API/templates/employee.html"
 UPLOAD_DIR_CONSULTANT_DETAILS = "uploads/consultant_details"
 
-# def generate_consultant_employees_pdf_template(employee_list: List[ConsultantEmployee], file_path: str):
-#     # Load the template environment
-#     template_dir = os.path.dirname(TEMPLATE_CONSULTANT_DETAILS)
-#     template_name = os.path.basename(TEMPLATE_CONSULTANT_DETAILS)
-#     env = Environment(loader=FileSystemLoader(template_dir))
-#     template = env.get_template(template_name)
-    
-#     # Render the template with data
-#     html_content = template.render(employees=employee_list)
-    
-    
-#     # Configuration for pdfkit
-#     config = pdfkit.configuration(wkhtmltopdf='C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe')
 
-#     print("Path is",config)
-    
-#     # PDF options
-#     options = {
-#         'footer-ce': 'Page [page] of [topage]',
-#         'footer-font-size': '8',
-#         'margin-bottom': '20mm',
-#         'no-outline': None
-#     }
-    
-#     # Convert HTML to PDF
-#     pdfkit.from_string(html_content, file_path, configuration=config, options=options)
-    
-#     return open(file_path, "rb")
 
 def generate_consultant_employees_pdf_template(employee_list, file_path):
     # Load the template environment
@@ -1989,23 +2259,23 @@ def get_consultant_employees_pdf(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
@@ -2095,7 +2365,7 @@ def call_stored_procedure(service_id, input_date):
 # Example call
 # results = call_stored_procedure(1, '2024-01-01')
 # print("Resultcccccccc",results)
-
+#------------------------------------------------------------------------------------------------------------
 @router.get("/get_bundle_price_list")
 def get_bundle_price_list(request: ServiceRequest=Depends()):
     """
@@ -2110,6 +2380,56 @@ def get_bundle_price_list(request: ServiceRequest=Depends()):
 
 
 #------------------------------------------------------------------------------------------------------------
+@router.get("/get_bundled_price_history", response_model=ServiceResponse)
+def get_bundle_price_list(service_id: int, input_date: Optional[str] = None):
+    # Call stored procedure or some other DB fetching logic
+    results = call_stored_procedure(service_id, input_date)
+
+    # Initialize a dictionary to hold aggregated data
+    aggregated_data = defaultdict(lambda: {
+        "total_service_charge": 0,
+        "total_govt_agency_fee": 0,
+        "total_stamp_duty": 0,
+        "total_stamp_fee": 0,
+        "service_goods_name": None,
+        "is_bundled_service": None,
+        "constitution_id": None,
+        "business_constitution_name": None,
+        "effective_from_date": None,
+        "effective_to_date": None
+    })
+
+    # Iterate over the results and aggregate values
+    for item in results:
+        constitution_id = item['constitution_id']
+
+        # Aggregate values
+        aggregated_data[constitution_id]['total_service_charge'] += item['service_charge']
+        aggregated_data[constitution_id]['total_govt_agency_fee'] += item['govt_agency_fee']
+        aggregated_data[constitution_id]['total_stamp_duty'] += item['stamp_duty']
+        aggregated_data[constitution_id]['total_stamp_fee'] += item['stamp_fee']
+
+        
+        aggregated_data[constitution_id]['service_goods_name'] = item['service_goods_name']
+        aggregated_data[constitution_id]['is_bundled_service'] = item['is_bundled_service']
+        aggregated_data[constitution_id]['constitution_id'] = constitution_id
+        aggregated_data[constitution_id]['business_constitution_name'] = item['business_constitution_name']
+
+        # Convert date fields to ISO format strings
+        aggregated_data[constitution_id]['effective_from_date'] = item['effective_from_date'].isoformat() if item['effective_from_date'] else None
+        aggregated_data[constitution_id]['effective_to_date'] = item['effective_to_date'].isoformat() if item['effective_to_date'] else None
+
+    # Convert the defaultdict to a regular dict
+    aggregated_data = dict(aggregated_data)
+
+    # Return the response with aggregated data
+    if not aggregated_data:
+        raise HTTPException(status_code=404, detail="No data found for the given service ID")
+
+    # Match the response to the expected format of ServiceResponse
+    return {"aggregated_data": aggregated_data}
+
+
 
 
 ####################################WORKORDER####################################
@@ -2122,6 +2442,7 @@ def get_work_order_details(
     id          : int,
     visit_master_id : Optional[int] = None,
     enquiry_details_id : Optional[int]= None,
+    work_order_details_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token : str = Depends(oauth2.oauth2_scheme)
 ):
@@ -2143,6 +2464,7 @@ def get_work_order_details(
 
         - visit_master_id (optional, query parameter): Required when the `entry_point` is `CONSULTATION`. 
         - enquiry_details_id (optional, query parameter): Required when the `entry_point` is `ENQUIRY`.
+        - work_order_details_id (optional) : required when the edit option is selected
 
     """
 
@@ -2150,20 +2472,26 @@ def get_work_order_details(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
 
-    results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id)
+    results = db_office_master.get_work_order_details(db,entry_point,id,visit_master_id,enquiry_details_id,work_order_details_id)
     
     return results
-#-------------------------------------------------------------------------------------------------------------
+
+
+
+
+#------------------------------------------------------------------------------------------------------------
+
+
 @router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
 def get_work_order_list(
- 
- 
+    
+   
     work_order_number 	    : Optional[str]= None,
     search_value            :  Union[str, int] = "ALL",
 
     work_order_from_date  	: Optional[date]= None,
     work_order_to_date  	: Optional[date]= None,
-    work_order_status_id 	: Optional[int]= None,
+    work_order_status_id 	: Optional[Union[int, str]] = "ALL",
     # mobile_number  	    : Optional[str]= None,
     # email_id            : Optional[str]= None,
     db: Session = Depends(get_db),
@@ -2187,8 +2515,10 @@ def get_work_order_list(
     """
     results = db_office_master.get_work_order_list(
          db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
-  
+    
     return results
+
+
 #-------------------------------------------------------------------------------------------------------------
 @router.get('/get_business_activity_master_by_type_id', response_model=List[BusinessActivityMasterSchema])
 def get_business_activity_master_by_type_id(
@@ -2205,7 +2535,7 @@ def get_business_activity_by_master_id(
 ):
     business_activities = db_office_master.get_business_activity_by_master_id(db, activity_master_id)
     return business_activities
-#-------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------
 @router.get('/get_utility_document_by_nature_of_possession', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
 def get_utility_document_by_nature_of_possession(
         service_id: int,
@@ -2214,7 +2544,7 @@ def get_utility_document_by_nature_of_possession(
         db:Session = Depends(get_db)
 ):
     return db_office_master.get_utility_document_by_nature_of_possession(service_id,constitution_id,nature_of_possession,db)
-#-------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------------------------------------
 @router.post('/save_work_order')
 def save_work_order(
     request: CreateWorkOrderRequest,
@@ -2233,7 +2563,7 @@ def save_work_order(
 def save_work_order_service_details(
     request: CreateWorkOrderSetDtailsRequest,
     work_order_details_id:int,
-    business_place_details_id:Optional[int] = 0,
+    # business_place_details_id:Optional[int] = 0,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 
@@ -2243,16 +2573,16 @@ def save_work_order_service_details(
    auth_info = authenticate_user(token)
    user_id = auth_info.get("user_id")
    
-   return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id,business_place_details_id)
+   return db_office_master.save_work_order_service_details( db,request,work_order_details_id,user_id)
 
 #---------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_service_details')
 def get_work_order_service_details(
-    id: int,
+    work_order_detail_id: int,
     db:Session = Depends(get_db)
 ):
     
-    result  = db_office_master.get_work_order_service_details(db,id)
+    result  = db_office_master.get_work_order_service_details(db,work_order_detail_id)
     return result
 #-----------------------------------------------------------------------------------------------------------
 @router.get('/get_work_order_dependancy_service_details')
@@ -2278,9 +2608,10 @@ def get_work_order_dependancy_service_details(
     return result
 
 #-----------------------------------------------------------------------------------------------------------
+
 @router.post('/save_work_order_dependancies')
 def save_work_order_dependancies(
-    depended_works: List[WorkOrderDependancySchema],
+    depended_works: List[CreateWorkOrderDependancySchema],
     record_action : RecordActionType,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -2288,8 +2619,8 @@ def save_work_order_dependancies(
     """
     Save or update work order dependencies based on the action type.
 
-    - depended_works: List of `WorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
-    - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_ONLY'`.
+    - depended_works: List of `CreateWorkOrderDependancySchema` objects representing the dependencies to be saved or updated.
+    - record_action: Specifies whether to insert new records or update existing ones. Can be `'INSERT_ONLY'` or `'UPDATE_AND_INSERT'`.
     - db: Database session dependency.
 
     **Returns**:
@@ -2303,7 +2634,696 @@ def save_work_order_dependancies(
     # user_id = auth_info.get("user_id")
 
     result = db_office_master.save_work_order_dependancies(depended_works, record_action,db)
-  
+    
     return result
+
 #--------------------------------------------------------------------------------------------------------------
+@router.get('/get_work_order_dependancy_by_work_order_details_id')
+def get_work_order_dependancy_by_work_order_details_id(
+    work_order_details_id: int,
+    db: Session=Depends(get_db)
+):
+    result = db_office_master.get_work_order_dependancy_by_work_order_details_id(db,work_order_details_id)
+    return result
+
+#--------------------------------------------------------------------------------------------------------------
+
+
+#-------------------------------SERVICE TASK-------------------------------------------------------------------------------
+
+@router.get('/services/get_all_service_task_list', response_model=List[OffViewServiceTaskMasterSchema])
+def get_all_service_task_list(
+    db: Session = Depends(get_db),
+    task_no: Optional[str] = None,
+    department_id: Union[int, str] = Query("ALL"),
+    team_id: Union[int, str] = Query("ALL"),
+    employee_id: Union[int, str] = Query("ALL"),
+    status_id: Union[int, str] = Query("ALL"),
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> List[OffViewServiceTaskMasterSchema]:
+    """
+    Retrieve a list of service tasks based on various filters.
+
+    Parameters:
+    - task_no (str): The task number to search for (partial match).
+    - department_id (int or str): The department ID to filter by, or "ALL" for no filtering.
+    - team_id (int or str): The team ID to filter by, or "ALL" for no filtering.
+    - employee_id (int or str): The employee ID to filter by, or "ALL" for no filtering.
+    - status_id (int or str): The status ID to filter by, or "ALL" for no filtering.
+    - from_date (date): The start date for filtering tasks.
+    - to_date (date): The end date for filtering tasks.
+    - token (str): The OAuth2 token for authentication.
+
+    Returns:
+    - A list of service tasks that match the given filters.
+    """
+
+    # Authenticate the user using the provided token.
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    # Call the database function to retrieve the filtered task list.
+    service_tasks = db_office_master.get_all_service_task_list(
+        db, task_no, department_id, team_id, employee_id, status_id, from_date, to_date
+    )
+
+    return service_tasks
+
+
+
+
+#---------------------------------------------------------------------------------------------
+
+@router.post("/update_service_task/{id}")
+def update_service_task(
+    id: int,
+    task_data: OffServiceTaskMasterSchema, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Updates an existing service task and inserts a history record for the update.
+    
+    Parameters:
+    - id (int): The ID of the service task to update.
+    - task_data (OffServiceTaskMasterSchema): The data to update the service task with.
+    
+    Returns:
+    - A success message if the update is successful.
+    """
+
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  # Extract the user ID from the authentication info
+
+    try:
+        db_office_master.update_service_task( db, id, task_data, user_id)
+
+        # Return a success message after the update is completed.
+        return {"success": True, "message": "Updated successfully"}
+    
+    except HTTPException as e:
+        # If an HTTPException occurs, re-raise it to be handled by FastAPI's error handling.
+        raise e
+
+#----------------------------------------------------------------------------------------------------------------------------
+
+@router.get('/services/get_service_task_history/{task_id}', response_model=List[OffServiceTaskHistorySchema])
+def get_service_task_history(
+    task_id: int,
+    db: Session = Depends(get_db)
+) -> List[OffServiceTaskHistorySchema]:
+    """
+    Retrieve all history entries for a given service_task_master_id.
+
+    Parameters:
+    - task_id (int): The ID of the service task master.
+
+    Returns:
+    - A list of service task history records.
+    """
+
+    # Query the database for all history entries with the given task_id
+    history_details = db.query(
+        OffServiceTaskHistory,
+        EmployeeMaster.first_name.label('history_update_by_first_name'),
+        EmployeeMaster.middle_name.label('history_update_by_middle_name'),
+        EmployeeMaster.last_name.label('history_update_by_last_name')
+    ).join(
+        EmployeeMaster, OffServiceTaskHistory.history_update_by == EmployeeMaster.employee_id
+    ).filter(
+        OffServiceTaskHistory.service_task_master_id == task_id
+    ).all()
+
+    # If no history details found, return an empty list
+    if not history_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No history found for this service task")
+
+    # Convert the SQLAlchemy query results to the Pydantic schema
+    result = []
+    for history, first_name, middle_name, last_name in history_details:
+        history_data = OffServiceTaskHistorySchema(
+            service_task_master_id=history.service_task_master_id,
+            # history_updated_on=history.history_updated_on,
+            history_updated_date=history.history_updated_on.date(),
+            history_updated_time=history.history_updated_on.time(),
+            history_update_by=history.history_update_by,
+            history_update_by_first_name=first_name,
+            history_update_by_middle_name=middle_name,
+            history_update_by_last_name=last_name,
+            history_description=history.history_description
+        )
+        result.append(history_data)
+
+    return result
+
+
+
+
+
+
+#------------------------------------------------------------------------------------------------------
+
+@router.get('/teams/get_by_department/{department_id}')
+def get_teams_by_department(
+    department_id: int,
+    db: Session = Depends(get_db)
+    # token: str = Depends(oauth2.oauth2_scheme)
+) -> List[dict]:
+    """
+    Retrieve all teams associated with a given department_id.
+
+    Parameters:
+    - department_id (int): The ID of the department.
+
+    Returns:
+    - A list of dictionaries representing teams associated with the department.
+    """
+    
+    teams = db.query(EmployeeTeamMaster).filter(
+        EmployeeTeamMaster.department_id == department_id,
+        EmployeeTeamMaster.is_deleted == 'no'
+    ).all()
+
+    # If no teams found, return an empty list
+    if not teams:
+        return []
+    
+    # Convert the result to a list of dictionaries
+    teams_list = [
+        {
+            "team_id": team.id,
+            "team_name": team.team_name
+           
+        }
+        for team in teams
+    ]
+    
+    return teams_list
+
+
+
+#------------------------------------------------------------------------------------------------------------------
+
+#-------------------------------SERVICE TASK-------------------------------------------------------------------------------
+@router.post('/services/assign_reassign_service_task')
+def assign_reassign_service_task(
+    task_data: ServiceTaskMasterAssign,
+    task_id: int,
+    assign_to: str = Query(enum=["DEPARTMENT", "TEAM", "EMPLOYEE"],description="Select to assign: DEPARTMENT,TEAM or EMPLOYEE"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Assign or reassign a service task to a department, team, or employee.
+
+    Parameters:
+    - task_id (int): The ID of the task to be assigned or reassigned.
+    - assign_to (str): Specifies whether to assign to a "DEPARTMENT", "TEAM", or "EMPLOYEE".
+    - task_data (ServiceTaskMasterAssign): The data for assignment, including department, team, and employee IDs.
+       If 'DEPARTMENT' is selected, 'TEAM' and 'EMPLOYEE' fields must be null.
+       If 'TEAM' is selected, 'DEPARTMENT' field must benot  null, but 'EMPLOYEE' is null.
+       If 'EMPLOYEE' is selected, both 'DEPARTMENT' and 'TEAM' fields must be not null.
+    Returns:
+    - A success message if the assignment is successful.
+    """
+
+    # Token verification
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    if not auth_info:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or authentication failed")
+
+    # Update the service task assignment in the master table
+    try:
+        db_office_master.assign_reassign_service_task(db, task_id, assign_to, task_data, user_id)
+        return {"success": True, "message": "Task assigned/reassigned successfully"}
+    except HTTPException as e:
+        raise e
+
+
+
+#--------------------------------------------------------------------------------------------------------------
+
+@router.post('/update_customer_data_document')
+def update_customer_data_document(
+    update_data: List[UpdateCustomerDataDocumentSchema],
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Endpoint to update customer data document master records.
+    
+    Updates records in the `customer_data_document_master` table based on the provided data.
+
+    **Parameters:**
+    - `update_data`: List of `UpdateCustomerDataDocumentSchema` objects containing update information.
+        - `id`: The ID of the record to update (required).
+        - `data`: The new data value (required).
+        - `valid_from_date`: Optional. The new start date of validity. Set to `null` to remove the date or omit the field to retain the existing date.
+        - `valid_to_date`: Optional. The new end date of validity. Set to `null` to remove the date or omit the field to retain the existing date.
+    - `db`: The SQLAlchemy database session (required).
+    - `token`: OAuth2 token for authorization (required).
+
+    **Request Examples:**
+
+    1. **Updating a Record with New Dates:**
+       ```json
+      [
+        {
+            "id": 4,
+            "data": "pan",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 5,
+            "data": "voter card",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        }
+    ]
+       ```
+
+    2. **Removing Dates (Setting to `null`):**
+       ```json
+       [
+         {
+           "id": 4,
+           "data": "data4",
+           "valid_from_date": null,
+           "valid_to_date": null
+         }
+       ]
+       ```
+
+    3. **Updating a Record Without Changing Dates:**
+       ```json
+       [
+        {
+            "id": 4,
+            "data": "pan",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 5,
+            "data": "voter card",
+            "valid_from_date": "2024-08-28",
+            "valid_to_date": "2024-12-30"
+        },
+        {
+            "id": 6,
+            "data": "aahar ",
+            "valid_from_date": null,
+            "valid_to_date": null
+        }
+    ]
+       ```
+
+    **Returns:**
+    - A JSON object with a success status and a message:
+      ```json
+      {
+        "success": true,
+        "message": "Records successfully updated"
+      }
+      ```
+
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    try:
+        # Try to update the records
+        success = db_office_master.update_customer_data_documents(update_data, db)
+        return {
+            "success": success,
+            "message": "Records successfully updated" if success else "Failed to update records"
+        }
+    except HTTPException as e:
+        # If a specific exception is raised, handle it
+        return {
+            "success": False,
+            "message": str(e.detail)
+        }
+    except Exception as e:
+        # Catch any other exceptions and handle them
+        return {
+            "success": False,
+            "message": str(e)
+        }
+    
+#------------------------------------------------------------------------------------------------------
+
+# @router.get("/get_documents_and_data")
+# def get_documents(
+#     type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
+#     db: Session = Depends(get_db)
+# ) -> List[Dict[str, Any]]:
+    
+#     """  Fetches a list of documents and data records based on an optional filter type.
+#     **Parameters:**
+
+#     - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
+#     """
+#     sql_query = text("""
+#     SELECT
+#         a.id,
+#         a.work_order_master_id,
+#         a.work_order_details_id,
+#         a.document_data_category_id,
+#         b.category_name,
+#         a.document_data_master_id,
+#         c.document_data_name,
+#         d.id AS document_data_type_id, 
+#         d.document_data_type, 
+#         c.has_expiry,
+#         a.customer_id,
+#         a.stake_holder_master_id,
+#         a.data,
+#         a.display_order,
+#         a.is_document_uploded,
+#         a.uploaded_date,
+#         a.uploaded_by,
+#         a.valid_from_date,
+#         a.valid_to_date,
+#         a.remarks,
+#         a.is_deleted
+#     FROM
+#         customer_data_document_master a
+#     LEFT JOIN
+#         off_document_data_category b ON a.document_data_category_id = b.id
+#     LEFT JOIN
+#         off_document_data_master c ON a.document_data_master_id = c.id
+#     LEFT JOIN
+#         off_document_data_type d ON c.document_data_type_id = d.id 
+#     WHERE
+#         a.is_deleted = 'no'
+#     AND 
+#         (:type IS NULL OR d.document_data_type = :type)
+#     """)
+
+#     try:
+#         result = db.execute(sql_query, {"type": type})
+#         # Convert results to a list of dictionaries
+#         results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
+#         return results_list
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@router.get("/get_documents_and_data")
+def get_documents(
+    work_order_master_id: int,  # Required parameter
+    type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    
+    """
+    Fetches a list of documents and data records based on work_order_master_id and an optional filter type.
+    
+    **Parameters:**
+
+    - **work_order_master_id** (int): Filter the results by the work order master ID.
+    - **type** (Optional, `str`): Further filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
+    """
+
+    sql_query = text("""
+    SELECT
+        a.id,
+        a.work_order_master_id,
+        a.work_order_details_id,
+        a.document_data_category_id,
+        b.category_name,
+        a.document_data_master_id,
+        c.document_data_name,
+        d.id AS document_data_type_id, 
+        d.document_data_type, 
+        c.has_expiry,
+        a.customer_id,
+        a.stake_holder_master_id,
+        a.data,
+        a.display_order,
+        a.is_document_uploded,
+        a.uploaded_date,
+        a.uploaded_by,
+        a.valid_from_date,
+        a.valid_to_date,
+        a.remarks,
+        a.is_deleted
+    FROM
+        customer_data_document_master a
+    LEFT JOIN
+        off_document_data_category b ON a.document_data_category_id = b.id
+    LEFT JOIN
+        off_document_data_master c ON a.document_data_master_id = c.id
+    LEFT JOIN
+        off_document_data_type d ON c.document_data_type_id = d.id 
+    WHERE
+        a.is_deleted = 'no'
+    AND 
+        a.work_order_master_id = :work_order_master_id
+    AND 
+        (:type IS NULL OR d.document_data_type = :type)
+    """)
+
+    try:
+        result = db.execute(sql_query, {"work_order_master_id": work_order_master_id, "type": type})
+        # Convert results to a list of dictionaries
+        results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
+        return results_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+#-------------------------------------------------------------------------------------------------------
+@router.post('/upload_document/{id}')
+def upload_document(
+   id: int,
+   request: DocumentsSchema = Depends(),
+   db: Session = Depends(get_db),
+   token: str = Depends(oauth2.oauth2_scheme),
+   file: UploadFile = File(None)
+
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info["user_id"] 
+
+    try:
+        updated_document = db_office_master.upload_documents(db, request, id, user_id, file)
+        return {
+            "success": True,
+            "message": "Uploaded  successfully",
+            # "file_url": updated_document.file_url  # Return file URL if needed
+        }                  
+    except Exception as e:    
+        raise HTTPException(status_code=500, detail=str(e))
+
+#-----------------------------------------------------------------------------------------------------
+@router.get("/get_upload_document/{id}", response_model=dict)
+def get_upload_document(id: int):
+    # Search for a file that starts with the given ID and has any extension
+    file_path = None
+    for file in Path(UPLOAD_WORK_ORDER_DOCUMENTS).glob(f"{id}.*"):
+        if file.is_file():
+            file_path = file
+            break
+
+    if not file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    
+    return {"photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}"}
+
+
+#---------------------------------------------------------------------------------------------------
+@router.get("/get_sub_services_by_bundled_id/{bundled_service_goods_id}")
+def get_bundled_service(bundled_service_goods_id: int, db: Session = Depends(get_db)):
+    sub_services = db_office_master.get_sub_services_by_bundled_id(db, bundled_service_goods_id)
+    
+    return {"bundled_service_goods_id": bundled_service_goods_id, "services": sub_services}
+
+#------------------------------------------------------------------------------------------------------
+@router.get("/get_dependent_services")
+def get_dependent_services(
+    work_order_details_id: int,
+    db: Session = Depends(get_db)
+) -> List[Dict[str, Any]]:
+    """
+    Fetches a list of dependent services for a given work_order_details_id.
+
+    **Parameters:**
+
+    - **work_order_details_id** (int): The ID of the work order detail to check for dependencies.
+
+    **Returns:**
+    - List of dependent services with their details.
+    """
+    try:
+        # Step 1: Check if the work_order_details_id is a dependent service in work_order_details table
+        dependent_service_check_query = text("""
+        SELECT is_depended_service 
+        FROM work_order_details 
+        WHERE id = :work_order_details_id 
+        AND is_deleted = 'no'
+        """)
+        result = db.execute(dependent_service_check_query, {"work_order_details_id": work_order_details_id}).fetchone()
+        
+        if not result or result[0] != 'yes':
+            return []  # Return empty list if it's not a dependent service or doesn't exist
+
+        # Step 2: Fetch dependent service IDs from the work_order_dependency table
+        dependency_query = text("""
+        SELECT dependent_on_work_id 
+        FROM work_order_dependency 
+        WHERE work_order_details_id = :work_order_details_id 
+        AND is_deleted = 'no'
+        """)
+        dependent_ids = db.execute(dependency_query, {"work_order_details_id": work_order_details_id}).fetchall()
+        
+        dependent_ids = [row[0] for row in dependent_ids]
+
+        if not dependent_ids:
+            return []
+
+        # Step 3: Fetch the dependent service details from the off_view_work_order_details view
+        # Convert the tuple of IDs into a comma-separated string for the SQL query
+        dependent_ids_str = ','.join(map(str, dependent_ids))
+
+        dependent_services_query = text(f"""
+        SELECT 
+            work_order_details_id,
+            service_goods_name,
+            trade_name,
+            leagal_name,
+            service_status
+        FROM off_view_work_order_details
+        WHERE work_order_details_id IN ({dependent_ids_str})
+        """)
+        result = db.execute(dependent_services_query).fetchall()
+
+        # print("result...............",result)
+
+        # Convert results to a list of dictionaries
+        results_list = [
+            {
+                "work_order_details_id": row[0],
+                "service_goods_name": row[1],
+                "trade_name": row[2],
+                "leagal_name": row[3],
+                "service_status":row[4]
+            }
+            for row in result
+        ]
+
+        return results_list
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+#-------------------------------------------------------------------------------------------------------------
+# test
+
+
+
+
+
+
+
+
+# def call_stored_procedure(service_id: int, input_date: Optional[str] = None):
+#     connection = None
+#     cursor = None
+#     try:
+#         connection = mysql.connector.connect(
+#             user="root",
+#             password="brdb123",  # Consider using environment variables
+#             host="202.21.38.180",
+#             port="3306",
+#             database="bharat_taxes_ca_erp"
+#         )
+#         cursor = connection.cursor(dictionary=True)
+
+#         # Call the stored procedure
+#         cursor.callproc('GetServiceDetails', [service_id, input_date])
+
+#         # Fetch results from stored procedure
+#         results = []
+#         for result_set in cursor.stored_results():
+#             results.extend(result_set.fetchall())
+
+#         return results
+
+#     except Error as e:
+#         print(f"Error: {e}")  # Consider logging instead of printing
+#         raise
+
+#     finally:
+#         if cursor:
+#             cursor.close()
+#         if connection:
+#             connection.close()
+
+# @router.get("/test/get_bundle_price_list", response_model=ServiceResponse)
+# def get_bundle_price_list(service_id: int, input_date: Optional[str] = None):
+#     # Call stored procedure or some other DB fetching logic
+#     results = call_stored_procedure(service_id, input_date)
+
+#     # Initialize a dictionary to hold aggregated data
+#     aggregated_data = defaultdict(lambda: {
+#         "total_service_charge": 0,
+#         "total_govt_agency_fee": 0,
+#         "total_stamp_duty": 0,
+#         "total_stamp_fee": 0,
+#         "service_goods_name": None,
+#         "is_bundled_service": None,
+#         "constitution_id": None,
+#         "business_constitution_name": None,
+#         "effective_from_date": None,
+#         "effective_to_date": None
+#     })
+
+#     # Iterate over the results and aggregate values
+#     for item in results:
+#         constitution_id = item['constitution_id']
+
+#         # Aggregate values
+#         aggregated_data[constitution_id]['total_service_charge'] += item['service_charge']
+#         aggregated_data[constitution_id]['total_govt_agency_fee'] += item['govt_agency_fee']
+#         aggregated_data[constitution_id]['total_stamp_duty'] += item['stamp_duty']
+#         aggregated_data[constitution_id]['total_stamp_fee'] += item['stamp_fee']
+
+#         # Set other fields (assuming they are the same across all items with the same constitution_id)
+#         aggregated_data[constitution_id]['service_goods_name'] = item['service_goods_name']
+#         aggregated_data[constitution_id]['is_bundled_service'] = item['is_bundled_service']
+#         aggregated_data[constitution_id]['constitution_id'] = constitution_id
+#         aggregated_data[constitution_id]['business_constitution_name'] = item['business_constitution_name']
+
+#         # Convert date fields to ISO format strings
+#         aggregated_data[constitution_id]['effective_from_date'] = item['effective_from_date'].isoformat() if item['effective_from_date'] else None
+#         aggregated_data[constitution_id]['effective_to_date'] = item['effective_to_date'].isoformat() if item['effective_to_date'] else None
+
+#     # Convert the defaultdict to a regular dict
+#     aggregated_data = dict(aggregated_data)
+
+#     # Return the response with aggregated data
+#     if not aggregated_data:
+#         raise HTTPException(status_code=404, detail="No data found for the given service ID")
+
+#     # Match the response to the expected format of ServiceResponse
+#     return {"aggregated_data": aggregated_data}
+
+
+
 
