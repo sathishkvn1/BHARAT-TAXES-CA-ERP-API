@@ -225,14 +225,22 @@ def save_appointment_visit_master(
             if existing_visit_master:
                 # Update existing visit master
                 for field, value in appointment_data.visit_master.model_dump(exclude_unset=True).items():
-                    setattr(existing_visit_master, field, value)
+                    if field == "remarks":
+                        if existing_visit_master.remarks:
+                            # Append new remarks to existing remarks with separator
+                            setattr(existing_visit_master, field, existing_visit_master.remarks + "**" + value)
+                        else:
+                            setattr(existing_visit_master, field, value)
+                    else:
+                        setattr(existing_visit_master, field, value)
+                
                 existing_visit_master.modified_by = user_id
                 existing_visit_master.modified_on = datetime.now()
 
                 # Handle visit details: update existing or add new
                 existing_details = db.query(OffAppointmentVisitDetails).filter(
                     OffAppointmentVisitDetails.visit_master_id == existing_visit_master.id).all()
-                
+
                 existing_details_dict = {detail.service_id: detail for detail in existing_details}
 
                 for detail in existing_details:
@@ -310,8 +318,6 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 #------------------------------------------------------------------------------------------------------------
 #///////////////////////////////////////////////////
