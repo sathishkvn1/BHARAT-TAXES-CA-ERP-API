@@ -558,14 +558,14 @@ def get_appointments(
             }
             visit_master_schema = OffAppointmentVisitMasterViewSchema(**visit_master_data)
 
-            # Create visit detail schema
-            visit_detail_schema = {
-                "visit_master_id": visit_details.visit_master_id,
-                "visit_details_id": visit_details.visit_details_id,
-                "service_id": visit_details.service_id,
-                "service_goods_name": visit_details.service_goods_name,
-                "is_main_service": visit_details.is_main_service   # if hasattr(visit_details, 'is_main_service') else "no" Set default if missing
-            }
+            # Create visit detail schema using the OffAppointmentVisitDetailsViewSchema
+            visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
+                visit_master_id=visit_details.visit_master_id, 
+                visit_details_id=visit_details.visit_details_id,
+                service_id=visit_details.service_id,
+                service_goods_name=visit_details.service_goods_name,
+                is_main_service=visit_details.is_main_service  # Ensure is_main_service is provided
+            )
 
             # Group by visit master ID
             if visit_master_schema.visit_master_id not in appointments:
@@ -583,6 +583,8 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 #---service-goods-master  swathy---------------------------
 
 
