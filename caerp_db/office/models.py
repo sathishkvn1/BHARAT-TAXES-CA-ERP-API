@@ -149,6 +149,47 @@ class OffAppointmentVisitDetails(caerp_base):
     deleted_on      = Column(Date, nullable=True)
 
 
+# class OffAppointmentVisitDetailsView(caerp_base):
+#     __tablename__ = 'off_view_appointment_details'
+
+#     visit_details_id                               = Column(Integer, primary_key=True, nullable=False)
+#     visit_master_id                                = Column(Integer, nullable=False)
+#     appointment_number                             = Column(String(50), nullable=True)
+#     financial_year_id                              = Column(Integer, nullable=True)
+#     voucher_number                                 = Column(String(50), nullable=True)
+#     appointment_master_id                          = Column(Integer, nullable=True)
+#     appointment_date                               = Column(Date, nullable=True)
+#     appointment_time_from                          = Column(String(50), nullable=False)  
+#     appointment_time_to                            = Column(String(50), nullable=True)  
+#     source_of_enquiry_id                           = Column(Integer, nullable=True)
+#     appointment_status_id                          = Column(Integer, nullable=True)
+#     gross_amount                                   = Column(Float, nullable=False)
+#     discount_percentage                            = Column(Float, nullable=False)
+#     special_discount_percentage                    = Column(Float, nullable=False)
+#     special_discount_amount                        = Column(Float, nullable=False)
+#     net_amount                                     = Column(Float, nullable=False)
+#     igst_amount                                    = Column(Float, nullable=False)
+#     sgst_amount                                    = Column(Float, nullable=False)
+#     cgst_amount                                    = Column(Float, nullable=False)
+#     bill_amount                                    = Column(Float, nullable=False)
+#     remarks                                        = Column(String(2000), nullable=False)
+#     service_id                                     = Column(Integer, nullable=True)
+#     service_goods_name                             = Column(String(500), nullable=False)  
+#     consultant_id                                  = Column(Integer, nullable=True)
+#     is_main_service                                = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     employee_number                                = Column(String(50), nullable=True)
+#     first_name                                     = Column(String(50), nullable=True)
+#     middle_name                                    = Column(String(50), nullable=True)
+#     last_name                                      = Column(String(50), nullable=True)
+#     created_by                                     = Column(Integer, nullable=True)
+#     created_on                                     = Column(Date, nullable=True)
+#     modified_by                                    = Column(Integer, nullable=True)
+#     modified_on                                    = Column(Date, nullable=True)
+#     is_deleted                                     = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by                                     = Column(Integer, nullable=True)
+#     deleted_on                                     = Column(Date, nullable=True)
+    
+
 class OffAppointmentVisitDetailsView(caerp_base):
     __tablename__ = 'off_view_appointment_details'
 
@@ -156,13 +197,20 @@ class OffAppointmentVisitDetailsView(caerp_base):
     visit_master_id                                = Column(Integer, nullable=False)
     appointment_number                             = Column(String(50), nullable=True)
     financial_year_id                              = Column(Integer, nullable=True)
+    financial_year                                 = Column(String(50), nullable=True)
     voucher_number                                 = Column(String(50), nullable=True)
     appointment_master_id                          = Column(Integer, nullable=True)
     appointment_date                               = Column(Date, nullable=True)
     appointment_time_from                          = Column(String(50), nullable=False)  
     appointment_time_to                            = Column(String(50), nullable=True)  
     source_of_enquiry_id                           = Column(Integer, nullable=True)
+    source                                         = Column(String(100), nullable=True)
     appointment_status_id                          = Column(Integer, nullable=True)
+    appointment_status                             = Column(String(100), nullable=True)
+    consultation_mode_id                           = Column(Integer)
+    consultation_mode                              = Column(String(50), nullable=True) 
+    consultation_tool_id                           = Column(Integer)
+    consultation_tool                              = Column(String(50), nullable=True) 
     gross_amount                                   = Column(Float, nullable=False)
     discount_percentage                            = Column(Float, nullable=False)
     special_discount_percentage                    = Column(Float, nullable=False)
@@ -189,7 +237,6 @@ class OffAppointmentVisitDetailsView(caerp_base):
     deleted_by                                     = Column(Integer, nullable=True)
     deleted_on                                     = Column(Date, nullable=True)
     
-
 
 class OffAppointmentCancellationReason(caerp_base):
     __tablename__ = 'off_appointment_cancellation_reason'
@@ -1488,14 +1535,11 @@ class CustomerDataDocumentMaster(caerp_base):
 
 class OffServiceTaskMaster(caerp_base):
     __tablename__               = 'off_service_task_master'
-
     id                          = Column(Integer, primary_key=True, autoincrement=True)
     work_order_master_id        = Column(Integer, nullable=False)
     work_order_details_id       = Column(Integer, nullable=False)
-    
     proforma_invoice_master_id  = Column(Integer, nullable=False)
     proforma_invoice_detail_id  = Column(Integer, nullable = False)
-
     customer_id                 = Column(Integer, nullable=True)
     task_number                 = Column(String(100), nullable=False)
     allocated_by                = Column(Integer, nullable=False)

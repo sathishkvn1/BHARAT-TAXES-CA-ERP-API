@@ -23,6 +23,7 @@ from pathlib import Path
 from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
+
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #------------------------------------------------------------------------------------------------------------
 # def save_appointment_visit_master(
@@ -491,28 +492,22 @@ def get_appointments(
     mobile_number: Optional[str] = None
 ) -> List[ResponseSchema]:
     try:
-        # Initialize search conditions
+        # Prepare search conditions
         search_conditions = []
 
-        # If mobile number is provided, search only with mobile number
+        # Mobile number filter
         if mobile_number:
             search_conditions.append(OffAppointmentVisitMasterView.mobile_number == mobile_number)
         else:
-            # Add date range filter
+            # Date range filter
             if from_date and to_date:
                 search_conditions.append(OffAppointmentVisitMasterView.appointment_date.between(from_date, to_date))
-            
-            # Check if id is provided
             if id != 0:
                 search_conditions.append(OffAppointmentVisitMasterView.appointment_master_id == id)
-
-            # Add conditions based on the provided parameters if they are not "ALL"
             if consultant_id != "ALL":
                 search_conditions.append(OffAppointmentVisitMasterView.consultant_id == consultant_id)
-
             if status_id != "ALL":
                 search_conditions.append(OffAppointmentVisitMasterView.appointment_status_id == status_id)
-
             if search_value != "ALL":
                 search_conditions.append(
                     or_(
@@ -521,118 +516,73 @@ def get_appointments(
                     )
                 )
 
-        # Add consultant status conditions
-        current_date = date.today()
-        consultant_conditions = [
-            EmployeeEmployementDetails.is_consultant == "yes",
-            EmployeeEmployementDetails.effective_from_date <= current_date,
-            or_(
-                EmployeeEmployementDetails.effective_to_date.is_(None),
-                EmployeeEmployementDetails.effective_to_date >= current_date
-            )
-        ]
-
-        # Query for main service
-        main_service_query = db.query(OffAppointmentVisitDetailsView).join(
+        # Main query to fetch visit details along with their associated appointment masters
+        main_service_query = db.query(
             OffAppointmentVisitMasterView,
-            OffAppointmentVisitDetailsView.appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
+            OffAppointmentVisitDetailsView
         ).join(
-            EmployeeEmployementDetails,
-            OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
+            OffAppointmentVisitDetailsView,
+            OffAppointmentVisitDetailsView.visit_master_id == OffAppointmentVisitMasterView.visit_master_id
         ).filter(
-            and_(*consultant_conditions)
-        ).filter(
-            and_(*search_conditions)
-        ).filter(
-            OffAppointmentVisitDetailsView.is_deleted == "no",
-            OffAppointmentVisitDetailsView.is_main_service == "yes"
+            *search_conditions,
+            OffAppointmentVisitDetailsView.is_deleted == "no"
         )
 
         if service_id != "ALL":
             main_service_query = main_service_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
 
-        main_service_results = main_service_query.all()
-
-        # Collect appointment IDs from main service query
-        main_service_appointment_ids = {result.appointment_master_id for result in main_service_results}
-
-        # Query for other services related to the main services' appointments
-        other_services_query = db.query(OffAppointmentVisitDetailsView).join(
-            OffAppointmentVisitMasterView,
-            OffAppointmentVisitDetailsView.appointment_master_id == OffAppointmentVisitMasterView.appointment_master_id
-        ).join(
-            EmployeeEmployementDetails,
-            OffAppointmentVisitDetailsView.consultant_id == EmployeeEmployementDetails.employee_id
-        ).filter(
-            and_(*consultant_conditions)
-        ).filter(
-            and_(*search_conditions)
-        ).filter(
-            OffAppointmentVisitDetailsView.is_deleted == "no",
-            OffAppointmentVisitDetailsView.is_main_service == "no",
-            OffAppointmentVisitDetailsView.appointment_master_id.in_(main_service_appointment_ids)
+        # Order by appointment date (descending) and full name (ascending)
+        main_service_query = main_service_query.order_by(
+            OffAppointmentVisitMasterView.appointment_date.desc(),
+            OffAppointmentVisitMasterView.full_name.asc()
         )
 
-        other_services_results = other_services_query.all()
+        # Execute the query to fetch all relevant results
+        main_service_results = main_service_query.all()
 
-        # Combine main service results and other services results
-        combined_results = main_service_results + other_services_results
+        # Organize appointments
+        appointments = {}
+        
+        for appointment_master, visit_details in main_service_results:
+            # Extract data from appointment master
+            appointment_master_data = {
+                column.name: getattr(appointment_master, column.name)
+                for column in appointment_master.__table__.columns
+            }
+            appointment_master_schema = OffAppointmentMasterViewSchema(**appointment_master_data)
 
-        # Check if any results were found
-        if not combined_results:
-            return []
+            # Create the visit master schema from visit details
+            visit_master_data = {
+                column.name: getattr(visit_details, column.name)
+                for column in visit_details.__table__.columns
+            }
+            visit_master_schema = OffAppointmentVisitMasterViewSchema(**visit_master_data)
 
-        # Organize visit details by appointment_id
-        visit_details_dict = {}
-        for visit_details in combined_results:
-            visit_details_data = {column.name: getattr(visit_details, column.name) for column in visit_details.__table__.columns}
-            visit_details_schema = OffAppointmentVisitDetailsViewSchema(**visit_details_data)
-            appointment_id = visit_details.appointment_master_id
-            if appointment_id not in visit_details_dict:
-                visit_details_dict[appointment_id] = {"visit_details": []}
-            visit_details_dict[appointment_id]["visit_details"].append(visit_details_schema)
+            # Create visit detail schema
+            visit_detail_schema = {
+                "visit_master_id": visit_details.visit_master_id,
+                "visit_details_id": visit_details.visit_details_id,
+                "service_id": visit_details.service_id,
+                "service_goods_name": visit_details.service_goods_name,
+                "is_main_service": visit_details.is_main_service   # if hasattr(visit_details, 'is_main_service') else "no" Set default if missing
+            }
 
-        # Filter appointments based on the visit details
-        valid_appointment_ids = visit_details_dict.keys()
-        # appointment_query = db.query(OffAppointmentVisitMasterView).filter(
-        #     OffAppointmentVisitMasterView.appointment_master_id.in_(valid_appointment_ids),
-        #     *search_conditions
-        # ).all()
-        appointment_query = db.query(OffAppointmentVisitMasterView).filter(
-            OffAppointmentVisitMasterView.appointment_master_id.in_(valid_appointment_ids),
-            *search_conditions
-        ).order_by(
-            OffAppointmentVisitMasterView.appointment_date.desc(),  # Order by appointment date descending
-            OffAppointmentVisitMasterView.full_name.asc()            # Order by full_name ascending
-        ).all()
-        # Check if appointments were found
-        if not appointment_query:
-            return []
+            # Group by visit master ID
+            if visit_master_schema.visit_master_id not in appointments:
+                appointments[visit_master_schema.visit_master_id] = ResponseSchema(
+                    appointment_master=appointment_master_schema,
+                    visit_master=visit_master_schema,
+                    visit_details=[visit_detail_schema]  # Initialize visit details list
+                )
+            else:
+                appointments[visit_master_schema.visit_master_id].visit_details.append(visit_detail_schema)
 
-        # Create response data
-        appointments = []
-        for appointment in appointment_query:
-            appointment_id = appointment.appointment_master_id
-            visit_details = visit_details_dict.get(appointment_id, {"visit_details": []})
-
-            appointment_data = {column.name: getattr(appointment, column.name) for column in appointment.__table__.columns}
-            visit_master = OffAppointmentVisitMasterViewSchema(**appointment_data)
-            appointment_master = OffAppointmentMasterViewSchema(**appointment_data)
-
-            response_data = ResponseSchema(
-                appointment_master=appointment_master,
-                visit_master=visit_master,
-                visit_details=visit_details["visit_details"]
-            )
-            appointments.append(response_data)
-
-        return appointments
+        return list(appointments.values())  # Return the list of grouped appointments
 
     except HTTPException as http_error:
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 #---service-goods-master  swathy---------------------------
 
 

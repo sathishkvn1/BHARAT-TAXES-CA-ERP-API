@@ -199,7 +199,6 @@ def get_and_search_appointments(
 
 
 
-
 #-------------------------swathy-------------------------------------------------------------------------------
 
 
@@ -1340,7 +1339,6 @@ def get_all_service_document_data_master(
     except Exception as e:
        
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 
 #------------------------------------------------------------------------------------------------

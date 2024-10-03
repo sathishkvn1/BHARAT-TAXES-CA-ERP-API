@@ -90,7 +90,6 @@ class OffAppointmentCancellationReasonSchema(BaseModel):
 
 
 
-
 class OffAppointmentMasterViewSchema(BaseModel):
     appointment_master_id: int
     full_name            : str
@@ -127,10 +126,11 @@ class OffAppointmentMasterViewSchema(BaseModel):
         from_attributes = True
 
 
-
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     visit_master_id           : Optional[int]
+    appointment_master_id     : int
     financial_year_id         : Optional[int]
+    financial_year            : Optional[str]
     voucher_number            : Optional[str]
     appointment_date          : Optional[date]
     appointment_time_from     : Optional[str]
@@ -141,7 +141,9 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     appointment_status        : Optional[str]
     consultant_id             : Optional[int]
     consultation_mode_id      : Optional[int]
+    consultation_mode         : Optional[str]
     consultation_tool_id      : Optional[int]
+    consultation_tool         : Optional[str]
     employee_number           : Optional[str]
     first_name                : Optional[str]
     middle_name               : Optional[str]
@@ -156,7 +158,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     cgst_amount                : Optional[float]
     bill_amount                : Optional[float]
     remarks                    : Optional[str]
-
+    
     class Config:
         orm_mode = True
         from_attributes = True
@@ -164,6 +166,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
 
 
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
+    visit_master_id   : Optional[int]
     visit_details_id  : int
     service_id        : int
     service_goods_name: str
@@ -173,14 +176,10 @@ class OffAppointmentVisitDetailsViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master      : OffAppointmentVisitMasterViewSchema
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
-        
-
-
 
  
 

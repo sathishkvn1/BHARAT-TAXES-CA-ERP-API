@@ -17,6 +17,7 @@ import os
 from typing import List, Dict
 from settings import BASE_URL
 
+
 router = APIRouter(
     prefix ='/Employee',
     tags=['Employee']
