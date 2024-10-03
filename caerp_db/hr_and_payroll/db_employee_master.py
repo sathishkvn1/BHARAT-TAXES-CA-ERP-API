@@ -1,7 +1,7 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmployementDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -91,7 +91,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
             employement_details_data["approved_by"] = user_id
             employement_details_data["approved_on"] = datetime.now()
 
-            insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+            insert_emp_det = insert(EmployeeEmploymentDetails).values(**employement_details_data)
             db.execute(insert_emp_det)
             db.commit()
 
@@ -125,7 +125,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
             # Update employement_details if present in the components
             if 'employement_details' in components and request.employement_details:
                 employement_details_data = request.employement_details.model_dump(exclude_unset=True)
-                db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == id).update(employement_details_data)
+                db.query(EmployeeEmploymentDetails).filter(EmployeeEmploymentDetails.employee_id == id).update(employement_details_data)
 
             # You can add more conditions for other components if needed
 
@@ -206,7 +206,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
           employement_details_data["approved_by"] = user_id
           employement_details_data["approved_on"] = datetime.now()  
 
-          insert_emp_det = insert(EmployeeEmployementDetails).values(**employement_details_data)
+          insert_emp_det = insert(EmployeeEmploymentDetails).values(**employement_details_data)
           db.execute(insert_emp_det)
           db.commit()
 
@@ -259,7 +259,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             if option == "bank_details" and request.bank_details:
               update_detail_record(db, EmployeeBankDetails, request.bank_details, id, updated_entities, "bank_details")
             if option == "employement_details" and request.employement_details:
-              update_detail_record(db, EmployeeEmployementDetails, request.employement_details, id, updated_entities, "employement_details") 
+              update_detail_record(db, EmployeeEmploymentDetails, request.employement_details, id, updated_entities, "employement_details") 
             if option == "emergency_contact_details" and request.emergency_contact_details:
               update_detail_record(db, EmployeeEmergencyContactDetails, request.emergency_contact_details, id, updated_entities, "emergency_contact_details")
             if option == "dependent_details" and request.dependent_details:
@@ -330,7 +330,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
             if option == "bank_details" and request.bank_details:
               insert_detail_record(db, EmployeeBankDetails, request.bank_details, employee_id, user_id)
             if option == "employement_details" and request.employement_details:
-              insert_detail_record(db, EmployeeEmployementDetails, request.employement_details, employee_id, user_id) 
+              insert_detail_record(db, EmployeeEmploymentDetails, request.employement_details, employee_id, user_id) 
             if option == "emergency_contact_details" and request.emergency_contact_details:
               insert_detail_record(db, EmployeeEmergencyContactDetails, request.emergency_contact_details, employee_id, user_id)   
             if option == "dependent_details" and request.dependent_details:
@@ -471,7 +471,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
         "permanent_address": db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.employee_id == employee_id).all(),
         "contact_details": db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employee_id).all(),
         "bank_details": db.query(EmployeeBankDetails).filter(EmployeeBankDetails.employee_id == employee_id).all(),
-        "employement_details": db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.employee_id == employee_id).all(),
+        "employement_details": db.query(EmployeeEmploymentDetails).filter(EmployeeEmploymentDetails.employee_id == employee_id).all(),
         "emergency_contact_details": db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.employee_id == employee_id).all(),
         "dependent_details": db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.employee_id == employee_id).all(),
         "employee_salary":  db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.employee_id == employee_id).all(),
@@ -504,7 +504,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
         "permanent_address": db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).first(),
         "contact_details": db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id).first(),
         "bank_details": db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).first(),
-        "employement_details": db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.id == id).first(),
+        "employement_details": db.query(EmployeeEmploymentDetails).filter(EmployeeEmploymentDetails.id == id).first(),
         "emergency_contact_details": db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.id == id).first(),
         "dependent_details": db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.id == id).first(),
         "employee_salary":  db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id).first(),
@@ -527,7 +527,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
         "permanent_address": db.query(EmployeePermanentAddress).filter(EmployeePermanentAddress.id == id).first(),
         "contact_details": db.query(EmployeeContactDetails).filter(EmployeeContactDetails.id == id).first(),
         "bank_details": db.query(EmployeeBankDetails).filter(EmployeeBankDetails.id == id).first(),
-        "employement_details": db.query(EmployeeEmployementDetails).filter(EmployeeEmployementDetails.id == id).first(),
+        "employement_details": db.query(EmployeeEmploymentDetails).filter(EmployeeEmploymentDetails.id == id).first(),
         "emergency_contact_details": db.query(EmployeeEmergencyContactDetails).filter(EmployeeEmergencyContactDetails.id == id).first(),
         "dependent_details": db.query(EmployeeDependentsDetails).filter(EmployeeDependentsDetails.id == id).first(),
         "employee_salary":  db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id).first(),
@@ -574,27 +574,27 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 #         EmployeeMaster.marital_status_id,
 #         MaritalStatus.marital_status, 
 #         EmployeeMaster.joining_date,
-#         EmployeeEmployementDetails.employee_category_id,
+#         EmployeeEmploymentDetails.employee_category_id,
 #         HrEmployeeCategory.category_name,
-#         EmployeeEmployementDetails.department_id,
+#         EmployeeEmploymentDetails.department_id,
 #         HrDepartmentMaster.department_name,
-#         EmployeeEmployementDetails.designation_id,
+#         EmployeeEmploymentDetails.designation_id,
 #         HrDesignationMaster.designation,
 #         EmployeeContactDetails.personal_mobile_number,
 #         EmployeeContactDetails.personal_email_id,
 #         EmployeeContactDetails.remarks,
-#         EmployeeEmployementDetails.is_consultant,
+#         EmployeeEmploymentDetails.is_consultant,
 #         EmployeeMaster.is_approved,
 #         UserBase.is_active
 #     ).join(
-#         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+#         EmployeeEmploymentDetails, EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id, isouter=True
   
 #     ).join(
-#         HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
+#         HrEmployeeCategory, EmployeeEmploymentDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
 #     ).join(
-#         HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
+#         HrDepartmentMaster, EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id, isouter=True
 #     ).join(
-#         HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+#         HrDesignationMaster, EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id, isouter=True
 #     ).join(
 #        UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter = True
 #     ).join(
@@ -628,7 +628,7 @@ def delete_employee_details(db: Session, employee_id: int, id: int, user_id: int
 #     if approval_status and approval_status != ApprovedStatus.ALL:
 #       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
 #     if is_consultant and is_consultant != "ALL":
-#       query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+#       query = query.filter(EmployeeEmploymentDetails.is_consultant == is_consultant)
 #     if search:
 #       search = search.strip()
 #       search_term = f"%{search}%"
@@ -675,30 +675,30 @@ def search_employee_master_details(
         EmployeeMaster.marital_status_id,
         MaritalStatus.marital_status, 
         EmployeeMaster.joining_date,
-        EmployeeEmployementDetails.employee_category_id,
+        EmployeeEmploymentDetails.employee_category_id,
         HrEmployeeCategory.category_name,
-        EmployeeEmployementDetails.department_id,
+        EmployeeEmploymentDetails.department_id,
         HrDepartmentMaster.department_name,
-        EmployeeEmployementDetails.designation_id,
+        EmployeeEmploymentDetails.designation_id,
         HrDesignationMaster.designation,
         EmployeeContactDetails.personal_mobile_number,
         EmployeeContactDetails.personal_email_id,
         EmployeeContactDetails.remarks,
-        EmployeeEmployementDetails.is_consultant,
+        EmployeeEmploymentDetails.is_consultant,
         EmployeeMaster.is_approved,
         UserBase.is_active
     ).join(
-        EmployeeEmployementDetails,
-        (EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id) &
-        EmployeeEmployementDetails.effective_to_date.is_(None),
+        EmployeeEmploymentDetails,
+        (EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id) &
+        EmployeeEmploymentDetails.effective_to_date.is_(None),
         isouter=True
   
     ).join(
-        HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
+        HrEmployeeCategory, EmployeeEmploymentDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
     ).join(
-        HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
+        HrDepartmentMaster, EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id, isouter=True
     ).join(
-        HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+        HrDesignationMaster, EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id, isouter=True
     ).join(
        UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter = True
     ).join(
@@ -735,7 +735,7 @@ def search_employee_master_details(
     if approval_status and approval_status != ApprovedStatus.ALL:
       query = query.filter(EmployeeMaster.is_approved == approval_status.value)
     if is_consultant and is_consultant != "ALL":
-      query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+      query = query.filter(EmployeeEmploymentDetails.is_consultant == is_consultant)
     if search:
       search = search.strip()
       search_term = f"%{search}%"
@@ -815,23 +815,23 @@ def get_bank_details(db: Session, employee_id: int):
 def get_employment_details(db: Session, employee_id: int):
     current_date = date.today()
 
-    # Join EmployeeEmployementDetails with HrDepartmentMaster and AppDesignation to fetch department_name and designation_name
+    # Join EmployeeEmploymentDetails with HrDepartmentMaster and AppDesignation to fetch department_name and designation_name
     return (
         db.query(
-            EmployeeEmployementDetails,
+            EmployeeEmploymentDetails,
             HrDepartmentMaster.department_name,  # Fetching department_name
             HrDesignationMaster.designation,      # Fetching designation_name
             HrEmployeeCategory.category_name
         )
-        .join(HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id)
-        .join(HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id)
-        .join(HrEmployeeCategory,EmployeeEmployementDetails.employee_category_id ==HrEmployeeCategory.id )
+        .join(HrDepartmentMaster, EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id)
+        .join(HrDesignationMaster, EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id)
+        .join(HrEmployeeCategory,EmployeeEmploymentDetails.employee_category_id ==HrEmployeeCategory.id )
         .filter(
-            EmployeeEmployementDetails.employee_id == employee_id,
-            EmployeeEmployementDetails.effective_from_date <= current_date,
-            (EmployeeEmployementDetails.effective_to_date >= current_date) |
-            (EmployeeEmployementDetails.effective_to_date.is_(None)),
-            EmployeeEmployementDetails.is_deleted == 'no'
+            EmployeeEmploymentDetails.employee_id == employee_id,
+            EmployeeEmploymentDetails.effective_from_date <= current_date,
+            (EmployeeEmploymentDetails.effective_to_date >= current_date) |
+            (EmployeeEmploymentDetails.effective_to_date.is_(None)),
+            EmployeeEmploymentDetails.is_deleted == 'no'
         )
         .all()
     )
@@ -1564,26 +1564,26 @@ def save_team_members(
 #         EmployeeMaster.marital_status_id,
 #         MaritalStatus.marital_status, 
 #         EmployeeMaster.joining_date,
-#         EmployeeEmployementDetails.employee_category_id,
+#         EmployeeEmploymentDetails.employee_category_id,
 #         HrEmployeeCategory.category_name,
-#         EmployeeEmployementDetails.department_id,
+#         EmployeeEmploymentDetails.department_id,
 #         HrDepartmentMaster.department_name,
-#         EmployeeEmployementDetails.designation_id,
+#         EmployeeEmploymentDetails.designation_id,
 #         HrDesignationMaster.designation,
 #         EmployeeContactDetails.personal_mobile_number,
 #         EmployeeContactDetails.personal_email_id,
 #         EmployeeContactDetails.remarks,
-#         EmployeeEmployementDetails.is_consultant,
+#         EmployeeEmploymentDetails.is_consultant,
 #         EmployeeMaster.is_approved,
 #         UserBase.is_active
 #     ).join(
-#         EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+#         EmployeeEmploymentDetails, EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id, isouter=True
 #     ).join(
-#         HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
+#         HrEmployeeCategory, EmployeeEmploymentDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
 #     ).join(
-#         HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
+#         HrDepartmentMaster, EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id, isouter=True
 #     ).join(
-#         HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+#         HrDesignationMaster, EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id, isouter=True
 #     ).join(
 #         UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter=True
 #     ).join(
@@ -1617,7 +1617,7 @@ def save_team_members(
 #     if approval_status and approval_status != ApprovedStatus.ALL:
 #         query = query.filter(EmployeeMaster.is_approved == approval_status.value)
 #     if is_consultant:
-#         query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+#         query = query.filter(EmployeeEmploymentDetails.is_consultant == is_consultant)
 #     if search:
 #         search = search.strip()
 #         search_term = f"%{search}%"
@@ -1668,26 +1668,26 @@ def search_employee_master_details_with_page(
         EmployeeMaster.marital_status_id,
         MaritalStatus.marital_status, 
         EmployeeMaster.joining_date,
-        EmployeeEmployementDetails.employee_category_id,
+        EmployeeEmploymentDetails.employee_category_id,
         HrEmployeeCategory.category_name,
-        EmployeeEmployementDetails.department_id,
+        EmployeeEmploymentDetails.department_id,
         HrDepartmentMaster.department_name,
-        EmployeeEmployementDetails.designation_id,
+        EmployeeEmploymentDetails.designation_id,
         HrDesignationMaster.designation,
         EmployeeContactDetails.personal_mobile_number,
         EmployeeContactDetails.personal_email_id,
         EmployeeContactDetails.remarks,
-        EmployeeEmployementDetails.is_consultant,
+        EmployeeEmploymentDetails.is_consultant,
         EmployeeMaster.is_approved,
         UserBase.is_active
     ).join(
-        EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id, isouter=True
+        EmployeeEmploymentDetails, EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id, isouter=True
     ).join(
-        HrEmployeeCategory, EmployeeEmployementDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
+        HrEmployeeCategory, EmployeeEmploymentDetails.employee_category_id == HrEmployeeCategory.id, isouter=True
     ).join(
-        HrDepartmentMaster, EmployeeEmployementDetails.department_id == HrDepartmentMaster.id, isouter=True
+        HrDepartmentMaster, EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id, isouter=True
     ).join(
-        HrDesignationMaster, EmployeeEmployementDetails.designation_id == HrDesignationMaster.id, isouter=True
+        HrDesignationMaster, EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id, isouter=True
     ).join(
         UserBase, EmployeeMaster.employee_id == UserBase.employee_id, isouter=True
     ).join(
@@ -1721,7 +1721,7 @@ def search_employee_master_details_with_page(
     if approval_status and approval_status != ApprovedStatus.ALL:
         query = query.filter(EmployeeMaster.is_approved == approval_status.value)
     if is_consultant and is_consultant != "ALL":
-      query = query.filter(EmployeeEmployementDetails.is_consultant == is_consultant)
+      query = query.filter(EmployeeEmploymentDetails.is_consultant == is_consultant)
     
     if search:
         search = search.strip()

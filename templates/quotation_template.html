@@ -213,8 +213,8 @@
         {% for item in quotations %}
 
         <tr>
-          <td>{{ item.service_goods_name }}</td>
-          <td>{{ item.service_charge }}</td>
+          <td>{{ item.service_goods_name  }}</td>
+          <td>{{ item.service_charge + item.govt_agency_fee + item.stamp_fee + item.stamp_duty }}</td>
           <td>{{ item.discount_amount }}</td>
           <td>{{ item.gst_amount }}</td>
           <td>{{ item.total_amount }}</td>

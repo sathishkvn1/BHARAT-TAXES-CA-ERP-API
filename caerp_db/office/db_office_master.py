@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType, Status
 from sqlalchemy.exc import SQLAlchemyError
 # from caerp_db.common.models import Employee
-from caerp_db.common.models import  BusinessActivity, BusinessActivityMaster, EmployeeEmployementDetails, EmployeeMaster
+from caerp_db.common.models import  BusinessActivity, BusinessActivityMaster, EmployeeEmploymentDetails, EmployeeMaster
 from caerp_db.hash import Hash
 from typing import Dict, Optional
 from datetime import date, datetime, timedelta
@@ -1223,11 +1223,11 @@ def get_consultants(db: Session):
 def get_all_non_consultant_employees(db: Session):
     query = (
         db.query(EmployeeMaster)
-        .join(EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id)
+        .join(EmployeeEmploymentDetails, EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id)
         .filter(
-            EmployeeEmployementDetails.is_consultant == 'no',
+            EmployeeEmploymentDetails.is_consultant == 'no',
             EmployeeMaster.is_deleted == 'no',
-            EmployeeEmployementDetails.is_deleted == 'no'
+            EmployeeEmploymentDetails.is_deleted == 'no'
         )
     )
     return query.all()
@@ -1238,11 +1238,11 @@ def get_all_non_consultant_employees(db: Session):
 def get_all_non_consultant_employees(db: Session):
     query = (
         db.query(EmployeeMaster)
-        .join(EmployeeEmployementDetails, EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id)
+        .join(EmployeeEmploymentDetails, EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id)
         .filter(
-            EmployeeEmployementDetails.is_consultant == 'no',
+            EmployeeEmploymentDetails.is_consultant == 'no',
             EmployeeMaster.is_deleted == 'no',
-            EmployeeEmployementDetails.is_deleted == 'no'
+            EmployeeEmploymentDetails.is_deleted == 'no'
         )
     )
     return query.all()

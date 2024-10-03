@@ -534,8 +534,8 @@ class EmployeeBankDetails(caerp_base):
     deleted_by                  = Column(Integer, default=None)
     deleted_on                  = Column(DateTime, default=None)
 
-class EmployeeEmployementDetails(caerp_base):
-    __tablename__ = "employee_employement_details"
+class EmployeeEmploymentDetails(caerp_base):
+    __tablename__ = "employee_employment_details"
 
     id                    = Column(Integer, primary_key=True, autoincrement=True)
     employee_id           = Column(Integer, nullable=False)
@@ -724,6 +724,7 @@ class BusinessActivityType(caerp_base):
 
 class BusinessActivityMaster(caerp_base):
     __tablename__ = 'app_business_activity_master'
+
 
     id                                   = Column(Integer, primary_key=True, autoincrement=True)
     business_activity_type_id            = Column(Integer,nullable=False)
