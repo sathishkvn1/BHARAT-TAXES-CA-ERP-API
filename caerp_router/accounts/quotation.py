@@ -656,11 +656,39 @@ def get_service_price_details_by_service_id(
      constitution_id: int,
      db: Session = Depends(get_db)
 ):
-     result = db_quotation.get_service_price_details_by_service_id(db,service_master_id,constitution_id)
-     if result:
-        return result
-     else:
+    """
+    Retrieve service price details by `service_master_id` and `constitution_id`.
+
+    This endpoint checks if a price has been set for a given service and constitution.
+    If the price details are available, they are returned; otherwise, an appropriate
+    message is returned, indicating that the service price is not set.
+
+    **Parameters**:
+    - `service_master_id` (int): The ID of the service.
+    - `constitution_id` (int): The ID of the constitution to check the service price for.
+
+    **Returns**:
+    - If price details exist: Returns the service price details.
+    - If no price details found: A message indicating that the service price is not set for the given service and constitution.
+
+    **Response Example** (Failure):
+    ```json
+    {
+      "success": false,
+      "message": "Service price details not found. Please ensure that the service price is set for the given service and constitution.",
+      "service_master_id": 1,
+      "constitution_id": 2
+    }
+    ```
+    """
+    result = db_quotation.get_service_price_details_by_service_id(db,service_master_id,constitution_id)
+    if result:
+        return {
+             'success': True,
+             'result': result}
+    else:
           return {
+            'success': False,
             'message': 'Service price details not found. Please ensure that the service price is set for the given service and constitution.',
             'service_master_id': service_master_id,
             'constitution_id': constitution_id
