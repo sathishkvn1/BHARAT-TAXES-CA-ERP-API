@@ -7,7 +7,7 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
-from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmployementDetails, EmployeeMaster
+from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
 from caerp_db.database import  get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
@@ -1367,23 +1367,23 @@ from datetime import datetime
 #         HrDepartmentMaster.department_name,
 #         HrDesignationMaster.designation
 #     ).join(
-#         EmployeeEmployementDetails,
-#         EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+#         EmployeeEmploymentDetails,
+#         EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
 #     ).join(
 #         EmployeeContactDetails,
 #         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
 #     ).join(
 #         HrDepartmentMaster,
-#         EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+#         EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
 #     ).join(
 #         HrDesignationMaster,
-#         EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+#         EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
 #     ).filter(
-#         EmployeeEmployementDetails.is_consultant == 'yes',
-#         EmployeeEmployementDetails.effective_from_date <= current_date,
-#         (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+#         EmployeeEmploymentDetails.is_consultant == 'yes',
+#         EmployeeEmploymentDetails.effective_from_date <= current_date,
+#         (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
 #         EmployeeMaster.is_deleted == 'no',
-#         EmployeeEmployementDetails.is_deleted == 'no',
+#         EmployeeEmploymentDetails.is_deleted == 'no',
 #         EmployeeContactDetails.is_deleted == 'no'
 #     )
 
@@ -1424,25 +1424,25 @@ def get_consultant_employees(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
         EmployeeContactDetails.effective_from_date <= current_date,
         (EmployeeContactDetails.effective_to_date == None) | (EmployeeContactDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
@@ -2117,23 +2117,23 @@ def get_consultant_employees_pdf(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
@@ -2259,23 +2259,23 @@ def get_consultant_employees_pdf(
         HrDepartmentMaster.department_name,
         HrDesignationMaster.designation
     ).join(
-        EmployeeEmployementDetails,
-        EmployeeMaster.employee_id == EmployeeEmployementDetails.employee_id
+        EmployeeEmploymentDetails,
+        EmployeeMaster.employee_id == EmployeeEmploymentDetails.employee_id
     ).join(
         EmployeeContactDetails,
         EmployeeMaster.employee_id == EmployeeContactDetails.employee_id
     ).join(
         HrDepartmentMaster,
-        EmployeeEmployementDetails.department_id == HrDepartmentMaster.id
+        EmployeeEmploymentDetails.department_id == HrDepartmentMaster.id
     ).join(
         HrDesignationMaster,
-        EmployeeEmployementDetails.designation_id == HrDesignationMaster.id
+        EmployeeEmploymentDetails.designation_id == HrDesignationMaster.id
     ).filter(
-        EmployeeEmployementDetails.is_consultant == 'yes',
-        EmployeeEmployementDetails.effective_from_date <= current_date,
-        (EmployeeEmployementDetails.effective_to_date == None) | (EmployeeEmployementDetails.effective_to_date >= current_date),
+        EmployeeEmploymentDetails.is_consultant == 'yes',
+        EmployeeEmploymentDetails.effective_from_date <= current_date,
+        (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
         EmployeeMaster.is_deleted == 'no',
-        EmployeeEmployementDetails.is_deleted == 'no',
+        EmployeeEmploymentDetails.is_deleted == 'no',
         EmployeeContactDetails.is_deleted == 'no'
     )
 
