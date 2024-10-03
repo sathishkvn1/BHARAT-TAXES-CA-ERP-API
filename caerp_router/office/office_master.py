@@ -1072,9 +1072,12 @@ def get_service_documents_data_details(
         
 #         if doc_data_status != 'ALL':
 #             if doc_data_status == "CONFIGURED":
-#                 search_conditions.append(text("a.id IS NOT NULL"))
+#                 # search_conditions.append(text("a.id IS NOT NULL"))
+#                 search_conditions.append(text("a.id IS NOT NULL AND d.is_deleted = 'no'"))
 #             elif doc_data_status == "NOT CONFIGURED":
-#                 search_conditions.append(text("a.id IS NULL"))
+#                 # search_conditions.append(text("a.id IS NULL"))
+#                 search_conditions.append(text("a.id IS NULL OR (a.id IS NOT NULL AND d.is_deleted = 'yes')"))
+    
 
 #         base_query = """
 #         SELECT
@@ -1092,9 +1095,15 @@ def get_service_documents_data_details(
 #             d.category_name,
 #             e.id AS sub_category_id,
 #             e.sub_category_name,
+            
 #             CASE
-#                 WHEN a.id IS NOT NULL THEN 'Configured'
-#                 ELSE 'Not Configured'
+#                   WHEN a.id IS NOT NULL AND EXISTS (
+#                       SELECT 1
+#                       FROM off_service_document_data_details AS dd
+#                       WHERE dd.service_document_data_master_id = a.id
+#                       AND dd.is_deleted = 'no'
+#                   ) THEN 'Configured'
+#                   ELSE 'Not Configured'
 #             END AS document_status
 #         FROM 
 #             off_service_goods_master AS g
@@ -1218,12 +1227,22 @@ def get_all_service_document_data_master(
         
         if doc_data_status != 'ALL':
             if doc_data_status == "CONFIGURED":
-                # search_conditions.append(text("a.id IS NOT NULL"))
-                search_conditions.append(text("a.id IS NOT NULL AND d.is_deleted = 'no'"))
+                search_conditions.append(text(
+                "a.id IS NOT NULL AND EXISTS ("
+                "SELECT 1 FROM off_service_document_data_details dd "
+                "WHERE dd.service_document_data_master_id = a.id "
+                "AND dd.is_deleted = 'no')"
+                 ))
+
+        # For Not Configured: No valid master or all details are deleted (is_deleted = 'yes')
             elif doc_data_status == "NOT CONFIGURED":
-                # search_conditions.append(text("a.id IS NULL"))
-                search_conditions.append(text("a.id IS NULL OR (a.id IS NOT NULL AND d.is_deleted = 'yes')"))
-    
+                search_conditions.append(text(
+                "(a.id IS NULL OR NOT EXISTS ("
+                "SELECT 1 FROM off_service_document_data_details dd "
+                "WHERE dd.service_document_data_master_id = a.id "
+                "AND dd.is_deleted = 'no'))"
+                 ))
+            
 
         base_query = """
         SELECT
@@ -1321,6 +1340,7 @@ def get_all_service_document_data_master(
     except Exception as e:
        
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 
 #------------------------------------------------------------------------------------------------
