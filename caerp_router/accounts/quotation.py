@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
 from caerp_schema.accounts.quotation_schema import AccProformaInvoiceShema, AccQuotationSchema, AccTaxInvoiceShema
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
@@ -93,6 +93,7 @@ def send_proposal(
 
 @router.get('/get_quotation_list')
 def get_quotqtion_list(
+    search_value: Union[str, int] = "ALL",
     status: Optional[str]='ALL',
     work_order_master_id : Optional[int] = None,
     quotation_id : Optional[int] = None,
@@ -100,7 +101,7 @@ def get_quotqtion_list(
     to_date : Optional[date] =None,
     db: Session = Depends(get_db)
 ): 
-   result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date)
+   result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date,search_value)
    return result
 
 
