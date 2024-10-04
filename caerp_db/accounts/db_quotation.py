@@ -958,7 +958,7 @@ def get_demand_notice(
     return result
 #-------------------------------------------------------------------------------------------------------------
    
- 
+  
 def consultation_invoice_generation(
         work_order_master_id: int,
         appointment_id: int,
@@ -971,7 +971,7 @@ def consultation_invoice_generation(
         ).first()
     if existing_data:
             return {'message': 'invoice is already exist',
-                    'invoice_id': existing_data.id}
+                    'invoice_master_id': existing_data.id}
     # Fetch work order data
    
     # Fetch appointment data
