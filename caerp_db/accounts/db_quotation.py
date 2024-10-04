@@ -1,6 +1,6 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
-from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
 from caerp_db.accounts.models import AccInvoiceDetails, AccInvoiceMaster, AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccTaxInvoiceDetails, AccTaxInvoiceMaster
@@ -958,6 +958,7 @@ def get_demand_notice(
     return result
 #-------------------------------------------------------------------------------------------------------------
    
+ 
 def consultation_invoice_generation(
         work_order_master_id: int,
         appointment_id: int,
@@ -978,8 +979,18 @@ def consultation_invoice_generation(
         OffAppointmentVisitMasterView.appointment_master_id == appointment_id,
         OffAppointmentVisitMasterView.is_deleted == 'no'
     ).first()
-
-
+    work_order_data =  db.query(WorkOrderMasterView).filter(
+        WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        WorkOrderMasterView.appointment_master_id == appointment_id,
+        WorkOrderMasterView.is_deleted == 'no'
+    ).first()
+    visit_master_id = work_order_data.visit_master_id
+    consultant_id= appointment_data.consultant_id
+    service_data =  db.query(OffAppointmentVisitDetails).filter(
+        OffAppointmentVisitDetails.visit_master_id== visit_master_id,
+        OffAppointmentVisitDetails.consultant_id== consultant_id,
+        OffAppointmentVisitDetails.is_main_service == 'yes'
+    ).all()
     # Generate voucher ID and invoice number
     voucher_id = generate_voucher_id(db)
     invoice_number = generate_book_number('INVOICE', db)
@@ -1001,18 +1012,18 @@ def consultation_invoice_generation(
     db.flush()  # To get the new_invoice.id
 
     # Fetch service data
-    service_data = db.query(WorkOrderDetailsView).filter(
-        WorkOrderDetailsView.work_order_master_id == work_order_master_id,
-        WorkOrderDetailsView.service_required == 'yes',
-        WorkOrderDetailsView.is_deleted == 'no'
-    )
+    # service_data = db.query(WorkOrderDetailsView).filter(
+    #     WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+    #     WorkOrderDetailsView.service_required == 'yes',
+    #     WorkOrderDetailsView.is_deleted == 'no'
+    # )
 
     total_invoice_amount = 0.0
 
     # Process each service
     for services in service_data:
         total_service_charge = 0.0
-        service_goods_master_id = services.service_goods_master_id
+        service_goods_master_id = services.service_id
        
 
         # Fetch consultation fee for the service
@@ -1027,30 +1038,15 @@ def consultation_invoice_generation(
             return {
                 'message' : 'Please set consultation fee '
             }
-        # Handle bundle services
-        if services.is_bundle_service == 'yes':
-            sub_services = db.query(WorkOrderDetailsView).filter(
-                WorkOrderDetailsView.bundle_service_id == services.work_order_details_id,
-                WorkOrderDetailsView.is_deleted == 'no'
-            ).all()
-
-            for sub_service in sub_services:
-                sub_service_goods_master_id = sub_service.service_goods_master_id
-                sub_consultation_fee_data = db.query(OffConsultantServiceDetails).filter(
-                    OffConsultantServiceDetails.consultant_id == appointment_data.consultant_id,
-                    OffConsultantServiceDetails.service_goods_master_id == sub_service_goods_master_id
-                ).first()
-
-                if sub_consultation_fee_data:
-                    total_service_charge += sub_consultation_fee_data.consultation_fee
+   
 
         # Create new invoice detail
         new_invoice_detail = AccTaxInvoiceDetails(
             tax_invoice_master_id=new_invoice.id,
             service_goods_master_id=service_goods_master_id,
             is_main_service = services.is_main_service,
-            is_bundle_service=services.is_bundle_service,
-            bundle_service_id=services.bundle_service_id if services.is_bundle_service == 'yes' else None,
+            is_bundle_service='yes',
+            bundle_service_id= None,
             service_charge=total_service_charge,
             taxable_amount = total_service_charge,
             total_amount = total_service_charge
@@ -1074,69 +1070,6 @@ def consultation_invoice_generation(
         }
 
 #---------------------------------------------------------------------------------------------------
-
-def get_invoice_details(
-    db: Session,
-    work_order_master_id: int,
-    invoice_master_id: int
-):
-    if work_order_master_id:
-        if invoice_master_id:
-            # Fetch the invoice master data
-            invoice_master_data = db.query(AccInvoiceMaster).filter(
-                AccInvoiceMaster.work_order_master_id == work_order_master_id,
-                AccInvoiceMaster.id == invoice_master_id,
-                AccInvoiceMaster.is_deleted == 'no'
-            ).first()
-
-            # Handle case when invoice master is not found
-            if not invoice_master_data:
-                raise HTTPException(status_code=404, detail="Invoice Master not found")
-
-            # Fetch the work order master data
-            work_order_master_data = db.query(WorkOrderMasterView).filter(
-                WorkOrderMasterView.work_order_master_id == work_order_master_id
-            ).first()
-
-            # Handle case when work order master data is not found
-            if not work_order_master_data:
-                raise HTTPException(status_code=404, detail="Work Order Master not found")
-
-            # Fetch the invoice details with the service name from joined table
-            invoice_details_data = db.query(
-                AccInvoiceDetails,
-                OffViewServiceGoodsMaster.service_goods_name
-            ).join(
-                OffViewServiceGoodsMaster,
-                AccInvoiceDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            ).filter(
-                AccInvoiceDetails.invoice_master_id == invoice_master_data.id,
-                AccInvoiceDetails.is_deleted == 'no'
-            ).all()
-
-            # Build the list of invoice details
-            invoice_details_list = []
-            for detail, service_name in invoice_details_data:
-                detail_dict = detail.__dict__.copy()  # Copy the details to modify
-                detail_dict['service_goods_name'] = service_name
-                invoice_details_list.append(AccProformaInvoiceDetailsSchema.model_validate(detail_dict))
-
-            # Construct response schema
-            invoice_response_data = AccInvoiceResponceSchema(
-                invoice_master=AccProformaInvoiceMasterSchema.model_validate(invoice_master_data.__dict__),
-                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                invoice_details=invoice_details_list
-            )
-
-            return invoice_response_data
-        else:
-            raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-    else:
-        raise HTTPException(status_code=400, detail="Work Order Master ID is required")
-
- 
-
-#-------------------------------------------------------------------------------------------------------------
 
 def get_proforma_invoice_details(
     db: Session,
