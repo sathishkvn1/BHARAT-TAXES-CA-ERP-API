@@ -1337,34 +1337,133 @@ def add_employee_to_team(
 
 
 
+# @router.get("/test1/check_username_mobile_and_email")
+# def check_user_and_mobile(
+#     employee_id: Optional[int] = None, 
+#     user_name: Optional[str] = None, 
+#     personal_mobile_number: Optional[str] = None,
+#     personal_email_id: Optional[str] = None,  
+#     personal_whatsapp_number: Optional[str] = None,  
+#     db: Session = Depends(get_db)
+# ):
+#     result = {"success": True, "messages": []}
+
+#     # Treat "null" (string) as None for each parameter
+#     if user_name == "null":
+#         user_name = None
+#     if personal_mobile_number == "null":
+#         personal_mobile_number = None
+#     if personal_email_id == "null":
+#         personal_email_id = None
+#     if personal_whatsapp_number == "null":
+#         personal_whatsapp_number = None
+
+#     # Check if user_name is provided and not None
+#     if user_name:
+#         # Check if the username exists
+#         username_exists_query = db.query(UserBase).filter(UserBase.user_name == user_name)
+
+#         if employee_id:
+#             # Exclude the current employee's record while checking for uniqueness
+#             username_exists_query = username_exists_query.filter(UserBase.employee_id != employee_id)
+
+#         username_exists = db.query(username_exists_query.exists()).scalar()
+
+#         if username_exists:
+#             result["success"] = False
+#             result["messages"].append("Username exists")
+#         else:
+#             result["messages"].append("Username is available")
+
+#     # Check if personal_mobile_number is provided and not None
+#     if personal_mobile_number:
+#         mobile_exists_query = db.query(EmployeeContactDetails).filter(
+#             EmployeeContactDetails.personal_mobile_number == personal_mobile_number,
+#             EmployeeContactDetails.is_deleted == 'no'
+#         )
+
+#         if employee_id:
+#             mobile_exists_query = mobile_exists_query.filter(EmployeeContactDetails.employee_id != employee_id)
+
+#         mobile_exists = db.query(mobile_exists_query.exists()).scalar()
+
+#         if mobile_exists:
+#             result["success"] = False
+#             result["messages"].append("Mobile number exists")
+#         else:
+#             result["messages"].append("Mobile number is available")
+
+#     # Check if personal_email_id is provided and not None
+#     if personal_email_id:
+#         email_exists_query = db.query(EmployeeContactDetails).filter(
+#             EmployeeContactDetails.personal_email_id == personal_email_id,
+#             EmployeeContactDetails.is_deleted == 'no'
+#         )
+
+#         if employee_id:
+#             email_exists_query = email_exists_query.filter(EmployeeContactDetails.employee_id != employee_id)
+
+#         email_exists = db.query(email_exists_query.exists()).scalar()
+
+#         if email_exists:
+#             result["success"] = False
+#             result["messages"].append("Email exists")
+#         else:
+#             result["messages"].append("Email is available")
+
+#     # Check if personal_whatsapp_number is provided and not None
+#     if personal_whatsapp_number:
+#         whatsapp_exists_query = db.query(EmployeeContactDetails).filter(
+#             EmployeeContactDetails.personal_whatsapp_number == personal_whatsapp_number,
+#             EmployeeContactDetails.is_deleted == 'no'
+#         )
+
+#         if employee_id:
+#             whatsapp_exists_query = whatsapp_exists_query.filter(EmployeeContactDetails.employee_id != employee_id)
+
+#         whatsapp_exists = db.query(whatsapp_exists_query.exists()).scalar()
+
+#         if whatsapp_exists:
+#             result["success"] = False
+#             result["messages"].append("WhatsApp number exists")
+#         else:
+#             result["messages"].append("WhatsApp number is available")
+
+#     # If no valid input is provided
+#     if not user_name and not personal_mobile_number and not personal_email_id and not personal_whatsapp_number:
+#         return {
+#             "success": False,
+#             "message": "No valid input provided"
+#         }
+
+#     return result
+
 @router.get("/check_username_mobile_and_email")
 def check_user_and_mobile(
     employee_id: Optional[int] = None, 
-    user_name: Optional[str] = None, 
-    personal_mobile_number: Optional[str] = None,
-    personal_email_id: Optional[str] = None,  
-    personal_whatsapp_number: Optional[str] = None,  
+    user_name: Optional[str] = "NULL", 
+    personal_mobile_number: Optional[str] = "NULL",
+    personal_email_id: Optional[str] = "NULL",  
+    personal_whatsapp_number: Optional[str] = "NULL",  
     db: Session = Depends(get_db)
 ):
     result = {"success": True, "messages": []}
 
-    # Treat "null" (string) as None for each parameter
-    if user_name == "null":
+ 
+    if user_name == "NULL":
         user_name = None
-    if personal_mobile_number == "null":
+    if personal_mobile_number == "NULL":
         personal_mobile_number = None
-    if personal_email_id == "null":
+    if personal_email_id == "NULL":
         personal_email_id = None
-    if personal_whatsapp_number == "null":
+    if personal_whatsapp_number == "NULL":
         personal_whatsapp_number = None
 
     # Check if user_name is provided and not None
     if user_name:
-        # Check if the username exists
         username_exists_query = db.query(UserBase).filter(UserBase.user_name == user_name)
 
         if employee_id:
-            # Exclude the current employee's record while checking for uniqueness
             username_exists_query = username_exists_query.filter(UserBase.employee_id != employee_id)
 
         username_exists = db.query(username_exists_query.exists()).scalar()
