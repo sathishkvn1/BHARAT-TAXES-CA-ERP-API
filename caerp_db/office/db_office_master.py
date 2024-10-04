@@ -3518,198 +3518,399 @@ def get_business_activity_by_master_id(
 
 #----------------------------------------------------------------------------------------------------
 
-def save_work_order(
-    request: CreateWorkOrderRequest,
-    db: Session,
-    user_id: int,
-    work_order_master_id: Optional[int] = 0
-):
-    if work_order_master_id == 0:
-        try:
-            work_order_number = generate_book_number('WORK_ORDER', db)
+# def save_work_order(
+#     request: CreateWorkOrderRequest,
+#     db: Session,
+#     user_id: int,
+#     work_order_master_id: Optional[int] = 0
+# ):
+#     if work_order_master_id == 0:
+#         try:
+#             work_order_number = generate_book_number('WORK_ORDER', db)
 
-            master_data = request.master.model_dump()
-            master_data['created_on'] = datetime.now()
-            master_data['created_by'] = user_id
-            master_data['work_order_number'] = work_order_number
-            master_data['work_order_date'] = datetime.now()
-            master = OffWorkOrderMaster(**master_data)
-            db.add(master)
-            db.flush()
+#             master_data = request.master.model_dump()
+#             master_data['created_on'] = datetime.now()
+#             master_data['created_by'] = user_id
+#             master_data['work_order_number'] = work_order_number
+#             master_data['work_order_date'] = datetime.now()
+#             master = OffWorkOrderMaster(**master_data)
+#             db.add(master)
+#             db.flush()
 
-            for main_detail in request.main_service:
-                detail_data = main_detail.model_dump()
-                detail_data['work_order_master_id'] = master.id
-                detail_data['created_by'] = user_id
-                detail_data['created_on'] = datetime.now()
+#             for main_detail in request.main_service:
+#                 detail_data = main_detail.model_dump()
+#                 detail_data['work_order_master_id'] = master.id
+#                 detail_data['created_by'] = user_id
+#                 detail_data['created_on'] = datetime.now()
                 
-                # Remove sub_services before creating the main work order detail
-                sub_services = detail_data.pop('sub_services', [])
+#                 # Remove sub_services before creating the main work order detail
+#                 sub_services = detail_data.pop('sub_services', [])
                 
-                work_order_detail = OffWorkOrderDetails(**detail_data)
-                db.add(work_order_detail)
-                db.flush()
-                for sub_detail in sub_services:
-                    sub_detail_data = sub_detail  # Already a dictionary
-                    sub_detail_data['work_order_master_id'] = master.id
-                    sub_detail_data['created_by'] = user_id
-                    sub_detail_data['created_on'] = datetime.now()
-                    sub_detail_data['bundle_service_id'] = work_order_detail.id
+#                 work_order_detail = OffWorkOrderDetails(**detail_data)
+#                 db.add(work_order_detail)
+#                 db.flush()
+#                 for sub_detail in sub_services:
+#                     sub_detail_data = sub_detail  # Already a dictionary
+#                     sub_detail_data['work_order_master_id'] = master.id
+#                     sub_detail_data['created_by'] = user_id
+#                     sub_detail_data['created_on'] = datetime.now()
+#                     sub_detail_data['bundle_service_id'] = work_order_detail.id
 
-                    # Remove sub_services from sub_detail_data if present
-                    sub_detail_data.pop('sub_services', None)
+#                     # Remove sub_services from sub_detail_data if present
+#                     sub_detail_data.pop('sub_services', None)
                     
-                    work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
-                    db.add(work_order_sub_detail)
+#                     work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+#                     db.add(work_order_sub_detail)
 
-            db.commit()
-            return {"message": "Work order created successfully", "work_order_master_id": master.id, "success": "success"}
+#             db.commit()
+#             return {"message": "Work order created successfully", "work_order_master_id": master.id, "success": "success"}
 
-        except SQLAlchemyError as e:
-            db.rollback()
-            raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order, {str(e)}")
+#         except SQLAlchemyError as e:
+#             db.rollback()
+#             raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order, {str(e)}")
 
-    else:
-        try:
-            master = db.query(OffWorkOrderMaster).filter(
-                OffWorkOrderMaster.id == work_order_master_id
-            ).first()
+#     else:
+#         try:
+#             master = db.query(OffWorkOrderMaster).filter(
+#                 OffWorkOrderMaster.id == work_order_master_id
+#             ).first()
 
-            if not master:
-                return {
-                    'message': 'Work order master not found'
-                }
+#             if not master:
+#                 return {
+#                     'message': 'Work order master not found'
+#                 }
 
-            master_data = request.master.model_dump()  # Use .dict() for Pydantic models
-            for key, value in master_data.items():
-                if key != "id":
-                    setattr(master, key, value)
+#             master_data = request.master.model_dump()  # Use .dict() for Pydantic models
+#             for key, value in master_data.items():
+#                 if key != "id":
+#                     setattr(master, key, value)
 
-            master.modified_on = datetime.now()
-            master.modified_by = user_id
+#             master.modified_on = datetime.now()
+#             master.modified_by = user_id
 
-            db.commit()
-            db.flush()
+#             db.commit()
+#             db.flush()
 
-            existing_detail_ids = {
-                detail.id for detail in db.query(OffWorkOrderDetails.id).filter(
-                    OffWorkOrderDetails.work_order_master_id == work_order_master_id
-                ).all()
-            }
-            provided_detail_ids = {detail.id for detail in request.main_service if detail.id}
+#             existing_detail_ids = {
+#                 detail.id for detail in db.query(OffWorkOrderDetails.id).filter(
+#                     OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                 ).all()
+#             }
+#             provided_detail_ids = {detail.id for detail in request.main_service if detail.id}
             
-            # Update existing records or add new ones
-            for detail in request.main_service:
-                sub_services = detail.sub_services if hasattr(detail, 'sub_services') else []
-                provided_detail_ids.update(sub_detail.id for sub_detail in sub_services if sub_detail.id)
+#             # Update existing records or add new ones
+#             for detail in request.main_service:
+#                 sub_services = detail.sub_services if hasattr(detail, 'sub_services') else []
+#                 provided_detail_ids.update(sub_detail.id for sub_detail in sub_services if sub_detail.id)
 
-                if detail.id and detail.id in existing_detail_ids:
-                    work_order_detail = db.query(OffWorkOrderDetails).filter(
-                        OffWorkOrderDetails.id == detail.id,
-                        OffWorkOrderDetails.work_order_master_id == work_order_master_id
-                    ).first()
+#                 if detail.id and detail.id in existing_detail_ids:
+#                     work_order_detail = db.query(OffWorkOrderDetails).filter(
+#                         OffWorkOrderDetails.id == detail.id,
+#                         OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                     ).first()
 
-                    if not work_order_detail:
-                        return {
-                            'message': f"Work order detail with id {detail.id} not found"
-                        }
+#                     if not work_order_detail:
+#                         return {
+#                             'message': f"Work order detail with id {detail.id} not found"
+#                         }
 
-                    detail_data = detail.model_dump()  # Use .dict() for Pydantic models
-                    for key, value in detail_data.items():
-                        if key != "id":
-                            setattr(work_order_detail, key, value)
-                    work_order_detail.is_deleted = 'no'
-                    work_order_detail.modified_on = datetime.now()
-                    work_order_detail.modified_by = user_id
+#                     detail_data = detail.model_dump()  # Use .dict() for Pydantic models
+#                     for key, value in detail_data.items():
+#                         if key != "id":
+#                             setattr(work_order_detail, key, value)
+#                     work_order_detail.is_deleted = 'no'
+#                     work_order_detail.modified_on = datetime.now()
+#                     work_order_detail.modified_by = user_id
 
-                    # Handle sub-details for existing records
-                    for sub_detail in sub_services:
-                        if sub_detail.id in existing_detail_ids:
-                            work_order_sub_detail = db.query(OffWorkOrderDetails).filter(
-                                OffWorkOrderDetails.id == sub_detail.id,
-                                OffWorkOrderDetails.work_order_master_id == work_order_master_id
-                            ).first()
+#                     # Handle sub-details for existing records
+#                     for sub_detail in sub_services:
+#                         if sub_detail.id in existing_detail_ids:
+#                             work_order_sub_detail = db.query(OffWorkOrderDetails).filter(
+#                                 OffWorkOrderDetails.id == sub_detail.id,
+#                                 OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                             ).first()
 
-                            if not work_order_sub_detail:
-                                return {
-                                    'message': f"Work order sub-detail with id {sub_detail.id} not found"
-                                }
+#                             if not work_order_sub_detail:
+#                                 return {
+#                                     'message': f"Work order sub-detail with id {sub_detail.id} not found"
+#                                 }
 
-                            sub_detail_data = sub_detail.dict()  # Use .dict() for Pydantic models
-                            for key, value in sub_detail_data.items():
-                                if key != "id":
-                                    setattr(work_order_sub_detail, key, value)
+#                             sub_detail_data = sub_detail.dict()  # Use .dict() for Pydantic models
+#                             for key, value in sub_detail_data.items():
+#                                 if key != "id":
+#                                     setattr(work_order_sub_detail, key, value)
 
-                            work_order_sub_detail.modified_on = datetime.now()
-                            work_order_sub_detail.modified_by = user_id
-                            work_order_sub_detail.is_deleted = 'no'
-                else:
-                    detail_data = detail.model_dump()  # Use .dict() for Pydantic models
-                    detail_data['work_order_master_id'] = master.id
-                    detail_data['created_by'] = user_id
-                    detail_data['created_on'] = datetime.now()
+#                             work_order_sub_detail.modified_on = datetime.now()
+#                             work_order_sub_detail.modified_by = user_id
+#                             work_order_sub_detail.is_deleted = 'no'
+#                 else:
+#                     detail_data = detail.model_dump()  # Use .dict() for Pydantic models
+#                     detail_data['work_order_master_id'] = master.id
+#                     detail_data['created_by'] = user_id
+#                     detail_data['created_on'] = datetime.now()
                     
-                    # Remove sub_services before creating the detail
-                    sub_services = detail_data.pop('sub_services', [])
+#                     # Remove sub_services before creating the detail
+#                     sub_services = detail_data.pop('sub_services', [])
                     
-                    work_order_detail = OffWorkOrderDetails(**detail_data)
-                    db.add(work_order_detail)
-                    db.flush()
+#                     work_order_detail = OffWorkOrderDetails(**detail_data)
+#                     db.add(work_order_detail)
+#                     db.flush()
 
-                    for sub_detail in sub_services:
-                        sub_detail_data = sub_detail  # Already a dictionary
-                        sub_detail_data['work_order_master_id'] = master.id
-                        sub_detail_data['created_by'] = user_id
-                        sub_detail_data['created_on'] = datetime.now()
-                        sub_detail_data['bundle_service_id'] = work_order_detail.id
+#                     for sub_detail in sub_services:
+#                         sub_detail_data = sub_detail  # Already a dictionary
+#                         sub_detail_data['work_order_master_id'] = master.id
+#                         sub_detail_data['created_by'] = user_id
+#                         sub_detail_data['created_on'] = datetime.now()
+#                         sub_detail_data['bundle_service_id'] = work_order_detail.id
 
-                        # Remove sub_services from sub_detail_data if present
-                        sub_detail_data.pop('sub_services', None)
+#                         # Remove sub_services from sub_detail_data if present
+#                         sub_detail_data.pop('sub_services', None)
 
-                        work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
-                        db.add(work_order_sub_detail)
+#                         work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+#                         db.add(work_order_sub_detail)
 
-            # Set is_details = 'yes' for existing records not in the provided details list
-            for existing_id in existing_detail_ids - provided_detail_ids:
+#             # Set is_details = 'yes' for existing records not in the provided details list
+#             for existing_id in existing_detail_ids - provided_detail_ids:
                
-                work_order_detail = db.query(OffWorkOrderDetails).filter(
-                    OffWorkOrderDetails.id == existing_id
-                ).first()
+#                 work_order_detail = db.query(OffWorkOrderDetails).filter(
+#                     OffWorkOrderDetails.id == existing_id
+#                 ).first()
 
-                if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
-                    sub_services = db.query(OffWorkOrderDetails).filter(
-                        OffWorkOrderDetails.bundle_service_id == work_order_detail.id
-                    ).all()
+#                 if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
+#                     sub_services = db.query(OffWorkOrderDetails).filter(
+#                         OffWorkOrderDetails.bundle_service_id == work_order_detail.id
+#                     ).all()
 
-                    if sub_services:  # Check if sub_services is not empty
-                        for service in sub_services:
-                            service.bundle_service_id = None
-                            service.modified_on = datetime.now()
-                            service.modified_by = user_id
-                            db.add(service)  # Add to the session
+#                     if sub_services:  # Check if sub_services is not empty
+#                         for service in sub_services:
+#                             service.bundle_service_id = None
+#                             service.modified_on = datetime.now()
+#                             service.modified_by = user_id
+#                             db.add(service)  # Add to the session
 
-                depended_services = db.query(WorkOrderDependancy).filter(
-                    WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
-                ).all()
-                for depended_service in depended_services:
-                    depended_service.is_deleted = 'yes'
-                    db.add(depended_service)
+#                 depended_services = db.query(WorkOrderDependancy).filter(
+#                     WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
+#                 ).all()
+#                 for depended_service in depended_services:
+#                     depended_service.is_deleted = 'yes'
+#                     db.add(depended_service)
 
-                work_order_detail.is_deleted = 'yes'
-                work_order_detail.modified_on = datetime.now()
-                work_order_detail.modified_by = user_id
-                db.add(work_order_detail)  # Add to the session
+#                 work_order_detail.is_deleted = 'yes'
+#                 work_order_detail.modified_on = datetime.now()
+#                 work_order_detail.modified_by = user_id
+#                 db.add(work_order_detail)  # Add to the session
 
-            db.commit()  # Commit all changes at once
+#             db.commit()  # Commit all changes at once
 
-            return {"message": "Work order updated successfully", "work_order_master_id": master.id, "success": "success"}
+#             return {"message": "Work order updated successfully", "work_order_master_id": master.id, "success": "success"}
 
-        except SQLAlchemyError as e:
-            db.rollback()
-            raise HTTPException(status_code=500, detail=str(e))
+#         except SQLAlchemyError as e:
+#             db.rollback()
+#             raise HTTPException(status_code=500, detail=str(e))
+
 
 #====================================================================================
 
+# def save_work_order(
+#     request: CreateWorkOrderRequest,
+#     db: Session,
+#     user_id: int,
+#     work_order_master_id: Optional[int] = 0
+# ):
+#     if work_order_master_id == 0:
+#         try:
+#             work_order_number = generate_book_number('WORK_ORDER', db)
+
+#             master_data = request.master.model_dump()
+#             master_data['created_on'] = datetime.now()
+#             master_data['created_by'] = user_id
+#             master_data['work_order_number'] = work_order_number
+#             master_data['work_order_date'] = datetime.now()
+#             master = OffWorkOrderMaster(**master_data)
+#             db.add(master)
+#             db.flush()
+
+#             for main_detail in request.main_service:
+#                 detail_data = main_detail.model_dump()
+#                 detail_data['work_order_master_id'] = master.id
+#                 detail_data['created_by'] = user_id
+#                 detail_data['created_on'] = datetime.now()
+                
+#                 # Remove sub_services before creating the main work order detail
+#                 sub_services = detail_data.pop('sub_services', [])
+                
+#                 work_order_detail = OffWorkOrderDetails(**detail_data)
+#                 db.add(work_order_detail)
+#                 db.flush()
+#                 for sub_detail in sub_services:
+#                     sub_detail_data = sub_detail  # Already a dictionary
+#                     sub_detail_data['work_order_master_id'] = master.id
+#                     sub_detail_data['created_by'] = user_id
+#                     sub_detail_data['created_on'] = datetime.now()
+#                     sub_detail_data['bundle_service_id'] = work_order_detail.id
+
+#                     # Remove sub_services from sub_detail_data if present
+#                     sub_detail_data.pop('sub_services', None)
+                    
+#                     work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+#                     db.add(work_order_sub_detail)
+
+#             db.commit()
+#             return {"message": "Work order created successfully", 
+#                     "work_order_master_id": master.id,
+#                     "work_order_number":master.work_order_number,
+#                     "work_order_date": master.work_order_date,
+#                       "success": "success"}
+
+#         except SQLAlchemyError as e:
+#             db.rollback()
+#             raise HTTPException(status_code=500, detail=f"An error occurred while creating the work order, {str(e)}")
+
+#     else:
+#         try:
+#             master = db.query(OffWorkOrderMaster).filter(
+#                 OffWorkOrderMaster.id == work_order_master_id
+#             ).first()
+
+#             if not master:
+#                 return {
+#                     'message': 'Work order master not found'
+#                 }
+
+#             master_data = request.master.model_dump()  # Use .dict() for Pydantic models
+#             for key, value in master_data.items():
+#                 if key != "id":
+#                     setattr(master, key, value)
+
+#             master.modified_on = datetime.now()
+#             master.modified_by = user_id
+
+#             db.commit()
+#             db.flush()
+
+#             existing_detail_ids = {
+#                 detail.id for detail in db.query(OffWorkOrderDetails.id).filter(
+#                     OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                 ).all()
+#             }
+#             provided_detail_ids = {detail.id for detail in request.main_service if detail.id}
+            
+#             # Update existing records or add new ones
+#             for detail in request.main_service:
+#                 sub_services = detail.sub_services if hasattr(detail, 'sub_services') else []
+#                 provided_detail_ids.update(sub_detail.id for sub_detail in sub_services if sub_detail.id)
+
+#                 if detail.id and detail.id in existing_detail_ids:
+#                     work_order_detail = db.query(OffWorkOrderDetails).filter(
+#                         OffWorkOrderDetails.id == detail.id,
+#                         OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                     ).first()
+
+#                     if not work_order_detail:
+#                         return {
+#                             'message': f"Work order detail with id {detail.id} not found"
+#                         }
+
+#                     detail_data = detail.model_dump()  # Use .dict() for Pydantic models
+#                     for key, value in detail_data.items():
+#                         if key != "id":
+#                             setattr(work_order_detail, key, value)
+#                     work_order_detail.is_deleted = 'no'
+#                     work_order_detail.modified_on = datetime.now()
+#                     work_order_detail.modified_by = user_id
+
+#                     # Handle sub-details for existing records
+#                     for sub_detail in sub_services:
+#                         if sub_detail.id in existing_detail_ids:
+#                             work_order_sub_detail = db.query(OffWorkOrderDetails).filter(
+#                                 OffWorkOrderDetails.id == sub_detail.id,
+#                                 OffWorkOrderDetails.work_order_master_id == work_order_master_id
+#                             ).first()
+
+#                             if not work_order_sub_detail:
+#                                 return {
+#                                     'message': f"Work order sub-detail with id {sub_detail.id} not found"
+#                                 }
+
+#                             sub_detail_data = sub_detail.dict()  # Use .dict() for Pydantic models
+#                             for key, value in sub_detail_data.items():
+#                                 if key != "id":
+#                                     setattr(work_order_sub_detail, key, value)
+
+#                             work_order_sub_detail.modified_on = datetime.now()
+#                             work_order_sub_detail.modified_by = user_id
+#                             work_order_sub_detail.is_deleted = 'no'
+#                 else:
+#                     detail_data = detail.model_dump()  # Use .dict() for Pydantic models
+#                     detail_data['work_order_master_id'] = master.id
+#                     detail_data['created_by'] = user_id
+#                     detail_data['created_on'] = datetime.now()
+                    
+#                     # Remove sub_services before creating the detail
+#                     sub_services = detail_data.pop('sub_services', [])
+                    
+#                     work_order_detail = OffWorkOrderDetails(**detail_data)
+#                     db.add(work_order_detail)
+#                     db.flush()
+
+#                     for sub_detail in sub_services:
+#                         sub_detail_data = sub_detail  # Already a dictionary
+#                         sub_detail_data['work_order_master_id'] = master.id
+#                         sub_detail_data['created_by'] = user_id
+#                         sub_detail_data['created_on'] = datetime.now()
+#                         sub_detail_data['bundle_service_id'] = work_order_detail.id
+
+#                         # Remove sub_services from sub_detail_data if present
+#                         sub_detail_data.pop('sub_services', None)
+
+#                         work_order_sub_detail = OffWorkOrderDetails(**sub_detail_data)
+#                         db.add(work_order_sub_detail)
+
+#             # Set is_details = 'yes' for existing records not in the provided details list
+#             for existing_id in existing_detail_ids - provided_detail_ids:
+               
+#                 work_order_detail = db.query(OffWorkOrderDetails).filter(
+#                     OffWorkOrderDetails.id == existing_id
+#                 ).first()
+
+#                 if work_order_detail.is_main_service == 'yes' or work_order_detail.is_bundle_service == 'yes':
+#                     sub_services = db.query(OffWorkOrderDetails).filter(
+#                         OffWorkOrderDetails.bundle_service_id == work_order_detail.id
+#                     ).all()
+
+#                     if sub_services:  # Check if sub_services is not empty
+#                         for service in sub_services:
+#                             service.bundle_service_id = None
+#                             service.modified_on = datetime.now()
+#                             service.modified_by = user_id
+#                             db.add(service)  # Add to the session
+
+#                 depended_services = db.query(WorkOrderDependancy).filter(
+#                     WorkOrderDependancy.dependent_on_work_id == work_order_detail.id
+#                 ).all()
+#                 for depended_service in depended_services:
+#                     depended_service.is_deleted = 'yes'
+#                     db.add(depended_service)
+
+#                 work_order_detail.is_deleted = 'yes'
+#                 work_order_detail.modified_on = datetime.now()
+#                 work_order_detail.modified_by = user_id
+#                 db.add(work_order_detail)  # Add to the session
+
+#             db.commit()  # Commit all changes at once
+
+#             return {"message": "Work order updated successfully", 
+#                     "work_order_master_id": master.id,
+#                     "work_order_number":master.work_order_number,
+#                     "work_order_date": master.work_order_date,
+#                     "success": "success"}
+
+#         except SQLAlchemyError as e:
+#             db.rollback()
+#             raise HTTPException(status_code=500, detail=str(e))
+
+
+
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session,
@@ -3718,6 +3919,7 @@ def save_work_order(
 ):
     if work_order_master_id == 0:
         try:
+           
             work_order_number = generate_book_number('WORK_ORDER', db)
 
             master_data = request.master.model_dump()
@@ -3907,6 +4109,9 @@ def save_work_order(
         except SQLAlchemyError as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(
