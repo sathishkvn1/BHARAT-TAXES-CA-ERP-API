@@ -1205,7 +1205,7 @@ def get_consultants(db: Session):
     FROM 
         employee_master em
     INNER JOIN 
-        employee_employement_details eed
+        employee_employment_details eed
     ON 
         em.employee_id = eed.employee_id
     WHERE 
