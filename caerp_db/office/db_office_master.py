@@ -4224,13 +4224,29 @@ def save_work_order_service_details(
                 existing_detail.is_deleted = 'yes'
 
         db.commit()
+        
+          # Step: Update sub-services' constitution if the main service is a bundle
+        if work_order_details.is_bundle_service == 'yes' and work_order_details.is_main_service == 'yes':
+            # Fetch all sub-services with the same bundle_service_id
+            
+            sub_services = db.query(OffWorkOrderDetails).filter(
+                OffWorkOrderDetails.bundle_service_id == work_order_details.id,
+                OffWorkOrderDetails.is_main_service == 'no' ,
+                OffWorkOrderDetails.is_deleted=='no' # Ensure we are updating only sub-services
+            ).all()
+
+            # Update constitution for each sub-service
+            for sub_service in sub_services:
+                sub_service.constitution_id = work_order_details.constitution_id
+
+            db.commit()
+
 
         return {"message": "Work order set details saved successfully"}
     
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #-------------------------------------------------------------------------------------------------
 def get_work_order_service_details(
