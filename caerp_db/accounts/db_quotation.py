@@ -588,30 +588,31 @@ def generate_profoma_invoice_details(
             
             for quotation_detail in relevant_quotation_details:
                 # Initialize totals
-                total_service_charge = quotation_detail.service_charge
-                total_govt_agency_fee = quotation_detail.govt_agency_fee
-                total_stamp_fee = quotation_detail.stamp_fee
-                total_stamp_duty = quotation_detail.stamp_duty
-                total_amount = quotation_detail.total_amount
+                total_service_charge    = quotation_detail.service_charge
+                total_govt_agency_fee   = quotation_detail.govt_agency_fee
+                total_stamp_fee         = quotation_detail.stamp_fee
+                total_stamp_duty        = quotation_detail.stamp_duty
+                total_amount            = quotation_detail.total_amount
+                taxable_amount          = quotation_detail.taxable_amount
 
                 # Create Invoice Detail Entry
                 invoice_detail = AccProformaInvoiceDetails(
-                    proforma_invoice_master_id=proforma_invoice_master.id,
-                    service_goods_master_id=quotation_detail.service_goods_master_id,
-                    is_bundle_service=quotation_detail.is_bundle_service,
-                    bundle_service_id=quotation_detail.bundle_service_id,
-                    service_charge=total_service_charge,
-                    govt_agency_fee=total_govt_agency_fee,
-                    stamp_duty=total_stamp_duty,
-                    stamp_fee=total_stamp_fee,
-                    quantity=1,  
+                    proforma_invoice_master_id  =proforma_invoice_master.id,
+                    service_goods_master_id     =quotation_detail.service_goods_master_id,
+                    is_bundle_service           =quotation_detail.is_bundle_service,
+                    bundle_service_id           =quotation_detail.bundle_service_id,
+                    service_charge              =total_service_charge,
+                    govt_agency_fee             =total_govt_agency_fee,
+                    stamp_duty  =total_stamp_duty,
+                    stamp_fee   =total_stamp_fee,
+                    quantity    =1,  
                     discount_amount = quotation_detail.discount_amount,
-                    gst_percent=quotation_detail.gst_percent,  
-                    gst_amount=quotation_detail.gst_amount,  # To be updated after calculation
-                    taxable_amount=total_service_charge,
+                    gst_percent     =quotation_detail.gst_percent,  
+                    gst_amount      =quotation_detail.gst_amount,  # To be updated after calculation
+                    taxable_amount  =taxable_amount,
                     # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                    total_amount  = total_amount,
-                    is_deleted='no'
+                    total_amount    = total_amount,
+                    is_deleted      ='no'
                 )
 
                 db.add(invoice_detail)
@@ -625,11 +626,12 @@ def generate_profoma_invoice_details(
                 proforma_invoice_master_id = proforma_invoice_master.id
                 proforma_invoice_detail_id = invoice_detail.id
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
-
+       
         # Update Invoice Master with total amount
         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
         proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
         proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
+        
         proforma_invoice_master.grand_total_amount          = total_invoice_amount
         proforma_invoice_master.net_amount                  = total_invoice_amount
         db.commit()
@@ -642,7 +644,6 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #----------------------------------------------------------------------------------
