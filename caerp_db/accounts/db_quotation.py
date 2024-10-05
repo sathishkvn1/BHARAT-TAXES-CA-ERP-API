@@ -627,8 +627,11 @@ def generate_profoma_invoice_details(
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
 
         # Update Invoice Master with total amount
-        proforma_invoice_master.grand_total_amount = total_invoice_amount
-        proforma_invoice_master.net_amount = total_invoice_amount
+        proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
+        proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
+        proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
+        proforma_invoice_master.grand_total_amount          = total_invoice_amount
+        proforma_invoice_master.net_amount                  = total_invoice_amount
         db.commit()
 
         return {
