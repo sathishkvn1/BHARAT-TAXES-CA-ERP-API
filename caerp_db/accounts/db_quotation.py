@@ -631,9 +631,9 @@ def generate_profoma_invoice_details(
         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
         proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
         proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
-        
-        proforma_invoice_master.grand_total_amount          = total_invoice_amount
-        proforma_invoice_master.net_amount                  = total_invoice_amount
+
+        proforma_invoice_master.grand_total_amount          = quotation_master_data.grand_total
+        proforma_invoice_master.net_amount                  = quotation_master_data.net_amount
         db.commit()
 
         return {
@@ -644,6 +644,9 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 
 #----------------------------------------------------------------------------------
