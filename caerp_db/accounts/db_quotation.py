@@ -1,6 +1,6 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
-from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster, OffViewWorkOrderBusinessPlaceDetails,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
 from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccTaxInvoiceDetails, AccTaxInvoiceMaster
@@ -723,14 +723,24 @@ def save_service_task_details(
    
 
 #----------------------------------------------------------------------------------------------
+
 def save_customer_data_document_master(
-        db: Session,
-        work_order_master_id: int,
-        work_order_details_id: int,
-        service_id: int,
-        consultation_id: int
+    db: Session,
+    work_order_master_id: int,
+    work_order_details_id: int,
+    service_id: int,
+    consultation_id: int
 ):
-    # SQL query to fetch document data
+    # Check for business place data
+    business_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
+        OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id,
+        OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
+    ).first()
+
+    # Determine if filtering by business place is necessary
+    filter_by_business_place = bool(business_place_data)
+
+    # SQL query to fetch document data with conditional filtering based on business place
     sql = text("""
         SELECT 
             d.*, b.document_data_category_id
@@ -743,15 +753,19 @@ def save_customer_data_document_master(
         WHERE 
             a.service_goods_master_id = :service_id 
             AND a.constitution_id = :consultation_id
+            AND   b.document_data_category_id != 3
+           
     """)
 
-    # Execute the query and fetch results as dictionaries
-    result = db.execute(sql, {'service_id': service_id, 'consultation_id': consultation_id}).mappings()
+    # Execute the query with filtering condition based on business place data
+    result = db.execute(sql, {
+        'service_id': service_id,
+        'consultation_id': consultation_id,
+    }).mappings()
 
     # Loop through the query results and insert into CustomerDataDocumentMaster
     for row in result:
-        # Access columns by name
-        document_data_master_id = row['id']  # Assuming 'id' is the column name for document_data_master_id
+        document_data_master_id = row['id']
         document_data_category_id = row['document_data_category_id']
 
         # Create a new instance of CustomerDataDocumentMaster
@@ -767,8 +781,8 @@ def save_customer_data_document_master(
    
     db.commit()
 
-    # Optionally, return something or just None
-    return {'message' : 'success'}
+    return {'message' : 'success',
+            'id': new_document.id}
 
 
 

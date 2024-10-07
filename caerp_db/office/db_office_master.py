@@ -4241,7 +4241,20 @@ def save_work_order_service_details(
 
             db.commit()
 
-
+        for detail in existing_business_place_details:
+            if detail.is_deleted == 'no':
+                if detail.utility_document_id:
+                    document_category_id = db.query(OffServiceDocumentDataDetails.document_data_category_id).filter(
+                        OffServiceDocumentDataDetails.id == detail.utility_document_id).scalar()
+                    new_document = CustomerDataDocumentMaster(
+                        work_order_master_id=work_order_details.work_order_master_id,
+                        work_order_details_id=work_order_details_id,
+                        document_data_category_id=document_category_id, 
+                        document_data_master_id=detail.utility_document_id,
+                        is_deleted='no'
+                    )
+                    db.add(new_document)
+        db.commit()
         return {"message": "Work order set details saved successfully"}
     
     except SQLAlchemyError as e:
