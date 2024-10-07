@@ -582,7 +582,6 @@ def generate_profoma_invoice_details(
         # Process each work order detail (only those required) and map it to the quotation details
         for details in work_order_details_data:
             service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
-            
             # Filter quotation details based on the service_goods_master_id from the work order
             relevant_quotation_details = [qd for qd in quotation_details_data if qd.service_goods_master_id == details.service_goods_master_id]
             
@@ -626,14 +625,14 @@ def generate_profoma_invoice_details(
                 proforma_invoice_master_id = proforma_invoice_master.id
                 proforma_invoice_detail_id = invoice_detail.id
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
-       
+                net_amount = total_invoice_amount
         # Update Invoice Master with total amount
         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
         proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
         proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
 
-        proforma_invoice_master.grand_total_amount          = quotation_master_data.grand_total
-        proforma_invoice_master.net_amount                  = quotation_master_data.net_amount
+        proforma_invoice_master.grand_total_amount          = total_invoice_amount
+        proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount -quotation_master_data.bill_discount + quotation_master_data.round_off
         db.commit()
 
         return {
