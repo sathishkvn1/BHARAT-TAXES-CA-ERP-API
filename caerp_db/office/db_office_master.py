@@ -4244,8 +4244,9 @@ def save_work_order_service_details(
         for detail in existing_business_place_details:
             if detail.is_deleted == 'no':
                 if detail.utility_document_id:
-                    document_category_id = db.query(OffServiceDocumentDataDetails.document_data_category_id).filter(
-                        OffServiceDocumentDataDetails.id == detail.utility_document_id).scalar()
+                    document_category_id = 3 # PRINCIPAL PLACE DOC
+                    # document_category_id = db.query(OffServiceDocumentDataDetails.document_data_category_id).filter(
+                        # OffServiceDocumentDataDetails.id == detail.utility_document_id).scalar()
                     new_document = CustomerDataDocumentMaster(
                         work_order_master_id=work_order_details.work_order_master_id,
                         work_order_details_id=work_order_details_id,
@@ -4260,6 +4261,7 @@ def save_work_order_service_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #-------------------------------------------------------------------------------------------------
 def get_work_order_service_details(
