@@ -4240,21 +4240,16 @@ def save_work_order_service_details(
                 sub_service.constitution_id = work_order_details.constitution_id
 
             db.commit()
-
-        for detail in existing_business_place_details:
-            if detail.is_deleted == 'no':
-                if detail.utility_document_id:
-                    document_category_id = 3 # PRINCIPAL PLACE DOC
-                    # document_category_id = db.query(OffServiceDocumentDataDetails.document_data_category_id).filter(
-                        # OffServiceDocumentDataDetails.id == detail.utility_document_id).scalar()
-                    new_document = CustomerDataDocumentMaster(
-                        work_order_master_id=work_order_details.work_order_master_id,
-                        work_order_details_id=work_order_details_id,
-                        document_data_category_id=document_category_id, 
-                        document_data_master_id=detail.utility_document_id,
-                        is_deleted='no'
-                    )
-                    db.add(new_document)
+        if detail_data.get('utility_document_id'):
+            new_document = CustomerDataDocumentMaster(
+                work_order_master_id=work_order_details.work_order_master_id,
+                work_order_details_id=work_order_details_id,
+                document_data_category_id=3,  # Assuming '3' is for PRINCIPAL PLACE DOC
+                document_data_master_id=detail_data['utility_document_id'],
+                is_deleted='no'
+            )
+            db.add(new_document)
+                    # print('new_document',new_document.id)
         db.commit()
         return {"message": "Work order set details saved successfully"}
     
