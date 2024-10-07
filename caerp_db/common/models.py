@@ -349,6 +349,14 @@ class Profession(caerp_base):
     id                   = Column(Integer, primary_key=True, autoincrement=True)
     profession_name 	 = Column(String(100), nullable=False)
     profession_code      = Column(String(100), nullable=False)
+    created_on      = Column(DateTime, nullable=False, default=func.now())
+    created_by      = Column(Integer, nullable=True)
+    modified_on     = Column(DateTime, default=None)
+    modified_by     = Column(Integer, nullable=True)
+    is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_on      = Column(DateTime, default=None)
+    deleted_by      = Column(Integer, nullable=True)
+
 
 
 
