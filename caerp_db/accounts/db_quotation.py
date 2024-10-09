@@ -687,6 +687,7 @@ def save_service_task_details(
 
 #----------------------------------------------------------------------------------------------
 
+
 def save_customer_data_document_master(
     db: Session,
     work_order_master_id: int,
@@ -759,78 +760,6 @@ def save_customer_data_document_master(
     return {'message' : 'success',
             'id': new_document.id}
 
-
-def save_customer_data_document_master(
-    db: Session,
-    work_order_master_id: int,
-    work_order_details_id: int,
-    service_id: int,
-    consultation_id: int
-):
-    # Check for business place data
-    business_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
-        OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id,
-        OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
-    ).first()
-
-    
-
-    # SQL query to fetch document data with conditional filtering based on business place
-    sql = text("""
-        SELECT 
-            d.*, b.document_data_category_id
-        FROM 
-            off_service_document_data_master a
-        JOIN 
-            off_service_document_data_details b ON a.id = b.service_document_data_master_id
-        JOIN 
-            off_document_data_master d ON b.document_data_master_id = d.id
-        WHERE 
-            a.service_goods_master_id = :service_id 
-            AND a.constitution_id = :consultation_id
-            AND   b.document_data_category_id != 3
-            AND  a.is_deleted = 'no'
-           
-    """)
-
-    # Execute the query with filtering condition based on business place data
-    result = db.execute(sql, {
-        'service_id': service_id,
-        'consultation_id': consultation_id,
-    }).mappings()
-
-    # Loop through the query results and insert into CustomerDataDocumentMaster
-    for row in result:
-        document_data_master_id = row['id']
-        document_data_category_id = row['document_data_category_id']
-
-        # Create a new instance of CustomerDataDocumentMaster
-        new_document = CustomerDataDocumentMaster(
-            work_order_master_id=work_order_master_id,
-            work_order_details_id=work_order_details_id,
-            document_data_category_id=document_data_category_id,
-            document_data_master_id=document_data_master_id,          
-            is_deleted='no' 
-        )
-
-        db.add(new_document)
-    if business_place_data:
-        document_data_master_id = business_place_data.utility_document_id
-        document_data_category_id = 3
-        new_document = CustomerDataDocumentMaster(
-            work_order_master_id=work_order_master_id,
-            work_order_details_id=work_order_details_id,
-            document_data_category_id=document_data_category_id,
-            document_data_master_id=document_data_master_id,          
-            is_deleted='no' 
-        )
-
-        db.add(new_document)
-   
-    db.commit()
-
-    return {'message' : 'success',
-            'id': new_document.id}
 
 
 def save_service_requirement_status(
