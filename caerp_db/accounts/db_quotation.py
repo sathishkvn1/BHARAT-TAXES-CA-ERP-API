@@ -716,6 +716,7 @@ def save_customer_data_document_master(
             a.service_goods_master_id = :service_id 
             AND a.constitution_id = :consultation_id
             AND   b.document_data_category_id != 3
+            AND  a.is_deleted = 'no'
            
     """)
 
