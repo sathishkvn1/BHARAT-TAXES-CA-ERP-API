@@ -459,16 +459,17 @@ def generate_tax_invoice_pdf(invoice, file_path):
     if invoice:
 
         # Extract and format data from the quotations object
-        details = invoice.tax_invoice_details
-        work_order_master = invoice.work_order_master 
+        details             = invoice.tax_invoice_details
+        work_order_master   = invoice.work_order_master 
         total = sum(item.total_amount for item in details)
-        advance = invoice.tax_invoice_master.advance_amount
-        additional_discount = invoice.tax_invoice_master.additional_discount_amount
-        gst_amount = sum(item.gst_amount for item in details)
-        total_amount = invoice.tax_invoice_master.net_amount
-        round_off  = invoice.tax_invoice_master.round_off_amount
-        bill_discount = invoice.tax_invoice_master.bill_discount_amount
-        grand_total = invoice.tax_invoice_master.grand_total_amount
+        advance                 = invoice.tax_invoice_master.advance_amount
+        additional_fee_required = invoice.tax_invoice_master.additional_fee_required
+        additional_discount     = invoice.tax_invoice_master.additional_discount_amount
+        gst_amount              = sum(item.gst_amount for item in details)
+        total_amount            = invoice.tax_invoice_master.net_amount
+        round_off               = invoice.tax_invoice_master.round_off_amount
+        bill_discount           = invoice.tax_invoice_master.bill_discount_amount
+        grand_total             = invoice.tax_invoice_master.grand_total_amount
 
 
         # Debug print: Check the content of details
@@ -479,6 +480,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
             'invoice': details,
             'total': total,
             'advance': advance,
+            'additional_fee_required':additional_fee_required,
             'additional_discount': additional_discount,
             'gst_amount': gst_amount,
             'total_amount': total_amount,
@@ -497,7 +499,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         # Configuration for pdfkit
         
-        wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
@@ -520,7 +522,6 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         return open(file_path, "rb")
     
-
 
 
 @router.get('/get_tax_invoice_pdf')
