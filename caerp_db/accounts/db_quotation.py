@@ -651,11 +651,12 @@ def generate_profoma_invoice_details(
 #----------------------------------------------------------------------------------
 
 
+
 def save_service_requirement_status(
         db: Session,
         request: List[ServiceRequirementSchema],
         user_id: int
-):                    
+):
     all_later = True  # Flag to check if all services are set to 'LATER'
 
     for data in request:
@@ -666,12 +667,24 @@ def save_service_requirement_status(
 
         try:
             if existing_record:
+                    
                 # Update the existing record with the new data
                 existing_record.service_required = data.service_required
                 existing_record.service_required_date = data.service_required_date
                 existing_record.modified_by = user_id
                 existing_record.modified_on = datetime.utcnow()
 
+                # If the service is set to 'LATER', update CustomerDataDocument
+                if data.service_required == 'LATER':
+                    # Update related CustomerDataDocument records
+                    customer_documents = db.query(CustomerDataDocumentMaster).filter(
+                        CustomerDataDocumentMaster.work_order_details_id == data.work_order_details_id
+                    ).all()
+
+                    for document in customer_documents:
+                        document.is_deleted = 'yes'
+                        
+                
                 db.commit()
 
                 # If any service is NOT set to 'LATER', set the flag to False
@@ -688,6 +701,7 @@ def save_service_requirement_status(
         return {'message': 'No service is required now'}
 
     return {'message': 'Success'}
+
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
