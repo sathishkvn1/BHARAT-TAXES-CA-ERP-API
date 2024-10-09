@@ -652,56 +652,6 @@ def generate_profoma_invoice_details(
 
 
 
-def save_service_requirement_status(
-        db: Session,
-        request: List[ServiceRequirementSchema],
-        user_id: int
-):
-    all_later = True  # Flag to check if all services are set to 'LATER'
-
-    for data in request:
-        existing_record = db.query(OffWorkOrderDetails).filter(
-            OffWorkOrderDetails.id == data.work_order_details_id,
-            OffWorkOrderDetails.is_deleted == 'no'
-        ).first()
-
-        try:
-            if existing_record:
-                    
-                # Update the existing record with the new data
-                existing_record.service_required = data.service_required
-                existing_record.service_required_date = data.service_required_date
-                existing_record.modified_by = user_id
-                existing_record.modified_on = datetime.utcnow()
-
-                # If the service is set to 'LATER', update CustomerDataDocument
-                if data.service_required == 'LATER':
-                    # Update related CustomerDataDocument records
-                    customer_documents = db.query(CustomerDataDocumentMaster).filter(
-                        CustomerDataDocumentMaster.work_order_details_id == data.work_order_details_id
-                    ).all()
-
-                    for document in customer_documents:
-                        document.is_deleted = 'yes'
-                        
-                
-                db.commit()
-
-                # If any service is NOT set to 'LATER', set the flag to False
-                if data.service_required != 'LATER':
-                    all_later = False
-
-        except Exception as e:
-            db.rollback()
-            print(f"Error updating service requirement: {str(e)}")
-            return {'message': 'Failed to update service requirements'}
-
-    # After looping, check if all services were set to 'LATER'
-    if all_later:
-        return {'message': 'No service is required now'}
-
-    return {'message': 'Success'}
-
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
@@ -750,8 +700,7 @@ def save_customer_data_document_master(
         OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
     ).first()
 
-    # Determine if filtering by business place is necessary
-    filter_by_business_place = bool(business_place_data)
+    
 
     # SQL query to fetch document data with conditional filtering based on business place
     sql = text("""
@@ -791,11 +740,66 @@ def save_customer_data_document_master(
         )
 
         db.add(new_document)
+    if business_place_data:
+        document_data_master_id = business_place_data.utility_document_id
+        document_data_category_id = 3
+        new_document = CustomerDataDocumentMaster(
+            work_order_master_id=work_order_master_id,
+            work_order_details_id=work_order_details_id,
+            document_data_category_id=document_data_category_id,
+            document_data_master_id=document_data_master_id,          
+            is_deleted='no' 
+        )
+
+        db.add(new_document)
    
     db.commit()
 
     return {'message' : 'success',
             'id': new_document.id}
+
+
+
+def save_service_requirement_status(
+        db: Session,
+        request: List[ServiceRequirementSchema],
+        user_id: int
+):                    
+    all_later = True  # Flag to check if all services are set to 'LATER'
+
+    for data in request:
+        existing_record = db.query(OffWorkOrderDetails).filter(
+            OffWorkOrderDetails.id == data.work_order_details_id,
+            OffWorkOrderDetails.is_deleted == 'no'
+        ).first()
+
+        try:
+            if existing_record:
+                    
+                # Update the existing record with the new data
+                existing_record.service_required = data.service_required
+                existing_record.service_required_date = data.service_required_date
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.utcnow()
+
+                db.commit()
+
+                # If any service is NOT set to 'LATER', set the flag to False
+                # if data.service_required != 'LATER':
+                #     all_later = False
+                if data.service_required == 'YES':
+                    all_later = False                
+        except Exception as e:
+            db.rollback()
+            print(f"Error updating service requirement: {str(e)}")
+            return {'message': 'Failed to update service requirements'}
+
+    # After looping, check if all services were set to 'LATER'
+    if all_later:
+        return {'message': 'No service is required now'}
+
+    return {'message': 'Success'}
+
 
 
 

@@ -4217,17 +4217,17 @@ def save_work_order_service_details(
                 # Insert a new business place detail
                 work_order_business_place = WorkOrderBusinessPlaceDetails(**detail_data)
                 db.add(work_order_business_place)
-            if detail_data.get('utility_document_id'):
-                new_document = CustomerDataDocumentMaster(
-                    work_order_master_id=work_order_details.work_order_master_id,
-                    work_order_details_id=work_order_details_id,
-                    document_data_category_id=3,  # Assuming '3' is for PRINCIPAL PLACE DOC
-                    document_data_master_id=detail_data['utility_document_id'],
-                    is_deleted='no'
-                )
-                db.add(new_document)
-                    # print('new_document',new_document.id)
-            db.commit()
+            # if detail_data.get('utility_document_id'):
+            #     new_document = CustomerDataDocumentMaster(
+            #         work_order_master_id=work_order_details.work_order_master_id,
+            #         work_order_details_id=work_order_details_id,
+            #         document_data_category_id=3,  # Assuming '3' is for PRINCIPAL PLACE DOC
+            #         document_data_master_id=detail_data['utility_document_id'],
+            #         is_deleted='no'
+            #     )
+            #     db.add(new_document)
+            #         # print('new_document',new_document.id)
+            # db.commit()
         # Set is_deleted to 'yes' for any existing business place details not in the incoming request
         for existing_detail in existing_business_place_details:
             if existing_detail.id not in incoming_ids:
