@@ -120,7 +120,10 @@ class OffAppointmentMasterViewSchema(BaseModel):
     is_deleted           : str
     deleted_by           : Optional[int]
     deleted_on           : Optional[date]
-
+    is_locked            : str
+    locked_on            : Optional[date]
+    locked_by            : Optional[int]
+    
     class Config:
         orm_mode = True
         from_attributes = True
@@ -715,7 +718,10 @@ class OffViewEnquiryMasterSchema(BaseModel):
     country_id               : Optional[int]
     country_name_english     : Optional[str]
     country_name_arabic      : Optional[str]
-
+    is_locked                : str
+    locked_on                : Optional[date]
+    locked_by                : Optional[int]
+    
     
 class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_details_id      : int
@@ -1466,6 +1472,7 @@ class OffServiceTaskHistorySchema(BaseModel):
 
 
 
+
 class OffViewServiceTaskMasterSchema(BaseModel):
     task_id                        : int
     work_order_master_id           : int
@@ -1505,7 +1512,10 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     task_priority_id               : Optional[int] = None
     task_priority                  : Optional[str] = ""
     remarks                        : Optional[str] = ""
-    
+    is_locked                      : str
+    locked_on                      : Optional[date]
+    locked_by                      : Optional[int]
+
     class Config:
         orm_mode = True
 

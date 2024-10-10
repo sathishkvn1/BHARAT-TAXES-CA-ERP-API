@@ -31,6 +31,11 @@ class OffAppointmentMaster(caerp_base):
     is_deleted       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by       = Column(Integer, nullable=True)
     deleted_on       = Column(Date, nullable=True)
+    is_locked        = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on        = Column(Date, nullable=True)
+    locked_by        = Column(Integer, nullable=True)
+
+
 
 class OffAppointmentVisitMaster(caerp_base):
     __tablename__ = 'off_appointment_visit_master'
@@ -69,7 +74,6 @@ class OffAppointmentVisitMaster(caerp_base):
 
 
 
-
 class OffAppointmentVisitMasterView(caerp_base):
     __tablename__ = 'off_view_appointment_master'
 
@@ -102,6 +106,9 @@ class OffAppointmentVisitMasterView(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(Integer, nullable=True)
     deleted_on                       = Column(Date, nullable=True)
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on                        = Column(Date, nullable=True)
+    locked_by                        = Column(Integer, nullable=True)
     visit_master_id                  = Column(Integer, nullable=True)
     financial_year_id                = Column(Integer, nullable=True)
     financial_year                   = Column(String(50), nullable=True)
@@ -130,7 +137,7 @@ class OffAppointmentVisitMasterView(caerp_base):
     cgst_amount                      = Column(Float, nullable=True)
     bill_amount                      = Column(Float, nullable=True)
     remarks                          = Column(String(2000), nullable=True)
-
+    
 
 
 
@@ -678,39 +685,45 @@ class OffConsultationTool(caerp_base):
 
 #=------------------------Enquiry--------------------
 
+
+
 class OffEnquiryMaster(caerp_base): 
     __tablename__ = 'off_enquiry_master'
 
  	
-    id     = Column(Integer, primary_key=True, autoincrement=True)
-    customer_number=Column(String(100), nullable=True)
-    first_name 	 = Column(String(200), nullable=False)
-    middle_name 	 = Column(String(200), nullable=True)
-    last_name 	 = Column(String(200), nullable=True)
-    gender_id= Column(Integer, nullable=True)
-    date_of_birth=Column(Date, nullable=True)
-    mobile_number  = Column(String(20), nullable=True)
-    whatsapp_number=Column(String(20), nullable=True)
-    email_id  = Column(String(50), nullable=True)
-    house_or_building_name=Column(String(100), nullable=True)
-    road_or_street_name=Column(String(100), nullable=True)
-    locality=Column(String(100), nullable=True)
-    pin_code=Column(String(50), nullable=True)
-    village_id= Column(Integer, nullable=True)
-    post_office_id= Column(Integer, nullable=True)
-    lsg_type_id= Column(Integer, nullable=True)
-    lsg_id= Column(Integer, nullable=True)
-    taluk_id= Column(Integer, nullable=True)
-    district_id= Column(Integer, nullable=True)
-    state_id= Column(Integer, nullable=True)
-    country_id= Column(Integer, nullable=True)
-    created_by = Column(Integer, nullable=True)
-    created_on = Column(Date, nullable=True)
-    modified_by = Column(Integer, nullable=True)
-    modified_on = Column(Date, nullable=True)
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by = Column(Integer, nullable=True)
-    deleted_on = Column(Date, nullable=True)
+    id                           = Column(Integer, primary_key=True, autoincrement=True)
+    customer_number              = Column(String(100), nullable=True)
+    first_name 	                 = Column(String(200), nullable=False)
+    middle_name 	             = Column(String(200), nullable=True)
+    last_name 	                 = Column(String(200), nullable=True)
+    gender_id                    = Column(Integer, nullable=True)
+    date_of_birth                = Column(Date, nullable=True)
+    mobile_number                = Column(String(20), nullable=True)
+    whatsapp_number              = Column(String(20), nullable=True)
+    email_id                     = Column(String(50), nullable=True)
+    house_or_building_name       = Column(String(100), nullable=True)
+    road_or_street_name          = Column(String(100), nullable=True)
+    locality                     = Column(String(100), nullable=True)
+    pin_code                     = Column(String(50), nullable=True)
+    village_id                   = Column(Integer, nullable=True)
+    post_office_id               = Column(Integer, nullable=True)
+    lsg_type_id                  = Column(Integer, nullable=True)
+    lsg_id                       = Column(Integer, nullable=True)
+    taluk_id                     = Column(Integer, nullable=True)
+    district_id                  = Column(Integer, nullable=True)
+    state_id                     = Column(Integer, nullable=True)
+    country_id                   = Column(Integer, nullable=True)
+    created_by                   = Column(Integer, nullable=True)
+    created_on                   = Column(Date, nullable=True)
+    modified_by                  = Column(Integer, nullable=True)
+    modified_on                  = Column(Date, nullable=True)
+    is_deleted                   = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                   = Column(Integer, nullable=True)
+    deleted_on                   = Column(Date, nullable=True)
+    is_locked                    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on                    = Column(Date, nullable=True)
+    locked_by                    = Column(Integer, nullable=True)
+
 
 class OffEnquiryDetails(caerp_base):
     __tablename__ = 'off_enquiry_details'
@@ -733,50 +746,55 @@ class OffEnquiryDetails(caerp_base):
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
 #view
-
 class OffViewEnquiryMaster(caerp_base): 
     __tablename__ = 'off_view_enquiry_master'
 
  	
-    enquiry_master_id     = Column(Integer, primary_key=True, autoincrement=True)
-    customer_number=Column(String(100), nullable=True)
-    first_name 	 = Column(String(200), nullable=False)
-    middle_name 	 = Column(String(200), nullable=True)
-    last_name 	 = Column(String(200), nullable=True)
-    gender_id= Column(Integer, nullable=True)
-    gender= Column(String(200))
-    date_of_birth=Column(Date, nullable=True)
-    mobile_number  = Column(String(20), nullable=True)
-    whatsapp_number=Column(String(20), nullable=True)
-    email_id  = Column(String(50), nullable=True)
-    house_or_building_name=Column(String(100), nullable=True)
-    road_or_street_name=Column(String(100), nullable=True)
-    locality=Column(String(100), nullable=True)
-    pin_code=Column(String(50), nullable=True)
-    post_office_id= Column(Integer, nullable=True)
-    post_office_name = Column(String(255), nullable=True)
-    village_id= Column(Integer, nullable=True)
-    village_name= Column(String(255), nullable=True)
-    lsg_type_id= Column(Integer, nullable=True)
-    lsg_type= Column(String(255), nullable=True)
-    lsg_id= Column(Integer, nullable=True)
-    lsg_name= Column(String(255), nullable=True)
-    taluk_id= Column(Integer, nullable=True)
-    taluk_name=Column(String(255), nullable=True)
-    district_id= Column(Integer, nullable=True)
-    district_name=Column(String(255), nullable=True)
-    state_id= Column(Integer, nullable=True)
-    state_name=Column(String(255), nullable=True)
-    country_id= Column(Integer, nullable=True)
-    country_name_english=Column(String(255), nullable=True)
-    country_name_arabic=Column(String(255), nullable=True)
-    created_by = Column(Integer, nullable=True)
-    created_on = Column(Date, nullable=True)
-    modified_by = Column(Integer, nullable=True)
-    modified_on = Column(Date, nullable=True)
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by = Column(Integer, nullable=True)
-    deleted_on = Column(Date, nullable=True)
+    enquiry_master_id       = Column(Integer, primary_key=True, autoincrement=True)
+    customer_number         = Column(String(100), nullable=True)
+    first_name 	            = Column(String(200), nullable=False)
+    middle_name 	        = Column(String(200), nullable=True)
+    last_name 	            = Column(String(200), nullable=True)
+    gender_id               = Column(Integer, nullable=True)
+    gender                  = Column(String(200))
+    date_of_birth           = Column(Date, nullable=True)
+    mobile_number           = Column(String(20), nullable=True)
+    whatsapp_number         = Column(String(20), nullable=True)
+    email_id                = Column(String(50), nullable=True)
+    house_or_building_name  = Column(String(100), nullable=True)
+    road_or_street_name     = Column(String(100), nullable=True)
+    locality                = Column(String(100), nullable=True)
+    pin_code                = Column(String(50), nullable=True)
+    post_office_id          = Column(Integer, nullable=True)
+    post_office_name        = Column(String(255), nullable=True)
+    village_id              = Column(Integer, nullable=True)
+    village_name            = Column(String(255), nullable=True)
+    lsg_type_id             = Column(Integer, nullable=True)
+    lsg_type                = Column(String(255), nullable=True)
+    lsg_id                  = Column(Integer, nullable=True)
+    lsg_name                = Column(String(255), nullable=True)
+    taluk_id                = Column(Integer, nullable=True)
+    taluk_name              = Column(String(255), nullable=True)
+    district_id             = Column(Integer, nullable=True)
+    district_name           = Column(String(255), nullable=True)
+    state_id                = Column(Integer, nullable=True)
+    state_name              = Column(String(255), nullable=True)
+    country_id              = Column(Integer, nullable=True)
+    country_name_english    = Column(String(255), nullable=True)
+    country_name_arabic     = Column(String(255), nullable=True)
+    created_by              = Column(Integer, nullable=True)
+    created_on              = Column(Date, nullable=True)
+    modified_by             = Column(Integer, nullable=True)
+    modified_on             = Column(Date, nullable=True)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by              = Column(Integer, nullable=True)
+    deleted_on              = Column(Date, nullable=True)
+    is_locked               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on               = Column(Date, nullable=True)
+    locked_by               = Column(Integer, nullable=True)
+
+
+
 
 class OffViewEnquiryDetails(caerp_base): 
     __tablename__ = 'off_view_enquiry_details'
@@ -841,13 +859,20 @@ class OffTaskPriority(caerp_base):
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
-class OffTaskStatus(caerp_base):
-    __tablename__ = 'off_task_status'
+class OffConsultationTaskStatus(caerp_base):
+    __tablename__ = 'off_consultation_task_status'
     id                  = Column(Integer, primary_key=True, autoincrement=True)
     task_status         = Column(String(100), nullable=True) 
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
 
- 
+
+class OffServiceTaskStatus(caerp_base):
+    __tablename__ = 'off_service_task_status'
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    task_status         = Column(String(100), nullable=True) 
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no') 
+
+
   
 
 class OffConsultationTaskMaster(caerp_base):
@@ -1082,7 +1107,6 @@ class OffViewConsultantServiceDetails(caerp_base):
 
 #-------------------------WORKORDER---------------------------------------
 
-
 class OffWorkOrderMaster(caerp_base):
     __tablename__ = 'work_order_master'
 
@@ -1127,6 +1151,11 @@ class OffWorkOrderMaster(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on                        = Column(DateTime, nullable=True)
+    locked_by                        = Column(String, nullable=True)
+
+
 
 class OffWorkOrderDetails(caerp_base):
     __tablename__ = 'work_order_details'
@@ -1154,7 +1183,7 @@ class OffWorkOrderDetails(caerp_base):
     bundle_service_id           = Column(Integer, nullable=True)
     is_depended_service         = Column(Enum('yes', 'no'), nullable=False, default='no')
     processing_order            = Column(Integer, nullable=True)
-    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
+    is_service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
     service_required_date       = Column(Date, nullable=True)
     service_status_id           = Column(Integer, nullable=False)
     file_opened_on              = Column(DateTime, nullable=True)
@@ -1243,7 +1272,9 @@ class WorkOrderMasterView(caerp_base):
     is_deleted                       = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
-
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on                        = Column(DateTime, nullable=True)
+    locked_by                        = Column(String, nullable=True)
 
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
@@ -1276,7 +1307,7 @@ class WorkOrderDetailsView(caerp_base):
     bundle_service_id           = Column(Integer, nullable=True)
     is_depended_service         = Column(Enum('yes', 'no'), nullable=False, default='no')
     processing_order            = Column(Integer, nullable=True)
-    service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
+    is_service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
     service_required_date       = Column(Date, nullable=True)
     service_status_id           = Column(Integer, nullable=False)
     service_status           = Column(String, nullable=True)
@@ -1347,31 +1378,6 @@ class CustomerDataDocumentMaster(caerp_base):
 
 
 
-# class OffServiceTaskMaster(caerp_base):
-#     __tablename__               = 'off_service_task_master'
-
-#     id                          = Column(Integer, primary_key=True, autoincrement=True)
-#     work_order_master_id        = Column(Integer, nullable=False)
-#     work_order_details_id       = Column(Integer, nullable=False)
-#     customer_id                 = Column(Integer, nullable=True)
-#     task_number                 = Column(String(100), nullable=False)
-#     allocated_by                = Column(Integer, nullable=False)
-#     allocated_on                = Column(DateTime, nullable=False)
-#     department_allocated_on     = Column(DateTime, nullable=False)
-#     department_allocated_to     = Column(Integer, nullable=False)
-#     team_allocated_on           = Column(DateTime, nullable=False)
-#     team_allocated_to           = Column(Integer, nullable=False)
-#     employee_allocated_on       = Column(DateTime, nullable=False)
-#     employee_allocated_to       = Column(Integer, nullable=False)
-#     task_status_id              = Column(Integer, nullable=False)
-#     task_priority_id            = Column(Integer, nullable=False)
-#     remarks                     = Column(String(1000), nullable=True)
-#     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-#     deleted_by                  = Column(Integer, nullable=True)
-#     deleted_on                  = Column(DateTime, nullable=True)
-
-
-
 class OffServiceTaskMaster(caerp_base):
     __tablename__               = 'off_service_task_master'
     id                          = Column(Integer, primary_key=True, autoincrement=True)
@@ -1395,7 +1401,9 @@ class OffServiceTaskMaster(caerp_base):
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                  = Column(Integer, nullable=True)
     deleted_on                  = Column(DateTime, nullable=True)
-
+    is_locked                   = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on                   = Column(DateTime, nullable=True)
+    locked_by                   = Column(Integer, nullable=True)
 
 
 class OffServiceTaskHistory(caerp_base):
@@ -1406,7 +1414,6 @@ class OffServiceTaskHistory(caerp_base):
     history_updated_on           = Column(DateTime, nullable=False, default=func.now())
     history_update_by            = Column(Integer, nullable=False)
     history_description          = Column(String(1000), nullable=False)
-
 
 
 
@@ -1454,5 +1461,7 @@ class OffViewServiceTaskMaster(caerp_base):
     is_deleted                     = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                     = Column(Integer, nullable=True)
     deleted_on                     = Column(DateTime, nullable=True)
-
+    is_locked                      = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on                      = Column(DateTime, nullable=True)
+    locked_by                      = Column(Integer, nullable=True)
 

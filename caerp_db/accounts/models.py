@@ -14,7 +14,6 @@ class AccQuotationMaster(caerp_base):
 
     coupon_total            = Column(Float, nullable=True)
 
-    product_discount_total  = Column(Float, nullable=False,default=0)
     bill_discount           = Column(Float, nullable=True)
     additional_discount     = Column(Float, nullable=True)
 
@@ -22,7 +21,7 @@ class AccQuotationMaster(caerp_base):
     round_off           = Column(Float, nullable=True)
     net_amount          = Column(Float, nullable=True)
     remarks             = Column(String(50), nullable=True)
-    quotation_status    = Column(Enum('DRAFT', 'ACCEPTED','SENT','REQUESTED REVISION'), nullable=False, default='DRAFT')
+    quotation_status_id    = Column(Integer, nullable=False)
     is_final_quotation  = Column(Enum('yes','no'), nullable = False, default='no') 
 
     created_by          = Column(Integer, nullable=True)
@@ -32,8 +31,9 @@ class AccQuotationMaster(caerp_base):
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by          = Column(Integer, nullable=True)
     deleted_on          = Column(Date, nullable=True)
-
-
+    is_locked           = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on           = Column(DateTime, nullable=True)
+    locked_by           = Column(String, nullable=True)
 
 class AccQuotationDetails(caerp_base):
     __tablename__ = 'acc_quotation_details'
@@ -63,13 +63,32 @@ class AccQuotationDetails(caerp_base):
 
     discount_percentage         = Column(Float, nullable=True)
     discount_amount             = Column(Float, nullable=False,default=0.0)
+    additional_discount_percentage      = Column(Float, nullable=False,default=0.0)  
+    additional_discount_amount          = Column(Float, nullable=False,default=0.0)
+    
+    taxable_amount              = Column(Float, nullable=False,default=0.0)
+    igst_percent                = Column(Float, nullable=False,default=0.0)
+    igst_amount                 = Column(Float, nullable=False,default=0.0)
+    cgst_percent                = Column(Float, nullable=False,default=0.0)
+    cgst_amount                 = Column(Float, nullable=False,default=0.0)
+    sgst_percent                = Column(Float, nullable=False,default=0.0)
+    sgst_amount                 = Column(Float, nullable=False,default=0.0)
+    cess_percent                = Column(Float, nullable=False,default=0.0)
+    cess_amount                 = Column(Float, nullable=False,default=0.0)
+    additional_cess_percent     = Column(Float, nullable=False,default=0.0)
+    additional_cess_amount      = Column(Float, nullable=False,default=0.0)
 
-    gst_percent                 = Column(Float, nullable=True)
-    gst_amount                  = Column(Float, nullable=True)
-    taxable_amount              = Column(Float, nullable=True)
     total_amount                = Column(Float, nullable=False,default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-    
+     
+
+class AccProformaInvoiceStatus(caerp_base):
+    __tablename__ = 'acc_proforma_invoice_status'
+
+    id                              = Column(Integer, primary_key=True, autoincrement=True)
+    proforma_invoice_status         = Column(String, nullable=False)
+    is_deleted                      = Column(Enum('yes', 'no'), nullable=False, default='no')
+
 
 class AccVoucherId(caerp_base):
     __tablename__ = 'acc_voucher_id'
@@ -105,6 +124,7 @@ class AccProformaInvoiceMaster(caerp_base):
     round_off_amount            = Column(Float, nullable=False,default=0.0)
     net_amount                 = Column(Float, nullable=False,default=0.0)
     remarks                     = Column(String(50), nullable=True)
+    proforma_invoice_status_id  = Column(Integer, nullable=False)
 
     created_by          = Column(Integer, nullable=False)
     created_on          = Column(DateTime, nullable=False, default=func.now())
@@ -113,6 +133,9 @@ class AccProformaInvoiceMaster(caerp_base):
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by          = Column(Integer, nullable=True)
     deleted_on          = Column(Date, nullable=True)
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on                        = Column(DateTime, nullable=True)
+    locked_by                        = Column(String, nullable=True)
 
 
 class AccProformaInvoiceDetails(caerp_base):
@@ -143,12 +166,31 @@ class AccProformaInvoiceDetails(caerp_base):
     discount_percentage         = Column(Float, nullable=False, default=0.0)
     discount_amount             = Column(Float, nullable=False, default=0.0)
 
-    gst_percent                 = Column(Float, nullable=False, default=0.0)
-    gst_amount                  = Column(Float, nullable=False, default=0.0)
-    taxable_amount              = Column(Float, nullable=False, default=0.0)
+    additional_discount_percentage      = Column(Float, nullable=False,default=0.0)  
+    additional_discount_amount          = Column(Float, nullable=False,default=0.0)
+    
+    taxable_amount              = Column(Float, nullable=False,default=0.0)
+    igst_percent                = Column(Float, nullable=False,default=0.0)
+    igst_amount                 = Column(Float, nullable=False,default=0.0)
+    cgst_percent                = Column(Float, nullable=False,default=0.0)
+    cgst_amount                 = Column(Float, nullable=False,default=0.0)
+    sgst_percent                = Column(Float, nullable=False,default=0.0)
+    sgst_amount                 = Column(Float, nullable=False,default=0.0)
+    cess_percent                = Column(Float, nullable=False,default=0.0)
+    cess_amount                 = Column(Float, nullable=False,default=0.0)
+    additional_cess_percent     = Column(Float, nullable=False,default=0.0)
+    additional_cess_amount      = Column(Float, nullable=False,default=0.0)
+
     total_amount                = Column(Float, nullable=False, default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
+class AccTaxInvoiceStatus(caerp_base):
+    __tablename__ = 'acc_tax_invoice_status'
+
+    id                         = Column(Integer, primary_key=True, autoincrement=True)
+    tax_invoice_status         = Column(String, nullable=False)
+    is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
 class AccTaxInvoiceMaster(caerp_base):
@@ -175,10 +217,11 @@ class AccTaxInvoiceMaster(caerp_base):
     bill_discount_amount        = Column(Float, nullable=False,default=0.0)
     additional_discount_amount  = Column(Float, nullable=False,default=0.0)
     advance_amount              = Column(Float, nullable=False,default=0.0)
-    additional_fee_required     = Column(Float, nullable=False,default=0.0)
+    additional_fee_amount       = Column(Float, nullable=False,default=0.0)
     round_off_amount            = Column(Float, nullable=False,default=0.0)
     net_amount                  = Column(Float, nullable=False,default=0.0)
     remarks                     = Column(String(50), nullable=True)
+    tax_invoice_status_id       = Column(String, nullable= False)
 
     created_by          = Column(Integer, nullable=False)
     created_on          = Column(DateTime, nullable=False, default=func.now())
@@ -187,6 +230,11 @@ class AccTaxInvoiceMaster(caerp_base):
     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by          = Column(Integer, nullable=True)
     deleted_on          = Column(Date, nullable=True)
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on                        = Column(DateTime, nullable=True)
+    locked_by                        = Column(String, nullable=True)
+
+
 
 class AccTaxInvoiceDetails(caerp_base):
     __tablename__ = 'acc_tax_invoice_details'
@@ -215,9 +263,27 @@ class AccTaxInvoiceDetails(caerp_base):
 
     discount_percentage         = Column(Float, nullable=False, default=0.0)
     discount_amount             = Column(Float, nullable=False, default=0.0)
-
-    gst_percent                 = Column(Float, nullable=False, default=0.0)
-    gst_amount                  = Column(Float, nullable=False, default=0.0)
-    taxable_amount              = Column(Float, nullable=False, default=0.0)
+    additional_discount_percentage      = Column(Float, nullable=False,default=0.0)  
+    additional_discount_amount          = Column(Float, nullable=False,default=0.0)
+    
+    taxable_amount              = Column(Float, nullable=False,default=0.0)
+    igst_percent                = Column(Float, nullable=False,default=0.0)
+    igst_amount                 = Column(Float, nullable=False,default=0.0)
+    cgst_percent                = Column(Float, nullable=False,default=0.0)
+    cgst_amount                 = Column(Float, nullable=False,default=0.0)
+    sgst_percent                = Column(Float, nullable=False,default=0.0)
+    sgst_amount                 = Column(Float, nullable=False,default=0.0)
+    cess_percent                = Column(Float, nullable=False,default=0.0)
+    cess_amount                 = Column(Float, nullable=False,default=0.0)
+    additional_cess_percent     = Column(Float, nullable=False,default=0.0)
+    additional_cess_amount      = Column(Float, nullable=False,default=0.0)
     total_amount                = Column(Float, nullable=False, default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AccQuotationStatus(caerp_base):
+    __tablename__ = 'acc_quotation_status'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    quotation_status            = Column(String, nullable=False)
+    is_deleted                   = Column(Enum('yes', 'no'), nullable=False, default='no')
