@@ -1486,7 +1486,7 @@ def add_employee_to_team(
 def save_team_members(
     db: Session,
     team_id: int,
-    # department_id: int,  
+    department_id: int,  
     data: AddEmployeeToTeam,  
     user_id: int
 ):
@@ -1531,7 +1531,6 @@ def save_team_members(
     except Exception as e:
         db.rollback()
         raise e
-    
 
 #------------------------------------------------------------------------------------------------------------
 

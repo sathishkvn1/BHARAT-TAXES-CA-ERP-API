@@ -6,6 +6,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Column ,DateTime
 
 
+
+
 class OffAppointmentMaster(caerp_base):
     __tablename__  =  "off_appointment_master"
 
@@ -568,7 +570,7 @@ class OffViewServiceDocumentsDataDetails(caerp_base):
     document_data_type = Column(String(200), nullable=False)
     document_data_name = Column(String(200), nullable=False)
     has_expiry = Column(Enum('yes', 'no'), nullable=False)
-    nature_of_possession_id = Column(Integer)
+    nature_of_possession_id = Column(Integer,nullable=True)
     nature_of_possession = Column(String(200), nullable=False)
     display_order = Column(Integer, nullable=False)
     service_document_data_details_is_deleted = Column(Enum('yes', 'no'), nullable=False) 

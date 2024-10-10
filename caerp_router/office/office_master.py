@@ -1534,11 +1534,12 @@ def get_service_details_by_consultant(
         AND a.effective_from_date <= CURDATE()
         AND (a.effective_to_date IS NULL OR a.effective_to_date >= CURDATE());
     """
-
     result = db.execute(text(query), {"consultant_id": consultant_id}).fetchall()
 
     if not result:
-        raise HTTPException(status_code=404, detail="No active records found")
+
+        result = []
+        # raise HTTPException(status_code=404, detail="No active records found")
 
     services = [
         ConsultantServiceDetailsResponse(

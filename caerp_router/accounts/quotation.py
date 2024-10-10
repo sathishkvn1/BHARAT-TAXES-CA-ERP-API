@@ -8,7 +8,7 @@ from caerp_db.database import get_db
 from caerp_db.accounts import db_quotation
 # from caerp_constants.caerp_constants import EntryPoint
 from caerp_schema.accounts.quotation_schema import AccProformaInvoiceShema, AccQuotationSchema, AccTaxInvoiceShema
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
@@ -93,6 +93,7 @@ def send_proposal(
 
 @router.get('/get_quotation_list')
 def get_quotqtion_list(
+    search_value: Union[str, int] = "ALL",
     status: Optional[str]='ALL',
     work_order_master_id : Optional[int] = None,
     quotation_id : Optional[int] = None,
@@ -100,7 +101,7 @@ def get_quotqtion_list(
     to_date : Optional[date] =None,
     db: Session = Depends(get_db)
 ): 
-   result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date)
+   result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date,search_value)
    return result
 
 
@@ -458,16 +459,17 @@ def generate_tax_invoice_pdf(invoice, file_path):
     if invoice:
 
         # Extract and format data from the quotations object
-        details = invoice.tax_invoice_details
-        work_order_master = invoice.work_order_master 
+        details             = invoice.tax_invoice_details
+        work_order_master   = invoice.work_order_master 
         total = sum(item.total_amount for item in details)
-        advance = invoice.tax_invoice_master.advance_amount
-        additional_discount = invoice.tax_invoice_master.additional_discount_amount
-        gst_amount = sum(item.gst_amount for item in details)
-        total_amount = invoice.tax_invoice_master.net_amount
-        round_off  = invoice.tax_invoice_master.round_off_amount
-        bill_discount = invoice.tax_invoice_master.bill_discount_amount
-        grand_total = invoice.tax_invoice_master.grand_total_amount
+        advance                 = invoice.tax_invoice_master.advance_amount
+        additional_fee_required = invoice.tax_invoice_master.additional_fee_required
+        additional_discount     = invoice.tax_invoice_master.additional_discount_amount
+        gst_amount              = sum(item.gst_amount for item in details)
+        total_amount            = invoice.tax_invoice_master.net_amount
+        round_off               = invoice.tax_invoice_master.round_off_amount
+        bill_discount           = invoice.tax_invoice_master.bill_discount_amount
+        grand_total             = invoice.tax_invoice_master.grand_total_amount
 
 
         # Debug print: Check the content of details
@@ -478,6 +480,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
             'invoice': details,
             'total': total,
             'advance': advance,
+            'additional_fee_required':additional_fee_required,
             'additional_discount': additional_discount,
             'gst_amount': gst_amount,
             'total_amount': total_amount,
@@ -496,7 +499,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         # Configuration for pdfkit
         
-        wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
@@ -519,7 +522,6 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         return open(file_path, "rb")
     
-
 
 
 @router.get('/get_tax_invoice_pdf')

@@ -1,9 +1,9 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
-from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster, OffViewWorkOrderBusinessPlaceDetails,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
-from caerp_db.accounts.models import AccInvoiceDetails, AccInvoiceMaster, AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccTaxInvoiceDetails, AccTaxInvoiceMaster
+from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccTaxInvoiceDetails, AccTaxInvoiceMaster
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
@@ -363,150 +363,14 @@ def send_proposal(
 
 
 
-# def get_quotation_data(
-#     db: Session,
-#     status: Optional[str] = 'ALL',
-#     work_order_master_id: Optional[int] = None,
-#     quotation_id: Optional[int] = None,
-#     from_date: Optional[date] =None,
-#     to_date: Optional[date] = None
-# ) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
-#     try:
-#         latest_version_subquery = (
-#             db.query(
-#                 AccQuotationMaster.work_order_master_id,
-#                 func.max(AccQuotationMaster.quotation_version).label("latest_version")
-#             )
-#             .group_by(AccQuotationMaster.work_order_master_id)
-#             .subquery()
-#         )
-
-#         # Main query to get the latest version records
-#         query = db.query(AccQuotationMaster).join(
-#             latest_version_subquery,
-#             (AccQuotationMaster.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
-#             (AccQuotationMaster.quotation_version == latest_version_subquery.c.latest_version)
-#         )
-#         if work_order_master_id:
-#             query = query.filter(AccQuotationMaster.work_order_master_id == work_order_master_id)
-#         if status != 'ALL':
-#                 query = query.filter(AccQuotationMaster.quotation_status == status)
-            
-            
-#         if from_date and to_date:
-#                 query = query.filter(
-#                     AccQuotationMaster.quotation_date >= from_date,
-#                     AccQuotationMaster.quotation_date <= to_date
-#                 )
-#         elif from_date:
-#                 query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-#         elif to_date:
-#                 query = query.filter(AccQuotationMaster.quotation_date <= to_date)
-
-
-#         # Apply filters based on provided parameters
-#         if quotation_id:
-#             query = query.filter(AccQuotationMaster.id == quotation_id)
-#             quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
-            
-#             if not quotation_data:
-#                 return {"message": "Quotation not found."}
-            
-#             # sFetch related work order and details
-#             work_order_master_data = db.query(WorkOrderMasterView).filter(
-#                 WorkOrderMasterView.work_order_master_id == quotation_data.work_order_master_id
-#             ).first()
-            
-#             # Fetch quotation details with the join to get service names
-#             quotation_details_data1 = db.query(
-#                 AccQuotationDetails,
-#                 OffViewServiceGoodsMaster.service_goods_name
-#             ).join(
-#                 OffViewServiceGoodsMaster,
-#                 AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-#             # ).join(
-#             #     OffWorkOrderDetails,
-#             #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
-#             ).filter(
-#                 AccQuotationDetails.quotation_master_id == quotation_data.id,
-#                 AccQuotationDetails.is_deleted == 'no'
-#             ).distinct()
-#             quotation_details_data = quotation_details_data1.all()
-#             # Correctly handle the results as tuples
-#             quotation_details_list = []
-#             for detail, service_name in quotation_details_data:
-#                 detail_dict = detail.__dict__.copy()  # Copy to modify
-#                 detail_dict['service_goods_name'] = service_name
-#                 # detail_dict['service_required'] = service_required
-#                 # detail_dict['service_required_date'] = service_required_date
-#                 quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
-
-#             # Construct response schema for a single quotation
-#             quotation_service_price_data = AccQuotationResponseSchema(
-#                 quotation_master=AccQuotationMasterSchema.model_validate(quotation_data.__dict__),
-#                 work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-#                 quotation_details=quotation_details_list
-#             )
-            
-#             return quotation_service_price_data
-#         else:
-           
-#             # Fetch all filtered quotations
-#             quotation_master_list = query.all()
-           
-#             # Construct response schema for multiple quotations
-#             quotations_response = []
-#             for quotation in quotation_master_list:
-#                 work_order_master_data = db.query(WorkOrderMasterView).filter(
-#                     WorkOrderMasterView.work_order_master_id == quotation.work_order_master_id
-#                 ).first()
-                
-              
-#                 quotation_details_data = db.query(
-#                 AccQuotationDetails,
-#                     OffViewServiceGoodsMaster.service_goods_name,
-#                     # OffWorkOrderDetails.service_required,
-#                     # OffWorkOrderDetails.service_required_date
-#                 ).join(
-#                     OffViewServiceGoodsMaster,
-#                     AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-#                 # ).join(
-#                 #     OffWorkOrderDetails,
-#                 #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
-#                 ).filter(
-#                         AccQuotationDetails.quotation_master_id == quotation.id,
-#                         AccQuotationDetails.is_deleted == 'no'
-#                     ).distinct().all()
-
-#                 # Correctly handle the results as tuples
-#                 quotation_details_list = []
-#                 for detail, service_name in quotation_details_data:
-#                     detail_dict = detail.__dict__.copy()  # Copy to modify
-#                     detail_dict['service_goods_name'] = service_name
-#                     quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
-
-                
-#                 # Add each quotation's data to the response list
-#                 quotations_response.append(AccQuotationResponseSchema(
-#                     quotation_master=AccQuotationMasterSchema.model_validate(quotation.__dict__),
-#                     work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-#                     # quotation_details=[AccQuotationDetailsSchema.model_validate(detail.__dict__) for detail in quotation_details_data]
-#                     quotation_details = quotation_details_list
-#                 ))
-
-#             return quotations_response
-
-#     except SQLAlchemyError as e:
-#         # Handle database exceptions
-#         raise HTTPException(status_code=500, detail=str(e))
-
 def get_quotation_data(
     db: Session,
     status: Optional[str] = 'ALL',
     work_order_master_id: Optional[int] = None,
     quotation_id: Optional[int] = None,
-    from_date: Optional[date] =None,
-    to_date: Optional[date] = None
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    search_value: Union[str, int] = "ALL"
 ) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
     try:
         latest_version_subquery = (
@@ -524,57 +388,68 @@ def get_quotation_data(
             (AccQuotationMaster.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
             (AccQuotationMaster.quotation_version == latest_version_subquery.c.latest_version)
         )
-        if work_order_master_id:
-            query = query.filter(AccQuotationMaster.work_order_master_id == work_order_master_id)
-        if status != 'ALL':
-                query = query.filter(AccQuotationMaster.quotation_status == status)
-            
-            
-        if from_date and to_date:
-                query = query.filter(
-                    AccQuotationMaster.quotation_date >= from_date,
-                    AccQuotationMaster.quotation_date <= to_date
-                )
-        elif from_date:
-                query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-        elif to_date:
-                query = query.filter(AccQuotationMaster.quotation_date <= to_date)
 
+        # Add a join to WorkOrderMasterView with the proper condition
+        query = query.join(
+            WorkOrderMasterView,
+            AccQuotationMaster.work_order_master_id == WorkOrderMasterView.work_order_master_id
+        )
 
         # Apply filters based on provided parameters
+        if work_order_master_id:
+            query = query.filter(AccQuotationMaster.work_order_master_id == work_order_master_id)
+        
+        if status != 'ALL':
+            query = query.filter(AccQuotationMaster.quotation_status == status)
+        
+        if from_date and to_date:
+            query = query.filter(
+                AccQuotationMaster.quotation_date >= from_date,
+                AccQuotationMaster.quotation_date <= to_date
+            )
+        elif from_date:
+            query = query.filter(AccQuotationMaster.quotation_date >= from_date)
+        elif to_date:
+            query = query.filter(AccQuotationMaster.quotation_date <= to_date)
+
+        # Add condition for search value if it's not 'ALL'
+        if search_value != "ALL":
+            query = query.filter(
+                or_(
+                    WorkOrderMasterView.first_name.like(f"%{search_value}%"),
+                    WorkOrderMasterView.email_id.like(f"%{search_value}%"),
+                    WorkOrderMasterView.mobile_number.like(f"%{search_value}%")
+                )
+            )
+
         if quotation_id:
             query = query.filter(AccQuotationMaster.id == quotation_id)
             quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
             if not quotation_data:
                 return {"message": "Quotation not found."}
-            
-            # sFetch related work order and details
+
+            # Fetch related work order and details
             work_order_master_data = db.query(WorkOrderMasterView).filter(
                 WorkOrderMasterView.work_order_master_id == quotation_data.work_order_master_id
             ).first()
-            
+
             # Fetch quotation details with the join to get service names
-            quotation_details_data1 = db.query(
+            quotation_details_data = db.query(
                 AccQuotationDetails,
                 OffViewServiceGoodsMaster.service_goods_name
             ).join(
                 OffViewServiceGoodsMaster,
                 AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            # ).join(
-            #     OffWorkOrderDetails,
-            #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
             ).filter(
                 AccQuotationDetails.quotation_master_id == quotation_data.id,
                 AccQuotationDetails.is_deleted == 'no'
-            ).distinct()
-            quotation_details_data = quotation_details_data1.all()
-            # Correctly handle the results as tuples
+            ).distinct().all()
+
+            # Handle the results as tuples
             quotation_details_list = []
             for detail, service_name in quotation_details_data:
                 detail_dict = detail.__dict__.copy()  # Copy to modify
                 detail_dict['service_goods_name'] = service_name
-                # detail_dict['service_required'] = service_required
-                # detail_dict['service_required_date'] = service_required_date
                 quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
 
             # Construct response schema for a single quotation
@@ -583,51 +458,41 @@ def get_quotation_data(
                 work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
                 quotation_details=quotation_details_list
             )
-            
+
             return quotation_service_price_data
         else:
-           
             # Fetch all filtered quotations
             quotation_master_list = query.all()
-           
+
             # Construct response schema for multiple quotations
             quotations_response = []
             for quotation in quotation_master_list:
                 work_order_master_data = db.query(WorkOrderMasterView).filter(
                     WorkOrderMasterView.work_order_master_id == quotation.work_order_master_id
                 ).first()
-                
-              
+
                 quotation_details_data = db.query(
-                AccQuotationDetails,
-                    OffViewServiceGoodsMaster.service_goods_name,
-                    # OffWorkOrderDetails.service_required,
-                    # OffWorkOrderDetails.service_required_date
+                    AccQuotationDetails,
+                    OffViewServiceGoodsMaster.service_goods_name
                 ).join(
                     OffViewServiceGoodsMaster,
                     AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-                # ).join(
-                #     OffWorkOrderDetails,
-                #     AccQuotationMaster.work_order_master_id == OffWorkOrderDetails.work_order_master_id
                 ).filter(
-                        AccQuotationDetails.quotation_master_id == quotation.id,
-                        AccQuotationDetails.is_deleted == 'no'
-                    ).distinct().all()
+                    AccQuotationDetails.quotation_master_id == quotation.id,
+                    AccQuotationDetails.is_deleted == 'no'
+                ).distinct().all()
 
-                # Correctly handle the results as tuples
+                # Handle the results as tuples
                 quotation_details_list = []
                 for detail, service_name in quotation_details_data:
                     detail_dict = detail.__dict__.copy()  # Copy to modify
                     detail_dict['service_goods_name'] = service_name
                     quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
 
-                
-                # Add each quotation's data to the response list
                 quotations_response.append(AccQuotationResponseSchema(
                     quotation_master=AccQuotationMasterSchema.model_validate(quotation.__dict__),
                     work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                    # quotation_details=[AccQuotationDetailsSchema.model_validate(detail.__dict__) for detail in quotation_details_data]
-                    quotation_details = quotation_details_list
+                    quotation_details=quotation_details_list
                 ))
 
             return quotations_response
@@ -635,7 +500,6 @@ def get_quotation_data(
     except SQLAlchemyError as e:
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #-------------------------------------------------------------
@@ -718,36 +582,36 @@ def generate_profoma_invoice_details(
         # Process each work order detail (only those required) and map it to the quotation details
         for details in work_order_details_data:
             service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
-            
             # Filter quotation details based on the service_goods_master_id from the work order
             relevant_quotation_details = [qd for qd in quotation_details_data if qd.service_goods_master_id == details.service_goods_master_id]
             
             for quotation_detail in relevant_quotation_details:
                 # Initialize totals
-                total_service_charge = quotation_detail.service_charge
-                total_govt_agency_fee = quotation_detail.govt_agency_fee
-                total_stamp_fee = quotation_detail.stamp_fee
-                total_stamp_duty = quotation_detail.stamp_duty
-                total_amount = quotation_detail.total_amount
+                total_service_charge    = quotation_detail.service_charge
+                total_govt_agency_fee   = quotation_detail.govt_agency_fee
+                total_stamp_fee         = quotation_detail.stamp_fee
+                total_stamp_duty        = quotation_detail.stamp_duty
+                total_amount            = quotation_detail.total_amount
+                taxable_amount          = quotation_detail.taxable_amount
 
                 # Create Invoice Detail Entry
                 invoice_detail = AccProformaInvoiceDetails(
-                    proforma_invoice_master_id=proforma_invoice_master.id,
-                    service_goods_master_id=quotation_detail.service_goods_master_id,
-                    is_bundle_service=quotation_detail.is_bundle_service,
-                    bundle_service_id=quotation_detail.bundle_service_id,
-                    service_charge=total_service_charge,
-                    govt_agency_fee=total_govt_agency_fee,
-                    stamp_duty=total_stamp_duty,
-                    stamp_fee=total_stamp_fee,
-                    quantity=1,  
+                    proforma_invoice_master_id  =proforma_invoice_master.id,
+                    service_goods_master_id     =quotation_detail.service_goods_master_id,
+                    is_bundle_service           =quotation_detail.is_bundle_service,
+                    bundle_service_id           =quotation_detail.bundle_service_id,
+                    service_charge              =total_service_charge,
+                    govt_agency_fee             =total_govt_agency_fee,
+                    stamp_duty  =total_stamp_duty,
+                    stamp_fee   =total_stamp_fee,
+                    quantity    =1,  
                     discount_amount = quotation_detail.discount_amount,
-                    gst_percent=quotation_detail.gst_percent,  
-                    gst_amount=quotation_detail.gst_amount,  # To be updated after calculation
-                    taxable_amount=total_service_charge,
+                    gst_percent     =quotation_detail.gst_percent,  
+                    gst_amount      =quotation_detail.gst_amount,  # To be updated after calculation
+                    taxable_amount  =taxable_amount,
                     # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
-                    total_amount  = total_amount,
-                    is_deleted='no'
+                    total_amount    = total_amount,
+                    is_deleted      ='no'
                 )
 
                 db.add(invoice_detail)
@@ -761,10 +625,14 @@ def generate_profoma_invoice_details(
                 proforma_invoice_master_id = proforma_invoice_master.id
                 proforma_invoice_detail_id = invoice_detail.id
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
-
+                net_amount = total_invoice_amount
         # Update Invoice Master with total amount
-        proforma_invoice_master.grand_total_amount = total_invoice_amount
-        proforma_invoice_master.net_amount = total_invoice_amount
+        proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
+        proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
+        proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
+
+        proforma_invoice_master.grand_total_amount          = total_invoice_amount
+        proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount -quotation_master_data.bill_discount + quotation_master_data.round_off
         db.commit()
 
         return {
@@ -778,46 +646,12 @@ def generate_profoma_invoice_details(
 
 
 
+
+
 #----------------------------------------------------------------------------------
 
 
-def save_service_requirement_status(
-        db: Session,
-        request: List[ServiceRequirementSchema],
-        user_id: int
-):                    
-    all_later = True  # Flag to check if all services are set to 'LATER'
 
-    for data in request:
-        existing_record = db.query(OffWorkOrderDetails).filter(
-            OffWorkOrderDetails.id == data.work_order_details_id,
-            OffWorkOrderDetails.is_deleted == 'no'
-        ).first()
-
-        try:
-            if existing_record:
-                # Update the existing record with the new data
-                existing_record.service_required = data.service_required
-                existing_record.service_required_date = data.service_required_date
-                existing_record.modified_by = user_id
-                existing_record.modified_on = datetime.utcnow()
-
-                db.commit()
-
-                # If any service is NOT set to 'LATER', set the flag to False
-                if data.service_required != 'LATER':
-                    all_later = False
-
-        except Exception as e:
-            db.rollback()
-            print(f"Error updating service requirement: {str(e)}")
-            return {'message': 'Failed to update service requirements'}
-
-    # After looping, check if all services were set to 'LATER'
-    if all_later:
-        return {'message': 'No service is required now'}
-
-    return {'message': 'Success'}
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
@@ -852,14 +686,24 @@ def save_service_task_details(
    
 
 #----------------------------------------------------------------------------------------------
+
+
 def save_customer_data_document_master(
-        db: Session,
-        work_order_master_id: int,
-        work_order_details_id: int,
-        service_id: int,
-        consultation_id: int
+    db: Session,
+    work_order_master_id: int,
+    work_order_details_id: int,
+    service_id: int,
+    consultation_id: int
 ):
-    # SQL query to fetch document data
+    # Check for business place data
+    business_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
+        OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id,
+        OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
+    ).first()
+
+    
+
+    # SQL query to fetch document data with conditional filtering based on business place
     sql = text("""
         SELECT 
             d.*, b.document_data_category_id
@@ -872,15 +716,20 @@ def save_customer_data_document_master(
         WHERE 
             a.service_goods_master_id = :service_id 
             AND a.constitution_id = :consultation_id
+            AND   b.document_data_category_id != 3
+            AND  b.is_deleted = 'no'
+           
     """)
 
-    # Execute the query and fetch results as dictionaries
-    result = db.execute(sql, {'service_id': service_id, 'consultation_id': consultation_id}).mappings()
+    # Execute the query with filtering condition based on business place data
+    result = db.execute(sql, {
+        'service_id': service_id,
+        'consultation_id': consultation_id,
+    }).mappings()
 
     # Loop through the query results and insert into CustomerDataDocumentMaster
     for row in result:
-        # Access columns by name
-        document_data_master_id = row['id']  # Assuming 'id' is the column name for document_data_master_id
+        document_data_master_id = row['id']
         document_data_category_id = row['document_data_category_id']
 
         # Create a new instance of CustomerDataDocumentMaster
@@ -893,11 +742,66 @@ def save_customer_data_document_master(
         )
 
         db.add(new_document)
+    if business_place_data:
+        document_data_master_id = business_place_data.utility_document_id
+        document_data_category_id = 3
+        new_document = CustomerDataDocumentMaster(
+            work_order_master_id=work_order_master_id,
+            work_order_details_id=work_order_details_id,
+            document_data_category_id=document_data_category_id,
+            document_data_master_id=document_data_master_id,          
+            is_deleted='no' 
+        )
+
+        db.add(new_document)
    
     db.commit()
 
-    # Optionally, return something or just None
-    return {'message' : 'success'}
+    return {'message' : 'success',
+            'id': new_document.id}
+
+
+
+def save_service_requirement_status(
+        db: Session,
+        request: List[ServiceRequirementSchema],
+        user_id: int
+):                    
+    all_later = True  # Flag to check if all services are set to 'LATER'
+
+    for data in request:
+        existing_record = db.query(OffWorkOrderDetails).filter(
+            OffWorkOrderDetails.id == data.work_order_details_id,
+            OffWorkOrderDetails.is_deleted == 'no'
+        ).first()
+
+        try:
+            if existing_record:
+                    
+                # Update the existing record with the new data
+                existing_record.service_required = data.service_required
+                existing_record.service_required_date = data.service_required_date
+                existing_record.modified_by = user_id
+                existing_record.modified_on = datetime.utcnow()
+
+                db.commit()
+
+                # If any service is NOT set to 'LATER', set the flag to False
+                # if data.service_required != 'LATER':
+                #     all_later = False
+                if data.service_required == 'YES':
+                    all_later = False                
+        except Exception as e:
+            db.rollback()
+            print(f"Error updating service requirement: {str(e)}")
+            return {'message': 'Failed to update service requirements'}
+
+    # After looping, check if all services were set to 'LATER'
+    if all_later:
+        return {'message': 'No service is required now'}
+
+    return {'message': 'Success'}
+
 
 
 
@@ -962,6 +866,8 @@ def get_demand_notice(
     return result
 #-------------------------------------------------------------------------------------------------------------
    
+ 
+
 def consultation_invoice_generation(
         work_order_master_id: int,
         appointment_id: int,
@@ -974,7 +880,7 @@ def consultation_invoice_generation(
         ).first()
     if existing_data:
             return {'message': 'invoice is already exist',
-                    'invoice_id': existing_data.id}
+                    'invoice_master_id': existing_data.id}
     # Fetch work order data
    
     # Fetch appointment data
@@ -982,8 +888,18 @@ def consultation_invoice_generation(
         OffAppointmentVisitMasterView.appointment_master_id == appointment_id,
         OffAppointmentVisitMasterView.is_deleted == 'no'
     ).first()
-
-
+    work_order_data =  db.query(WorkOrderMasterView).filter(
+        WorkOrderMasterView.work_order_master_id == work_order_master_id,
+        WorkOrderMasterView.appointment_master_id == appointment_id,
+        WorkOrderMasterView.is_deleted == 'no'
+    ).first()
+    visit_master_id = work_order_data.visit_master_id
+    consultant_id= appointment_data.consultant_id
+    service_data =  db.query(OffAppointmentVisitDetails).filter(
+        OffAppointmentVisitDetails.visit_master_id== visit_master_id,
+        OffAppointmentVisitDetails.consultant_id== consultant_id,
+        OffAppointmentVisitDetails.is_main_service == 'yes'
+    ).all()
     # Generate voucher ID and invoice number
     voucher_id = generate_voucher_id(db)
     invoice_number = generate_book_number('INVOICE', db)
@@ -993,6 +909,7 @@ def consultation_invoice_generation(
         voucher_id=voucher_id,
         service_type='CONSULTATION',
         appointment_master_id=appointment_id,
+        visit_master_id = visit_master_id,
         work_order_master_id=work_order_master_id,
         tax_invoice_number=invoice_number,
         tax_invoice_date=date.today(),
@@ -1005,18 +922,18 @@ def consultation_invoice_generation(
     db.flush()  # To get the new_invoice.id
 
     # Fetch service data
-    service_data = db.query(WorkOrderDetailsView).filter(
-        WorkOrderDetailsView.work_order_master_id == work_order_master_id,
-        WorkOrderDetailsView.service_required == 'yes',
-        WorkOrderDetailsView.is_deleted == 'no'
-    )
+    # service_data = db.query(WorkOrderDetailsView).filter(
+    #     WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+    #     WorkOrderDetailsView.service_required == 'yes',
+    #     WorkOrderDetailsView.is_deleted == 'no'
+    # )
 
     total_invoice_amount = 0.0
 
     # Process each service
     for services in service_data:
         total_service_charge = 0.0
-        service_goods_master_id = services.service_goods_master_id
+        service_goods_master_id = services.service_id
        
 
         # Fetch consultation fee for the service
@@ -1031,30 +948,15 @@ def consultation_invoice_generation(
             return {
                 'message' : 'Please set consultation fee '
             }
-        # Handle bundle services
-        if services.is_bundle_service == 'yes':
-            sub_services = db.query(WorkOrderDetailsView).filter(
-                WorkOrderDetailsView.bundle_service_id == services.work_order_details_id,
-                WorkOrderDetailsView.is_deleted == 'no'
-            ).all()
-
-            for sub_service in sub_services:
-                sub_service_goods_master_id = sub_service.service_goods_master_id
-                sub_consultation_fee_data = db.query(OffConsultantServiceDetails).filter(
-                    OffConsultantServiceDetails.consultant_id == appointment_data.consultant_id,
-                    OffConsultantServiceDetails.service_goods_master_id == sub_service_goods_master_id
-                ).first()
-
-                if sub_consultation_fee_data:
-                    total_service_charge += sub_consultation_fee_data.consultation_fee
+   
 
         # Create new invoice detail
         new_invoice_detail = AccTaxInvoiceDetails(
             tax_invoice_master_id=new_invoice.id,
             service_goods_master_id=service_goods_master_id,
             is_main_service = services.is_main_service,
-            is_bundle_service=services.is_bundle_service,
-            bundle_service_id=services.bundle_service_id if services.is_bundle_service == 'yes' else None,
+            is_bundle_service='yes',
+            bundle_service_id= None,
             service_charge=total_service_charge,
             taxable_amount = total_service_charge,
             total_amount = total_service_charge
@@ -1078,69 +980,6 @@ def consultation_invoice_generation(
         }
 
 #---------------------------------------------------------------------------------------------------
-
-def get_invoice_details(
-    db: Session,
-    work_order_master_id: int,
-    invoice_master_id: int
-):
-    if work_order_master_id:
-        if invoice_master_id:
-            # Fetch the invoice master data
-            invoice_master_data = db.query(AccInvoiceMaster).filter(
-                AccInvoiceMaster.work_order_master_id == work_order_master_id,
-                AccInvoiceMaster.id == invoice_master_id,
-                AccInvoiceMaster.is_deleted == 'no'
-            ).first()
-
-            # Handle case when invoice master is not found
-            if not invoice_master_data:
-                raise HTTPException(status_code=404, detail="Invoice Master not found")
-
-            # Fetch the work order master data
-            work_order_master_data = db.query(WorkOrderMasterView).filter(
-                WorkOrderMasterView.work_order_master_id == work_order_master_id
-            ).first()
-
-            # Handle case when work order master data is not found
-            if not work_order_master_data:
-                raise HTTPException(status_code=404, detail="Work Order Master not found")
-
-            # Fetch the invoice details with the service name from joined table
-            invoice_details_data = db.query(
-                AccInvoiceDetails,
-                OffViewServiceGoodsMaster.service_goods_name
-            ).join(
-                OffViewServiceGoodsMaster,
-                AccInvoiceDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            ).filter(
-                AccInvoiceDetails.invoice_master_id == invoice_master_data.id,
-                AccInvoiceDetails.is_deleted == 'no'
-            ).all()
-
-            # Build the list of invoice details
-            invoice_details_list = []
-            for detail, service_name in invoice_details_data:
-                detail_dict = detail.__dict__.copy()  # Copy the details to modify
-                detail_dict['service_goods_name'] = service_name
-                invoice_details_list.append(AccProformaInvoiceDetailsSchema.model_validate(detail_dict))
-
-            # Construct response schema
-            invoice_response_data = AccInvoiceResponceSchema(
-                invoice_master=AccProformaInvoiceMasterSchema.model_validate(invoice_master_data.__dict__),
-                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                invoice_details=invoice_details_list
-            )
-
-            return invoice_response_data
-        else:
-            raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-    else:
-        raise HTTPException(status_code=400, detail="Work Order Master ID is required")
-
- 
-
-#-------------------------------------------------------------------------------------------------------------
 
 def get_proforma_invoice_details(
     db: Session,

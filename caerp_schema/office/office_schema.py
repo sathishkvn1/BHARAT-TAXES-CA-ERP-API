@@ -482,7 +482,7 @@ class OffViewServiceDocumentsDataDetailsSchema(BaseModel):
     document_data_name                  : str
     has_expiry                          : str
     nature_of_possession_id             : Optional[int]
-    nature_of_possession                : str
+    nature_of_possession                : Optional[str]
     display_order                       : int
     class Config:
         from_attributes = True  
