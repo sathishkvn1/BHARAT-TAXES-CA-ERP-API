@@ -2,23 +2,25 @@ from caerp_db.database import caerp_base
 from sqlalchemy import Column, DateTime, Integer, String,Date,Float,Enum,Time, func
 
 
+
+
 class AccQuotationMaster(caerp_base):
     __tablename__ = 'acc_quotation_master'
 
     id                      = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id       = Column(Integer, nullable=False)
     work_order_master_id    = Column(Integer, nullable=True)
     quotation_version       = Column(Integer, nullable=True)
     quotation_date          = Column(Date, nullable=True)
     quotation_number        = Column(String(50), nullable=True)
-    offer_total             = Column(Float, nullable=True)
+    total_offer_amount             = Column(Float, nullable=True)
+    total_coupon_amount            = Column(Float, nullable=True)
 
-    coupon_total            = Column(Float, nullable=True)
+    bill_discount_amount           = Column(Float, nullable=True)
+    additional_discount_amount     = Column(Float, nullable=True)
 
-    bill_discount           = Column(Float, nullable=True)
-    additional_discount     = Column(Float, nullable=True)
-
-    grand_total         = Column(Float, nullable=True)
-    round_off           = Column(Float, nullable=True)
+    grand_total_amount         = Column(Float, nullable=True)
+    round_off_amount           = Column(Float, nullable=True)
     net_amount          = Column(Float, nullable=True)
     remarks             = Column(String(50), nullable=True)
     quotation_status_id    = Column(Integer, nullable=False)
@@ -34,6 +36,7 @@ class AccQuotationMaster(caerp_base):
     is_locked           = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on           = Column(DateTime, nullable=True)
     locked_by           = Column(String, nullable=True)
+
 
 class AccQuotationDetails(caerp_base):
     __tablename__ = 'acc_quotation_details'
@@ -103,6 +106,7 @@ class AccProformaInvoiceMaster(caerp_base):
     __tablename__ = 'acc_proforma_invoice_master'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id           = Column(Integer, nullable=False)
     voucher_id                  = Column(Integer, nullable=False)
     service_type                = Column(Enum('CONSULTATION', 'NON_CONSULTATION', 'GOODS'), nullable=False, default='no' )
 
@@ -193,10 +197,12 @@ class AccTaxInvoiceStatus(caerp_base):
     is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
+
 class AccTaxInvoiceMaster(caerp_base):
     __tablename__ = 'acc_tax_invoice_master'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id           = Column(Integer, nullable=False)
     voucher_id                  = Column(Integer, nullable=False)
     service_type                = Column(Enum('CONSULTATION', 'NON_CONSULTATION', 'GOODS'), nullable=False, default='no' )
 
