@@ -34,7 +34,7 @@ def generate_book_number(book_type:BookType,financial_year_id,customer_id,db:Ses
         book_record = db.query(BookNumber).filter(
             BookNumber.financial_year_id == financial_year_id,
             BookNumber.customer_id == customer_id,
-            BookNumber.book_type == book_type.value,
+            BookNumber.book_type == book_type,
             BookNumber.is_active == 'yes'
         ).first()
         
