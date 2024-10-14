@@ -706,7 +706,10 @@ def get_employee_details(
                 "email_id": emp.personal_email_id,
                 "is_consultant": emp.is_consultant,
                 "user_status": emp.is_active,
-                "approval_status": emp.is_approved
+                "approval_status": emp.is_approved,
+                "is_locked":emp.is_locked,
+                "locked_on":emp.locked_on,
+                "locked_by":emp.locked_by,
             }
             employee_details.append(emp_detail)
 
@@ -1437,6 +1440,7 @@ def add_employee_to_team(
 #         }
 
 #     return result
+
 
 @router.get("/check_username_mobile_and_email")
 def check_user_and_mobile(

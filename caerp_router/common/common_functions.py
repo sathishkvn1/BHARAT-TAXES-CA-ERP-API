@@ -234,7 +234,7 @@ async def delete_undelete_by_id(
 
 #     return {"message": f"Record with ID {id} from model {model_name} has been {'locked' if is_locked == 'yes' else 'unlocked'}."}
 
-@router.post("/lock_unlock", operation_id="lock_unlock_record")
+@router.get("/lock_unlock", operation_id="lock_unlock_record")
 async def lock_unlock(
     model_name: str = Query(..., description="Model name to fetch data from"),
     id: Optional[int] = Query(None, description="ID of the record to lock/unlock"),

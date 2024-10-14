@@ -445,6 +445,10 @@ class EmployeeMaster(caerp_base):
     is_deleted           = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by           = Column(Integer, default=None)
     deleted_on           = Column(DateTime, default=None)
+    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on                        = Column(DateTime, nullable=True)
+    locked_by                        = Column(String, nullable=True)
+
 
 
 class EmployeePermanentAddress(caerp_base):
@@ -728,3 +732,14 @@ class BookNumber(caerp_base):
     book_prefix                 = Column(String, nullable=True)
     book_number                 = Column(Integer, nullable=False, default= 0)
     is_active                   = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppActivityHistory(caerp_base):
+    __tablename__ = 'app_activity_history'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    action_taken_on = Column(DateTime, nullable=False, default=datetime.utcnow)
+    action_taken_by = Column(Integer, ForeignKey('employee_master.employee_id'), nullable=False)
+    action_type = Column(Enum('INSERT', 'UPDATE', 'DELETE', 'SELECT'), nullable=False)
+    db_table_name = Column(String(50), nullable=False)
+    action_query = Column(Text, nullable=False)
