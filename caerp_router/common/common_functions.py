@@ -187,11 +187,12 @@ async def delete_undelete_by_id(
         raise HTTPException(status_code=400, detail="Invalid action type")
        
 #--------------------------------------------------------
-# @router.post("/lock_unlock", operation_id="lock_unlock_record")
+
+# @router.get("/lock_unlock_record", operation_id="lock_unlock_record")
 # async def lock_unlock(
 #     model_name: str = Query(..., description="Model name to fetch data from"),
 #     id: Optional[int] = Query(None, description="ID of the record to lock/unlock"),
-#     is_locked: str = Query(..., description="Lock/Unlock status (yes/no)"),
+#     action: LockType = Query(..., description="Action to perform (LOCK or UNLOCK)"),
 #     token: str = Depends(oauth2.oauth2_scheme),
 #     db: Session = Depends(get_db)
 # ):
@@ -220,21 +221,32 @@ async def delete_undelete_by_id(
 #         raise HTTPException(status_code=404, detail="Record not found")
 
 #     # Lock/Unlock logic
-#     if is_locked == "yes":
+#     is_locked = record.is_locked
+#     if action == LockType.LOCK:
 #         record.is_locked = "yes"
 #         record.locked_on = datetime.now()  # Set the current date
 #         record.locked_by = user_id         # Set the user ID from the token
-#     elif is_locked == "no":
+#     elif action == LockType.UNLOCK:
 #         record.is_locked = "no"
 #         record.locked_on = None            # Clear the lock date
 #         record.locked_by = None            # Clear the lock user
 #     else:
-#         raise HTTPException(status_code=400, detail="Invalid is_locked value. Use 'yes' or 'no'.")
+#         raise HTTPException(status_code=400, detail="Invalid action. Use 'LOCK' or 'UNLOCK'.")
 
 #     # Commit the changes
 #     db.commit()
 
-#     return {"message": f"Record with ID {id} from model {model_name} has been {'locked' if is_locked == 'yes' else 'unlocked'}."}
+#     # Prepare the response data
+#     response_data = {
+#         "message": f"Record with ID {id} from model {model_name} has been {'locked' if action == LockType.LOCK else 'unlocked'}.",
+#         "success": True,
+#         "locked":is_locked
+#         # "locked": action == LockType.LOCK  # True if locked, False if unlocked
+#     }
+
+#     return response_data
+
+
 
 @router.get("/lock_unlock_record", operation_id="lock_unlock_record")
 async def lock_unlock(
@@ -262,8 +274,11 @@ async def lock_unlock(
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid user or token")
 
-    # Query the record based on the given ID
-    record = db.query(table_model).filter(table_model.id == id).first()
+    # Query the record based on the given ID or employee_id if the model is EmployeeMaster
+    if table_model == EmployeeMaster:
+        record = db.query(table_model).filter(table_model.employee_id == id).first()
+    else:
+        record = db.query(table_model).filter(table_model.id == id).first()
 
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
@@ -288,8 +303,7 @@ async def lock_unlock(
     response_data = {
         "message": f"Record with ID {id} from model {model_name} has been {'locked' if action == LockType.LOCK else 'unlocked'}.",
         "success": True,
-        "locked":is_locked
-        # "locked": action == LockType.LOCK  # True if locked, False if unlocked
+        "locked": is_locked  # Reflect the lock status before the change
     }
 
     return response_data
