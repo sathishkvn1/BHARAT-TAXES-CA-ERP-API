@@ -234,7 +234,7 @@ async def delete_undelete_by_id(
 
 #     return {"message": f"Record with ID {id} from model {model_name} has been {'locked' if is_locked == 'yes' else 'unlocked'}."}
 
-@router.get("/lock_unlock", operation_id="lock_unlock_record")
+@router.get("/lock_unlock_record", operation_id="lock_unlock_record")
 async def lock_unlock(
     model_name: str = Query(..., description="Model name to fetch data from"),
     id: Optional[int] = Query(None, description="ID of the record to lock/unlock"),
@@ -267,6 +267,7 @@ async def lock_unlock(
         raise HTTPException(status_code=404, detail="Record not found")
 
     # Lock/Unlock logic
+    is_locked = record.is_locked
     if action == LockType.LOCK:
         record.is_locked = "yes"
         record.locked_on = datetime.now()  # Set the current date
@@ -285,7 +286,8 @@ async def lock_unlock(
     response_data = {
         "message": f"Record with ID {id} from model {model_name} has been {'locked' if action == LockType.LOCK else 'unlocked'}.",
         "success": True,
-        "locked": action == LockType.LOCK  # True if locked, False if unlocked
+        "locked":is_locked
+        # "locked": action == LockType.LOCK  # True if locked, False if unlocked
     }
 
     return response_data
