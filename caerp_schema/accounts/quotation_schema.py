@@ -5,27 +5,90 @@ from datetime import date, datetime
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewWorkOrderDetailsSchema,OffViewWorkOrderMasterSchema
 
 
+# class AccQuotationMasterSchema(BaseModel):
+
+#     id                      : Optional[int] = None
+#     work_order_master_id    : Optional[int] = None
+#     quotation_version       : Optional[int] = None
+#     quotation_date          : Optional[date] = None
+#     quotation_number        : Optional[str] = None
+
+#     offer_total             : Optional[float] = None
+
+#     coupon_total            : Optional[float] = None
+#     # product_discount_total  : Optional[float] = None
+#     bill_discount           : Optional[float] = None
+#     additional_discount     : Optional[float] = None
+
+#     grand_total             : Optional[float] = None
+#     round_off               : Optional[float] = None
+#     net_amount              : Optional[float] = None
+#     remarks                 : Optional[str] = None
+#     quotation_status        : Optional[str] = 'DRAFT'
+#     is_final_quotation      : Optional[str] = 'no'
+
 class AccQuotationMasterSchema(BaseModel):
 
     id                      : Optional[int] = None
+    financial_year_id       : Optional[int] = None
     work_order_master_id    : Optional[int] = None
     quotation_version       : Optional[int] = None
     quotation_date          : Optional[date] = None
     quotation_number        : Optional[str] = None
 
-    offer_total             : Optional[float] = None
-
-    coupon_total            : Optional[float] = None
+    total_offer_amount             : Optional[float] = None
+    total_coupon_amount            : Optional[float] = None
     # product_discount_total  : Optional[float] = None
-    bill_discount           : Optional[float] = None
-    additional_discount     : Optional[float] = None
+    bill_discount_amount           : Optional[float] = None
+    additional_discount_amount     : Optional[float] = None
 
-    grand_total             : Optional[float] = None
-    round_off               : Optional[float] = None
+    grand_total_amount             : Optional[float] = None
+    round_off_amount               : Optional[float] = None
     net_amount              : Optional[float] = None
     remarks                 : Optional[str] = None
-    quotation_status        : Optional[str] = 'DRAFT'
+    quotation_status_id        : Optional[int] = None
     is_final_quotation      : Optional[str] = 'no'
+    is_locked                       : Optional[str] = 'no'  
+    locked_on                       : Optional[datetime] = None
+    locked_by                       : Optional[int] =  None
+
+
+# class AccQuotationDetailsSchema(BaseModel):
+
+#     id                           : Optional[int] = None
+#     quotation_master_id          : Optional[int] = None
+#     service_goods_master_id      : Optional[int] = None
+#     service_goods_name           : Optional[str] = None
+#     hsn_sac_code                 : Optional[str] = None
+#     is_main_service              : Optional[str] = 'no'   
+#     is_bundle_service            : Optional[str] = 'no'
+#     bundle_service_id            : Optional[int] = None
+#     service_charge               : Optional[float] = None
+#     govt_agency_fee              : Optional[float] = None
+#     stamp_duty                   : Optional[float] = None
+#     stamp_fee                    : Optional[float] = None
+#     quantity                     : Optional[float] = None
+
+#     has_offer                    : Optional[str] = 'no'
+#     offer_name                   : Optional[str] = None
+#     offer_percentage             : Optional[float] = None
+#     offer_amount                 : Optional[float] = None
+
+#     has_coupon                   : Optional[str] = 'no'
+#     coupon_code                  : Optional[str] = None
+#     coupon_percentage            : Optional[float] = None
+#     coupon_amount                : Optional[float] = None
+
+#     discount_percentage          : Optional[float] = None
+#     discount_amount              : Optional[float] = None
+
+#     gst_percent                  : Optional[float] = None
+#     gst_amount                   : Optional[float] = None
+#     taxable_amount               : Optional[float] = None
+#     total_amount                 : Optional[float] = None
+#     # service_required             : Optional[str] = 'YES'
+#     # service_required_date        : Optional[date] = None
+#     is_deleted                   : Optional[str] = 'no'
 
 
 
@@ -34,7 +97,7 @@ class AccQuotationDetailsSchema(BaseModel):
     id                           : Optional[int] = None
     quotation_master_id          : Optional[int] = None
     service_goods_master_id      : Optional[int] = None
-    service_goods_name           : Optional[str] = None
+    # service_goods_name           : Optional[str] = None
     hsn_sac_code                 : Optional[str] = None
     is_main_service              : Optional[str] = 'no'   
     is_bundle_service            : Optional[str] = 'no'
@@ -57,10 +120,21 @@ class AccQuotationDetailsSchema(BaseModel):
 
     discount_percentage          : Optional[float] = None
     discount_amount              : Optional[float] = None
-
-    gst_percent                  : Optional[float] = None
-    gst_amount                   : Optional[float] = None
+    discount_amount
+    additional_discount_percentage   : Optional[float] = None
+    additional_discount_amount       : Optional[float] = None
+    
     taxable_amount               : Optional[float] = None
+    igst_percent                 : Optional[float] = None
+    igst_amount                  : Optional[float] = None
+    cgst_percent                 : Optional[float] = None
+    cgst_amount                  : Optional[float] = None
+    sgst_percent                 : Optional[float] = None
+    sgst_amount                  : Optional[float] = None
+    cess_percent                 : Optional[float] = None
+    cess_amount                  : Optional[float] = None
+    additional_cess_percent      : Optional[float] = None
+    additional_cess_amount       : Optional[float] = None
     total_amount                 : Optional[float] = None
     # service_required             : Optional[str] = 'YES'
     # service_required_date        : Optional[date] = None
@@ -173,14 +247,14 @@ class AccTaxInvoiceMasterSchema(BaseModel):
     account_head_id         : Optional[int]= None
     offer_total             : Optional[float] = None
 
-    coupon_total            : Optional[float] = None
-    grand_total_amount            : Optional[float]= None
-    bill_discount_amount         : Optional[float]= None
+    coupon_total                : Optional[float] = None
+    grand_total_amount          : Optional[float]= None
+    bill_discount_amount        : Optional[float]= None
     additional_discount_amount  : Optional[float]= None
     advance_amount              : Optional[float]= None
     additional_fee_required     : Optional[float]= None
     round_off_amount            : Optional[float]= None
-    net_amount                 : Optional[float]= None
+    net_amount                  : Optional[float]= None
     remarks                     : Optional[str]= None
 
 

@@ -4,18 +4,22 @@ from fastapi.responses import StreamingResponse
 
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeExperience, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, UsersRole
+from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
+from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, UsersRole
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffConsultationTaskStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryStatus, OffNatureOfPossession, OffServiceDocumentDataDetails, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskStatus, OffSourceOfEnquiry, OffTaskPriority, OffWorkOrderStatus
+from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffConsultationTaskStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryMaster, OffEnquiryStatus, OffNatureOfPossession, OffServiceDocumentDataDetails, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskStatus, OffSourceOfEnquiry, OffTaskPriority, OffWorkOrderMaster, OffWorkOrderStatus
 
 
 from caerp_auth import oauth2
-
+from sqlalchemy import inspect
 from typing import Optional
-from datetime import date
+from datetime import datetime
+from caerp_auth import oauth2
+from caerp_auth.authentication import authenticate_user
+
 
 from caerp_db.services.model import GstReasonToObtainRegistration, GstTypeOfRegistration
 
@@ -27,6 +31,10 @@ router = APIRouter(
 class ActionType(str, Enum):
     DELETE = 'DELETE'
     UNDELETE = 'UNDELETE'
+
+class LockType(str, Enum):
+    LOCK = 'LOCK'
+    UNLOCK = 'UNLOCK'
 
 from api_library.api_library import DynamicAPI
 
@@ -80,8 +88,14 @@ TABLE_MODEL_MAPPING = {
     "GstTypeOfRegistration":GstTypeOfRegistration,
     "OffServiceDocumentDataDetails":OffServiceDocumentDataDetails,
     "Profession":Profession,
-    "OffServiceTaskStatus":OffServiceTaskStatus
-
+    "OffServiceTaskStatus":OffServiceTaskStatus,
+    "AccQuotationMaster":AccQuotationMaster,
+    "EmployeeEmploymentDetails":EmployeeEmploymentDetails,
+    "OffEnquiryMaster":OffEnquiryMaster,
+    "OffWorkOrderMaster":OffWorkOrderMaster,
+    "AccTaxInvoiceMaster":AccTaxInvoiceMaster,
+    "AccProformaInvoiceMaster":AccProformaInvoiceMaster
+    
 }
 
 # Define a function to get the model class based on the provided model name
@@ -133,9 +147,6 @@ async def get_info(
 
 #........................fr delete
 
-
-
-
 @router.get("/delete_undelete_by_id", operation_id="modify_records")
 async def delete_undelete_by_id(
     model_name: str = Query(..., description="Model name to fetch data from"),
@@ -174,6 +185,228 @@ async def delete_undelete_by_id(
         raise HTTPException(status_code=400, detail="Invalid action type")
        
 #--------------------------------------------------------
+# @router.post("/lock_unlock", operation_id="lock_unlock_record")
+# async def lock_unlock(
+#     model_name: str = Query(..., description="Model name to fetch data from"),
+#     id: Optional[int] = Query(None, description="ID of the record to lock/unlock"),
+#     is_locked: str = Query(..., description="Lock/Unlock status (yes/no)"),
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Lock or Unlock a record based on the provided model name and ID.
+#     The token is used to extract the user_id for `locked_by`, and the current date is used for `locked_on`.
+#     """
+#     # Get the model class based on the provided model name
+#     table_model = get_model_by_model_name(model_name)
+
+#     # Check if the model exists
+#     if table_model is None:
+#         raise HTTPException(status_code=404, detail="Model not found")
+
+#     # Retrieve the user info from the token
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     if user_id is None:
+#         raise HTTPException(status_code=401, detail="Invalid user or token")
+
+#     # Query the record based on the given ID
+#     record = db.query(table_model).filter(table_model.id == id).first()
+
+#     if not record:
+#         raise HTTPException(status_code=404, detail="Record not found")
+
+#     # Lock/Unlock logic
+#     if is_locked == "yes":
+#         record.is_locked = "yes"
+#         record.locked_on = datetime.now()  # Set the current date
+#         record.locked_by = user_id         # Set the user ID from the token
+#     elif is_locked == "no":
+#         record.is_locked = "no"
+#         record.locked_on = None            # Clear the lock date
+#         record.locked_by = None            # Clear the lock user
+#     else:
+#         raise HTTPException(status_code=400, detail="Invalid is_locked value. Use 'yes' or 'no'.")
+
+#     # Commit the changes
+#     db.commit()
+
+#     return {"message": f"Record with ID {id} from model {model_name} has been {'locked' if is_locked == 'yes' else 'unlocked'}."}
+
+@router.post("/lock_unlock", operation_id="lock_unlock_record")
+async def lock_unlock(
+    model_name: str = Query(..., description="Model name to fetch data from"),
+    id: Optional[int] = Query(None, description="ID of the record to lock/unlock"),
+    action: LockType = Query(..., description="Action to perform (LOCK or UNLOCK)"),
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Lock or Unlock a record based on the provided model name and ID.
+    The token is used to extract the user_id for `locked_by`, and the current date is used for `locked_on`.
+    """
+    # Get the model class based on the provided model name
+    table_model = get_model_by_model_name(model_name)
+
+    # Check if the model exists
+    if table_model is None:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Retrieve the user info from the token
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid user or token")
+
+    # Query the record based on the given ID
+    record = db.query(table_model).filter(table_model.id == id).first()
+
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    # Lock/Unlock logic
+    if action == LockType.LOCK:
+        record.is_locked = "yes"
+        record.locked_on = datetime.now()  # Set the current date
+        record.locked_by = user_id         # Set the user ID from the token
+    elif action == LockType.UNLOCK:
+        record.is_locked = "no"
+        record.locked_on = None            # Clear the lock date
+        record.locked_by = None            # Clear the lock user
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action. Use 'LOCK' or 'UNLOCK'.")
+
+    # Commit the changes
+    db.commit()
+
+    # Prepare the response data
+    response_data = {
+        "message": f"Record with ID {id} from model {model_name} has been {'locked' if action == LockType.LOCK else 'unlocked'}.",
+        "success": True,
+        "locked": action == LockType.LOCK  # True if locked, False if unlocked
+    }
+
+    return response_data
+
+#-------------------------------------------------------------------------------------------------
+# @router.get("/get_record_with_employee_names")
+# async def get_record_with_employee_names(
+#     model_name: str = Query(..., description="Model name to fetch data from"),
+#     id: int = Query(..., description="ID of the record"),
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     This endpoint retrieves a record and joins with EmployeeMaster to get the names for created_by, modified_by, and deleted_by.
+#     """
+#     # Step 1: Get user info from the token (not necessary for fetching but included as per your use case)
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     # Step 2: Fetch the model dynamically based on model_name
+#     model = globals().get(model_name)
+#     if not model:
+#         raise HTTPException(status_code=404, detail="Model not found")
+
+#     # Step 3: Fetch the record based on ID
+#     record = db.query(model).filter(model.id == id).first()
+#     if not record:
+#         raise HTTPException(status_code=404, detail="Record not found")
+
+#     # Step 4: Fetch employee names for created_by, modified_by, and deleted_by
+#     created_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == record.created_by).first()
+#     modified_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == record.modified_by).first()
+#     deleted_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == record.deleted_by).first()
+
+#     # Step 5: Prepare response with employee names
+#     response_data = {
+#         "record_id": record.id,
+#         "created_by": {
+#             "id": record.created_by,
+#             "name": f"{created_by_employee.first_name} {created_by_employee.middle_name or ''} {created_by_employee.last_name}" if created_by_employee else None
+#         },
+#         "modified_by": {
+#             "id": record.modified_by,
+#             "name": f"{modified_by_employee.first_name} {modified_by_employee.middle_name or ''} {modified_by_employee.last_name}" if modified_by_employee else None
+#         },
+#         "deleted_by": {
+#             "id": record.deleted_by,
+#             "name": f"{deleted_by_employee.first_name} {deleted_by_employee.middle_name or ''} {deleted_by_employee.last_name}" if deleted_by_employee else None
+#         }
+#     }
+
+#     # Return the response with the employee names
+#     return response_data
+
+
+
+
+@router.get("/get_record_details_with_employee_names")
+async def get_record_with_employee_names(
+    model_name: str = Query(..., description="Model name to fetch data from"),
+    id: int = Query(..., description="ID of the record"),
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    This endpoint retrieves a record and joins with EmployeeMaster to get the names for created_by, modified_by, and deleted_by fields,
+    if those fields are present in the model.
+    """
+    # Step 1: Get user info from the token (not necessary for fetching but included as per your use case)
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    # Step 2: Fetch the model dynamically based on model_name
+    model = globals().get(model_name)
+    if not model:
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    # Step 3: Fetch the record based on ID
+    record = db.query(model).filter(model.id == id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    # Step 4: Check which columns exist in the model
+    mapper = inspect(model)
+    available_columns = {col.key for col in mapper.attrs}
+    
+    response_data = {"record_id": record.id}
+
+    # Step 5: Get names for each field, if it exists
+    if "created_by" in available_columns:
+        created_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == getattr(record, "created_by")).first()
+        response_data["created_by"] = {
+            "id": getattr(record, "created_by"),
+            "name": f"{created_by_employee.first_name} {created_by_employee.middle_name or ''} {created_by_employee.last_name}" if created_by_employee else None
+        }
+
+    if "modified_by" in available_columns:
+        modified_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == getattr(record, "modified_by")).first()
+        response_data["modified_by"] = {
+            "id": getattr(record, "modified_by"),
+            "name": f"{modified_by_employee.first_name} {modified_by_employee.middle_name or ''} {modified_by_employee.last_name}" if modified_by_employee else None
+        }
+
+    if "deleted_by" in available_columns:
+        deleted_by_employee = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == getattr(record, "deleted_by")).first()
+        response_data["deleted_by"] = {
+            "id": getattr(record, "deleted_by"),
+            "name": f"{deleted_by_employee.first_name} {deleted_by_employee.middle_name or ''} {deleted_by_employee.last_name}" if deleted_by_employee else None
+        }
+
+    # Return the response with the employee names, based on available fields
+    return response_data
+
+
+
+
+#-0---------------------------------------------------------------------------------------------------------------------
+
+
+
+
 @router.post("/test/save_record", operation_id="save_record")
 async def save_record(
     model_name: str = Query(..., description="Model name to save data to"),
@@ -204,41 +437,6 @@ async def save_record(
 
     return {"message": "Record saved successfully"}
 #....................................................................................................
-
-# @router.post("/test/save_recordsss", operation_id="save_record")
-# async def save_record(
-#     model_name: str = Query(..., description="Model name to save data to"),
-#     data: dict = Body(..., description="Data to be saved to the table"),
-#     id: Optional[int] = Query(None, description="ID of the record to update. If not provided or 0, insert a new record."),
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Save a record to the specified table. If ID is provided and nonzero, update an existing record.
-#     """
-#     # Get the model class based on the provided model name
-#     table_model = get_model_by_model_name(model_name)
-
-#     # Check if the model exists
-#     if table_model is None:
-#         raise HTTPException(status_code=404, detail="Model not found")
-
-#     # Initialize DynamicAPI instance with the retrieved model
-#     dynamic_api = DynamicAPI(table_model)
-
-#     if id is not None and id != 0:
-#         # Update existing record if ID is provided and nonzero
-#         # Check if the record exists
-#         existing_record = dynamic_api.get_record_by_id(db, id, [])  # Provide an empty list for fields
-#         if existing_record:
-#             # Update the existing record
-#             dynamic_api.update_record_by_id(db, id, data)
-#             return {"message": f"Record with ID {id} from model {model_name} has been updated"}
-#         else:
-#             raise HTTPException(status_code=404, detail="Record not found")
-#     else:
-#         # Insert a new record if ID is not provided or 0
-#         dynamic_api.save_record(db, data)
-#         return {"message": "New record inserted successfully"}
 
 
 @router.post("/check_duplicate")
