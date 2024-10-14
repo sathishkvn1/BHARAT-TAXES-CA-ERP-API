@@ -7,7 +7,7 @@ import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
-from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
+from caerp_db.common.models import  AppActivityHistory, EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
 from caerp_db.database import  get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
@@ -21,7 +21,7 @@ from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
-from sqlalchemy import text,null
+from sqlalchemy import insert, text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
@@ -425,6 +425,47 @@ from datetime import datetime, timedelta
 
 
 
+# @router.get("/get_consultant_schedule")
+# def get_consultant_schedule(
+#     consultant_id: int,
+#     consultation_mode_id: int,
+#     db: Session = Depends(get_db),
+#     check_date: Optional[date] = None,
+#     service_goods_master_id: Optional[int] = None,
+#     appointment_id: Optional[int] = None
+# ):
+#     """
+# #### Parameters:
+
+# - `consultant_id` (int, required): The ID of the consultant whose schedule is to be fetched.
+# - `consultation_mode_id` (int, required): The ID of the consultation mode.
+# - `db` (Session, required): The database session, provided by the dependency injection.
+# - `check_date` (date, optional): The specific date to check the schedule for. If not provided, the endpoint will fetch the schedule for the next 10 days.
+# - `service_goods_master_id` (int, optional): The ID of the service or goods master to get slot duration.
+
+# #### Response:
+# The endpoint returns a JSON object containing either available slots or messages about unavailable dates. The response format varies depending on whether `check_date` is provided or not.
+
+# 1. **When All parameters are provided**:
+#     - **Available slots found**: Returns a list of available time slots.
+#     - **No available slots**: Returns a message indicating no available slots for the specified date.
+
+# 2. **When `check_date` and `service_goods_master_id`  is not provided**:
+#     - **Unavailable dates**: Returns a list of unavailable dates within the next 10 days.
+#     - **Available dates**: Returns a list of available dates within the next 10 days.
+# """
+
+#     return db_office_master.fetch_available_and_unavailable_dates_and_slots(
+#         consultant_id=consultant_id,
+#         consultation_mode_id=consultation_mode_id,
+#         db=db,
+#         check_date=check_date,
+#         service_goods_master_id=service_goods_master_id,
+#         appointment_id=appointment_id
+#     )
+
+
+
 @router.get("/get_consultant_schedule")
 def get_consultant_schedule(
     consultant_id: int,
@@ -463,7 +504,6 @@ The endpoint returns a JSON object containing either available slots or messages
         service_goods_master_id=service_goods_master_id,
         appointment_id=appointment_id
     )
-
 
 #---------------------------------------------------------------------------------------------------------------
 
@@ -3327,4 +3367,250 @@ def get_dependent_services(
 
 
 
+def log_activity(db: Session, user_id: int, action_type: str, db_table_name: str, action_query: str):
+    try:
+        # Create a new activity history record
+        activity_history = AppActivityHistory(
+            action_taken_on=datetime.utcnow(),
+            action_taken_by=user_id,
+            action_type=action_type,
+            db_table_name=db_table_name,
+            action_query=action_query
+        )
+        
+        # Add the new record to the session and commit
+        db.add(activity_history)
+        db.commit()
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        print(f"Error logging activity: {str(e)}")  # Log the error as needed
 
+@router.post("/test/save_consultant_schedule/")
+def save_consultant_schedule(
+    schedules: List[ConsultantScheduleCreate], 
+    action_type: RecordActionType,
+    id: Optional[int] = None,
+    consultant_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    
+    try:
+        for data in schedules:
+            save_consultant_schedule_detail_test(data, consultant_id, user_id, id, action_type, db)
+        
+        return {"success": True, "detail": "Saved successfully"}
+    
+    except Exception as e:
+        print(f"Error in endpoint: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    
+
+def save_consultant_schedule_detail_test(
+    schedule_data: ConsultantScheduleCreate,
+    consultant_id: Optional[int],
+    user_id: int,
+    id: Optional[int],
+    action_type: RecordActionType,
+    db: Session
+):
+    try:
+        # Convert schedule_data to dictionary format for processing
+        schedule_dict = schedule_data.model_dump()
+        print("schedule_dict", schedule_dict)
+
+        # Handle special schedules (`is_normal_schedule == "no"`)
+        if schedule_data.is_normal_schedule == "no":
+            if not schedule_data.consultation_date:
+                raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
+            
+            # Remove `effective_from_date` as it's not needed in special schedules
+            schedule_dict.pop("effective_from_date", None)
+
+            # Assign `day_of_week_id` using SQL query based on `consultation_date`
+            day_of_week_query = text(f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')")
+            day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
+            schedule_dict['day_of_week_id'] = day_of_week_id
+
+            # INSERT ONLY logic
+            if action_type == RecordActionType.INSERT_ONLY:
+                if consultant_id is None:
+                    raise ValueError("consultant_id is required for INSERT_ONLY")
+                
+                # Check if the record already exists to avoid duplicates
+                existing_schedule = db.query(OffConsultantSchedule).filter(
+                    OffConsultantSchedule.consultant_id == consultant_id,
+                    OffConsultantSchedule.consultation_date == schedule_data.consultation_date,
+                    OffConsultantSchedule.consultation_mode_id == schedule_data.consultation_mode_id
+                ).first()
+
+               
+                if existing_schedule:
+                    raise ValueError("A schedule for this consultant on this date already exists.")
+
+                # Insert the new schedule
+                new_schedule = OffConsultantSchedule(
+                    **schedule_dict, 
+                    consultant_id=consultant_id, 
+                    created_by=user_id, 
+                    created_on=datetime.now()
+                )
+
+                stmt = insert(OffConsultantSchedule).values(
+                **schedule_dict, 
+                consultant_id=consultant_id, 
+                created_by=user_id, 
+                created_on=datetime.now()
+            )
+
+            # Compile the statement to get the raw SQL
+                action_query = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                print("action_query:", action_query)
+                action_type = action_query.split()[0]  # This will give you the first word
+                print("action_type:", action_type)  #
+
+
+                
+                db.add(new_schedule)
+                db.commit()
+
+                # Log activity
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type=action_type,
+                    db_table_name="OffConsultantSchedule",
+                    action_query=action_query
+                )
+
+                return True
+
+            # UPDATE ONLY logic
+            elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+                # Fetch the existing schedule based on the provided ID
+                existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+
+                if not existing_schedule:
+                    raise ValueError(f"Schedule with ID {id} not found.")
+
+                # Update only the fields that are provided in the schedule_dict
+                for key, value in schedule_dict.items():
+                    setattr(existing_schedule, key, value)
+
+                # Update the modification metadata
+                existing_schedule.modified_by = user_id
+                existing_schedule.modified_on = datetime.now()
+                
+                # Commit the update to the existing schedule
+                db.commit()
+
+                # Log activity
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type="UPDATE",
+                    db_table_name="OffConsultantSchedule",
+                    action_query=str(db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id))  # Log the SQL query
+                )
+
+                return True
+
+            else:
+                raise ValueError("Invalid action type for special schedules (is_normal_schedule = 'no').")
+
+        # Handle normal schedules (`is_normal_schedule == "yes"`)
+        elif schedule_data.is_normal_schedule == "yes":
+            if action_type == RecordActionType.UPDATE_AND_INSERT:
+                if consultant_id is None:
+                    raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+
+                # Ensure `effective_from_date` is provided
+                effective_from_date = schedule_dict.get('effective_from_date')
+                if not effective_from_date:
+                    raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
+
+                # Query for the existing schedule (active record)
+                existing_schedule_query = db.query(OffConsultantSchedule).filter(
+                    OffConsultantSchedule.consultant_id == consultant_id,
+                    OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
+                    OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
+                    OffConsultantSchedule.effective_to_date.is_(None)
+                )
+                existing_schedule = existing_schedule_query.first()
+
+                # If an active schedule exists, update its `effective_to_date`
+                if existing_schedule:
+                    new_effective_to_date = effective_from_date - timedelta(days=1)
+                    existing_schedule.effective_to_date = new_effective_to_date
+                    existing_schedule.modified_by = user_id
+                    existing_schedule.modified_on = datetime.now()
+                    db.commit()  # Commit the update for the existing schedule
+
+                    # Log activity for existing schedule update
+                    log_activity(
+                        db=db,
+                        user_id=user_id,
+                        action_type="UPDATE",
+                        db_table_name="OffConsultantSchedule",
+                        action_query=str(existing_schedule_query)  # Log the SQL query
+                    )
+
+                # Insert the new schedule
+                new_schedule = OffConsultantSchedule(
+                    **schedule_dict, 
+                    consultant_id=consultant_id, 
+                    created_by=user_id, 
+                    created_on=datetime.now()
+                )
+                db.add(new_schedule)
+                db.commit()
+
+                # Log activity for new schedule insertion
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type="INSERT",
+                    db_table_name="OffConsultantSchedule",
+                    action_query=f"Inserted new schedule for consultant ID {consultant_id}: {schedule_dict}"
+                )
+
+                return True
+
+            # UPDATE ONLY logic for normal schedule
+            elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+                # Handle the update of an existing schedule based on the provided ID
+                existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+                if existing_schedule:
+                    for key, value in schedule_dict.items():
+                        setattr(existing_schedule, key, value)
+                    existing_schedule.modified_by = user_id
+                    existing_schedule.modified_on = datetime.now()
+                    db.commit()
+
+                    # Log activity for updating an existing schedule
+                    log_activity(
+                        db=db,
+                        user_id=user_id,
+                        action_type="UPDATE",
+                        db_table_name="OffConsultantSchedule",
+                        action_query=str(db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id))  # Log the SQL query
+                    )
+
+                    return True
+                else:
+                    raise ValueError(f"Schedule with ID {id} not found.")
+
+            else:
+                raise ValueError("Invalid action type for normal schedules (is_normal_schedule = 'yes').")
+
+        else:
+            raise ValueError("Invalid schedule type or action type provided.")
+
+    except Exception as e:
+        db.rollback()  # Rollback changes in case of an error
+        raise HTTPException(status_code=400, detail=str(e))

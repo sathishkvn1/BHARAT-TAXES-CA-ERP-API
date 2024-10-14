@@ -10,7 +10,7 @@ from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 from caerp_db.office import db_office_master
 
-from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffConsultationTaskStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryMaster, OffEnquiryStatus, OffNatureOfPossession, OffServiceDocumentDataDetails, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskStatus, OffSourceOfEnquiry, OffTaskPriority, OffWorkOrderMaster, OffWorkOrderStatus
+from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffConsultationTaskStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryMaster, OffEnquiryStatus, OffNatureOfPossession, OffServiceDocumentDataDetails, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskMaster, OffServiceTaskStatus, OffSourceOfEnquiry, OffTaskPriority, OffWorkOrderMaster, OffWorkOrderStatus
 
 
 from caerp_auth import oauth2
@@ -94,7 +94,9 @@ TABLE_MODEL_MAPPING = {
     "OffEnquiryMaster":OffEnquiryMaster,
     "OffWorkOrderMaster":OffWorkOrderMaster,
     "AccTaxInvoiceMaster":AccTaxInvoiceMaster,
-    "AccProformaInvoiceMaster":AccProformaInvoiceMaster
+    "AccProformaInvoiceMaster":AccProformaInvoiceMaster,
+    "EmployeeMaster":EmployeeMaster,
+    "OffServiceTaskMaster":OffServiceTaskMaster
     
 }
 
