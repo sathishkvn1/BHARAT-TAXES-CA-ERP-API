@@ -35,12 +35,18 @@ router  = APIRouter(
 @router.get('/generate_quotation_service_details')
 def generate_quotation_service_details(
     work_order_master_id: int,
-   
+    token: str = Depends(oauth2.oauth2_scheme),
     db: Session = Depends(get_db)
 ):
     
-         
-    result   = db_quotation.generate_quotation_service_details(db,work_order_master_id)
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")   
+    financial_year_id   =  auth_info.get("financial_year_id") 
+    customer_id         =  auth_info.get("mother_customer_id") 
+    result   = db_quotation.generate_quotation_service_details(db,work_order_master_id,financial_year_id,customer_id )
  
     return result
 
