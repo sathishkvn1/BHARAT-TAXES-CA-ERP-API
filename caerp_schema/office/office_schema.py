@@ -1608,3 +1608,4 @@ class ServiceResponse(BaseModel):
 # class ServiceResponse(BaseModel):
 #     data: List[BundlePriceResponse]
 #     aggregated_data: List[BundlePriceResponse] 
+

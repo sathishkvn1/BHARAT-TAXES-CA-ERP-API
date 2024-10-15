@@ -334,27 +334,30 @@ class OffViewServiceGoodsMaster(caerp_base):
     service_goods_master_deleted_on = Column(DateTime, nullable=True)
 
 
-
 class OffServiceGoodsMaster(caerp_base):
-    __tablename__ = 'off_service_goods_master'
-    id = Column(Integer, primary_key=True, index=True)
-    hsn_sac_class_id = Column(Integer, nullable=False)
-    group_id = Column(Integer, nullable=False)
-    sub_group_id = Column(Integer, nullable=False)
-    category_id = Column(Integer, nullable=False)
-    sub_category_id = Column(Integer, nullable=False)
+    __tablename__  = 'off_service_goods_master'
+    id                 = Column(Integer, primary_key=True, index=True)
+    hsn_sac_class_id   = Column(Integer, nullable=False)
+    group_id           = Column(Integer, nullable=False)
+    sub_group_id       = Column(Integer, nullable=False)
+    category_id        = Column(Integer, nullable=False)
+    sub_category_id    = Column(Integer, nullable=False)
     service_goods_name = Column(String(500), nullable=False)
-    hsn_sac_id = Column(Integer, nullable=False)
-    sku_code_id = Column(Integer, nullable=False)
-    has_consultation = Column(Enum('yes', 'no'), default='no', nullable=False)
+    hsn_sac_id         = Column(Integer, nullable=False)
+    sku_code_id        = Column(Integer, nullable=False)
+    has_consultation   = Column(Enum('yes', 'no'), default='no', nullable=False)
     is_bundled_service = Column(Enum('yes', 'no'), default='no', nullable=False)
-    created_by = Column(Integer, nullable=False)
-    created_on = Column(DateTime, nullable=False)
-    modified_by = Column(Integer, nullable=True)
-    modified_on = Column(DateTime, nullable=True)
-    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
-    deleted_by = Column(Integer, nullable=True)
-    deleted_on = Column(DateTime, nullable=True)
+    created_by         = Column(Integer, nullable=False)
+    created_on         = Column(DateTime, nullable=False)
+    modified_by        = Column(Integer, nullable=True)
+    modified_on        = Column(DateTime, nullable=True)
+    is_deleted         = Column(Enum('yes', 'no'), default='no', nullable=False)
+    deleted_by         = Column(Integer, nullable=True)
+    deleted_on         = Column(DateTime, nullable=True)
+    is_locked          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on          = Column(Date, nullable=True)
+    locked_by          = Column(Integer, nullable=True)
+
 
 class OffServiceGoodsDetails(caerp_base):
         
@@ -531,15 +534,25 @@ class OffNatureOfPossession(caerp_base):
     
 class OffServiceDocumentDataMaster(caerp_base):
     __tablename__ = 'off_service_document_data_master'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    service_goods_master_id = Column(Integer, nullable=False)
-    group_id = Column(Integer, nullable=False)
-    sub_group_id = Column(Integer, nullable=False)
-    category_id = Column(Integer, nullable=False)
-    sub_category_id = Column(Integer, nullable=False)
-    constitution_id = Column(Integer, nullable=False)
-  
- 
+    id                       = Column(Integer, primary_key=True, autoincrement=True)
+    service_goods_master_id  = Column(Integer, nullable=False)
+    group_id                 = Column(Integer, nullable=False)
+    sub_group_id             = Column(Integer, nullable=False)
+    category_id              = Column(Integer, nullable=False)
+    sub_category_id          = Column(Integer, nullable=False)
+    constitution_id          = Column(Integer, nullable=False)
+    created_by               = Column(Integer, nullable=False)
+    created_on               = Column(DateTime, nullable=False)
+    modified_by              = Column(Integer, nullable=True)
+    modified_on              = Column(DateTime, nullable=True)
+    is_deleted               = Column(Enum('yes', 'no'), default='no', nullable=False)
+    deleted_by               = Column(Integer, nullable=True)
+    deleted_on               = Column(DateTime, nullable=True)
+    is_locked                = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on                = Column(Date, nullable=True)
+    locked_by                = Column(Integer, nullable=True)
+
+
 
 class OffServiceDocumentDataDetails(caerp_base):
     __tablename__ = 'off_service_document_data_details'
@@ -892,6 +905,9 @@ class OffConsultationTaskMaster(caerp_base):
     is_deleted              = Column(Enum('yes', 'no'), default='no', nullable=False)
     deleted_by              = Column(Integer, nullable=True)
     deleted_on              = Column(DateTime, nullable=True)
+    is_locked               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on               = Column(Date, nullable=True)
+    locked_by               = Column(Integer, nullable=True)
 
 
 
@@ -1183,7 +1199,7 @@ class OffWorkOrderDetails(caerp_base):
     bundle_service_id           = Column(Integer, nullable=True)
     is_depended_service         = Column(Enum('yes', 'no'), nullable=False, default='no')
     processing_order            = Column(Integer, nullable=True)
-    is_service_required            = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
+    is_service_required         = Column(Enum('YES', 'NO', 'LATER'), nullable=False, default='YES')
     service_required_date       = Column(Date, nullable=True)
     service_status_id           = Column(Integer, nullable=False)
     file_opened_on              = Column(DateTime, nullable=True)

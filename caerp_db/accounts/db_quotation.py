@@ -2,9 +2,9 @@ from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
 from caerp_db.common.models import AppActivityHistory
 from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster, OffViewWorkOrderBusinessPlaceDetails,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
-from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
-from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
-from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceMaster
+from caerp_schema.office.office_schema import  OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
+from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceDetailsViewSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceMasterViewSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceDetailsViewSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceMasterViewSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
+from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceDetailsView, AccProformaInvoiceMaster, AccProformaInvoiceMasterView, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceDetailsView, AccTaxInvoiceMaster, AccTaxInvoiceMasterView
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
@@ -179,16 +179,17 @@ def generate_quotation_service_details(
                 additional_cess_amount=0.0,
                 # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
                 # taxable_amount = total_service_charge,
-                # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
                 taxable_amount = prices.service_charge,
                 total_amount = prices.service_charge + prices.govt_agency_fee + prices.stamp_duty + prices.stamp_fee 
+
+                # total_amount = prices.service_charge + prices.govt_agency_fee + prices.stamp_duty + prices.stamp_fee 
             )
         
             db.add(quotation_detail)
                 
             gst_amount = quotation_detail.taxable_amount * (quotation_detail.igst_percent /100)
             quotation_detail.igst_amount = gst_amount
-            quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
+            quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount + quotation_detail.cgst_amount +quotation_detail.sgst_amount+ quotation_detail.additional_cess_amount
             quotation_total_amount += quotation_detail.total_amount 
             product_discount_total +=quotation_detail.discount_amount  
             
@@ -209,7 +210,6 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 #=-------------------------------------------------------------------------------------------
 
 def save_quotation_data(
@@ -476,7 +476,10 @@ def get_quotation_data(
 def generate_profoma_invoice_details(
         db: Session,
         work_order_master_id: int,
-        user_id: int):
+        user_id: int,
+        financial_year_id : int,
+        customer_id : int
+        ):
     try:
         # Check if an invoice already exists
         existing_data = db.query(AccProformaInvoiceMaster).filter(
@@ -498,7 +501,7 @@ def generate_profoma_invoice_details(
         # Fetch Work Order Details data (main services only, where service_required = 'YES')
         work_order_details_data = db.query(WorkOrderDetailsView).filter(
             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
-            WorkOrderDetailsView.service_required == 'YES', 
+            WorkOrderDetailsView.is_service_required == 'YES', 
             WorkOrderDetailsView.is_main_service == 'yes',
             WorkOrderDetailsView.is_deleted == 'no'
         ).all()
@@ -528,16 +531,19 @@ def generate_profoma_invoice_details(
        
         # Generate new voucher ID and invoice number
         new_voucher_id = generate_voucher_id(db)
-        proforma_invoice_number = generate_book_number('INVOICE', db)
+        proforma_invoice_number = generate_book_number('PROFORMA_INVOICE',financial_year_id,customer_id, db)
 
         # Create Invoice Master Entry
         proforma_invoice_master = AccProformaInvoiceMaster(
+            financial_year_id   = financial_year_id,
+            # hsn_sac_code        = 
             voucher_id=new_voucher_id,
             service_type='NON_CONSULTATION',
             work_order_master_id=work_order_master_id,
             proforma_invoice_number=proforma_invoice_number,
             proforma_invoice_date=datetime.now(),
             account_head_id=1,
+            proforma_invoice_status_id= 1,
             created_by=user_id,
             created_on=datetime.now(),
             is_deleted='no'
@@ -576,8 +582,8 @@ def generate_profoma_invoice_details(
                     stamp_fee   =total_stamp_fee,
                     quantity    =1,  
                     discount_amount = quotation_detail.discount_amount,
-                    gst_percent     =quotation_detail.gst_percent,  
-                    gst_amount      =quotation_detail.gst_amount,  # To be updated after calculation
+                    igst_percent     =quotation_detail.igst_percent,  
+                    igst_amount      =quotation_detail.igst_amount,  # To be updated after calculation
                     taxable_amount  =taxable_amount,
                     # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
                     total_amount    = total_amount,
@@ -590,19 +596,19 @@ def generate_profoma_invoice_details(
                 total_invoice_amount += invoice_detail.total_amount
 
                 # Calculate GST Amount and update the entry
-                gst_amount = invoice_detail.taxable_amount * (invoice_detail.gst_percent / 100)
-                invoice_detail.gst_amount = gst_amount
+                gst_amount = invoice_detail.taxable_amount * (invoice_detail.igst_percent / 100)
+                invoice_detail.igst_amount = gst_amount
                 proforma_invoice_master_id = proforma_invoice_master.id
                 proforma_invoice_detail_id = invoice_detail.id
-                task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id)
+                task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id,financial_year_id,customer_id)
                 net_amount = total_invoice_amount
         # Update Invoice Master with total amount
-        proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount
-        proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount
-        proforma_invoice_master.round_off_amount            = quotation_master_data.round_off
+        proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount_amount
+        proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount_amount
+        proforma_invoice_master.round_off_amount            = quotation_master_data.round_off_amount
 
         proforma_invoice_master.grand_total_amount          = total_invoice_amount
-        proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount -quotation_master_data.bill_discount + quotation_master_data.round_off
+        proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount_amount -quotation_master_data.bill_discount_amount + quotation_master_data.round_off_amount
         db.commit()
 
         return {
@@ -614,7 +620,6 @@ def generate_profoma_invoice_details(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
@@ -622,10 +627,12 @@ def save_service_task_details(
         work_order_details_id: int,
         proforma_invoice_master_id : int,
         proforma_invoice_detail_id: int,
-        user_id:int
+        user_id:int,
+        financial_year_id: int,
+        customer_id: int
 ):
     try: 
-        task_number = generate_book_number('TASK',db)
+        task_number = generate_book_number('TASK',financial_year_id,customer_id,db)
         new_task = OffServiceTaskMaster(
             work_order_master_id=work_order_master_id,
             work_order_details_id=work_order_details_id,
@@ -647,6 +654,7 @@ def save_service_task_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
    
+
 
 #----------------------------------------------------------------------------------------------
 
@@ -769,10 +777,6 @@ def save_service_requirement_status(
 
 
  
-
-
- 
-
 def save_profoma_invoice(
         db: Session,
         work_order_master_id: int,
@@ -808,6 +812,7 @@ def save_profoma_invoice(
         except SQLAlchemyError as e:
             db.rollback()  # Rollback the transaction in case of error
             raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
+
 #-------------------------------------------------------------------------------------------------------
 
 def get_demand_notice(
@@ -830,12 +835,13 @@ def get_demand_notice(
 #-------------------------------------------------------------------------------------------------------------
    
  
-
 def consultation_invoice_generation(
         work_order_master_id: int,
         appointment_id: int,
         db: Session,
-        user_id: int
+        user_id: int,
+        financial_yer_id : int,
+        customer_id: int
 ):
     existing_data = db.query(AccTaxInvoiceMaster).filter(
             AccTaxInvoiceMaster.work_order_master_id == work_order_master_id,
@@ -865,10 +871,11 @@ def consultation_invoice_generation(
     ).all()
     # Generate voucher ID and invoice number
     voucher_id = generate_voucher_id(db)
-    invoice_number = generate_book_number('INVOICE', db)
+    invoice_number = generate_book_number('TAX_INVOICE',financial_yer_id,customer_id, db)
 
     # Create new invoice entry
     new_invoice = AccTaxInvoiceMaster(
+        financial_year_id = financial_yer_id,
         voucher_id=voucher_id,
         service_type='CONSULTATION',
         appointment_master_id=appointment_id,
@@ -876,6 +883,7 @@ def consultation_invoice_generation(
         work_order_master_id=work_order_master_id,
         tax_invoice_number=invoice_number,
         tax_invoice_date=date.today(),
+        tax_invoice_status_id = 1,
         # total_offer_amount = 0.0,
         # total_coupon_amount = 0.0,
         net_amount=0.0,  # To be updated later
@@ -943,127 +951,106 @@ def consultation_invoice_generation(
         }
 
 #---------------------------------------------------------------------------------------------------
-
 def get_proforma_invoice_details(
     db: Session,
     work_order_master_id: int,
-    proforma_invoice_master_id: int
+    proforma_invoice_master_id: int,
+    include_details: Optional[bool] = Query(False)
 ):
-    if work_order_master_id:
-        if proforma_invoice_master_id:
-            # Fetch the invoice master data
-            invoice_master_data = db.query(AccProformaInvoiceMaster).filter(
-                AccProformaInvoiceMaster.work_order_master_id == work_order_master_id,
-                AccProformaInvoiceMaster.id == proforma_invoice_master_id,
-                AccProformaInvoiceMaster.is_deleted == 'no'
-            ).first()
+    # try:
+        if not work_order_master_id:
+            raise HTTPException(status_code=400, detail="Work Order Master ID is required")
 
-            # Handle case when invoice master is not found
-            if not invoice_master_data:
-                raise HTTPException(status_code=404, detail="Invoice Master not found")
-
-            # Fetch the work order master data
-            work_order_master_data = db.query(WorkOrderMasterView).filter(
-                WorkOrderMasterView.work_order_master_id == work_order_master_id
-            ).first()
-
-            # Handle case when work order master data is not found
-            if not work_order_master_data:
-                raise HTTPException(status_code=404, detail="Work Order Master not found")
-
-            # Fetch the invoice details with the service name from joined table
-            invoice_details_data = db.query(
-                AccProformaInvoiceDetails,
-                OffViewServiceGoodsMaster.service_goods_name
-            ).join(
-                OffViewServiceGoodsMaster,
-                AccProformaInvoiceDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            ).filter(
-                AccProformaInvoiceDetails.proforma_invoice_master_id == invoice_master_data.id,
-                AccProformaInvoiceDetails.is_deleted == 'no'
-            ).all()
-
-            # Build the list of invoice details
-            invoice_details_list = []
-            for detail, service_name in invoice_details_data:
-                detail_dict = detail.__dict__.copy()  # Copy the details to modify
-                detail_dict['service_goods_name'] = service_name
-                invoice_details_list.append(AccProformaInvoiceDetailsSchema.model_validate(detail_dict))
-
-            # Construct response schema
-            invoice_response_data = AccProformaInvoiceResponceSchema(
-                proforma_invoice_master=AccProformaInvoiceMasterSchema.model_validate(invoice_master_data.__dict__),
-                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                proforma_invoice_details=invoice_details_list
-            )
-
-            return invoice_response_data
-        else:
+        if not proforma_invoice_master_id:
             raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-    else:
-        raise HTTPException(status_code=400, detail="Work Order Master ID is required")
 
+        # Fetch the invoice master data
+        invoice_master_data = db.query(AccProformaInvoiceMasterView).filter(
+            AccProformaInvoiceMasterView.work_order_master_id == work_order_master_id,
+            AccProformaInvoiceMasterView.id == proforma_invoice_master_id,
+            AccProformaInvoiceMasterView.is_deleted == 'no'
+        ).first()
+
+        # Handle case when invoice master is not found
+        if not invoice_master_data:
+            raise HTTPException(status_code=404, detail="Invoice Master not found")
+
+        # Initialize response schema with master data
+        invoice_response_data = AccProformaInvoiceResponceSchema(
+            proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
+            proforma_invoice_details = []
+        )
+
+        # If include_details is true, fetch the invoice details
+        if include_details:
+            invoice_details_data = db.query(AccProformaInvoiceDetailsView).filter(
+                AccProformaInvoiceDetailsView.proforma_invoice_master_id == proforma_invoice_master_id,
+                AccProformaInvoiceDetailsView.is_deleted == 'no'
+            ).all()
+            
+            # Convert details data to the schema format
+            invoice_details_list = [
+                AccProformaInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details_data
+            ]
+            
+            # Add the details to the response schema
+            invoice_response_data.proforma_invoice_details = invoice_details_list
+
+        return invoice_response_data
+    # except Exception as e:
+    #     print(f"Error: {e}")
+    #     raise HTTPException(status_code=500, detail="An internal error occurred.")
 
 
 def get_tax_invoice_details(
     db: Session,
     work_order_master_id: int,
-    tax_invoice_master_id: int
+    tax_invoice_master_id: int,
+    include_details: Optional[bool] = Query(False)
 ):
-    if work_order_master_id:
-        if tax_invoice_master_id:
-            # Fetch the invoice master data
-            invoice_master_data = db.query(AccTaxInvoiceMaster).filter(
-                AccTaxInvoiceMaster.work_order_master_id == work_order_master_id,
-                AccTaxInvoiceMaster.id == tax_invoice_master_id,
-                AccTaxInvoiceMaster.is_deleted == 'no'
-            ).first()
+    # try:
+        if not work_order_master_id:
+            raise HTTPException(status_code=400, detail="Work Order Master ID is required")
 
-            # Handle case when invoice master is not found
-            if not invoice_master_data:
-                raise HTTPException(status_code=404, detail="Invoice Master not found")
-
-            # Fetch the work order master data
-            work_order_master_data = db.query(WorkOrderMasterView).filter(
-                WorkOrderMasterView.work_order_master_id == work_order_master_id
-            ).first()
-
-            # Handle case when work order master data is not found
-            if not work_order_master_data:
-                raise HTTPException(status_code=404, detail="Work Order Master not found")
-
-            # Fetch the invoice details with the service name from joined table
-            invoice_details_data = db.query(
-                AccTaxInvoiceDetails,
-                OffViewServiceGoodsMaster.service_goods_name
-            ).join(
-                OffViewServiceGoodsMaster,
-                AccTaxInvoiceDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            ).filter(
-                AccTaxInvoiceDetails.tax_invoice_master_id == invoice_master_data.id,
-                AccTaxInvoiceDetails.is_deleted == 'no'
-            ).all()
-
-            # Build the list of invoice details
-            invoice_details_list = []
-            for detail, service_name in invoice_details_data:
-                detail_dict = detail.__dict__.copy()  # Copy the details to modify
-                detail_dict['service_goods_name'] = service_name
-                invoice_details_list.append(AccTaxInvoiceDetailsSchema.model_validate(detail_dict))
-
-            # Construct response schema
-            invoice_response_data = AccTaxInvoiceResponceSchema(
-                tax_invoice_master=AccTaxInvoiceMasterSchema.model_validate(invoice_master_data.__dict__),
-                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                tax_invoice_details=invoice_details_list
-            )
-
-            return invoice_response_data
-        else:
+        if not tax_invoice_master_id:
             raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-    else:
-        raise HTTPException(status_code=400, detail="Work Order Master ID is required")
 
+        # Fetch the invoice master data
+        invoice_master_data = db.query(AccTaxInvoiceMasterView).filter(
+            AccTaxInvoiceMasterView.work_order_master_id == work_order_master_id,
+            AccTaxInvoiceMasterView.id == tax_invoice_master_id,
+            AccTaxInvoiceMasterView.is_deleted == 'no'
+        ).first()
+
+        # Handle case when invoice master is not found
+        if not invoice_master_data:
+            raise HTTPException(status_code=404, detail="Invoice Master not found")
+
+        # Initialize response schema with master data
+        invoice_response_data = AccTaxInvoiceResponceSchema(
+            tax_invoice_master=AccTaxInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
+            tax_invoice_details = []
+        )
+
+        # If include_details is true, fetch the invoice details
+        if include_details:
+            invoice_details_data = db.query(AccTaxInvoiceDetailsView).filter(
+                AccTaxInvoiceDetailsView.tax_invoice_master_id == tax_invoice_master_id,
+                AccTaxInvoiceDetailsView.is_deleted == 'no'
+            ).all()
+            
+            # Convert details data to the schema format
+            invoice_details_list = [
+                AccTaxInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details_data
+            ]
+            
+            # Add the details to the response schema
+            invoice_response_data.tax_invoice_details = invoice_details_list
+
+        return invoice_response_data
+    # except Exception as e:
+    #     print(f"Error: {e}")
+    #     raise HTTPException(status_code=500, detail="An internal error occurred.")
 
 #---------------------------------------------------------------------------------------------------
 

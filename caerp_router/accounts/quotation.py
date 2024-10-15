@@ -362,7 +362,6 @@ def save_service_requirement_status(
 
 
 #--------------------------------------------------------------------------------------------
-
 @router.get('/generate_profoma_invoice')
 def generate_profoma_invoice(
     work_order_master_id : int,
@@ -374,20 +373,27 @@ def generate_profoma_invoice(
 
             auth_info = authenticate_user(token)
             user_id = auth_info.get("user_id")
-            result   = db_quotation.generate_profoma_invoice_details(db,work_order_master_id,user_id)
+            financial_year_id   =  auth_info.get("financial_year_id") 
+            customer_id         =  auth_info.get("mother_customer_id")             
+            result   = db_quotation.generate_profoma_invoice_details(db,work_order_master_id,user_id,financial_year_id,customer_id)
             return result
-
 #----------------------------------------------------------------------------------------
-
 @router.get('/get_proforma_invoice_details')
 def get_proforma_invoice_details(
      work_order_master_id : int,
      proforma_invoice_master_id : int,
+     include_details: Optional[bool] = Query(False),
+     token: str = Depends(oauth2.oauth2_scheme),
      db: Session = Depends(get_db)
 ):
-     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id)
-     return result
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
+        # auth_info = authenticate_user(token)
+        # user_id = auth_info.get("user_id")
+            
+    result = db_quotation.get_proforma_invoice_details_new(db,work_order_master_id,proforma_invoice_master_id,include_details)
+    return result
 #---------------------------------------------------------------------------------
 
 @router.post('/save_proforma_invoice')
@@ -430,10 +436,11 @@ def consultation_invoice_generation(
 
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
+    financial_year_id   =  auth_info.get("financial_year_id") 
+    customer_id         =  auth_info.get("mother_customer_id") 
      
-    result = db_quotation.consultation_invoice_generation(work_order_master_id,appointment_master_id,db,user_id)
+    result = db_quotation.consultation_invoice_generation(work_order_master_id,appointment_master_id,db,user_id,financial_year_id,customer_id)
     return result
-
 #--------------------------------------------------------------------
 
 @router.get('/get_invoice_details')
