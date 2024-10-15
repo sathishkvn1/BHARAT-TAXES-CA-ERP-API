@@ -123,3 +123,12 @@ class BookType(str, Enum):
     JOURNAL_VOUCHER     = 'JOURNAJOURNAL_VOUCHERL'
     FILE                = 'FILE'
     
+
+class QuotationStatus(str, Enum):
+    QUOTATION_DRAFT 				    = 1
+    QUOTATION_SENT					    = 2
+    QUOTATION_PENDING_CUSTOMER_APPROVAL	= 3
+    QUOTATION_ADJUSTMENT_REQUESTED		= 4
+    QUOTATION_ACCEPTED				    = 5
+    QUOTATION_REJECTED				    = 6
+    QUOTATION_CONVERTED_TO_PROFORMA		= 7

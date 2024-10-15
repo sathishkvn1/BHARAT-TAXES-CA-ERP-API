@@ -5,27 +5,6 @@ from datetime import date, datetime
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewWorkOrderDetailsSchema,OffViewWorkOrderMasterSchema
 
 
-# class AccQuotationMasterSchema(BaseModel):
-
-#     id                      : Optional[int] = None
-#     work_order_master_id    : Optional[int] = None
-#     quotation_version       : Optional[int] = None
-#     quotation_date          : Optional[date] = None
-#     quotation_number        : Optional[str] = None
-
-#     offer_total             : Optional[float] = None
-
-#     coupon_total            : Optional[float] = None
-#     # product_discount_total  : Optional[float] = None
-#     bill_discount           : Optional[float] = None
-#     additional_discount     : Optional[float] = None
-
-#     grand_total             : Optional[float] = None
-#     round_off               : Optional[float] = None
-#     net_amount              : Optional[float] = None
-#     remarks                 : Optional[str] = None
-#     quotation_status        : Optional[str] = 'DRAFT'
-#     is_final_quotation      : Optional[str] = 'no'
 
 class AccQuotationMasterSchema(BaseModel):
 
@@ -51,7 +30,6 @@ class AccQuotationMasterSchema(BaseModel):
     is_locked                       : Optional[str] = 'no'  
     locked_on                       : Optional[datetime] = None
     locked_by                       : Optional[int] =  None
-
 
 # class AccQuotationDetailsSchema(BaseModel):
 
@@ -139,16 +117,96 @@ class AccQuotationDetailsSchema(BaseModel):
     # service_required             : Optional[str] = 'YES'
     # service_required_date        : Optional[date] = None
     is_deleted                   : Optional[str] = 'no'
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class AccQuotationMasterViewSchema(BaseModel):
+    quotation_master_id     : Optional[int] = None
+    financial_year_id       : Optional[int] = None
+    financial_year          : Optional[str] = None
+    year_begin_date         : Optional[date] = None
+    year_end_date           : Optional[date] = None
+    work_order_master_id    : Optional[int] = None
+    quotation_version       : Optional[int] = None
+    quotation_date          : Optional[date] = None
+    quotation_number        : Optional[str] = None
+    total_offer_amount             : Optional[float] = None
+    total_coupon_amount            : Optional[float] = None
+
+    bill_discount_amount           : Optional[float] = None
+    additional_discount_amount     : Optional[float] = None
+
+    grand_total_amount             : Optional[float] = None
+    round_off_amount               : Optional[float] = None
+    net_amount                     : Optional[float] = None
+    quotation_status_id            : Optional[int] = None
+    quotation_status                : Optional[str] = None
+    is_final_quotation             : Optional[str] = 'no'
+    enquiry_master_id           : Optional[int] = None
+    enquiry_details_id          : Optional[int] = None
+    appointment_master_id       : Optional[int] = None
+    visit_master_id             : Optional[int] = None
+
+    work_order_number           : Optional[str] = None
+    work_order_date             : Optional[str] = None
+    first_name                  : Optional[str] = None
+    middle_name                 : Optional[str] = None
+    last_name                   : Optional[str] = None
+    gender_id                   : Optional[int] = None
+    gender                      : Optional[str] = None
+    date_of_birth               : Optional[str] = None
+    mobile_number               : Optional[str] = None
+    whatsapp_number             : Optional[str] = None
+    email_id                    : Optional[str] = None
+    house_or_building_name      : Optional[str] = None
+    road_or_street_name         : Optional[str] = None
+    locality                    : Optional[str] = None
+    pin_code                    : Optional[str] = None
+    post_office_id              : Optional[int] = None
+    post_office_name            : Optional[str] = None
+    village_id                  : Optional[int] = None
+    village_name                : Optional[str] = None
+    lsg_type_id                 : Optional[int] = None
+    lsg_type                    : Optional[str] = None
+    lsg_id                      : Optional[int] = None
+    lsg_name                    : Optional[str] = None
+    taluk_id                    : Optional[int] = None
+    taluk_name                  : Optional[str] = None
+    district_id                 : Optional[int] = None
+    district_name               : Optional[str] = None
+    state_id                    : Optional[int] = None
+    state_name                  : Optional[str] = None
+    country_id                  : Optional[int] = None
+    country_name                : Optional[str] = None
+    work_order_remarks          : Optional[str] = None
+    contact_person_name         : Optional[str] = None
+    contact_person_mobile_number    : Optional[str] = None
+    contact_person_whatsapp_number  : Optional[str] = None
+    contact_person_email_id         : Optional[str] = None
+    work_order_status_id            : Optional[int] = None
+    work_order_status               : Optional[str] = None
+
+
+
+    
+    is_locked           : Optional[str] = 'no'  
+    locked_on          : Optional[date] = None
+    locked_by          : Optional[int] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
 
 class AccQuotationSchema(BaseModel):
     quotation_master            : AccQuotationMasterSchema
     quotation_details           : List[AccQuotationDetailsSchema]
 
 class AccQuotationResponseSchema(BaseModel):
-    work_order_master : OffViewWorkOrderMasterSchema
-    quotation_master : AccQuotationMasterSchema
-    quotation_details : List[AccQuotationDetailsSchema]
-
+    quotation_master            : AccQuotationMasterViewSchema
+    quotation_details           : List[AccQuotationDetailsSchema]
 
 class AccProformaInvoiceMasterSchema(BaseModel):
 

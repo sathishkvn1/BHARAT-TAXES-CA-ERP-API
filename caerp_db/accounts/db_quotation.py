@@ -1,13 +1,14 @@
 from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
+from caerp_db.common.models import AppActivityHistory
 from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster, OffViewWorkOrderBusinessPlaceDetails,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
 from caerp_schema.office.office_schema import OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
-from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
-from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccTaxInvoiceDetails, AccTaxInvoiceMaster
+from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
+from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceMaster, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceMaster
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
-from caerp_constants.caerp_constants import EntryPoint
+from caerp_constants.caerp_constants import EntryPoint, QuotationStatus
 from caerp_functions.send_email import send_email
 from caerp_schema.common.common_schema import Email
 from sqlalchemy.exc import IntegrityError
@@ -39,6 +40,8 @@ def get_service_price_details_by_service_id(
 def generate_quotation_service_details(
     db: Session,
     work_order_master_id: int,
+    financial_year_id: int,
+    customer_id: int
 ) -> ServiceGoodsPriceResponseSchema:
     try:
         
@@ -63,19 +66,20 @@ def generate_quotation_service_details(
         services = []
         service_goods_price_data = None                   
         quotation_master = AccQuotationMaster(
+            financial_year_id = financial_year_id,
             work_order_master_id=work_order_master_id,
             quotation_version=1,
             quotation_date=datetime.utcnow().date(),
-            quotation_number=generate_book_number('QUOTATION', db),  # Example, generate or fetch actual
-            offer_total=0,
-            coupon_total=0,
-            bill_discount=0,
-            additional_discount=0,
-            round_off=0,
+            quotation_number=generate_book_number('QUOTATION',financial_year_id, customer_id,db),  # Example, generate or fetch actual
+            total_offer_amount=0,
+            total_coupon_amount=0,
+            bill_discount_amount=0,
+            additional_discount_amount=0,
+            round_off_amount=0,
             net_amount=0,
-            grand_total= 0,
+            grand_total_amount= 0,
             remarks='',
-            quotation_status='DRAFT',
+            quotation_status_id=1,
             is_final_quotation='no',
             created_by= 1,
             created_on=datetime.utcnow()
@@ -160,8 +164,19 @@ def generate_quotation_service_details(
                 coupon_amount = 0.0,
                 discount_percentage = 0.0,
                 discount_amount = 0.0,
-                gst_percent=10.0,
-                gst_amount=0,
+                additional_discount_percentage = 0.0,
+                additional_discount_amount = 0.0,
+                igst_percent=10.0,
+                igst_amount=0.0,
+                
+                cgst_percent =0.0,
+                cgst_amount =0.0,
+                sgst_percent=0.0,
+                sgst_amount=0.0,
+                cess_percent=0.0,
+                cess_amount=0.0,
+                additional_cess_percent=0.0,
+                additional_cess_amount=0.0,
                 # taxable_amount= total_service_charge - details.offer_amount - details.coupon_amount - details.discount_amount  ,
                 # taxable_amount = total_service_charge,
                 # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
@@ -171,14 +186,14 @@ def generate_quotation_service_details(
         
             db.add(quotation_detail)
                 
-            gst_amount = quotation_detail.taxable_amount * (quotation_detail.gst_percent /100)
-            quotation_detail.gst_amount = gst_amount
+            gst_amount = quotation_detail.taxable_amount * (quotation_detail.igst_percent /100)
+            quotation_detail.igst_amount = gst_amount
             quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount
             quotation_total_amount += quotation_detail.total_amount 
             product_discount_total +=quotation_detail.discount_amount  
             
-        quotation_master.grand_total = quotation_total_amount 
-        quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount
+        quotation_master.grand_total_amount = quotation_total_amount 
+        quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount_amount
         db.commit()
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
@@ -195,34 +210,36 @@ def generate_quotation_service_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
 
-
 #=-------------------------------------------------------------------------------------------
-
 
 def save_quotation_data(
         request : AccQuotationSchema,
-        user_id : int,       
+        user_id : int, 
+        financial_year_id : int,
+        customer_id : int,      
         db : Session ,
         quotation_id : Optional[int]= None
 ):
     try:
+            if quotation_id != 0:               
 
-            if quotation_id != 0: 
-                
-                quotation_data = db.query(AccQuotationMaster).filter(
-                    AccQuotationMaster.id == quotation_id,
-                    AccQuotationMaster.is_deleted == 'no'
-                ).order_by(AccQuotationMaster.quotation_version.desc()).first()
-
-
+                quotation_data = db.query(AccQuotationMasterView).filter(
+                    AccQuotationMasterView.quotation_master_id == quotation_id,
+                    AccQuotationMasterView.is_deleted == 'no'
+                ).order_by(AccQuotationMasterView.quotation_version.desc()).first()
+               
                 if quotation_data:
-                    quotation_status = quotation_data.quotation_status
-                    if quotation_status=='REQUESTED REVISION':
+                    quotation_status_id = quotation_data.quotation_status_id
+                    # if quotation_status=='REQUESTED REVISION':
+                    if quotation_status_id==4:
+
                         new_quotation_master = AccQuotationMaster(
                                 quotation_version=quotation_data.quotation_version + 1,
                                 # quotation_number=quotation_data.quotation_number,  # Retain the same quotation number
                                 # quotation_date=quotation_data.quotation_date,  # Retain the same quotation date
-                                quotation_status="DRAFT",  # Set the status to "DRAFT"
+                                # quotation_status="DRAFT",  # Set the status to "DRAFT"
+                                quotation_status_id=1,  # Set the status to "DRAFT"
+                               
                                 created_by=user_id,
                                 created_on=datetime.utcnow(),
                                 **request.quotation_master.dict(exclude_unset=True)
@@ -239,7 +256,9 @@ def save_quotation_data(
                         db.commit()
                         return {"message": "Quotation saved successfully", "quotation_master_id": new_quotation_master.id}
 
-                    elif quotation_status in ["DRAFT", "SENT"]:
+                    # elif quotation_status in ["DRAFT", "SENT"]:
+                    elif quotation_status_id in [1,3]:
+
                     # Update the existing quotation master
                         for key, value in request.quotation_master.model_dump(exclude_unset=True).items():
                             setattr(quotation_data, key, value)
@@ -273,15 +292,17 @@ def save_quotation_data(
                             'message': 'quotation is already accepted ',
                             'quotation_status': quotation_data.quotation_status
                         }
-            else:
-                raise HTTPException(status_code=404, detail="Quotation not found")
+                else:
+                    raise HTTPException(status_code=404, detail="Quotation not found")
 
 
                 # else:
                 #     raise HTTPException(status_code=404, detail="Quotation not found")
         # with db.begin():
             if quotation_id == 0  :
-                quotation_number  = generate_book_number('QUOTATION',db)
+                # financial_year_id = 1
+                # customer_id       = 1
+                quotation_number  = generate_book_number('QUOTATION',financial_year_id, customer_id,db)
                 quotation_master = AccQuotationMaster(
                     quotation_version = 1,
                     quotation_number = quotation_number,
@@ -320,6 +341,12 @@ def save_quotation_data(
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred,{ str(e)}")
 
 #--------------------------------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------------------------
+
+
+
 def update_quotation_status(
         quotation_id : int,
         quotation_status : str,
@@ -363,145 +390,88 @@ def send_proposal(
 
 
 
+
 def get_quotation_data(
     db: Session,
-    status: Optional[str] = 'ALL',
+    include_details: Optional[bool] = Query(False),
     work_order_master_id: Optional[int] = None,
-    quotation_id: Optional[int] = None,
+    quotation_master_id: Optional[int] = None,
+    status: Optional[QuotationStatus] = None,
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     search_value: Union[str, int] = "ALL"
-) -> Union[AccQuotationResponseSchema, List[AccQuotationResponseSchema]]:
-    try:
-        latest_version_subquery = (
-            db.query(
-                AccQuotationMaster.work_order_master_id,
-                func.max(AccQuotationMaster.quotation_version).label("latest_version")
-            )
-            .group_by(AccQuotationMaster.work_order_master_id)
-            .subquery()
+) -> Union[List[AccQuotationResponseSchema], dict]:
+    
+    # Build the base query for master data
+  
+    latest_version_subquery = (
+        db.query(
+            AccQuotationMasterView.work_order_master_id,
+            func.max(AccQuotationMasterView.quotation_version).label("latest_version")
         )
+        .group_by(AccQuotationMasterView.work_order_master_id)
+        .subquery()
+    )
 
-        # Main query to get the latest version records
-        query = db.query(AccQuotationMaster).join(
-            latest_version_subquery,
-            (AccQuotationMaster.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
-            (AccQuotationMaster.quotation_version == latest_version_subquery.c.latest_version)
-        )
-
-        # Add a join to WorkOrderMasterView with the proper condition
-        query = query.join(
-            WorkOrderMasterView,
-            AccQuotationMaster.work_order_master_id == WorkOrderMasterView.work_order_master_id
-        )
-
-        # Apply filters based on provided parameters
-        if work_order_master_id:
-            query = query.filter(AccQuotationMaster.work_order_master_id == work_order_master_id)
-        
-        if status != 'ALL':
-            query = query.filter(AccQuotationMaster.quotation_status == status)
-        
-        if from_date and to_date:
-            query = query.filter(
-                AccQuotationMaster.quotation_date >= from_date,
-                AccQuotationMaster.quotation_date <= to_date
+    # Main query to get the latest version records
+    query = db.query(AccQuotationMasterView).join(
+        latest_version_subquery,
+        (AccQuotationMasterView.work_order_master_id == latest_version_subquery.c.work_order_master_id) &
+        (AccQuotationMasterView.quotation_version == latest_version_subquery.c.latest_version)
+    )
+    # Apply filters based on provided parameters
+    if work_order_master_id:
+        query = query.filter(AccQuotationMasterView.work_order_master_id == work_order_master_id)
+    if quotation_master_id:
+        query = query.filter(AccQuotationMasterView.quotation_master_id == quotation_master_id)
+    if search_value != 'ALL':
+        query = query.filter(
+            or_(
+                AccQuotationMasterView.first_name.like(f"%{search_value}%"),
+                AccQuotationMasterView.email_id.like(f"%{search_value}%"),
+                AccQuotationMasterView.mobile_number.like(f"%{search_value}%")
             )
-        elif from_date:
-            query = query.filter(AccQuotationMaster.quotation_date >= from_date)
-        elif to_date:
-            query = query.filter(AccQuotationMaster.quotation_date <= to_date)
+        )
+    if status != 'ALL' and status is not None:
+        query = query.filter(AccQuotationMasterView.quotation_status_id == status)
+    if from_date:
+        query = query.filter(AccQuotationMasterView.quotation_date >= from_date)
+    if to_date:
+        query = query.filter(AccQuotationMasterView.quotation_date <= to_date)
 
-        # Add condition for search value if it's not 'ALL'
-        if search_value != "ALL":
-            query = query.filter(
-                or_(
-                    WorkOrderMasterView.first_name.like(f"%{search_value}%"),
-                    WorkOrderMasterView.email_id.like(f"%{search_value}%"),
-                    WorkOrderMasterView.mobile_number.like(f"%{search_value}%")
-                )
-            )
+    # Fetch master data
+    master_data = query.all()
+    
+    if not master_data:
+        return {
+            'message': 'Quotation Not Found',
+            'Success': False
+        }
 
-        if quotation_id:
-            query = query.filter(AccQuotationMaster.id == quotation_id)
-            quotation_data = query.group_by(AccQuotationMaster.work_order_master_id).first()
-            if not quotation_data:
-                return {"message": "Quotation not found."}
-
-            # Fetch related work order and details
-            work_order_master_data = db.query(WorkOrderMasterView).filter(
-                WorkOrderMasterView.work_order_master_id == quotation_data.work_order_master_id
-            ).first()
-
-            # Fetch quotation details with the join to get service names
-            quotation_details_data = db.query(
-                AccQuotationDetails,
-                OffViewServiceGoodsMaster.service_goods_name
-            ).join(
-                OffViewServiceGoodsMaster,
-                AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-            ).filter(
-                AccQuotationDetails.quotation_master_id == quotation_data.id,
+    # Prepare the response based on include_details parameter
+    quotations = []
+    for master in master_data:
+        if include_details:
+            # Fetch and include details if requested
+            details_query = db.query(AccQuotationDetails).filter(
+                AccQuotationDetails.quotation_master_id == master.quotation_master_id,
                 AccQuotationDetails.is_deleted == 'no'
-            ).distinct().all()
-
-            # Handle the results as tuples
-            quotation_details_list = []
-            for detail, service_name in quotation_details_data:
-                detail_dict = detail.__dict__.copy()  # Copy to modify
-                detail_dict['service_goods_name'] = service_name
-                quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
-
-            # Construct response schema for a single quotation
-            quotation_service_price_data = AccQuotationResponseSchema(
-                quotation_master=AccQuotationMasterSchema.model_validate(quotation_data.__dict__),
-                work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                quotation_details=quotation_details_list
             )
-
-            return quotation_service_price_data
+            details = details_query.all()
+            details_schema = [AccQuotationDetailsSchema.from_orm(detail) for detail in details]
         else:
-            # Fetch all filtered quotations
-            quotation_master_list = query.all()
+            details_schema = []
 
-            # Construct response schema for multiple quotations
-            quotations_response = []
-            for quotation in quotation_master_list:
-                work_order_master_data = db.query(WorkOrderMasterView).filter(
-                    WorkOrderMasterView.work_order_master_id == quotation.work_order_master_id
-                ).first()
+        # Construct the response schema
+        quotations.append(
+            AccQuotationResponseSchema(
+                quotation_master=AccQuotationMasterViewSchema.model_validate(master.__dict__),
+                quotation_details=details_schema
+            )
+        )
 
-                quotation_details_data = db.query(
-                    AccQuotationDetails,
-                    OffViewServiceGoodsMaster.service_goods_name
-                ).join(
-                    OffViewServiceGoodsMaster,
-                    AccQuotationDetails.service_goods_master_id == OffViewServiceGoodsMaster.service_goods_master_id
-                ).filter(
-                    AccQuotationDetails.quotation_master_id == quotation.id,
-                    AccQuotationDetails.is_deleted == 'no'
-                ).distinct().all()
-
-                # Handle the results as tuples
-                quotation_details_list = []
-                for detail, service_name in quotation_details_data:
-                    detail_dict = detail.__dict__.copy()  # Copy to modify
-                    detail_dict['service_goods_name'] = service_name
-                    quotation_details_list.append(AccQuotationDetailsSchema.model_validate(detail_dict))
-
-                quotations_response.append(AccQuotationResponseSchema(
-                    quotation_master=AccQuotationMasterSchema.model_validate(quotation.__dict__),
-                    work_order_master=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data.__dict__),
-                    quotation_details=quotation_details_list
-                ))
-
-            return quotations_response
-
-    except SQLAlchemyError as e:
-        # Handle database exceptions
-        raise HTTPException(status_code=500, detail=str(e))
-
-
+    return quotations
+ 
 #-------------------------------------------------------------
 def generate_profoma_invoice_details(
         db: Session,
@@ -643,13 +613,6 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
-#----------------------------------------------------------------------------------
-
 
 
 #----------------------------------------------------------------------------------------------------------

@@ -3,7 +3,6 @@ from sqlalchemy import Column, DateTime, Integer, String,Date,Float,Enum,Time, f
 
 
 
-
 class AccQuotationMaster(caerp_base):
     __tablename__ = 'acc_quotation_master'
 
@@ -83,8 +82,7 @@ class AccQuotationDetails(caerp_base):
 
     total_amount                = Column(Float, nullable=False,default=0.0)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-     
-
+    
 class AccProformaInvoiceStatus(caerp_base):
     __tablename__ = 'acc_proforma_invoice_status'
 
@@ -389,6 +387,8 @@ class AccQuotationStatus(caerp_base):
     is_deleted                   = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
+
+
 class AccQuotationMasterView(caerp_base):
     __tablename__ = 'off_view_quotation_master'
 
@@ -424,8 +424,8 @@ class AccQuotationMasterView(caerp_base):
     middle_name                 = Column(String(100),nullable=False)
     last_name                   = Column(String(100),nullable=False)
     gender_id                   = Column(Integer, nullable=False)
-    gender                      = Column(Date, nullable=False)
-    date_of_birth               = Column(String(100),nullable=False)
+    gender                      = Column(String(100),nullable=True)
+    date_of_birth               = Column(Date, nullable=False)
     mobile_number               = Column(String(100),nullable=True)
     whatsapp_number             = Column(String(100),nullable=True)
     email_id                    = Column(String(100),nullable=True)
@@ -469,4 +469,3 @@ class AccQuotationMasterView(caerp_base):
     is_locked           = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on           = Column(DateTime, nullable=True)
     locked_by           = Column(String(100), nullable=True)
-

@@ -38,7 +38,8 @@ from fastapi import Header
 import geoip2.database
 import os,random
 from settings import GEOIP_DATABASE_PATH
-f
+from fastapi.responses import JSONResponse
+
 
 
 
@@ -52,6 +53,22 @@ router = APIRouter(
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# class MyCustomException(Exception):
+#     def __init__(self, status_code: int, detail: str, headers: dict = None):
+#         self.status_code = status_code
+#         self.detail = detail
+#         self.headers = headers
+
+# Exception handler for custom exceptions
+# @app.exception_handler(MyCustomException)
+# def my_custom_exception_handler(request: Request, exc: MyCustomException):
+#     return JSONResponse(
+#         status_code=exc.status_code,
+#         content={"message": exc.detail},
+#         headers=exc.headers
+#     )
 
 
 @router.post('/admin-login')
@@ -74,10 +91,17 @@ def get_token(
             "status": False
         }
         headers = {"X-Error": "Username incorrect."}
-       
+        # return {
+        #     'detail': detail_message,
+        #     'message': 'Username incorrect',
+        #     # 'headers': headers
+        # }
+        # raise  MyCustomException(status_code=status.HTTP_404_NOT_FOUND, detail=detail_message, headers=headers)
+    
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail_message, headers=headers)
     
-       
+        # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{login_attempt} out of 3 attempts remaining. Username incorrect.', headers={"X-Error": "Username incorrect."})
+    # else:
     elif user.locked_upto is not None and datetime.utcnow() < user.locked_upto:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Your account is locked, Please Try ain later')
        
@@ -238,13 +262,17 @@ def get_token(
                     
                 # Add the log_id to the data dictionary
                 data = {
-                    'user_id': user.employee_id,
-                    'role_id': role_ids,
-                    'log_id': log_id,
-                    'mobile_otp_id':mobile_otp_id,
-                    'is_password_reset': password_reset_status                
+                    'user_id'               : user.employee_id,
+                    'role_id'               : role_ids,
+                    'log_id'                : log_id,
+                    'mobile_otp_id'         :mobile_otp_id,
+                    'is_password_reset'     : password_reset_status, 
+                    'financial_year_id'     : 1,
+                    'mother_customer_id'    : 1,
+                    'branch_id'             : 1
                     
                 }
+
                 
                 access_token = oauth2.create_access_token(data=data)               
             
@@ -271,10 +299,13 @@ def authenticate_user(token: str) -> Dict[str, Union[int, None]]:
         role_id = payload.get("role_id")
         log_id = payload.get("log_id")
         employee_id = payload.get("employee_id")
+        financial_year_id = payload.get("financial_year_id")
+        mother_customer_id = payload.get('mother_customer_id')
        
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return {"user_id": user_id, "role_id": role_id ,"log_id": log_id ,"employee_id": employee_id}
+        return {"user_id": user_id, "role_id": role_id ,"log_id": log_id ,"employee_id": employee_id, 
+                'financial_year_id':financial_year_id, 'mother_customer_id': mother_customer_id}
     except JWTError as e:
         print(f"JWT Error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")

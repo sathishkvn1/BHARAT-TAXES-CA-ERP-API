@@ -2597,8 +2597,12 @@ def save_work_order(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
    auth_info = authenticate_user(token)
    user_id = auth_info.get("user_id")
+   financial_year_id   =  auth_info.get("financial_year_id") 
+   customer_id         =  auth_info.get("mother_customer_id") 
    
-   return db_office_master.save_work_order(request, db, user_id,work_order_master_id)
+   return db_office_master.save_work_order(request, db, user_id,financial_year_id,customer_id,work_order_master_id)
+
+
 #---------------------------------------------------------------------------------------------------------
 @router.post('/save_work_order_service_details')
 def save_work_order_service_details(

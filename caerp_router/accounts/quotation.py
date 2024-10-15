@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import EntryPoint
+from caerp_constants.caerp_constants import EntryPoint, QuotationStatus
 import pdfkit
 
 from caerp_schema.office.office_schema import ServiceRequirementSchema
@@ -59,6 +59,10 @@ def save_quotation_data(
     result = db_quotation.save_quotation_data(request,user_id,db,quotation_id)
     return result
 
+
+
+
+
 @router.post('/update_quotation_status')
 def update_quotation_status(
         quotation_id : int,
@@ -78,33 +82,24 @@ def send_proposal(
     result = db_quotation.send_proposal(quotation_id,work_order_master_id,db)
     return result
 
-# @router.get('/get_quotation_list')
-# def get_quotqtion_list(
-#     status: Optional[str]='ALL',
-#     work_order_master_id : Optional[int] = None,
-#     quotation_id : Optional[int] = None,
-#     from_date : Optional[date] = Query(date.today()),
-#     to_date : Optional[date] =None,
-#     db: Session = Depends(get_db)
-# ): 
-#    result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date)
-#    return result
-
 
 @router.get('/get_quotation_list')
 def get_quotqtion_list(
     search_value: Union[str, int] = "ALL",
-    status: Optional[str]='ALL',
+    # status: Optional[str]='ALL',
+    status: Optional[QuotationStatus] = None,
     work_order_master_id : Optional[int] = None,
     quotation_id : Optional[int] = None,
     from_date : Optional[date] = None,
     to_date : Optional[date] =None,
-    db: Session = Depends(get_db)
+    include_details: Optional[bool] = Query(False),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+
 ): 
-   result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date,search_value)
-   return result
-
-
+    result = db_quotation.get_quotation_data(db,include_details,work_order_master_id,quotation_id,status,from_date,to_date,search_value)
+#    result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date,search_value)
+    return result
 #--------------------------------------------------------------------------------------------------
 
 
