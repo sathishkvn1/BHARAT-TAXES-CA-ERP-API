@@ -1055,7 +1055,7 @@ class WorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'YES'
+    is_service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id    : Optional[int] = None
     file_opened_on        : Optional[date] = None
