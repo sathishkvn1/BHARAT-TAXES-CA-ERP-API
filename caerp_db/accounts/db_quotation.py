@@ -388,7 +388,6 @@ def send_proposal(
     return result
 
 
-
 def get_quotation_data(
     db: Session,
     include_details: Optional[bool] = Query(False),
@@ -452,12 +451,12 @@ def get_quotation_data(
     for master in master_data:
         if include_details:
             # Fetch and include details if requested
-            details_query = db.query(AccQuotationDetails).filter(
-                AccQuotationDetails.quotation_master_id == master.quotation_master_id,
-                AccQuotationDetails.is_deleted == 'no'
+            details_query = db.query(AccQuotationDetailsView).filter(
+                AccQuotationDetailsView.quotation_master_id == master.quotation_master_id,
+                AccQuotationDetailsView.is_deleted == 'no'
             )
             details = details_query.all()
-            details_schema = [AccQuotationDetailsSchema.from_orm(detail) for detail in details]
+            details_schema = [AccQuotationDetailsViewSchema.from_orm(detail) for detail in details]
         else:
             details_schema = []
 
@@ -471,6 +470,7 @@ def get_quotation_data(
 
     return quotations
  
+
 #-------------------------------------------------------------
 def generate_profoma_invoice_details(
         db: Session,

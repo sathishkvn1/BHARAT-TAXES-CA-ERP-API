@@ -149,13 +149,13 @@ class AccQuotationMasterViewSchema(BaseModel):
     visit_master_id             : Optional[int] = None
 
     work_order_number           : Optional[str] = None
-    work_order_date             : Optional[str] = None
+    work_order_date             : Optional[date] = None
     first_name                  : Optional[str] = None
     middle_name                 : Optional[str] = None
     last_name                   : Optional[str] = None
     gender_id                   : Optional[int] = None
     gender                      : Optional[str] = None
-    date_of_birth               : Optional[str] = None
+    date_of_birth               : Optional[date] = None
     mobile_number               : Optional[str] = None
     whatsapp_number             : Optional[str] = None
     email_id                    : Optional[str] = None
@@ -189,7 +189,13 @@ class AccQuotationMasterViewSchema(BaseModel):
 
 
 
-    
+    # created_by          : Optional[int] = None
+    # created_on          : Optional[str] = None
+    # modified_by         : Optional[int] = None
+    # modified_on         : Optional[str] = None
+    # is_deleted          : Optional[str] = 'no'
+    # deleted_by          : Optional[int] = None
+    # deleted_on          : Optional[str] = None
     is_locked           : Optional[str] = 'no'  
     locked_on          : Optional[date] = None
     locked_by          : Optional[int] = None
@@ -198,15 +204,10 @@ class AccQuotationMasterViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
-
 class AccQuotationSchema(BaseModel):
     quotation_master            : AccQuotationMasterSchema
     quotation_details           : List[AccQuotationDetailsSchema]
 
-class AccQuotationResponseSchema(BaseModel):
-    quotation_master            : AccQuotationMasterViewSchema
-    quotation_details           : List[AccQuotationDetailsSchema]
 
 class AccProformaInvoiceMasterSchema(BaseModel):
 
@@ -601,3 +602,55 @@ class AccProformaInvoiceDetailsViewSchema(BaseModel):
 class AccProformaInvoiceResponceSchema(BaseModel):
     proforma_invoice_master: AccProformaInvoiceMasterViewSchema
     proforma_invoice_details: Optional[List[AccProformaInvoiceDetailsViewSchema]]
+
+
+class AccQuotationDetailsViewSchema(BaseModel):
+    
+    id                          : Optional[int]= None   
+    quotation_master_id         : Optional[int]= None    
+    quotation_version           : Optional[int]= None
+    quotation_date              : Optional[date]= None
+    quotation_number            : Optional[str]= None
+    service_goods_master_id     : Optional[int]= None
+    service_goods_name          : Optional[str] =None
+    is_main_service             : Optional[str] = 'no'
+    is_bundle_service           : Optional[str]= 'no'
+    bundle_service_id           : Optional[int]= None
+    service_charge              : Optional[float]= None
+    govt_agency_fee             : Optional[float]= None
+    stamp_duty                  : Optional[float]= None
+    stamp_fee                   : Optional[float]= None
+    quantity                    : Optional[int]= None
+
+    offer_master_id             : Optional[int]= None
+    offer_name                  : Optional[str]= None
+    offer_percentage            : Optional[float]= None
+    offer_amount                : Optional[float]= None
+
+    discount_percentage         : Optional[float]= None
+    discount_amount             : Optional[float]= None
+    additional_discount_percentage   : Optional[float] = None
+    additional_discount_amount       : Optional[float] = None
+    
+    taxable_amount               : Optional[float] = None
+    igst_percent                 : Optional[float] = None
+    igst_amount                  : Optional[float] = None
+    cgst_percent                 : Optional[float] = None
+    cgst_amount                  : Optional[float] = None
+    sgst_percent                 : Optional[float] = None
+    sgst_amount                  : Optional[float] = None
+    cess_percent                 : Optional[float] = None
+    cess_amount                  : Optional[float] = None
+    additional_cess_percent      : Optional[float] = None
+    additional_cess_amount       : Optional[float] = None
+    total_amount                : Optional[float]= None
+    is_deleted                  : Optional[str]= None   
+
+    class Config:
+        orm_mode = True
+        from_attributes = True     
+
+
+class AccQuotationResponseSchema(BaseModel):
+    quotation_master            : AccQuotationMasterViewSchema
+    quotation_details           : List[AccQuotationDetailsViewSchema]    

@@ -215,19 +215,19 @@ def generate_quotation_pdf(quotations, file_path):
     if quotations:
         # Extract and format data from the quotations object
         # details = quotations[0].quotation_details
-        details = quotations.quotation_details
+        details = quotations[0].quotation_details
         # details = quotations.get('quotation_details')
 
-        work_order_master = quotations.work_order_master 
+        # work_order_master = quotations.quotation_master 
         total = sum(item.total_amount for item in details)
         # advance = quotations.quotation_master.advance_amount
-        additional_discount = quotations.quotation_master.additional_discount
-        gst_amount = sum(item.gst_amount for item in details)
-        total_amount = quotations.quotation_master.net_amount
-        round_off  = quotations.quotation_master.round_off
-        bill_discount = quotations.quotation_master.bill_discount
-        grand_total = quotations.quotation_master.grand_total
-
+        additional_discount = quotations[0].quotation_master.additional_discount_amount
+        gst_amount = sum(item.igst_amount for item in details)
+        total_amount = quotations[0].quotation_master.net_amount
+        round_off  = quotations[0].quotation_master.round_off_amount
+        bill_discount = quotations[0].quotation_master.bill_discount_amount
+        grand_total = quotations[0].quotation_master.grand_total_amount
+        print('FIRST NAME',quotations[0].quotation_master.first_name )
         data = {
             'quotations': details,
             'total': total,
@@ -237,7 +237,7 @@ def generate_quotation_pdf(quotations, file_path):
             'gst_amount': gst_amount,
             'total_amount': total_amount,
             'current_date': date.today(),
-            'work_order_master': work_order_master,
+            'work_order_master': quotations[0].quotation_master,
             'round_off':round_off,
             'bill_discount': bill_discount  
         }
@@ -246,11 +246,12 @@ def generate_quotation_pdf(quotations, file_path):
         html_content = template.render(data)
 
         # Debug print: Check the HTML content generated
-        print("Generated HTML content:", html_content)
+        # print("Generated HTML content:", html_content)
 
         # Configuration for pdfkit
-        # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
+       
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+        # wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
@@ -272,7 +273,6 @@ def generate_quotation_pdf(quotations, file_path):
 
         return open(file_path, "rb")
 
-
 @router.get('/get_quotation_pdf')
 def get_quotation_pdf(
     status: Optional[str]='ALL',
@@ -282,10 +282,10 @@ def get_quotation_pdf(
     to_date : Optional[date] = None,
     db: Session = Depends(get_db)
 ):
-    quotations = db_quotation.get_quotation_data(db, status, work_order_master_id, quotation_id, from_date, to_date)
+    quotations = db_quotation.get_quotation_data(db, 'true' , work_order_master_id, quotation_id, status,from_date, to_date)
     if not quotations:
         raise HTTPException(status_code=404, detail="No quotations found")
-
+    # print('Quotations ', quotations)
     file_path = os.path.join(UPLOAD_DIR_QUOTATION_DETAILS , "quotations.pdf")
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
@@ -396,7 +396,6 @@ def get_proforma_invoice_details(
             
     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details)
     return result
-
 
 #---------------------------------------------------------------------------------
 
