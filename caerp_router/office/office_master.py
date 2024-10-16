@@ -403,13 +403,13 @@ def save_service_document_data_master(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
-    # user_id = auth_info.get("user_id")
+    user_id = auth_info.get("user_id")
 
     try:
         result_message = ""
         for service in data:
             result = db_office_master.save_service_document_data_master(
-                db, id, service
+                db, id, service,user_id
             )
             result_message = result["message"]
         
@@ -1315,6 +1315,7 @@ def get_all_service_document_data_master(
         LEFT JOIN off_service_document_data_master AS a 
             ON g.id = a.service_goods_master_id 
             AND f.id = a.constitution_id
+            AND a.is_deleted = 'no' 
         LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
         LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
         LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id

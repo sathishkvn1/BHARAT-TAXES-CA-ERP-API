@@ -1019,16 +1019,20 @@ def search_off_document_data_master(
  
 
 #------------------------------------------------------------------------------------------------------------
-
 def save_service_document_data_master(
     db: Session,
     id: int,
-    doc_data: SaveServiceDocumentDataMasterRequest
+    doc_data: SaveServiceDocumentDataMasterRequest,
+    user_id: int
 ):
     try:
         if id == 0:
             # Create a new master and insert details
             new_master_data = doc_data.Service.model_dump()
+            new_master_data.update({
+                    "created_by": user_id,
+                    "created_on": datetime.now()
+                })
             new_master = OffServiceDocumentDataMaster(**new_master_data)
             db.add(new_master)
             db.flush()  # Ensure new_master.id is available for details
@@ -1070,7 +1074,8 @@ def save_service_document_data_master(
             # Save master data
             for key, value in doc_data.Service.model_dump().items():
                 setattr(existing_master, key, value)
-
+                existing_master.modified_by = user_id
+                existing_master.modified_on = datetime.now()  
             if doc_data.Documents:
                 # Mark existing details as deleted
                 db.query(OffServiceDocumentDataDetails).filter(
@@ -1123,6 +1128,8 @@ def save_service_document_data_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 #------------------------------------------------------------------------------------------------------------
