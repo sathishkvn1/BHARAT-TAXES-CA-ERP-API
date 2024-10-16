@@ -50,6 +50,7 @@ def generate_quotation_service_details(
  
     return result
 
+
 @router.post('/save_quotation_data')
 def save_quotation_data(
         request : AccQuotationSchema,
@@ -62,9 +63,10 @@ def save_quotation_data(
 
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    result = db_quotation.save_quotation_data(request,user_id,db,quotation_id)
+    financial_year_id   =  auth_info.get("financial_year_id") 
+    customer_id         =  auth_info.get("mother_customer_id")
+    result = db_quotation.save_quotation_data(request,user_id,financial_year_id,customer_id,db,quotation_id)
     return result
-
 
 
 
@@ -392,8 +394,10 @@ def get_proforma_invoice_details(
         # auth_info = authenticate_user(token)
         # user_id = auth_info.get("user_id")
             
-    result = db_quotation.get_proforma_invoice_details_new(db,work_order_master_id,proforma_invoice_master_id,include_details)
+    result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details)
     return result
+
+
 #---------------------------------------------------------------------------------
 
 @router.post('/save_proforma_invoice')

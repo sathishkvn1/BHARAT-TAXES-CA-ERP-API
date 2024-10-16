@@ -211,7 +211,6 @@ def generate_quotation_service_details(
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
 #=-------------------------------------------------------------------------------------------
-
 def save_quotation_data(
         request : AccQuotationSchema,
         user_id : int, 
@@ -390,7 +389,6 @@ def send_proposal(
 
 
 
-
 def get_quotation_data(
     db: Session,
     include_details: Optional[bool] = Query(False),
@@ -429,7 +427,8 @@ def get_quotation_data(
             or_(
                 AccQuotationMasterView.first_name.like(f"%{search_value}%"),
                 AccQuotationMasterView.email_id.like(f"%{search_value}%"),
-                AccQuotationMasterView.mobile_number.like(f"%{search_value}%")
+                AccQuotationMasterView.mobile_number.like(f"%{search_value}%"),
+                AccQuotationMasterView.quotation_number.like(f"%{search_value}%")      
             )
         )
     if status != 'ALL' and status is not None:
