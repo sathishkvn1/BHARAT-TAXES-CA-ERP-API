@@ -667,6 +667,8 @@ class AccTaxInvoiceMasterView(caerp_base):
 
     grand_total_amount             = Column(Float, nullable=True)
     advance_amount                 = Column(Float, nullable=True)
+    additional_fee_amount       = Column(Float, nullable=False,default=0.0)
+
     round_off_amount               = Column(Float, nullable=True)
     net_amount                     = Column(Float, nullable=True)
     tax_invoice_status_id     = Column(Integer, nullable=False)
@@ -682,7 +684,6 @@ class AccTaxInvoiceMasterView(caerp_base):
     is_locked           = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on           = Column(DateTime, nullable=True)
     locked_by           = Column(String(100), nullable=True)
-
 
 class AccTaxInvoiceDetailsView(caerp_base):
     __tablename__ = 'off_view_tax_invoice_details'

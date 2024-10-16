@@ -952,104 +952,123 @@ def consultation_invoice_generation(
 #---------------------------------------------------------------------------------------------------
 def get_proforma_invoice_details(
     db: Session,
-    work_order_master_id: int,
-    proforma_invoice_master_id: int,
+    work_order_master_id: Optional[int] = None,
+    proforma_invoice_master_id: Optional[int] =None,
     include_details: Optional[bool] = Query(False)
 ):
     # try:
-        if not work_order_master_id:
-            raise HTTPException(status_code=400, detail="Work Order Master ID is required")
-
-        if not proforma_invoice_master_id:
-            raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-
-        # Fetch the invoice master data
-        invoice_master_data = db.query(AccProformaInvoiceMasterView).filter(
-            AccProformaInvoiceMasterView.work_order_master_id == work_order_master_id,
-            AccProformaInvoiceMasterView.id == proforma_invoice_master_id,
+        query = db.query(AccProformaInvoiceMasterView).filter(           
             AccProformaInvoiceMasterView.is_deleted == 'no'
-        ).first()
+        )
+        if  work_order_master_id:
+           query = query.filter(
+               AccProformaInvoiceMasterView.work_order_master_id == work_order_master_id
+           )
+
+        if  proforma_invoice_master_id:
+            query = query.filter(
+               AccProformaInvoiceMasterView.id == proforma_invoice_master_id
+           )
+        # Fetch the invoice master data
+        invoice_master_data = query.all()
 
         # Handle case when invoice master is not found
         if not invoice_master_data:
             raise HTTPException(status_code=404, detail="Invoice Master not found")
+        
+        invoice_response_data = []
+        for master in invoice_master_data:
+       
 
-        # Initialize response schema with master data
-        invoice_response_data = AccProformaInvoiceResponceSchema(
-            proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
-            proforma_invoice_details = []
-        )
+        # # Initialize response schema with master data
+        #     invoice_response_data = AccProformaInvoiceResponceSchema(
+        #         proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
+        #         proforma_invoice_details = []
+        #     )
 
         # If include_details is true, fetch the invoice details
-        if include_details:
-            invoice_details_data = db.query(AccProformaInvoiceDetailsView).filter(
-                AccProformaInvoiceDetailsView.proforma_invoice_master_id == proforma_invoice_master_id,
-                AccProformaInvoiceDetailsView.is_deleted == 'no'
-            ).all()
+            if include_details:
+                invoice_details = db.query(AccProformaInvoiceDetailsView).filter(
+                    AccProformaInvoiceDetailsView.proforma_invoice_master_id == proforma_invoice_master_id,
+                    AccProformaInvoiceDetailsView.is_deleted == 'no'
+                ).all()
             
             # Convert details data to the schema format
-            invoice_details_list = [
-                AccProformaInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details_data
-            ]
-            
+                invoice_details_list = [
+                    AccProformaInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details
+                ]
+            else:
+                invoice_details_list =[]
+            invoice_response_data.append(
+                 AccProformaInvoiceResponceSchema(
+                proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(master.__dict__),
+                proforma_invoice_details=invoice_details_list
+            )
+            )
             # Add the details to the response schema
-            invoice_response_data.proforma_invoice_details = invoice_details_list
+            # invoice_response_data.proforma_invoice_details = invoice_details_list
 
         return invoice_response_data
     # except Exception as e:
     #     print(f"Error: {e}")
     #     raise HTTPException(status_code=500, detail="An internal error occurred.")
-
 
 def get_tax_invoice_details(
     db: Session,
-    work_order_master_id: int,
-    tax_invoice_master_id: int,
+    work_order_master_id: Optional[int] = None,
+    tax_invoice_master_id: Optional[int] = None,
     include_details: Optional[bool] = Query(False)
 ):
     # try:
-        if not work_order_master_id:
-            raise HTTPException(status_code=400, detail="Work Order Master ID is required")
-
-        if not tax_invoice_master_id:
-            raise HTTPException(status_code=400, detail="Invoice Master ID is required")
-
-        # Fetch the invoice master data
-        invoice_master_data = db.query(AccTaxInvoiceMasterView).filter(
-            AccTaxInvoiceMasterView.work_order_master_id == work_order_master_id,
-            AccTaxInvoiceMasterView.id == tax_invoice_master_id,
+        query = db.query(AccTaxInvoiceMasterView).filter(           
             AccTaxInvoiceMasterView.is_deleted == 'no'
-        ).first()
+        )
+        if  work_order_master_id:
+           query = query.filter(
+               AccTaxInvoiceMasterView.work_order_master_id == work_order_master_id
+           )
+
+        if  tax_invoice_master_id:
+            query = query.filter(
+               AccTaxInvoiceMasterView.id == tax_invoice_master_id
+           )
+        
+        # Fetch the invoice master data
+        invoice_master_data = query.all()
 
         # Handle case when invoice master is not found
         if not invoice_master_data:
             raise HTTPException(status_code=404, detail="Invoice Master not found")
 
         # Initialize response schema with master data
-        invoice_response_data = AccTaxInvoiceResponceSchema(
-            tax_invoice_master=AccTaxInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
-            tax_invoice_details = []
-        )
-
-        # If include_details is true, fetch the invoice details
-        if include_details:
-            invoice_details_data = db.query(AccTaxInvoiceDetailsView).filter(
-                AccTaxInvoiceDetailsView.tax_invoice_master_id == tax_invoice_master_id,
-                AccTaxInvoiceDetailsView.is_deleted == 'no'
-            ).all()
+        invoice_response_data = [] 
+        for master in invoice_master_data:
+            if include_details:
+                invoice_details = db.query(AccTaxInvoiceDetailsView).filter(
+                    AccTaxInvoiceDetailsView.tax_invoice_master_id == tax_invoice_master_id,
+                    AccTaxInvoiceDetailsView.is_deleted == 'no'
+                ).all()
             
             # Convert details data to the schema format
-            invoice_details_list = [
-                AccTaxInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details_data
-            ]
-            
-            # Add the details to the response schema
-            invoice_response_data.tax_invoice_details = invoice_details_list
+                invoice_details_list = [
+                    AccTaxInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details
+                ]
+            else:
+                invoice_details_list =[]
+            invoice_response_data.append(
+                 AccTaxInvoiceResponceSchema(
+                tax_invoice_master=AccTaxInvoiceMasterViewSchema.model_validate(master.__dict__),
+                tax_invoice_details=invoice_details_list
+            )
+            )
 
+        # If include_details is true, fetch the invoice details
+       
         return invoice_response_data
     # except Exception as e:
     #     print(f"Error: {e}")
     #     raise HTTPException(status_code=500, detail="An internal error occurred.")
+
 
 #---------------------------------------------------------------------------------------------------
 

@@ -203,7 +203,6 @@ UPLOAD_DIR_QUOTATION_DETAILS       = "uploads/quotation_details"
 #         return open(file_path, "rb")
 
 
-
 def generate_quotation_pdf(quotations, file_path):
 
     # Load the template environment
@@ -246,12 +245,11 @@ def generate_quotation_pdf(quotations, file_path):
         html_content = template.render(data)
 
         # Debug print: Check the HTML content generated
-        # print("Generated HTML content:", html_content)
+        print("Generated HTML content:", html_content)
 
         # Configuration for pdfkit
-       
+        # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
-        # wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
@@ -273,6 +271,7 @@ def generate_quotation_pdf(quotations, file_path):
 
         return open(file_path, "rb")
 
+
 @router.get('/get_quotation_pdf')
 def get_quotation_pdf(
     status: Optional[str]='ALL',
@@ -292,7 +291,6 @@ def get_quotation_pdf(
     pdf_buffer = generate_quotation_pdf(quotations, file_path)
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=quotations.pdf"})
-
 
 
 # @router.get('/get_quotation_pdf')
@@ -380,6 +378,7 @@ def generate_profoma_invoice(
             result   = db_quotation.generate_profoma_invoice_details(db,work_order_master_id,user_id,financial_year_id,customer_id)
             return result
 #----------------------------------------------------------------------------------------
+
 @router.get('/get_proforma_invoice_details')
 def get_proforma_invoice_details(
      work_order_master_id : int,
@@ -396,7 +395,6 @@ def get_proforma_invoice_details(
             
     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details)
     return result
-
 #---------------------------------------------------------------------------------
 
 @router.post('/save_proforma_invoice')
@@ -713,12 +711,18 @@ def get_service_price_details_by_service_id(
 
 @router.get('/get_tax_invoice_details')
 def get_tax_invoice_details(
-     work_order_master_id : int,
-     tax_invoice_master_id : int,
+     work_order_master_id : Optional[int]= None,
+     tax_invoice_master_id : Optional[int]= None,
+     include_details: Optional[bool] = Query(False),
+     token: str = Depends(oauth2.oauth2_scheme),
      db: Session = Depends(get_db)
 ):
-     result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id)
+     if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing") 
+     
+     result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id,include_details)
      return result
+
 
 
 
