@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import EntryPoint, QuotationStatus
+from caerp_constants.caerp_constants import EntryPoint, ProformaInvoiceStatus, QuotationStatus, TaxInvoiceStatus
 import pdfkit
 
 from caerp_schema.office.office_schema import ServiceRequirementSchema
@@ -379,11 +379,16 @@ def generate_profoma_invoice(
             return result
 #----------------------------------------------------------------------------------------
 
+
 @router.get('/get_proforma_invoice_details')
 def get_proforma_invoice_details(
-     work_order_master_id : int,
-     proforma_invoice_master_id : int,
+     work_order_master_id : Optional[int] =None,
+     proforma_invoice_master_id : Optional[int] =None,
+     status: ProformaInvoiceStatus= None,
      include_details: Optional[bool] = Query(False),
+     search_value: Union[str, int] = "ALL",
+     from_date: Optional[date] = None,
+     to_date: Optional[date] = None,
      token: str = Depends(oauth2.oauth2_scheme),
      db: Session = Depends(get_db)
 ):
@@ -393,8 +398,10 @@ def get_proforma_invoice_details(
         # auth_info = authenticate_user(token)
         # user_id = auth_info.get("user_id")
             
-    result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details)
+    result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details,status,search_value,from_date,to_date)
     return result
+
+
 #---------------------------------------------------------------------------------
 
 @router.post('/save_proforma_invoice')
@@ -714,13 +721,17 @@ def get_tax_invoice_details(
      work_order_master_id : Optional[int]= None,
      tax_invoice_master_id : Optional[int]= None,
      include_details: Optional[bool] = Query(False),
+     status: TaxInvoiceStatus = None,
+     search_value: Union[str, int] = "ALL",
+     from_date: Optional[date] = None,
+     to_date: Optional[date] = None,
      token: str = Depends(oauth2.oauth2_scheme),
      db: Session = Depends(get_db)
 ):
      if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing") 
      
-     result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id,include_details)
+     result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id,include_details,status,search_value,from_date,to_date)
      return result
 
 

@@ -132,3 +132,21 @@ class QuotationStatus(str, Enum):
     QUOTATION_ACCEPTED				    = 5
     QUOTATION_REJECTED				    = 6
     QUOTATION_CONVERTED_TO_PROFORMA		= 7
+
+
+
+
+class ProformaInvoiceStatus(str , Enum):
+
+    PROFORMA_INVOICE_GENERATED 					= 1
+    PROFORMA_INVOICE_SENT						= 2
+    PROFORMA_INVOICE_PARTIALLY_CONVERTED_TO_TAX_INVOICE	= 3
+    PROFORMA_INVOICE_CONVERTED_TO_TAX_INVOICE			= 4
+
+
+class TaxInvoiceStatus(str, Enum):
+
+    TAX_INVOICE_PENDING_PAYMENT			= 1
+    TAX_INVOICE_PARTIALLY_PAID			= 2
+    TAX_INVOICE_PAID				    = 3
+    TAX_INVOICE_CANCELLED				= 4

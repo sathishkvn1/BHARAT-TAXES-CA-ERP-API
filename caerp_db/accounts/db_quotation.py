@@ -8,7 +8,7 @@ from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoi
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
-from caerp_constants.caerp_constants import EntryPoint, QuotationStatus
+from caerp_constants.caerp_constants import EntryPoint, ProformaInvoiceStatus, QuotationStatus, TaxInvoiceStatus
 from caerp_functions.send_email import send_email
 from caerp_schema.common.common_schema import Email
 from sqlalchemy.exc import IntegrityError
@@ -950,11 +950,16 @@ def consultation_invoice_generation(
         }
 
 #---------------------------------------------------------------------------------------------------
+
 def get_proforma_invoice_details(
     db: Session,
     work_order_master_id: Optional[int] = None,
     proforma_invoice_master_id: Optional[int] =None,
-    include_details: Optional[bool] = Query(False)
+    include_details: Optional[bool] = Query(False),
+    status: ProformaInvoiceStatus = None,
+    search_value: Union[str, int] = "ALL",
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None
 ):
     # try:
         query = db.query(AccProformaInvoiceMasterView).filter(           
@@ -969,7 +974,24 @@ def get_proforma_invoice_details(
             query = query.filter(
                AccProformaInvoiceMasterView.id == proforma_invoice_master_id
            )
-        # Fetch the invoice master data
+            
+        if search_value != 'ALL':
+            query = query.filter(
+                or_(
+                    AccProformaInvoiceMasterView.first_name.like(f"%{search_value}%"),
+                    AccProformaInvoiceMasterView.email_id.like(f"%{search_value}%"),
+                    AccProformaInvoiceMasterView.mobile_number.like(f"%{search_value}%"),
+                    AccProformaInvoiceMasterView.proforma_invoice_number.like(f"%{search_value}%")      
+                )
+            )
+        if status != 'ALL' and status is not None:
+            query = query.filter(AccProformaInvoiceMasterView.proforma_invoice_status == status)
+        if from_date:
+            query = query.filter(AccProformaInvoiceMasterView.proforma_invoice_date >= from_date)
+        if to_date:
+            query = query.filter(AccProformaInvoiceMasterView.proforma_invoice_date <= to_date)
+
+            # Fetch the invoice master data
         invoice_master_data = query.all()
 
         # Handle case when invoice master is not found
@@ -978,18 +1000,10 @@ def get_proforma_invoice_details(
         
         invoice_response_data = []
         for master in invoice_master_data:
-       
-
-        # # Initialize response schema with master data
-        #     invoice_response_data = AccProformaInvoiceResponceSchema(
-        #         proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(invoice_master_data.__dict__),
-        #         proforma_invoice_details = []
-        #     )
-
         # If include_details is true, fetch the invoice details
             if include_details:
                 invoice_details = db.query(AccProformaInvoiceDetailsView).filter(
-                    AccProformaInvoiceDetailsView.proforma_invoice_master_id == proforma_invoice_master_id,
+                    AccProformaInvoiceDetailsView.proforma_invoice_master_id == master.id,
                     AccProformaInvoiceDetailsView.is_deleted == 'no'
                 ).all()
             
@@ -1009,15 +1023,18 @@ def get_proforma_invoice_details(
             # invoice_response_data.proforma_invoice_details = invoice_details_list
 
         return invoice_response_data
-    # except Exception as e:
-    #     print(f"Error: {e}")
-    #     raise HTTPException(status_code=500, detail="An internal error occurred.")
+    
+
 
 def get_tax_invoice_details(
     db: Session,
     work_order_master_id: Optional[int] = None,
     tax_invoice_master_id: Optional[int] = None,
-    include_details: Optional[bool] = Query(False)
+    include_details: Optional[bool] = Query(False),
+    status: TaxInvoiceStatus = None,
+    search_value: Union[str, int] = "ALL",
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None
 ):
     # try:
         query = db.query(AccTaxInvoiceMasterView).filter(           
@@ -1032,6 +1049,22 @@ def get_tax_invoice_details(
             query = query.filter(
                AccTaxInvoiceMasterView.id == tax_invoice_master_id
            )
+        if search_value != 'ALL':
+            query = query.filter(
+                or_(
+                    AccTaxInvoiceMasterView.first_name.like(f"%{search_value}%"),
+                    AccTaxInvoiceMasterView.email_id.like(f"%{search_value}%"),
+                    AccTaxInvoiceMasterView.mobile_number.like(f"%{search_value}%"),
+                    AccTaxInvoiceMasterView.tax_invoice_number.like(f"%{search_value}%")      
+                )
+            )
+        if status != 'ALL' and status is not None:
+            query = query.filter(AccTaxInvoiceMasterView.tax_invoice_status == status)
+        if from_date:
+            query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date >= from_date)
+        if to_date:
+            query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date <= to_date)
+
         
         # Fetch the invoice master data
         invoice_master_data = query.all()
@@ -1045,10 +1078,10 @@ def get_tax_invoice_details(
         for master in invoice_master_data:
             if include_details:
                 invoice_details = db.query(AccTaxInvoiceDetailsView).filter(
-                    AccTaxInvoiceDetailsView.tax_invoice_master_id == tax_invoice_master_id,
+                    AccTaxInvoiceDetailsView.tax_invoice_master_id == master.id,
                     AccTaxInvoiceDetailsView.is_deleted == 'no'
                 ).all()
-            
+               
             # Convert details data to the schema format
                 invoice_details_list = [
                     AccTaxInvoiceDetailsViewSchema.model_validate(detail.__dict__) for detail in invoice_details
@@ -1068,7 +1101,6 @@ def get_tax_invoice_details(
     # except Exception as e:
     #     print(f"Error: {e}")
     #     raise HTTPException(status_code=500, detail="An internal error occurred.")
-
 
 #---------------------------------------------------------------------------------------------------
 
