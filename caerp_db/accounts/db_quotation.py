@@ -2,6 +2,7 @@ from fastapi import HTTPException,Query
 from sqlalchemy.orm import Session,aliased
 from caerp_db.common.models import AppActivityHistory
 from caerp_db.office.models import CustomerDataDocumentMaster, OffAppointmentVisitDetails, OffAppointmentVisitMasterView, OffConsultantServiceDetails, OffServiceTaskMaster, OffViewServiceGoodsMaster, OffViewWorkOrderBusinessPlaceDetails,OffWorkOrderDetails,OffViewServiceGoodsPriceMaster,WorkOrderDetailsView, WorkOrderMasterView,OffWorkOrderMaster
+from caerp_router.common.common_functions import update_column_value
 from caerp_schema.office.office_schema import  OffWorkOrderMasterSchema,OffViewServiceGoodsPriceMasterSchema,OffViewWorkOrderMasterSchema,ServiceGoodsPriceDetailsSchema,OffViewWorkOrderDetailsSchema,ServiceGoodsPriceResponseSchema, ServiceRequirementSchema
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceDetailsViewSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceMasterViewSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationDetailsViewSchema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceDetailsViewSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceMasterViewSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
 from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceDetailsView, AccProformaInvoiceMaster, AccProformaInvoiceMasterView, AccQuotationDetailsView, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceDetailsView, AccTaxInvoiceMaster, AccTaxInvoiceMasterView
@@ -86,7 +87,7 @@ def generate_quotation_service_details(
         )
         db.add(quotation_master)
         db.flush() 
-            
+           
         # Loop through each detail to fetch its price data
         for details in work_order_details_data:
             service_master_id = details.service_goods_master_id
@@ -196,6 +197,8 @@ def generate_quotation_service_details(
         quotation_master.grand_total_amount = quotation_total_amount 
         quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount_amount
         db.commit()
+        #update_column_value(db,tablr_name,row_id,field_name,value )
+        update_column_value(db,'off_work_order_master',1,'work_order_status_id',2)
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
                      "quotation_master_id": quotation_master.id,
@@ -210,6 +213,8 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
+
+
 #=-------------------------------------------------------------------------------------------
 def save_quotation_data(
         request : AccQuotationSchema,
@@ -370,7 +375,6 @@ def update_quotation_status(
     
 
 
-
 def send_proposal(
         quotation_id: int,
         work_order_master_id: int,
@@ -378,13 +382,37 @@ def send_proposal(
     work_order_master_data = db.query(WorkOrderMasterView).filter(
         WorkOrderMasterView.work_order_master_id == work_order_master_id).first()
     
-    email = Email(
-        messageTo = work_order_master_data.email_id,
-        subject=  "Quotation verification",
-        messageBody = f"This is for compleating your quotation",
-        messageType= "NO_REPLY"
-    )
-    result = send_email(email,db)
+    # email = Email(
+    #     messageTo = work_order_master_data.email_id,
+    #     subject=  "Quotation verification",
+    #     messageBody = f"This is for compleating your quotation",
+    #     messageType= "NO_REPLY"
+    # )
+    # result = send_email(email,db)
+    update_column_value(db,'acc_quotation_master', 1,'quotation_status_id',2)
+    result = {
+        'message': 'Send proposal successfully',
+        'success': True
+    }
+    return result
+
+
+
+
+
+def send_tax_invoice(
+        tax_invoice_id: int,
+        work_order_master_id: int,
+        db:Session):
+    work_order_master_data = db.query(WorkOrderMasterView).filter(
+        WorkOrderMasterView.work_order_master_id == work_order_master_id).first()
+    
+    
+    update_column_value(db,'acc_tax_invoice_master', 1,'tax_invoice_status_id',2)
+    result = {
+        'message': 'Send invoice successfully',
+        'success': True
+    }
     return result
 
 
@@ -493,6 +521,7 @@ def generate_profoma_invoice_details(
             WorkOrderMasterView.work_order_master_id == work_order_master_id
         ).first()
 
+        enquiry_details_id = work_order_master_data.enquiry_details_id
         if not work_order_master_data:
             raise HTTPException(status_code=404, detail="Work Order Master not found")
 
@@ -608,6 +637,10 @@ def generate_profoma_invoice_details(
         proforma_invoice_master.grand_total_amount          = total_invoice_amount
         proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount_amount -quotation_master_data.bill_discount_amount + quotation_master_data.round_off_amount
         db.commit()
+        if enquiry_details_id:
+                 update_column_value(db,'off_enquiry_details',1,'enquiry_status_id',3)
+        update_column_value(db,'off_work_order_master',1,'work_order_status_id',4)
+        update_column_value(db,'acc_quotation_master',1,'quotation_status_id',6)
 
         return {
             'message': 'Success',
@@ -1139,3 +1172,19 @@ def save_tax_invoice(
             db.rollback()  # Rollback the transaction in case of error
             raise HTTPException(status_code=500, detail=str(e))  # Raise HTTPException with error message
  
+
+def send_proforma_invoice(
+        proforma_invoice_id: int,
+        work_order_master_id: int,
+        db:Session):
+    work_order_master_data = db.query(WorkOrderMasterView).filter(
+        WorkOrderMasterView.work_order_master_id == work_order_master_id).first()
+    
+   
+    update_column_value(db,'acc_proforma_invoice_master', 1,'proforma_invoice_status_id',2)
+    result = {
+        'message': 'Send invoice successfully',
+        'success': True
+    }
+    return result
+

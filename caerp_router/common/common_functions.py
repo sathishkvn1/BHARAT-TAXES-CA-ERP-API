@@ -11,6 +11,10 @@ from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster
 from caerp_db.office import db_office_master
 
 from caerp_db.office.models import AppBusinessConstitution, AppDayOfWeek, AppHsnSacClasses, AppHsnSacMaster, AppStockKeepingUnitCode, OffAppointmentCancellationReason, OffAppointmentMaster, OffAppointmentStatus, OffConsultationMode, OffConsultationTaskStatus, OffDocumentDataCategory, OffDocumentDataMaster, OffDocumentDataType, OffEnquirerType, OffEnquiryMaster, OffEnquiryStatus, OffNatureOfPossession, OffServiceDocumentDataDetails, OffServiceGoodsCategory, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskMaster, OffServiceTaskStatus, OffSourceOfEnquiry, OffTaskPriority, OffWorkOrderMaster, OffWorkOrderStatus
+from sqlalchemy import update, Table, MetaData
+from sqlalchemy.exc import NoResultFound
+
+
 
 
 from caerp_auth import oauth2
@@ -487,3 +491,62 @@ async def check_duplicate(
         raise HTTPException(status_code=500)
 
 
+
+
+
+
+
+
+
+def update_column_value(db: Session, table_name: str, row_id: int, field_name: str, value):
+    """
+    Updates a specific field in a table for a given row.
+
+    :param db: SQLAlchemy Session object.
+    :param table_name: Name of the table where the record is to be updated.
+    :param row_id: ID of the row to update.
+    :param field_name: Name of the field to update.
+    :param value: New value to set for the field.
+    :return: None
+    """
+    try:
+        # Reflect the table from the database
+        metadata = MetaData()
+        table = Table(table_name, metadata, autoload_with=db.bind)
+        
+        # Check if the table has the field_name as a column
+        if field_name not in table.c:
+            raise ValueError(f"Field '{field_name}' does not exist in table '{table_name}'.")
+
+        # Build the update query
+        stmt = (
+            update(table)
+            .where(table.c.id == row_id)  # Assuming the primary key column is 'id'
+            .values({field_name: value})
+        )
+
+        # Execute the update query
+        result = db.execute(stmt)
+        
+        # Commit the changes if the row was successfully updated
+        if result.rowcount > 0:
+            db.commit()
+            # print(f"Successfully updated {field_name} in {table_name} for row with ID {row_id}.")
+            return {
+                'message': f"Successfully updated {field_name} in {table_name} for row with ID {row_id}.",
+                'success': True
+            }
+        else:
+            # print(f"No row found with ID {row_id} in table {table_name}.")
+            return {
+                'message': f"No row found with ID {row_id} in table {table_name}.",
+                'success': False
+            }
+
+    except NoResultFound:
+        print(f"No row found with ID {row_id} in table {table_name}.")
+    except Exception as e:
+        db.rollback()
+        print(f"An error occurred: {e}")
+
+  

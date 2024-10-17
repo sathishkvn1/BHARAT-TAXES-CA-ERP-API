@@ -81,12 +81,17 @@ def update_quotation_status(
    result = db_quotation.update_quotation_status(quotation_id,quotation_status,db)
    return result
 
+
 @router.post('/send_proposal')
 def send_proposal(
     quotation_id :int,
     work_order_master_id : int,
+    token: str = Depends(oauth2.oauth2_scheme),
     db: Session = Depends(get_db)
 ):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
     result = db_quotation.send_proposal(quotation_id,work_order_master_id,db)
     return result
 
@@ -764,3 +769,30 @@ def save_tax_invoice(
         result = db_quotation.save_tax_invoice( db, work_order_master_id,request,user_id)
         return result
 
+@router.post('/send_proforma_invoice')
+def send_proforma_invoice(
+    proforma_invoice_master_id :int,
+    work_order_master_id : int,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    result = db_quotation.send_proforma_invoice(proforma_invoice_master_id,work_order_master_id,db)
+    return result
+
+
+
+@router.post('/send_tax_invoice')
+def send_tax_invoice(
+    tax_invoice_master_id :int,
+    work_order_master_id : int,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    result = db_quotation.send_tax_invoice(tax_invoice_master_id,work_order_master_id,db)
+    return result

@@ -133,3 +133,65 @@ class StakeHolderMasterSchema(BaseModel):
     contact_details     : List[ContactDetailsSchema]
     identity_information: List[IdentityInformationSchema]
     address             : List[AddressSchema]
+
+
+class BusinessPlace(BaseModel):
+    
+    pin_code                  : Optional[str]
+    country_id                : Optional[int]
+    state_id                  : Optional[int]
+    district_id               : Optional[int]
+    taluk_id                  : Optional[int]
+    city_id                   : Optional[int]
+    lsg_type_id               : Optional[int]
+    lsg_id                    : Optional[int]
+    village_id                : Optional[int]
+    locality                  : Optional[str]
+    road_street_name          : Optional[str]
+    premises_building_name    : Optional[str]
+    building_flat_number       : Optional[str]
+    floor_number               : Optional[str]
+    landmark                  : Optional[str]
+    latitude                  : Optional[str]
+    longitude                 : Optional[str]
+    is_principal_place        : Optional[str]
+    business_place_type       : Optional[str]
+    nature_of_possession_id   : Optional[int]
+
+
+class BusinessActivityType(BaseModel):
+    
+    business_activity_type_id : Optional[int]
+
+
+class BusinessActivityMaster(BaseModel):
+    business_activity_master_id: Optional[int]
+
+
+class BusinessActivity(BaseModel):
+    business_activity_id       : Optional[int]
+
+
+class BusinessActivityData(BaseModel):
+    business_activity_type      : Optional[BusinessActivityType]
+    business_activity_master     : Optional[BusinessActivityMaster]
+    business_activity           : Optional[BusinessActivity]
+
+
+class BusinessData(BaseModel):
+    business_place             : List[BusinessPlace]
+    business_activity          : List[BusinessActivityData]
+
+
+class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
+
+    hsn_sac_class_id   :int
+    hsn_sac_code_id    :int
+
+
+class CustomerGstStateSpecificInformationSchema(BaseModel):
+
+    professional_tax_employee_code               :str
+    professional_tax_registration_certificate    :str
+    state_excise_licence_number                  :str
+    excise_licence_holder_name                   :str

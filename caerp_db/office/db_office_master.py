@@ -14,6 +14,7 @@ from sqlalchemy.orm.session import Session
 from caerp_db.office.models import AppDayOfWeek, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
 from caerp_functions.generate_book_number import generate_book_number
 
+from caerp_router.common.common_functions import update_column_value
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
 from typing import Union,List
@@ -3762,7 +3763,6 @@ def get_work_order_details(
     # if data:
 
     return data
-    
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
@@ -3878,7 +3878,6 @@ def get_business_activity_by_master_id(
 
 #----------------------------------------------------------------------------------------------------
 
-
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session,
@@ -3891,7 +3890,7 @@ def save_work_order(
         try:
            
             work_order_number = generate_book_number('WORK_ORDER',financial_year_id,customer_id, db)
-
+            enquiry_details_id = request.master.enquiry_details_id
             master_data = request.master.model_dump()
             master_data['created_on'] = datetime.now()
             master_data['created_by'] = user_id
@@ -3900,7 +3899,7 @@ def save_work_order(
             master = OffWorkOrderMaster(**master_data)
             db.add(master)
             db.flush()
-
+            
             for main_detail in request.main_service:
                 detail_data = main_detail.model_dump()
                 detail_data['work_order_master_id'] = master.id
@@ -3927,6 +3926,9 @@ def save_work_order(
                     db.add(work_order_sub_detail)
 
             db.commit()
+            if enquiry_details_id:
+                 update_column_value(db,'off_enquiry_details',1,'enquiry_status_id',2)
+
             return {"message": "Work order created successfully", 
                     "work_order_master_id": master.id,
                     "work_order_number":master.work_order_number,
@@ -4079,8 +4081,6 @@ def save_work_order(
         except SQLAlchemyError as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
-
-
 
 
 #-------------------------------------------------------------------------------------------------------------

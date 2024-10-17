@@ -1,11 +1,13 @@
 from datetime import date, datetime, timedelta
+from typing import List
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 
-from caerp_db.common.models import AppDesignation, AppViewVillages, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, StateDB
-from caerp_db.office.models import OffServiceTaskMaster
-from caerp_db.services.model import CustomerAdditionalTradeName, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
-from caerp_schema.services.gst_schema import BusinessDetailsSchema, CustomerRequestSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
+from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
+from caerp_functions.generate_book_number import generate_book_number
+from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -17,11 +19,15 @@ def save_business_details(
     user_id: int,
     id: int  # 0 for insert (new), non-zero for update
 ):
+    financial_year_id = 1
+    customer_id = 1
     try:
         if id == 0:
             # Insert new CustomerMaster without customer_id
+            customer_number = generate_book_number('CUSTOMER',financial_year_id,customer_id, db)
             customer_master = CustomerMaster(
                 **business_details_data.model_dump(exclude_unset=True),
+                customer_number=customer_number,
                 created_by=user_id,  # Set created_by field
                 created_on=datetime.now(),  # Set created_on to current datetime
                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
@@ -213,7 +219,10 @@ def save_customer_details(customer_id: int,
         raise HTTPException(status_code=500, detail=str(e))
 
 #-get''
-def get_customer_details(db: Session, customer_id: int):
+def get_customer_details(db: Session, 
+                         customer_id: int,
+                         user_id: int, 
+                         ):
     try:
         # Query the main customer record
         customer = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
@@ -232,6 +241,7 @@ def get_customer_details(db: Session, customer_id: int):
         response = {
             "customer_business_details": {
                 "id": customer.customer_id,
+                "customer_number":customer.customer_number,
                 "pan_number": customer.pan_number,
                 "pan_creation_date": customer.pan_creation_date,
                 "state_id": customer.state_id,
@@ -475,7 +485,11 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 
 #--get
 
-def get_stakeholder_details(db: Session, customer_id: int, stakeholder_type: str):
+def get_stakeholder_details(db: Session, 
+                            customer_id: int, 
+                            stakeholder_type: str,
+                            user_id: int
+                            ):
     try:
         # Fetch records from CustomerStakeHolder based on customer_id
         customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id).all()
@@ -545,6 +559,12 @@ def get_stakeholder_details(db: Session, customer_id: int, stakeholder_type: str
                         "city_name": db.query(CityDB.city_name).filter_by(id=address.city_id).scalar() if address and address.city_id else None,
                         "village_id": address.village_id if address else None,
                         "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=address.village_id).scalar() if address and address.village_id else None,
+                        "post_office_id": address.post_office_id if address else None,
+                        "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=address.post_office_id).scalar() if address and address.post_office_id else None,
+                        "lsg_type_id": address.lsg_type_id,
+                        "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
+                        "lsg_id": address.lsg_id,
+                        "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
                         "locality": address.locality if address else None,
                         "road_street_name": address.road_street_name if address else None,
                         "building_flat_number": address.building_flat_number if address else None,
@@ -556,6 +576,476 @@ def get_stakeholder_details(db: Session, customer_id: int, stakeholder_type: str
                 stakeholder_details.append(response)
 
         return stakeholder_details if stakeholder_details else []
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+#----------------
+
+
+def save_business_place(customer_id: int, 
+                       data: BusinessData, 
+                       db: Session,
+                       user_id: int,
+                       id: int  # New parameter to determine insert or update
+                       ):
+    try:
+        if id == 0:
+            # Add new business data
+            for business_place in data.business_place:
+                # Create new business place model
+                business_place_model = CustomerBusinessPlace(
+                    **business_place.model_dump(exclude_unset=True),
+                    customer_id=customer_id  # Associate with customer_id
+                )
+                db.add(business_place_model)
+                db.flush()  # Flush to get the ID of the newly created business place
+                business_place_id = business_place_model.id
+
+                # Save Business Activities
+                for activity_data in data.business_activity:
+                    # Extract IDs from activity_data
+                    business_activity_type_id = activity_data.business_activity_type.business_activity_type_id
+                    business_activity_master_id = activity_data.business_activity_master.business_activity_master_id
+                    business_activity_id = activity_data.business_activity.business_activity_id
+
+                    # Save Business Activity Type
+                    activity_type_model = CustomerBusinessPlaceActivityType(
+                        customer_id=customer_id,
+                        business_place_id=business_place_id,  # Associate with the current business place
+                        business_activity_type_id=business_activity_type_id  # Using the provided type ID
+                    )
+                    db.add(activity_type_model)
+
+                    # Save Core Activity
+                    core_activity_model = CustomerBusinessPlaceCoreActivity(
+                        customer_id=customer_id,
+                        business_place_id=business_place_id,  # Associate with the current business place
+                        business_activity_master_id=business_activity_master_id  # Using the provided master ID
+                    )
+                    db.add(core_activity_model)
+
+                    # Save Business Activity
+                    activity_model = CustomerBusinessPlaceActivity(
+                        customer_id=customer_id,
+                        business_place_id=business_place_id,  # Associate with the current business place
+                        business_activity_id=business_activity_id  # Using the provided activity ID
+                    )
+                    db.add(activity_model)
+
+        else:
+            # Update existing business data
+            existing_business_place = db.query(CustomerBusinessPlace).filter_by(id=id, customer_id=customer_id).first()
+            if not existing_business_place:
+                return []
+
+            # Update business place details
+            for business_place in data.business_place:
+                existing_business_place.update(**business_place.model_dump(exclude_unset=True))
+
+                # Assuming that business activities can be updated or added as necessary
+                for activity_data in data.business_activity:
+                    business_activity_type_id = activity_data.business_activity_type.business_activity_type_id
+                    business_activity_master_id = activity_data.business_activity_master.business_activity_master_id
+                    business_activity_id = activity_data.business_activity.business_activity_id
+
+                    # Update or create Business Activity Type
+                    existing_activity_type = db.query(CustomerBusinessPlaceActivityType).filter_by(
+                        business_place_id=existing_business_place.id,
+                        business_activity_type_id=business_activity_type_id
+                    ).first()
+                    if existing_activity_type:
+                        existing_activity_type.update(customer_id=customer_id)
+                    else:
+                        new_activity_type = CustomerBusinessPlaceActivityType(
+                            customer_id=customer_id,
+                            business_place_id=existing_business_place.id,
+                            business_activity_type_id=business_activity_type_id
+                        )
+                        db.add(new_activity_type)
+
+                    # Update or create Core Activity
+                    existing_core_activity = db.query(CustomerBusinessPlaceCoreActivity).filter_by(
+                        business_place_id=existing_business_place.id,
+                        business_activity_master_id=business_activity_master_id
+                    ).first()
+                    if existing_core_activity:
+                        existing_core_activity.update(customer_id=customer_id)
+                    else:
+                        new_core_activity = CustomerBusinessPlaceCoreActivity(
+                            customer_id=customer_id,
+                            business_place_id=existing_business_place.id,
+                            business_activity_master_id=business_activity_master_id
+                        )
+                        db.add(new_core_activity)
+
+                    # Update or create Business Activity
+                    existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
+                        business_place_id=existing_business_place.id,
+                        business_activity_id=business_activity_id
+                    ).first()
+                    if existing_activity:
+                        existing_activity.update(customer_id=customer_id)
+                    else:
+                        new_activity = CustomerBusinessPlaceActivity(
+                            customer_id=customer_id,
+                            business_place_id=existing_business_place.id,
+                            business_activity_id=business_activity_id
+                        )
+                        db.add(new_activity)
+
+        # Commit the transaction
+        db.commit()
+        
+        return {"message": "Business data saved successfully"}
+
+    except Exception as e:
+        db.rollback()  # Rollback in case of an error
+        raise HTTPException(status_code=500, detail=str(e))
+
+#---get
+
+
+def get_business_place(customer_id: int, 
+                        type: str, 
+                        db: Session,
+                        user_id: int
+                        ):
+    """
+    Fetch business data from the database.
+    """
+    # Determine the value for is_principal_place based on the type
+    is_principal_place = 'yes' if type == 'PRINCIPAL_PLACE_ADDRESS' else 'no'
+
+    try:
+        # Fetch business places
+        business_places = db.query(CustomerBusinessPlace).filter(
+            CustomerBusinessPlace.customer_id == customer_id,
+            CustomerBusinessPlace.is_principal_place == is_principal_place
+        ).all()
+
+        # Prepare business places response
+        business_places_response = [
+            {
+                "id": bp.id,
+                "pin_code": bp.pin_code,
+                "country_id": bp.country_id,
+                "country_name": db.query(CountryDB.country_name_english).filter_by(id=bp.country_id).scalar() if bp.country_id else None,
+                "state_id": bp.state_id,      
+                "state_name": db.query(StateDB.state_name).filter_by(id=bp.state_id).scalar() if bp.state_id else None,
+                "district_id": bp.district_id,     
+                "district_name": db.query(DistrictDB.district_name).filter_by(id=bp.district_id).scalar() if bp.district_id else None,
+                "taluk_id": bp.taluk_id,  
+                "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=bp.taluk_id).scalar() if bp.taluk_id else None,
+                "city_id": bp.city_id,    
+                "city_name": db.query(CityDB.city_name).filter_by(id=bp.city_id).scalar() if bp.city_id else None,
+                "village_id": bp.village_id,   
+                "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=bp.village_id).scalar() if bp.village_id else None,
+                "lsg_type_id": bp.lsg_type_id,
+                "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=bp.lsg_type_id).first().lsg_type if bp.lsg_type_id else None,
+                "lsg_id": bp.lsg_id,
+                "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=bp.lsg_id).first().lsg_name if bp.lsg_id else None,
+                "locality": bp.locality,
+                "road_street_name": bp.road_street_name,
+                "premises_building_name": bp.premises_building_name,
+                "building_flat_number": bp.building_flat_number,
+                "floor_number": bp.floor_number,
+                "landmark": bp.landmark,
+                "latitude": bp.latitude,
+                "longitude": bp.longitude,
+                "is_principal_place": bp.is_principal_place,
+                "business_place_type": bp.business_place_type,
+                "nature_of_possession_id": bp.nature_of_possession_id,
+                "nature_of_possession": db.query(OffNatureOfPossession.nature_of_possession).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
+            }
+            for bp in business_places
+        ]
+
+        # Initialize response lists for activities, activity types, and core activities
+        business_activities_response = []
+        business_activity_types_response = []
+        business_core_activities_response = []
+
+        # Fetch related activities for each business place
+        for bp in business_places:
+            # Fetch business activities for the current business place
+            business_activities = db.query(CustomerBusinessPlaceActivity).filter(
+                CustomerBusinessPlaceActivity.business_place_id == bp.id
+            ).all()
+            
+            business_activities_response.extend([
+                {
+                    "id": ba.id,
+                    "customer_id": ba.customer_id,
+                    "business_place_id": ba.business_place_id,
+                    "business_activity_id": ba.business_activity_id,
+                    "business_activity_name": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().business_activity if ba.business_activity_id else None,
+                }
+                for ba in business_activities
+            ])
+
+            # Fetch business activity types for the current business place
+            business_activity_types = db.query(CustomerBusinessPlaceActivityType).filter(
+                CustomerBusinessPlaceActivityType.business_place_id == bp.id
+            ).all()
+
+            business_activity_types_response.extend([
+                {
+                    "id": bat.id,
+                    "customer_id": bat.customer_id,
+                    "business_place_id": bat.business_place_id,
+                    "business_activity_type_id": bat.business_activity_type_id,
+                    "business_activity_type_name": db.query(BusinessActivityType).filter(BusinessActivityType.id == bat.business_activity_type_id).first().business_activity_type if bat.business_activity_type_id else None,
+                }
+                for bat in business_activity_types
+            ])
+
+            # Fetch business core activities for the current business place
+            business_core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter(
+                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id
+            ).all()
+
+            business_core_activities_response.extend([
+                {
+                    "id": bca.id,
+                    "customer_id": bca.customer_id,
+                    "business_place_id": bca.business_place_id,
+                    "business_activity_master_id": bca.business_activity_master_id,
+                    "business_activity_master_name": db.query(BusinessActivityMaster).filter(BusinessActivityMaster.id == bca.business_activity_master_id).first().business_activity if bca.business_activity_master_id else None,
+                }
+                for bca in business_core_activities
+            ])
+
+        # Compile final response
+        response = {
+            "business_places": business_places_response,
+            "business_activities": business_activities_response,
+            "business_activity_types": business_activity_types_response,
+            "business_core_activities": business_core_activities_response
+        }
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+#-------------
+
+
+def get_hsn_sac_data(hsn_sac_class_id: int,
+                       hsn_sac_code: str,
+                       db: Session,
+                       user_id: int
+                       ):
+    
+    try:
+        # Base query
+        query = db.query(AppHsnSacMaster, AppHsnSacClasses.hsn_sac_class).join(
+            AppHsnSacClasses, AppHsnSacMaster.hsn_sac_class_id == AppHsnSacClasses.id
+        )
+
+        # Filter based on hsn_sac_class_id and hsn_sac_code
+        if hsn_sac_class_id:
+            query = query.filter(AppHsnSacMaster.hsn_sac_class_id == hsn_sac_class_id)
+
+        if hsn_sac_code:
+            query = query.filter(AppHsnSacMaster.hsn_sac_code == hsn_sac_code)
+
+        # Execute the query
+        results = query.all()
+
+        # If no records are found, raise an exception
+        if not results:
+            return []
+
+        # Format the results for the response
+        response = [
+            {
+               
+                "hsn_sac_class": result.hsn_sac_class,
+                "hsn_sac_code_id": result.AppHsnSacMaster.id,
+                "hsn_sac_code": result.AppHsnSacMaster.hsn_sac_code,
+                "hsn_sac_description": result.AppHsnSacMaster.hsn_sac_description,
+            }
+            for result in results
+        ]
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+
+
+def save_goods_commodities_details(
+    id: int,  # 0 for insert, non-zero for update
+    customer_id: int,
+    details: CustomerGoodsCommoditiesSupplyDetailsSchema,
+    db: Session,
+    user_id: int  # Optionally track the user making the changes
+):
+    try:
+        # Use model_dump to get the details as a dictionary
+        detail_data = details.model_dump(exclude_unset=True)  # Only include set fields
+
+        if id == 0:
+            # Create a new entry if ID is 0
+            new_entry = CustomerGoodsCommoditiesSupplyDetails(
+                customer_id=customer_id,
+                hsn_sac_class_id=detail_data['hsn_sac_class_id'],
+                hsn_sac_code_id=detail_data['hsn_sac_code_id'],
+                effective_from_date=date.today(),  # Set effective_from_date to current date
+                effective_to_date=None,              # Set effective_to_date as None
+                created_by=user_id,               # Default value for is_deleted
+                created_on=datetime.now()            # Set created_on to current datetime
+            )
+            db.add(new_entry)
+            db.commit()  # Commit to save the new entry
+            db.refresh(new_entry)  # Refresh to get the updated instance with id
+
+            return {"success": True, "message": "New data saved successfully"}
+
+        else:
+            # Fetch the existing record by ID for updating
+            existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=id).first()
+
+            if not existing_entry:
+                return []
+
+            # Update the existing record fields
+            existing_entry.hsn_sac_class_id = detail_data['hsn_sac_class_id']
+            existing_entry.hsn_sac_code_id = detail_data['hsn_sac_code_id']
+            existing_entry.modified_on = datetime.now()  # Update modified date to current datetime
+            existing_entry.modified_by = user_id  # Optionally track who made the change
+
+            db.commit()  # Commit the changes to the database
+
+            return {"success": True, "message": "Data updated successfully"}
+
+    except Exception as e:
+        db.rollback()  # Rollback the transaction in case of an error
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+#----------------
+def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
+    try:
+        # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
+        commodities = (
+            db.query(CustomerGoodsCommoditiesSupplyDetails)
+            .filter(CustomerGoodsCommoditiesSupplyDetails.customer_id == customer_id)
+            .all()
+        )
+
+        if not commodities:
+            return []  # Return an empty list if no commodities found
+
+        response = []
+        for commodity in commodities:
+            # Fetching hsn_sac_class from AppHsnSacClasses based on hsn_sac_class_id
+            hsn_class_details = (
+                db.query(AppHsnSacClasses)
+                .filter(AppHsnSacClasses.id == commodity.hsn_sac_class_id)
+                .first()
+            )
+
+            # Fetching hsn_sac_code and hsn_sac_description from AppHsnSacMaster based on hsn_sac_code_id
+            hsn_details = (
+                db.query(AppHsnSacMaster)
+                .filter(AppHsnSacMaster.id == commodity.hsn_sac_code_id)
+                .first()
+            )
+
+            if hsn_class_details and hsn_details:
+                response.append({
+                    "hsn_sac_class_id": hsn_class_details.id,
+                    "hsn_sac_class": hsn_class_details.hsn_sac_class,  # Assuming this field exists
+                    "hsn_sac_code_id": hsn_details.id,
+                    "hsn_sac_code": hsn_details.hsn_sac_code,
+                    "hsn_sac_description": hsn_details.hsn_sac_description,
+                })
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+#-
+
+
+def save_customer_gst_state_specific_information(
+    id: int,  # 0 for insert, non-zero for update
+    customer_id: int,
+    data: CustomerGstStateSpecificInformationSchema,
+    db: Session,
+    user_id: int  # Optionally track the user making the changes
+):
+    try:
+        # Use model_dump to get the details as a dictionary
+        detail_data = data.model_dump(exclude_unset=True)  # Only include set fields
+
+        if id == 0:
+            # Create a new entry if ID is 0
+            new_entry = CustomerGstStateSpecificInformation(
+                customer_id=customer_id,
+                **detail_data,
+                created_by=user_id,
+                created_on=datetime.now()  # Set created_on to current datetime
+            )
+            db.add(new_entry)
+            db.commit()  # Commit to save the new entry
+            db.refresh(new_entry)  # Refresh to get the updated instance with id
+
+            return {"success": True, "message": "New GST state-specific information saved successfully"}
+
+        else:
+            # Fetch the existing record by ID for updating
+            existing_entry = db.query(CustomerGstStateSpecificInformation).filter_by(id=id).first()
+
+            if not existing_entry:
+                return []
+
+            # Update the existing record fields
+            for key, value in detail_data.items():
+                setattr(existing_entry, key, value)
+            existing_entry.modified_on = datetime.now()  # Update modified date to current datetime
+            existing_entry.modified_by = user_id  # Optionally track who made the change
+
+            db.commit()  # Commit the changes to the database
+
+            return {"success": True, "message": "GST state-specific information updated successfully"}
+
+    except Exception as e:
+        db.rollback()  # Rollback the transaction in case of an error
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+#----------
+
+def get_gst_state_specific_information_by_customer_id(customer_id: int, 
+                                                      db: Session,
+                                                      user_id:int) -> List[CustomerGstStateSpecificInformation]:
+    try:
+        # Query the CustomerGstStateSpecificInformation for the given customer_id
+        gst_info_records = (
+            db.query(CustomerGstStateSpecificInformation)
+            .filter(CustomerGstStateSpecificInformation.customer_id == customer_id, 
+                    CustomerGstStateSpecificInformation.is_deleted == 'no')  # Optionally filter out deleted records
+            .all()
+        )
+
+        if not gst_info_records:
+            return []  # Return an empty list if no records found
+
+        return gst_info_records
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
