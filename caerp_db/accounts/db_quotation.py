@@ -393,7 +393,7 @@ def get_quotation_data(
     include_details: Optional[bool] = Query(False),
     work_order_master_id: Optional[int] = None,
     quotation_master_id: Optional[int] = None,
-    status: Optional[QuotationStatus] = None,
+    status: Union[str, int] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
     search_value: Union[str, int] = "ALL"
@@ -470,7 +470,6 @@ def get_quotation_data(
 
     return quotations
  
-
 #-------------------------------------------------------------
 def generate_profoma_invoice_details(
         db: Session,
@@ -956,7 +955,7 @@ def get_proforma_invoice_details(
     work_order_master_id: Optional[int] = None,
     proforma_invoice_master_id: Optional[int] =None,
     include_details: Optional[bool] = Query(False),
-    status: ProformaInvoiceStatus = None,
+    status:  Union[str, int] = "ALL",
     search_value: Union[str, int] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None
@@ -1031,7 +1030,7 @@ def get_tax_invoice_details(
     work_order_master_id: Optional[int] = None,
     tax_invoice_master_id: Optional[int] = None,
     include_details: Optional[bool] = Query(False),
-    status: TaxInvoiceStatus = None,
+    status: Union[str, int] = "ALL",
     search_value: Union[str, int] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None
@@ -1098,9 +1097,9 @@ def get_tax_invoice_details(
         # If include_details is true, fetch the invoice details
        
         return invoice_response_data
-    # except Exception as e:
-    #     print(f"Error: {e}")
-    #     raise HTTPException(status_code=500, detail="An internal error occurred.")
+   
+
+
 
 #---------------------------------------------------------------------------------------------------
 

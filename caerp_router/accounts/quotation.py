@@ -90,12 +90,11 @@ def send_proposal(
     result = db_quotation.send_proposal(quotation_id,work_order_master_id,db)
     return result
 
-
 @router.get('/get_quotation_list')
 def get_quotqtion_list(
     search_value: Union[str, int] = "ALL",
     # status: Optional[str]='ALL',
-    status: Optional[QuotationStatus] = None,
+    status: Union[str, int] = "ALL",
     work_order_master_id : Optional[int] = None,
     quotation_id : Optional[int] = None,
     from_date : Optional[date] = None,
@@ -105,9 +104,25 @@ def get_quotqtion_list(
     token: str = Depends(oauth2.oauth2_scheme)
 
 ): 
+    """
+    Fetch a list of quotations with optional filters.
+
+    - **search_value**: String or integer to search quotations by name, email, mobile or quotation_number.
+    - **status**: Filter by quotation status.
+    - **work_order_master_id**: Filter by work order master ID.
+    - **quotation_id**: Filter by specific quotation ID.
+    - **from_date**: Include quotations created on or after this date.
+    - **to_date**: Include quotations created on or before this date.
+    - **include_details**: Boolean to include detailed quotation information.
+
+    **Returns**:
+    - List of quotations or a message if no quotations are found.
+    """
     result = db_quotation.get_quotation_data(db,include_details,work_order_master_id,quotation_id,status,from_date,to_date,search_value)
 #    result = db_quotation.get_quotation_data(db,status,work_order_master_id,quotation_id,from_date,to_date,search_value)
     return result
+
+
 #--------------------------------------------------------------------------------------------------
 
 
@@ -384,7 +399,7 @@ def generate_profoma_invoice(
 def get_proforma_invoice_details(
      work_order_master_id : Optional[int] =None,
      proforma_invoice_master_id : Optional[int] =None,
-     status: ProformaInvoiceStatus= None,
+     status: Union[str, int] = "ALL",
      include_details: Optional[bool] = Query(False),
      search_value: Union[str, int] = "ALL",
      from_date: Optional[date] = None,
@@ -400,8 +415,6 @@ def get_proforma_invoice_details(
             
     result = db_quotation.get_proforma_invoice_details(db,work_order_master_id,proforma_invoice_master_id,include_details,status,search_value,from_date,to_date)
     return result
-
-
 #---------------------------------------------------------------------------------
 
 @router.post('/save_proforma_invoice')
@@ -716,12 +729,13 @@ def get_service_price_details_by_service_id(
     #-----------------------------------------------------
 
 
+
 @router.get('/get_tax_invoice_details')
 def get_tax_invoice_details(
      work_order_master_id : Optional[int]= None,
      tax_invoice_master_id : Optional[int]= None,
      include_details: Optional[bool] = Query(False),
-     status: TaxInvoiceStatus = None,
+     status: Union[str, int] = "ALL",
      search_value: Union[str, int] = "ALL",
      from_date: Optional[date] = None,
      to_date: Optional[date] = None,
@@ -733,7 +747,6 @@ def get_tax_invoice_details(
      
      result = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id,include_details,status,search_value,from_date,to_date)
      return result
-
 
 
 
