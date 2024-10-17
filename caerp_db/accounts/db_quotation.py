@@ -8,7 +8,7 @@ from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoi
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import and_,or_, func, text
 from datetime import date, datetime
-from caerp_constants.caerp_constants import EntryPoint, ProformaInvoiceStatus, QuotationStatus, TaxInvoiceStatus
+from caerp_constants.caerp_constants import EntryPoint
 from caerp_functions.send_email import send_email
 from caerp_schema.common.common_schema import Email
 from sqlalchemy.exc import IntegrityError

@@ -12,7 +12,7 @@ from typing import List, Optional, Union
 from datetime import date
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
-from caerp_constants.caerp_constants import EntryPoint, ProformaInvoiceStatus, QuotationStatus, TaxInvoiceStatus
+from caerp_constants.caerp_constants import EntryPoint
 import pdfkit
 
 from caerp_schema.office.office_schema import ServiceRequirementSchema
