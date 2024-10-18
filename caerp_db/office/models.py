@@ -1234,6 +1234,8 @@ class WorkOrderDependancy(caerp_base):
     dependent_on_work_id    =  Column(Integer, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
+
 class WorkOrderMasterView(caerp_base):
     __tablename__ = 'off_view_work_order_master'
 
@@ -1281,6 +1283,7 @@ class WorkOrderMasterView(caerp_base):
     contact_person_whatsapp_number   = Column(String, nullable=True)
     contact_person_email_id          = Column(String, nullable=True)
     work_order_status_id             = Column(Integer, nullable=False)
+    work_order_status                = Column(String, nullable=True)
     created_by                       = Column(String, nullable=True)
     created_on                       = Column(DateTime, nullable=False)
     modified_by                      = Column(String, nullable=True)
@@ -1291,7 +1294,6 @@ class WorkOrderMasterView(caerp_base):
     is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on                        = Column(DateTime, nullable=True)
     locked_by                        = Column(String, nullable=True)
-
 
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
