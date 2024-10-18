@@ -1235,7 +1235,6 @@ class WorkOrderDependancy(caerp_base):
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
-
 class WorkOrderMasterView(caerp_base):
     __tablename__ = 'off_view_work_order_master'
 
@@ -1294,6 +1293,7 @@ class WorkOrderMasterView(caerp_base):
     is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on                        = Column(DateTime, nullable=True)
     locked_by                        = Column(String, nullable=True)
+
 
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
