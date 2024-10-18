@@ -187,18 +187,17 @@ def generate_quotation_service_details(
             )
         
             db.add(quotation_detail)
-                
+
             gst_amount = quotation_detail.taxable_amount * (quotation_detail.igst_percent /100)
             quotation_detail.igst_amount = gst_amount
             quotation_detail.total_amount = quotation_detail.total_amount+gst_amount - quotation_detail.discount_amount + quotation_detail.cgst_amount +quotation_detail.sgst_amount+ quotation_detail.additional_cess_amount
             quotation_total_amount += quotation_detail.total_amount 
             product_discount_total +=quotation_detail.discount_amount  
-            
         quotation_master.grand_total_amount = quotation_total_amount 
         quotation_master.net_amount = quotation_total_amount - quotation_master.additional_discount_amount
         db.commit()
         #update_column_value(db,tablr_name,row_id,field_name,value )
-        update_column_value(db,'off_work_order_master',1,'work_order_status_id',2)
+        update_column_value(db,'work_order_master',work_order_master_id,'work_order_status_id',2)
             # return quotation_master.id
         return {"message": "Quotation saved successfully",
                      "quotation_master_id": quotation_master.id,
@@ -213,7 +212,6 @@ def generate_quotation_service_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #=-------------------------------------------------------------------------------------------
 def save_quotation_data(
@@ -375,6 +373,7 @@ def update_quotation_status(
     
 
 
+
 def send_proposal(
         quotation_id: int,
         work_order_master_id: int,
@@ -389,13 +388,12 @@ def send_proposal(
     #     messageType= "NO_REPLY"
     # )
     # result = send_email(email,db)
-    update_column_value(db,'acc_quotation_master', 1,'quotation_status_id',2)
+    update_column_value(db,'acc_quotation_master', quotation_id,'quotation_status_id',2)
     result = {
         'message': 'Send proposal successfully',
         'success': True
     }
     return result
-
 
 
 
@@ -408,7 +406,7 @@ def send_tax_invoice(
         WorkOrderMasterView.work_order_master_id == work_order_master_id).first()
     
     
-    update_column_value(db,'acc_tax_invoice_master', 1,'tax_invoice_status_id',2)
+    update_column_value(db,'acc_tax_invoice_master', tax_invoice_id,'tax_invoice_status_id',2)
     result = {
         'message': 'Send invoice successfully',
         'success': True
@@ -638,9 +636,9 @@ def generate_profoma_invoice_details(
         proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount_amount -quotation_master_data.bill_discount_amount + quotation_master_data.round_off_amount
         db.commit()
         if enquiry_details_id:
-                 update_column_value(db,'off_enquiry_details',1,'enquiry_status_id',3)
-        update_column_value(db,'off_work_order_master',1,'work_order_status_id',4)
-        update_column_value(db,'acc_quotation_master',1,'quotation_status_id',6)
+                 update_column_value(db,'off_enquiry_details',enquiry_details_id,'enquiry_status_id',3)
+        update_column_value(db,'work_order_master',work_order_master_id,'work_order_status_id',4)
+        update_column_value(db,'acc_quotation_master',quotation_master_data.id,'quotation_status_id',6)
 
         return {
             'message': 'Success',
@@ -650,6 +648,7 @@ def generate_profoma_invoice_details(
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
@@ -1181,10 +1180,9 @@ def send_proforma_invoice(
         WorkOrderMasterView.work_order_master_id == work_order_master_id).first()
     
    
-    update_column_value(db,'acc_proforma_invoice_master', 1,'proforma_invoice_status_id',2)
+    update_column_value(db,'acc_proforma_invoice_master', proforma_invoice_id,'proforma_invoice_status_id',2)
     result = {
         'message': 'Send invoice successfully',
         'success': True
     }
     return result
-

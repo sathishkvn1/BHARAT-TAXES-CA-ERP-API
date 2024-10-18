@@ -4,7 +4,7 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
-from caerp_db.office.models import AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
+from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, StakeHolderMasterSchema, TradeNameSchema
@@ -100,7 +100,7 @@ def save_customer_details(customer_id: int,
                 if existing_trade_name:
                     for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
                         setattr(existing_trade_name, key, value)
-                    existing_trade_name.effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                    existing_trade_name.effective_from_date=datetime.now()  # Set effective_from_date to current date
                     existing_trade_name.effective_to_date=None
                     existing_trade_name.modified_by = user_id
                     existing_trade_name.modified_on = datetime.now()
@@ -191,26 +191,26 @@ def save_customer_details(customer_id: int,
                     existing_registration.modified_on = datetime.now()
 
         # Handle Authorization
-        if customer_id == 0:  # New Customer Authorization
-            new_authorization = CustomerMaster(
-                customer_id=customer_id,
-                **customer_data.authorization.model_dump(exclude_unset=True),
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
-                effective_to_date=None,
-                created_by=user_id,
-                created_on=datetime.now()
-            )
-            db.add(new_authorization)
-        else:
+        if customer_id >= 0:  # Check if it's an existing customer or a new customer
             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
-            if existing_authorization:
+
+            if existing_authorization:  # Update the existing authorization
                 for key, value in customer_data.authorization.model_dump(exclude_unset=True).items():
                     setattr(existing_authorization, key, value)
-                existing_authorization.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                existing_authorization.effective_to_date=None
-                existing_authorization.modified_by = user_id
-                existing_authorization.modified_on = datetime.now()
-
+                existing_authorization.effective_from_date = datetime.now()  
+                existing_authorization.effective_to_date = None 
+                existing_authorization.modified_by = user_id  
+                existing_authorization.modified_on = datetime.now()  
+            else:  
+                new_authorization = CustomerMaster(
+                    customer_id=customer_id,
+                    **customer_data.authorization.model_dump(exclude_unset=True),
+                    effective_from_date=datetime.now(),  
+                    effective_to_date=None,  
+                    created_by=user_id,  
+                    created_on=datetime.now()  
+                )
+                db.add(new_authorization)
         # Commit transaction
         db.commit()
 
@@ -257,6 +257,7 @@ def get_customer_details(db: Session,
                 "authorised_signatory_name_as_in_pan": customer.authorized_signatory_name_as_in_pan,
                 "authorised_signatory_pan_number": customer.authorized_signatory_pan_number,
                 "constitution_id": customer.constitution_id,
+                "constitution_name": db.query(AppBusinessConstitution.business_constitution_name).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
                 "has_authorized_signatory": customer.has_authorized_signatory,
                 "has_authorized_representative": customer.has_authorized_representative,
                 "is_mother_customer": customer.is_mother_customer

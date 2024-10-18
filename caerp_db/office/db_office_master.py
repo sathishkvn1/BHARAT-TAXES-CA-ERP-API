@@ -3927,7 +3927,7 @@ def save_work_order(
 
             db.commit()
             if enquiry_details_id:
-                 update_column_value(db,'off_enquiry_details',1,'enquiry_status_id',2)
+                 update_column_value(db,'off_enquiry_details',enquiry_details_id,'enquiry_status_id',2)
 
             return {"message": "Work order created successfully", 
                     "work_order_master_id": master.id,

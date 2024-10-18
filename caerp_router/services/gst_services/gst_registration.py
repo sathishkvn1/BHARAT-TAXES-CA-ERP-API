@@ -174,7 +174,7 @@ def get_stakeholder_master(
 
 #-----------------business_activity
 
-@router.get("/get_business-activities/{activity_type_id}")
+@router.get("/get_business_activities/{activity_type_id}")
 def get_business_activities(activity_type_id: int, 
                             db: Session = Depends(get_db)):
     # Build the query
@@ -333,8 +333,8 @@ def get_hsn_commodities(customer_id: int,
 
 
 
-@router.post("/save-gst-state-info/{id}")
-def save_gst_state_info(
+@router.post("/save_gst_state_specific_information/{id}")
+def save_gst_state_specific_information(
     id: int,
     customer_id: int,
     data: CustomerGstStateSpecificInformationSchema,
