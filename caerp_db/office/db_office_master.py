@@ -592,8 +592,9 @@ def reschedule_or_cancel_appointment(db: Session,
                                      action: AppointmentStatusConstants, 
                                      visit_master_id: int):
     appointment = db.query(OffAppointmentVisitMaster).filter(OffAppointmentVisitMaster.id == visit_master_id).first()
+    
     if not appointment:
-        return {"message":"Appointment not found"}
+        return {"message": "Appointment not found"}
     
     # Fetch the status ID based on the action
     status_name = ""
@@ -605,36 +606,52 @@ def reschedule_or_cancel_appointment(db: Session,
         raise HTTPException(status_code=400, detail="Invalid action")
     
     status = db.query(OffAppointmentStatus).filter(OffAppointmentStatus.appointment_status == status_name).first()
+    
     if not status:
-        return {"message":"Status '{status_name}' not found"}
+        return {"message": f"Status '{status_name}' not found"}
+    
     status_id = status.id
 
+    # Handle Rescheduling
     if action == AppointmentStatusConstants.RESCHEDULED:
         if not request_data.date or not request_data.from_time or not request_data.to_time:
-            return {"message":"Date and time are required for rescheduling"} 
-        # Update appointment status to RESCHEDULED and update date and time
+            return {"message": "Date and time are required for rescheduling"} 
+        
+        # Update appointment status and details in OffAppointmentVisitMaster
         appointment.appointment_status_id = status_id
         appointment.consultant_id = request_data.consultant_id
         appointment.appointment_date = request_data.date
         appointment.appointment_time_from = request_data.from_time
         appointment.appointment_time_to = request_data.to_time
+        
+        # Update remarks with the provided description
         if appointment.remarks:
             appointment.remarks += f"**{request_data.description}"
         else:
             appointment.remarks = request_data.description
+
+        # Fetch and update the consultant ID in OffAppointmentVisitDetails
+        appointment_details = db.query(OffAppointmentVisitDetails).filter(OffAppointmentVisitDetails.visit_master_id == visit_master_id).all()
+
+        for detail in appointment_details:
+            detail.consultant_id = request_data.consultant_id
+        
         db.commit()
         return {"success": True, "message": "Appointment rescheduled successfully"}
     
+    # Handle Canceling
     elif action == AppointmentStatusConstants.CANCELED:
         # Update appointment status to CANCELED
         appointment.appointment_status_id = status_id
+        
+        # Update remarks with the provided description
         if appointment.remarks:
             appointment.remarks += f"**{request_data.description}"
         else:
             appointment.remarks = request_data.description
+        
         db.commit()
         return {"success": True, "message": "Appointment canceled successfully"}
-
 #-------------------------------get_appointment_info
 def get_appointment_info(db: Session, type: str) -> List[dict]:
     if type == "cancellation_reasons":
