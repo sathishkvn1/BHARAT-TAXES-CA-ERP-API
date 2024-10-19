@@ -497,6 +497,158 @@ def get_quotation_data(
     return quotations
  
 #-------------------------------------------------------------
+# def generate_profoma_invoice_details(
+#         db: Session,
+#         work_order_master_id: int,
+#         user_id: int,
+#         financial_year_id : int,
+#         customer_id : int
+#         ):
+#     try:
+#         # Check if an invoice already exists
+#         existing_data = db.query(AccProformaInvoiceMaster).filter(
+#             AccProformaInvoiceMaster.work_order_master_id == work_order_master_id,
+#             AccProformaInvoiceMaster.is_deleted == 'no'
+#         ).first()
+
+#         if existing_data:
+#             return {'message': 'Invoice already exists', 'proforma_invoice_master_id': existing_data.id}
+
+#         # Fetch Work Order Master data
+#         work_order_master_data = db.query(WorkOrderMasterView).filter(
+#             WorkOrderMasterView.work_order_master_id == work_order_master_id
+#         ).first()
+
+#         enquiry_details_id = work_order_master_data.enquiry_details_id
+#         if not work_order_master_data:
+#             raise HTTPException(status_code=404, detail="Work Order Master not found")
+
+#         # Fetch Work Order Details data (main services only, where service_required = 'YES')
+#         work_order_details_data = db.query(WorkOrderDetailsView).filter(
+#             WorkOrderDetailsView.work_order_master_id == work_order_master_id,
+#             WorkOrderDetailsView.is_service_required == 'YES', 
+#             WorkOrderDetailsView.is_main_service == 'yes',
+#             WorkOrderDetailsView.is_deleted == 'no'
+#         ).all()
+
+#         if not work_order_details_data:
+#             raise HTTPException(status_code=404, detail="No work order details found")
+
+#         # Fetch Quotation Master data
+#         quotation_master_data = db.query(AccQuotationMaster).filter(
+#             AccQuotationMaster.work_order_master_id == work_order_master_id,
+#             AccQuotationMaster.is_deleted == 'no'
+#         ).first()
+
+#         if not quotation_master_data:
+#             raise HTTPException(status_code=404, detail="No quotation master data found")
+
+#         # Fetch Quotation Details data
+#         quotation_details_data = db.query(AccQuotationDetails).filter(
+#             AccQuotationDetails.quotation_master_id == quotation_master_data.id,
+#             AccQuotationDetails.is_deleted == 'no'
+#         ).all()
+
+#         if not quotation_details_data:
+#             raise HTTPException(status_code=404, detail="No quotation details found")
+
+#         services = []
+       
+#         # Generate new voucher ID and invoice number
+#         new_voucher_id = generate_voucher_id(db)
+#         proforma_invoice_number = generate_book_number('PROFORMA_INVOICE',financial_year_id,customer_id, db)
+
+#         # Create Invoice Master Entry
+#         proforma_invoice_master = AccProformaInvoiceMaster(
+#             financial_year_id   = financial_year_id,
+#             # hsn_sac_code        = 
+#             voucher_id=new_voucher_id,
+#             service_type='NON_CONSULTATION',
+#             work_order_master_id=work_order_master_id,
+#             proforma_invoice_number=proforma_invoice_number,
+#             proforma_invoice_date=datetime.now(),
+#             account_head_id=1,
+#             proforma_invoice_status_id= 1,
+#             created_by=user_id,
+#             created_on=datetime.now(),
+#             is_deleted='no'
+#         )
+
+#         db.add(proforma_invoice_master)
+#         db.flush()  # Ensure invoice_master.id is generated
+
+#         total_invoice_amount = 0.0
+#         task_id = None
+
+#         # Process each work order detail (only those required) and map it to the quotation details
+#         for details in work_order_details_data:
+#             service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
+#             # Filter quotation details based on the service_goods_master_id from the work order
+#             relevant_quotation_details = [qd for qd in quotation_details_data if qd.service_goods_master_id == details.service_goods_master_id]
+            
+#             for quotation_detail in relevant_quotation_details:
+#                 # Initialize totals
+#                 total_service_charge    = quotation_detail.service_charge
+#                 total_govt_agency_fee   = quotation_detail.govt_agency_fee
+#                 total_stamp_fee         = quotation_detail.stamp_fee
+#                 total_stamp_duty        = quotation_detail.stamp_duty
+#                 total_amount            = quotation_detail.total_amount
+#                 taxable_amount          = quotation_detail.taxable_amount
+
+#                 # Create Invoice Detail Entry
+#                 invoice_detail = AccProformaInvoiceDetails(
+#                     proforma_invoice_master_id  =proforma_invoice_master.id,
+#                     service_goods_master_id     =quotation_detail.service_goods_master_id,
+#                     is_bundle_service           =quotation_detail.is_bundle_service,
+#                     bundle_service_id           =quotation_detail.bundle_service_id,
+#                     service_charge              =total_service_charge,
+#                     govt_agency_fee             =total_govt_agency_fee,
+#                     stamp_duty  =total_stamp_duty,
+#                     stamp_fee   =total_stamp_fee,
+#                     quantity    =1,  
+#                     discount_amount = quotation_detail.discount_amount,
+#                     igst_percent     =quotation_detail.igst_percent,  
+#                     igst_amount      =quotation_detail.igst_amount,  # To be updated after calculation
+#                     taxable_amount  =taxable_amount,
+#                     # total_amount=total_service_charge + total_govt_agency_fee + total_stamp_fee + total_stamp_duty,
+#                     total_amount    = total_amount,
+#                     is_deleted      ='no'
+#                 )
+
+#                 db.add(invoice_detail)
+#                 db.flush()
+
+#                 total_invoice_amount += invoice_detail.total_amount
+
+#                 # Calculate GST Amount and update the entry
+#                 gst_amount = invoice_detail.taxable_amount * (invoice_detail.igst_percent / 100)
+#                 invoice_detail.igst_amount = gst_amount
+#                 proforma_invoice_master_id = proforma_invoice_master.id
+#                 proforma_invoice_detail_id = invoice_detail.id
+#                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id,financial_year_id,customer_id)
+#                 net_amount = total_invoice_amount
+#         # Update Invoice Master with total amount
+#         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount_amount
+#         proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount_amount
+#         proforma_invoice_master.round_off_amount            = quotation_master_data.round_off_amount
+
+#         proforma_invoice_master.grand_total_amount          = total_invoice_amount
+#         proforma_invoice_master.net_amount                  = total_invoice_amount-quotation_master_data.additional_discount_amount -quotation_master_data.bill_discount_amount + quotation_master_data.round_off_amount
+#         db.commit()
+#         if enquiry_details_id:
+#                  update_column_value(db,'off_enquiry_details',enquiry_details_id,'enquiry_status_id',3)
+#         update_column_value(db,'work_order_master',work_order_master_id,'work_order_status_id',4)
+#         update_column_value(db,'acc_quotation_master',quotation_master_data.id,'quotation_status_id',6)
+
+#         return {
+#             'message': 'Success',
+#             'proforma_invoice_master_id': proforma_invoice_master.id,
+#         }
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+
 def generate_profoma_invoice_details(
         db: Session,
         work_order_master_id: int,
@@ -649,7 +801,6 @@ def generate_profoma_invoice_details(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-
 #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
@@ -689,6 +840,7 @@ def save_service_task_details(
 #----------------------------------------------------------------------------------------------
 
 
+
 def save_customer_data_document_master(
     db: Session,
     work_order_master_id: int,
@@ -697,10 +849,10 @@ def save_customer_data_document_master(
     consultation_id: int
 ):
     # Check for business place data
-    business_place_data = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
+    business_place_list = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
         OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id,
         OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
-    ).first()
+    ).all()
 
     
 
@@ -743,7 +895,8 @@ def save_customer_data_document_master(
         )
 
         db.add(new_document)
-    if business_place_data:
+    # if business_place_data:
+    for business_place_data in business_place_list:
         document_data_master_id = business_place_data.utility_document_id
         document_data_category_id = 3
         new_document = CustomerDataDocumentMaster(
@@ -1186,3 +1339,6 @@ def send_proforma_invoice(
         'success': True
     }
     return result
+
+
+ 

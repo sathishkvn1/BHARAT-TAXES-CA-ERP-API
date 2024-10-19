@@ -128,7 +128,12 @@
           <td>{{ item.service_goods_name }}</td>
           <td>{{ item.service_charge }}</td>
           <td>{{ item.discount_amount }}</td>
-          <td>{{ item.gst_amount }}</td>
+          <td>{% if item.igst_amount %}
+            {{ item.igst_amount }}
+          {% endif %}
+          {% if item.cgst_amount %}
+            {{ item.cgst_amount + item.sgst_amount }}
+          {% endif %}</td>
           <td>{{ item.total_amount }}</td>
         </tr>
         {% endfor %}
