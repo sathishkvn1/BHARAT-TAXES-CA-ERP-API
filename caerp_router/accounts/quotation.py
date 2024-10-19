@@ -481,6 +481,9 @@ def get_invoice_details(
 
 #-----------------------------------------------------------------------------------------
 
+# wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+
+
 def generate_tax_invoice_pdf(invoice, file_path):
 
     # Load the template environment
@@ -534,7 +537,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
         
         # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
-        
+       
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
@@ -556,7 +559,103 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         return open(file_path, "rb")
 
+@router.get('/get_tax_invoice_pdf')
+def get_tax_invoice_pdf(
+     work_order_master_id : int,
+     tax_invoice_master_id : int,
+     db: Session = Depends(get_db)
+):
+     invoice  = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id)
+     if not invoice:
+                  raise HTTPException(status_code=404, detail="No invoice found")
+     
+     file_path = os.path.join(UPLOAD_DIR_INVOICE_DETAILS , f"tax_invoice{tax_invoice_master_id}.pdf")
+     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
+     pdf_buffer = generate_tax_invoice_pdf(invoice, file_path)
+    
+     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=invoice.pdf"})
+
+     
+     
+    #  return result
+
+
+
+
+
+
+# def generate_proforma_invoice_pdf(invoice, file_path):
+
+#     # Load the template environment
+#     template_dir = os.path.dirname(TEMPLATE_PROFORMA_INVOICE_DETAILS)
+#     template_name = os.path.basename(TEMPLATE_PROFORMA_INVOICE_DETAILS)
+#     env = Environment(loader=FileSystemLoader(template_dir))
+#     template = env.get_template(template_name)
+
+#     # Prepare data for the template
+#     if invoice:
+
+#         # Extract and format data from the quotations object
+#         details = invoice.proforma_invoice_details
+#         work_order_master = invoice.work_order_master 
+#         total = sum(item.total_amount for item in details)
+#         advance = invoice.proforma_invoice_master.advance_amount
+#         additional_discount = invoice.proforma_invoice_master.additional_discount_amount
+#         gst_amount = sum(item.gst_amount for item in details)
+#         total_amount = invoice.proforma_invoice_master.net_amount
+#         round_off  = invoice.proforma_invoice_master.round_off_amount
+#         bill_discount = invoice.proforma_invoice_master.bill_discount_amount
+#         grand_total = invoice.proforma_invoice_master.grand_total_amount
+
+
+#         # Debug print: Check the content of details
+#         # print("Invoice Details  === :", invoice)
+#         # print("Work Order Master Details:", work_order_master)
+
+#         data = {
+#             'invoice': details,
+#             'total': total,
+#             'advance': advance,
+#             'additional_discount': additional_discount,
+#             'gst_amount': gst_amount,
+#             'total_amount': total_amount,
+#             'current_date': date.today(),
+#             'work_order_master': work_order_master, 
+#             'round_off': round_off,
+#             'bill_discount': bill_discount,
+#             'grand_total': grand_total
+#         }
+
+#         # Render the template with data
+#         html_content = template.render(data)
+
+#         # Debug print: Check the HTML content generated
+#         # print("Generated HTML content:", html_content)
+
+#         # Configuration for pdfkit
+        
+#         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
+#         if not os.path.isfile(wkhtmltopdf_path):
+#             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
+        
+#         config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
+
+#         # PDF options
+#         options = {
+#             'footer-center': 'Page [page] of [topage]',
+#             'footer-font-size': '8',
+#             'margin-bottom': '20mm',
+#             'no-outline': None
+#         }
+        
+#         try:
+#             # Convert HTML to PDF
+#             pdfkit.from_string(html_content, file_path, configuration=config, options=options)
+#         except Exception as e:
+#             raise RuntimeError(f'Error generating PDF: {e}')
+
+#         return open(file_path, "rb")
 
 def generate_proforma_invoice_pdf(invoice, file_path):
 
@@ -608,107 +707,7 @@ def generate_proforma_invoice_pdf(invoice, file_path):
 
         # Configuration for pdfkit
         
-        wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
-        if not os.path.isfile(wkhtmltopdf_path):
-            raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
-        
-        config = pdfkit.configuration(wkhtmltopdf=wkhtmltopdf_path)
-
-        # PDF options
-        options = {
-            'footer-center': 'Page [page] of [topage]',
-            'footer-font-size': '8',
-            'margin-bottom': '20mm',
-            'no-outline': None
-        }
-        
-        try:
-            # Convert HTML to PDF
-            pdfkit.from_string(html_content, file_path, configuration=config, options=options)
-        except Exception as e:
-            raise RuntimeError(f'Error generating PDF: {e}')
-
-        return open(file_path, "rb")
-
-
-
-
-@router.get('/get_tax_invoice_pdf')
-def get_tax_invoice_pdf(
-     work_order_master_id : int,
-     tax_invoice_master_id : int,
-     db: Session = Depends(get_db)
-):
-     invoice  = db_quotation.get_tax_invoice_details(db,work_order_master_id,tax_invoice_master_id)
-     if not invoice:
-                  raise HTTPException(status_code=404, detail="No invoice found")
-     
-     file_path = os.path.join(UPLOAD_DIR_INVOICE_DETAILS , f"tax_invoice{tax_invoice_master_id}.pdf")
-     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-     pdf_buffer = generate_tax_invoice_pdf(invoice, file_path)
-    
-     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=invoice.pdf"})
-
-     
-     
-    #  return result
-
-
-
-
-
-
-def generate_proforma_invoice_pdf(invoice, file_path):
-
-    # Load the template environment
-    template_dir = os.path.dirname(TEMPLATE_PROFORMA_INVOICE_DETAILS)
-    template_name = os.path.basename(TEMPLATE_PROFORMA_INVOICE_DETAILS)
-    env = Environment(loader=FileSystemLoader(template_dir))
-    template = env.get_template(template_name)
-
-    # Prepare data for the template
-    if invoice:
-
-        # Extract and format data from the quotations object
-        details = invoice.proforma_invoice_details
-        work_order_master = invoice.work_order_master 
-        total = sum(item.total_amount for item in details)
-        advance = invoice.proforma_invoice_master.advance_amount
-        additional_discount = invoice.proforma_invoice_master.additional_discount_amount
-        gst_amount = sum(item.gst_amount for item in details)
-        total_amount = invoice.proforma_invoice_master.net_amount
-        round_off  = invoice.proforma_invoice_master.round_off_amount
-        bill_discount = invoice.proforma_invoice_master.bill_discount_amount
-        grand_total = invoice.proforma_invoice_master.grand_total_amount
-
-
-        # Debug print: Check the content of details
-        # print("Invoice Details  === :", invoice)
-        # print("Work Order Master Details:", work_order_master)
-
-        data = {
-            'invoice': details,
-            'total': total,
-            'advance': advance,
-            'additional_discount': additional_discount,
-            'gst_amount': gst_amount,
-            'total_amount': total_amount,
-            'current_date': date.today(),
-            'work_order_master': work_order_master, 
-            'round_off': round_off,
-            'bill_discount': bill_discount,
-            'grand_total': grand_total
-        }
-
-        # Render the template with data
-        html_content = template.render(data)
-
-        # Debug print: Check the HTML content generated
-        # print("Generated HTML content:", html_content)
-
-        # Configuration for pdfkit
-        
+        # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
@@ -730,6 +729,7 @@ def generate_proforma_invoice_pdf(invoice, file_path):
             raise RuntimeError(f'Error generating PDF: {e}')
 
         return open(file_path, "rb")
+
 
 
 
