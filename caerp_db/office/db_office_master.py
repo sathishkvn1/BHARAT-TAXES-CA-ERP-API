@@ -1510,16 +1510,33 @@ def get_all_service(db: Session) -> List[Dict[str, any]]:
     return services_data
 #---------------------------------------------------------------------------------------------------------------
 
-# def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantDetails]:
+
+
+# def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantServiceDetails]:
 #     # Query the database to get consultants for the given service_id
-#     consultants = db.query(OffViewConsultantDetails).filter(OffViewConsultantDetails.service_goods_master_id == service_id).all()
+#     consultants = db.query(OffViewConsultantServiceDetails).filter(OffViewConsultantServiceDetails.service_goods_master_id == service_id).all()
 #     return consultants
 
 def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewConsultantServiceDetails]:
-    # Query the database to get consultants for the given service_id
-    consultants = db.query(OffViewConsultantServiceDetails).filter(OffViewConsultantServiceDetails.service_goods_master_id == service_id).all()
+    """
+    Query the database to get consultants for the given service_id
+    where `consultant_details_effective_to_date` is either NULL or greater than the current date.
+    """
+    # Query the database with the condition on `consultant_details_effective_to_date`
+    
+    consultants = (
+        db.query(OffViewConsultantServiceDetails)
+        .filter(
+            OffViewConsultantServiceDetails.service_goods_master_id == service_id,
+            or_(
+                OffViewConsultantServiceDetails.consultant_details_effective_to_date.is_(None),
+                OffViewConsultantServiceDetails.consultant_details_effective_to_date > func.now()
+            )
+        )
+        .all()
+    )
+    
     return consultants
-
 
 #---------------------------------------------------------------------------------------------------------------
 def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantServiceDetails]:
