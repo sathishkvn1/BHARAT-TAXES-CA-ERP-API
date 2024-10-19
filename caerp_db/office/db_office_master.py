@@ -1523,7 +1523,7 @@ def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewCon
     where `consultant_details_effective_to_date` is either NULL or greater than the current date.
     """
     # Query the database with the condition on `consultant_details_effective_to_date`
-    
+
     consultants = (
         db.query(OffViewConsultantServiceDetails)
         .filter(
@@ -1539,12 +1539,22 @@ def get_consultants_for_service(db: Session, service_id: int) -> List[OffViewCon
     return consultants
 
 #---------------------------------------------------------------------------------------------------------------
-def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantServiceDetails]:
+# def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantServiceDetails]:
     
-    services = db.query(OffViewConsultantServiceDetails).filter(OffViewConsultantServiceDetails.consultant_id == consultant_id).all()
+#     services = db.query(OffViewConsultantServiceDetails).filter(OffViewConsultantServiceDetails.consultant_id == consultant_id).all()
    
-    return services
+#     return services
 
+def get_all_services_by_consultant_id(db: Session, consultant_id: int) -> List[OffViewConsultantServiceDetails]:
+    services = db.query(OffViewConsultantServiceDetails).filter(
+        OffViewConsultantServiceDetails.consultant_id == consultant_id,
+        or_(
+            OffViewConsultantServiceDetails.consultant_details_effective_to_date.is_(None),
+            OffViewConsultantServiceDetails.consultant_details_effective_to_date > func.now()
+        )
+    ).all()
+
+    return services
 
 #---------------APARNA------------------------------------------------------------------------------------------
 def get_all_services(db: Session) -> List[OffViewServiceGoodsPriceMaster]:
