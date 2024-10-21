@@ -20,7 +20,7 @@ router = APIRouter(
     tags=['Gst Services']
 )
 
-#--------------business details
+#--------------Business Details----------------
 
 @router.post("/save_business_details")
 def save_business_details(
@@ -51,7 +51,7 @@ def save_business_details(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-#--------------
+#--------------Save Customer Details----------------
 
 @router.post("/save_customer_details/{customer_id}")
 def save_customer_details(customer_id: int, 
@@ -79,7 +79,7 @@ def save_customer_details(customer_id: int,
 
     
 
-#--------
+#--------Get Customer Details---------------
 @router.get("/get_customers/{customer_id}")
 def get_customer_details(
     customer_id: int,
@@ -109,7 +109,7 @@ def get_customer_details(
     return customer_details
 
 
-#----save stakeholder_details--------
+#----Save Stakeholder Details--------
 @router.post("/save_stake_holder_master")
 def save_stake_holder_master(
     request_data: StakeHolderMasterSchema,
@@ -141,7 +141,7 @@ def save_stake_holder_master(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#-get stakeholder_details
+#------ Get Stakeholder Details-----------------
 @router.get("/get_stakeholder_master/{customer_id}")
 def get_stakeholder_master(
     customer_id: int,
@@ -172,7 +172,7 @@ def get_stakeholder_master(
 
 
 
-#-----------------business_activity
+#-----------------Business Activity-----------------
 
 @router.get("/get_business_activities/{activity_type_id}")
 def get_business_activities(activity_type_id: int, 
@@ -215,7 +215,7 @@ def get_business_activities(activity_type_id: int,
 
 
 
-#--------
+#--------Save Business Place--------------
 
 @router.post("/save_business_place")
 def save_business_place_details(
@@ -241,7 +241,7 @@ def save_business_place_details(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-
+#--------- Get Business Place-----------------
 @router.get("/get_business_place")
 def get_business_place(
     customer_id: int,
@@ -262,7 +262,7 @@ def get_business_place(
 
 
 
-#-----------------
+#-----------------Hsn Sac Data---------------
 
 @router.get("/get_hsn_sac_data")
 def get_hsn_sac_data(
@@ -289,7 +289,7 @@ def get_hsn_sac_data(
 
 
 
-#--
+#---------Goods Commodities Supply Details-----------------
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
     id: int,  # New field to handle update or create
@@ -311,7 +311,9 @@ def save_goods_commodities(
         return db_gst.save_goods_commodities_details(id, customer_id, details, db, user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+#-------------- Hsn Commodities----------------
 
 @router.get("/get_hsn_commodities/{customer_id}")
 def get_hsn_commodities(customer_id: int, 
@@ -331,7 +333,7 @@ def get_hsn_commodities(customer_id: int,
     commodities = db_gst.get_hsn_commodities_by_customer_id(customer_id, user_id, db)
     return commodities
 
-
+#-------------Gst State Specific Information---------------
 
 @router.post("/save_gst_state_specific_information/{id}")
 def save_gst_state_specific_information(
@@ -355,7 +357,7 @@ def save_gst_state_specific_information(
 
 
 
-#--------
+#--------Gst State Specific Information
 
 @router.get("/get_gst_state_specific_information/{customer_id}", 
             response_model=List[CustomerGstStateSpecificInformationSchema]

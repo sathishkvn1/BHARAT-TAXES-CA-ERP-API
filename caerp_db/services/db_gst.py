@@ -254,8 +254,8 @@ def get_customer_details(db: Session,
                 "tan_number": customer.tan_number,
                 "passport_number": customer.passport_number,
                 "tin_number": customer.tin_number,
-                "authorised_signatory_name_as_in_pan": customer.authorized_signatory_name_as_in_pan,
-                "authorised_signatory_pan_number": customer.authorized_signatory_pan_number,
+                "authorized_signatory_name_as_in_pan": customer.authorized_signatory_name_as_in_pan,
+                "authorized_signatory_pan_number": customer.authorized_signatory_pan_number,
                 "constitution_id": customer.constitution_id,
                 "constitution_name": db.query(AppBusinessConstitution.business_constitution_name).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
                 "has_authorized_signatory": customer.has_authorized_signatory,
@@ -319,7 +319,170 @@ def get_customer_details(db: Session,
         raise HTTPException(status_code=500, detail=str(e))
     
 
-#-save stakeholder
+#------Save stakeholder
+
+
+# def save_stakeholder_details(request: StakeHolderMasterSchema, 
+#                              user_id: int,
+#                              db: Session, 
+#                              customer_id: int,
+#                              stake_holder_type: str):  # Added `stake_holder_type` as a parameter
+#     try:
+#         # 1. Handle StakeHolderMaster
+#         personal_info = request.personal_information
+#         if personal_info.id == 0:
+#             # Create new StakeHolderMaster
+#             stake_holder_master = StakeHolderMaster(
+#                 first_name=personal_info.first_name,
+#                 middle_name=personal_info.middle_name,
+#                 last_name=personal_info.last_name,
+#                 fathers_first_name=personal_info.fathers_first_name,
+#                 marital_status_id=personal_info.marital_status_id,
+#                 date_of_birth=personal_info.date_of_birth,
+#                 gender_id=personal_info.gender_id,
+#                 din_number=personal_info.din_number,
+#                 is_citizen_of_india=personal_info.is_citizen_of_india,
+#                 pan_number=personal_info.pan_number,
+#                 passport_number=personal_info.passport_number,
+#                 aadhaar_number=personal_info.aadhaar_number,
+#                 created_by=user_id,  # Set created_by field
+#                 created_on=datetime.now()
+#             )
+#             db.add(stake_holder_master)
+#         else:
+#             # Update existing StakeHolderMaster
+#             stake_holder_master = db.query(StakeHolderMaster).filter_by(id=personal_info.id).first()
+#             if stake_holder_master:
+#                 stake_holder_master.first_name = personal_info.first_name
+#                 stake_holder_master.middle_name = personal_info.middle_name
+#                 stake_holder_master.last_name = personal_info.last_name
+#                 stake_holder_master.fathers_first_name = personal_info.fathers_first_name
+#                 stake_holder_master.marital_status_id = personal_info.marital_status_id
+#                 stake_holder_master.date_of_birth = personal_info.date_of_birth
+#                 stake_holder_master.gender_id = personal_info.gender_id
+#                 stake_holder_master.din_number = personal_info.din_number
+#                 stake_holder_master.is_citizen_of_india = personal_info.is_citizen_of_india
+#                 stake_holder_master.pan_number = personal_info.pan_number
+#                 stake_holder_master.passport_number = personal_info.passport_number
+#                 stake_holder_master.aadhaar_number = personal_info.aadhaar_number
+#                 stake_holder_master.modified_by = user_id  # Set modified_by field
+#                 stake_holder_master.modified_on = datetime.now()
+#             else:
+#                 return {"detail": "stake_holder_master not found"}
+
+#         db.flush()  # Flush to get `stake_holder_master.id`
+
+#         # 2. Handle StakeHolderContactDetails
+#         for contact_details in request.contact_details:
+#             if contact_details.id == 0:
+#             # Create new contact details
+#                 contact_detail_entry = StakeHolderContactDetails(
+#                     stake_holder_id=stake_holder_master.id,
+#                     mobile_number=contact_details.mobile_number,
+#                     email_address=contact_details.email_address,
+#                     telephone_number_with_std_code=contact_details.telephone_number_with_std_code,
+#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                     effective_to_date=None,
+#                     created_by=user_id,  # Set created_by field
+#                     created_on=datetime.now()
+#             )
+#                 db.add(contact_detail_entry)
+#             else:
+#             # Update existing contact details
+#                 contact_detail_entry = db.query(StakeHolderContactDetails).filter_by(id=contact_details.id).first()
+#                 if contact_detail_entry:
+#                     contact_detail_entry.mobile_number = contact_details.mobile_number
+#                     contact_detail_entry.email_address = contact_details.email_address
+#                     contact_detail_entry.telephone_number_with_std_code = contact_details.telephone_number_with_std_code
+#                     contact_detail_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                     contact_detail_entry.effective_to_date=None
+#                     contact_detail_entry.modified_by = user_id  # Set modified_by field
+#                     contact_detail_entry.modified_on = datetime.now()
+#                 else:
+#                     return {"detail": "contact_detail not found"}
+
+#             db.flush()  # Flush to get `contact_detail_entry.id`
+
+#         # 3. Handle StakeHolderAddress
+#         for addr in request.address:
+#             if addr.address_type in ['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']:
+#                 if addr.id == 0:
+#                     # Create new address
+#                     address_entry = StakeHolderAddress(
+#                         stake_holder_id=stake_holder_master.id,
+#                         pin_code=addr.pin_code,
+#                         address_type=addr.address_type,
+#                         country_id=addr.country_id,
+#                         state_id=addr.state_id,
+#                         district_id=addr.district_id,
+#                         city_id=addr.city_id,
+#                         village_id=addr.village_id,
+#                         post_office_id=addr.post_office_id,
+#                         lsg_type_id=addr.lsg_type_id,
+#                         lsg_id=addr.lsg_id,
+#                         locality=addr.locality,
+#                         road_street_name=addr.road_street_name,
+#                         premises_building_name=addr.premises_building_name,
+#                         building_flat_number=addr.building_flat_number,
+#                         floor_number=addr.floor_number,
+#                         landmark=addr.landmark,
+#                         effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                         effective_to_date=None,
+#                         created_by=user_id,  # Set created_by field
+#                         created_on=datetime.now()
+#                     )
+#                     db.add(address_entry)
+#                 else:
+#                     # Update existing address
+#                     address_entry = db.query(StakeHolderAddress).filter_by(id=addr.id, address_type=addr.address_type).first()
+#                     if address_entry:
+#                         address_entry.pin_code = addr.pin_code
+#                         address_entry.country_id = addr.country_id
+#                         address_entry.state_id = addr.state_id
+#                         address_entry.district_id = addr.district_id
+#                         address_entry.city_id = addr.city_id
+#                         address_entry.village_id = addr.village_id
+#                         address_entry.post_office_id = addr.post_office_id
+#                         address_entry.lsg_type_id = addr.lsg_type_id
+#                         address_entry.lsg_id = addr.lsg_id
+#                         address_entry.locality = addr.locality
+#                         address_entry.road_street_name = addr.road_street_name
+#                         address_entry.premises_building_name = addr.premises_building_name
+#                         address_entry.building_flat_number = addr.building_flat_number
+#                         address_entry.floor_number = addr.floor_number
+#                         address_entry.landmark = addr.landmark
+#                         address_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                         address_entry.effective_to_date=None
+#                         address_entry.modified_by = user_id  # Set modified_by field
+#                         address_entry.modified_on = datetime.now()
+#                     else:
+#                         return {"detail": "address_detail not found"}
+
+#                 db.flush()  # Flush to get `address_entry.id`
+
+#         # 4. Insert into the `customer_stakeholder` table
+#         customer_stakeholder_entry = CustomerStakeHolder(
+#             customer_id=customer_id,
+#             stake_holder_master_id=stake_holder_master.id,
+#             designation_id=request.identity_information[0].designation_id,  # Assuming identity_information[0] is valid
+#             contact_details_id=contact_detail_entry.id,
+#             residential_address_id=address_entry.id,
+#             stake_holder_type=stake_holder_type, 
+#             effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#             effective_to_date=None, # Save the stake_holder_type field
+#             created_by=user_id,  # Set created_by field
+#             created_on=datetime.now()
+#         )
+#         db.add(customer_stakeholder_entry)
+
+#         # Commit the transaction
+#         db.commit()
+
+#         return {"message": "saved successfully"}
+
+#     except Exception as e:
+#         db.rollback()  # Roll back the transaction in case of error
+#         raise HTTPException(status_code=500, detail=str(e))
 
 
 def save_stakeholder_details(request: StakeHolderMasterSchema, 
@@ -375,7 +538,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
         # 2. Handle StakeHolderContactDetails
         for contact_details in request.contact_details:
             if contact_details.id == 0:
-            # Create new contact details
+                # Create new contact details
                 contact_detail_entry = StakeHolderContactDetails(
                     stake_holder_id=stake_holder_master.id,
                     mobile_number=contact_details.mobile_number,
@@ -385,17 +548,17 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                     effective_to_date=None,
                     created_by=user_id,  # Set created_by field
                     created_on=datetime.now()
-            )
+                )
                 db.add(contact_detail_entry)
             else:
-            # Update existing contact details
+                # Update existing contact details
                 contact_detail_entry = db.query(StakeHolderContactDetails).filter_by(id=contact_details.id).first()
                 if contact_detail_entry:
                     contact_detail_entry.mobile_number = contact_details.mobile_number
                     contact_detail_entry.email_address = contact_details.email_address
                     contact_detail_entry.telephone_number_with_std_code = contact_details.telephone_number_with_std_code
-                    contact_detail_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                    contact_detail_entry.effective_to_date=None
+                    contact_detail_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
+                    contact_detail_entry.effective_to_date = None
                     contact_detail_entry.modified_by = user_id  # Set modified_by field
                     contact_detail_entry.modified_on = datetime.now()
                 else:
@@ -405,7 +568,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 
         # 3. Handle StakeHolderAddress
         for addr in request.address:
-            if addr.address_type == "RESIDENTIAL":
+            if addr.address_type in ['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']:
                 if addr.id == 0:
                     # Create new address
                     address_entry = StakeHolderAddress(
@@ -434,7 +597,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                     db.add(address_entry)
                 else:
                     # Update existing address
-                    address_entry = db.query(StakeHolderAddress).filter_by(id=addr.id).first()
+                    address_entry = db.query(StakeHolderAddress).filter_by(id=addr.id).first()  # Removed address_type from filter
                     if address_entry:
                         address_entry.pin_code = addr.pin_code
                         address_entry.country_id = addr.country_id
@@ -451,8 +614,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         address_entry.building_flat_number = addr.building_flat_number
                         address_entry.floor_number = addr.floor_number
                         address_entry.landmark = addr.landmark
-                        address_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                        address_entry.effective_to_date=None
+                        address_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
+                        address_entry.effective_to_date = None
                         address_entry.modified_by = user_id  # Set modified_by field
                         address_entry.modified_on = datetime.now()
                     else:
@@ -460,20 +623,36 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 
                 db.flush()  # Flush to get `address_entry.id`
 
-        # 4. Insert into the `customer_stakeholder` table
-        customer_stakeholder_entry = CustomerStakeHolder(
+        # 4. Check if the `CustomerStakeHolder` entry exists for this `customer_id` and `stake_holder_master_id`
+        customer_stakeholder_entry = db.query(CustomerStakeHolder).filter_by(
             customer_id=customer_id,
-            stake_holder_master_id=stake_holder_master.id,
-            designation_id=request.identity_information[0].designation_id,  # Assuming identity_information[0] is valid
-            contact_details_id=contact_detail_entry.id,
-            residential_address_id=address_entry.id,
-            stake_holder_type=stake_holder_type, 
-            effective_from_date=datetime.now(),  # Set effective_from_date to current date
-            effective_to_date=None, # Save the stake_holder_type field
-            created_by=user_id,  # Set created_by field
-            created_on=datetime.now()
-        )
-        db.add(customer_stakeholder_entry)
+            stake_holder_master_id=stake_holder_master.id
+        ).first()
+
+        if customer_stakeholder_entry:
+            # Update existing CustomerStakeHolder
+            customer_stakeholder_entry.designation_id = request.identity_information[0].designation_id  # Assuming identity_information[0] is valid
+            customer_stakeholder_entry.contact_details_id = contact_detail_entry.id
+            customer_stakeholder_entry.residential_address_id = address_entry.id
+            customer_stakeholder_entry.stake_holder_type = stake_holder_type
+            customer_stakeholder_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
+            customer_stakeholder_entry.modified_by = user_id  # Set modified_by field
+            customer_stakeholder_entry.modified_on = datetime.now()
+        else:
+            # Insert new CustomerStakeHolder
+            customer_stakeholder_entry = CustomerStakeHolder(
+                customer_id=customer_id,
+                stake_holder_master_id=stake_holder_master.id,
+                designation_id=request.identity_information[0].designation_id,  # Assuming identity_information[0] is valid
+                contact_details_id=contact_detail_entry.id,
+                residential_address_id=address_entry.id,
+                stake_holder_type=stake_holder_type, 
+                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                effective_to_date=None,  # Save the stake_holder_type field
+                created_by=user_id,  # Set created_by field
+                created_on=datetime.now()
+            )
+            db.add(customer_stakeholder_entry)
 
         # Commit the transaction
         db.commit()
@@ -484,7 +663,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
         db.rollback()  # Roll back the transaction in case of error
         raise HTTPException(status_code=500, detail=str(e))
 
-#--get
+#--Get Stakeholder Details
 
 def get_stakeholder_details(db: Session, 
                             customer_id: int, 
@@ -550,6 +729,7 @@ def get_stakeholder_details(db: Session,
                     "address": {
                         "id": address.id if address else None,
                         "pin_code": address.pin_code if address else None,
+                        "address_type":address.address_type if address else None,
                         "country_id": address.country_id if address else None,
                         "country_name": db.query(CountryDB.country_name_english).filter_by(id=address.country_id).scalar() if address and address.country_id else None,
                         "state_id": address.state_id if address else None,
@@ -583,7 +763,7 @@ def get_stakeholder_details(db: Session,
 
 
 
-#----------------
+#----------------Save Business Place----------
 
 
 def save_business_place(customer_id: int, 
@@ -706,7 +886,7 @@ def save_business_place(customer_id: int,
         db.rollback()  # Rollback in case of an error
         raise HTTPException(status_code=500, detail=str(e))
 
-#---get
+#---get Business Place
 
 
 def get_business_place(customer_id: int, 
@@ -834,7 +1014,7 @@ def get_business_place(customer_id: int,
 
 
 
-#-------------
+#-------------Get hsn sac
 
 
 def get_hsn_sac_data(hsn_sac_class_id: int,
@@ -882,7 +1062,7 @@ def get_hsn_sac_data(hsn_sac_class_id: int,
     
 
 
-
+#-------------Goods Commodities Supply Details----------
 
 def save_goods_commodities_details(
     id: int,  # 0 for insert, non-zero for update
@@ -903,8 +1083,8 @@ def save_goods_commodities_details(
                 hsn_sac_code_id=detail_data['hsn_sac_code_id'],
                 effective_from_date=date.today(),  # Set effective_from_date to current date
                 effective_to_date=None,              # Set effective_to_date as None
-                created_by=user_id,               # Default value for is_deleted
-                created_on=datetime.now()            # Set created_on to current datetime
+                created_by=user_id,               
+                created_on=datetime.now()            
             )
             db.add(new_entry)
             db.commit()  # Commit to save the new entry
@@ -922,8 +1102,8 @@ def save_goods_commodities_details(
             # Update the existing record fields
             existing_entry.hsn_sac_class_id = detail_data['hsn_sac_class_id']
             existing_entry.hsn_sac_code_id = detail_data['hsn_sac_code_id']
-            existing_entry.modified_on = datetime.now()  # Update modified date to current datetime
-            existing_entry.modified_by = user_id  # Optionally track who made the change
+            existing_entry.modified_on = datetime.now() 
+            existing_entry.modified_by = user_id  
 
             db.commit()  # Commit the changes to the database
 
@@ -935,8 +1115,10 @@ def save_goods_commodities_details(
     
 
 
-#----------------
-def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
+#----------------get Hsn Commodities Supply Details
+def get_hsn_commodities_by_customer_id(customer_id: int,
+                                        user_id: int, 
+                                        db: Session):
     try:
         # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
         commodities = (
@@ -951,7 +1133,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
         response = []
         for commodity in commodities:
             # Fetching hsn_sac_class from AppHsnSacClasses based on hsn_sac_class_id
-            hsn_class_details = (
+            hsn_class_details = ( 
                 db.query(AppHsnSacClasses)
                 .filter(AppHsnSacClasses.id == commodity.hsn_sac_class_id)
                 .first()
@@ -967,7 +1149,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
             if hsn_class_details and hsn_details:
                 response.append({
                     "hsn_sac_class_id": hsn_class_details.id,
-                    "hsn_sac_class": hsn_class_details.hsn_sac_class,  # Assuming this field exists
+                    "hsn_sac_class": hsn_class_details.hsn_sac_class,  
                     "hsn_sac_code_id": hsn_details.id,
                     "hsn_sac_code": hsn_details.hsn_sac_code,
                     "hsn_sac_description": hsn_details.hsn_sac_description,
@@ -979,7 +1161,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
         raise HTTPException(status_code=500, detail=str(e))
 
 
-#-
+#----- save Customer Gst State Specific Information
 
 
 def save_customer_gst_state_specific_information(
@@ -1017,8 +1199,8 @@ def save_customer_gst_state_specific_information(
             # Update the existing record fields
             for key, value in detail_data.items():
                 setattr(existing_entry, key, value)
-            existing_entry.modified_on = datetime.now()  # Update modified date to current datetime
-            existing_entry.modified_by = user_id  # Optionally track who made the change
+            existing_entry.modified_on = datetime.now()  
+            existing_entry.modified_by = user_id  
 
             db.commit()  # Commit the changes to the database
 
@@ -1029,7 +1211,7 @@ def save_customer_gst_state_specific_information(
         raise HTTPException(status_code=500, detail=str(e))
     
 
-#----------
+#----------get Customer Gst State Specific Information
 
 def get_gst_state_specific_information_by_customer_id(customer_id: int, 
                                                       db: Session,

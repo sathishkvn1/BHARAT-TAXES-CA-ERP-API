@@ -109,8 +109,8 @@ class IdentityInformationSchema(BaseModel):
 
 class AddressSchema(BaseModel):
     id             : Optional[int]
-    address_type   : str = "RESIDENTIAL" 
-    # address_type   : Optional[str]
+    # address_type   : str = "RESIDENTIAL" 
+    address_type   : Optional[str]
     pin_code       : Optional[str]
     country_id     : Optional[int]
     state_id       :  Optional[int]
