@@ -1603,103 +1603,53 @@ def get_services_filtered(db: Session,
 
 
 
-#---------------------------------------------------------------------------------------------------------------
-
-# def get_service_data(service_id: int, db: Session) -> List[ServiceModelSchema]:
-#     query = text("""
-#         SELECT
-#             a.id AS constitution_id,
-#             a.business_constitution_name,
-#             a.business_constitution_code,
-#             b.id AS service_goods_master_id,
-#             COALESCE(c.id, 0) AS service_goods_price_master_id,
-#             b.service_goods_name,
-#             COALESCE(c.service_charge, 0) AS service_charge,
-#             COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
-#             COALESCE(c.stamp_duty, 0) AS stamp_duty,
-#             COALESCE(c.stamp_fee, 0) AS stamp_fee,
-#             COALESCE(c.id, 0) AS price_master_id,
-           
-#             c.effective_from_date AS effective_from_date,
-#             c.effective_to_date AS effective_to_date
-#         FROM
-#             app_business_constitution AS a
-#         LEFT OUTER JOIN
-#             off_service_goods_master AS b ON TRUE
-#         LEFT OUTER JOIN
-#             off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
-#                                                  AND a.id = c.constitution_id
-#                                                  AND (c.effective_to_date IS NULL OR c.effective_to_date >= CURRENT_DATE)
-#                                                  AND c.effective_from_date <= CURRENT_DATE
-#         WHERE
-#             b.id = :service_id
-#         ORDER BY
-#             a.id, b.id;
-#     """)
-
-#     query_result = db.execute(query, {"service_id": service_id}).fetchall()
-
-#     service_data = [
-#         ServiceModelSchema(
-           
-#             constitution_id=row.constitution_id,
-#             business_constitution_name=row.business_constitution_name,
-#             service_goods_master_id=row.service_goods_master_id,
-#             service_goods_price_master_id=row.service_goods_price_master_id,
-#             service_name=row.service_goods_name,
-#             business_constitution_code=row.business_constitution_code,
-#             service_charge=row.service_charge,
-#             govt_agency_fee=row.govt_agency_fee,
-#             stamp_duty=row.stamp_duty,
-#             stamp_fee=row.stamp_fee,
-#             effective_from_date=row.effective_from_date,
-#             effective_to_date=row.effective_to_date,
-#             price_master_id=row.price_master_id
-#         ) for row in query_result
-#     ]
-    
-#     return service_data
-
-#------------------------------------------------------------------------------------------------------------
 def get_service_data(service_id: int, rate_status: Optional[str], db: Session) -> List[ServiceModelSchema]:
-    # Use the current date if query_date is not provided
     query_date = datetime.now().date()
 
     query = text("""
-        SELECT
-            a.id AS constitution_id,
-            a.business_constitution_name,
-            a.business_constitution_code,
-            b.id AS service_goods_master_id,
-            COALESCE(c.id, 0) AS service_goods_price_master_id,
-            b.service_goods_name,
-            COALESCE(c.service_charge, 0) AS service_charge,
-            COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
-            COALESCE(c.stamp_duty, 0) AS stamp_duty,
-            COALESCE(c.stamp_fee, 0) AS stamp_fee,
-            COALESCE(c.id, 0) AS price_master_id,
-            c.effective_from_date AS effective_from_date,
-            c.effective_to_date AS effective_to_date,
-            CASE
-                WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 'CURRENT'
-                WHEN c.effective_from_date > :query_date THEN 'UPCOMING'
-                ELSE 'PREVIOUS'
-            END AS rate_status
-        FROM
-            app_business_constitution AS a
-        LEFT OUTER JOIN
-            off_service_goods_master AS b ON TRUE
-        LEFT OUTER JOIN
-            off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
-                                                 AND a.id = c.constitution_id
-        WHERE
-            b.id = :service_id
-            AND (:rate_status IS NULL 
-                OR (:rate_status = 'CURRENT' AND c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date))
-                OR (:rate_status = 'UPCOMING' AND c.effective_from_date > :query_date)
-                OR (:rate_status = 'PREVIOUS' AND c.effective_to_date IS NOT NULL AND c.effective_to_date < :query_date))
-        ORDER BY
-            a.id, b.id;
+        WITH ranked_prices AS (
+            SELECT
+                a.id AS constitution_id,
+                a.business_constitution_name,
+                a.business_constitution_code,
+                b.id AS service_goods_master_id,
+                COALESCE(c.id, 0) AS service_goods_price_master_id,
+                b.service_goods_name,
+                COALESCE(c.service_charge, 0) AS service_charge,
+                COALESCE(c.govt_agency_fee, 0) AS govt_agency_fee,
+                COALESCE(c.stamp_duty, 0) AS stamp_duty,
+                COALESCE(c.stamp_fee, 0) AS stamp_fee,
+                COALESCE(c.id, 0) AS price_master_id,
+                c.effective_from_date AS effective_from_date,
+                c.effective_to_date AS effective_to_date,
+                CASE
+                    WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 'CURRENT'
+                    WHEN c.effective_from_date > :query_date THEN 'UPCOMING'
+                    ELSE 'PREVIOUS'
+                END AS rate_status,
+                ROW_NUMBER() OVER (PARTITION BY a.id ORDER BY 
+                    CASE 
+                        WHEN c.effective_from_date <= :query_date AND (c.effective_to_date IS NULL OR c.effective_to_date >= :query_date) THEN 1
+                        WHEN c.effective_from_date > :query_date THEN 2
+                        ELSE 3 
+                    END, c.effective_from_date DESC) AS rn
+            FROM
+                app_business_constitution AS a
+            LEFT OUTER JOIN
+                off_service_goods_master AS b ON TRUE
+            LEFT OUTER JOIN
+                off_service_goods_price_master AS c ON b.id = c.service_goods_master_id 
+                                                     AND a.id = c.constitution_id
+            WHERE
+                b.id = :service_id
+        )
+        SELECT * FROM ranked_prices
+        WHERE rn = 1 
+          AND (:rate_status IS NULL 
+              OR (rate_status = 'CURRENT' AND effective_from_date <= :query_date AND (effective_to_date IS NULL OR effective_to_date >= :query_date))
+              OR (rate_status = 'UPCOMING' AND effective_from_date > :query_date)
+              OR (rate_status = 'PREVIOUS' AND effective_to_date IS NOT NULL AND effective_to_date < :query_date))
+        ORDER BY constitution_id;
     """)
 
     query_result = db.execute(query, {"service_id": service_id, "query_date": query_date, "rate_status": rate_status}).fetchall()
@@ -1724,7 +1674,6 @@ def get_service_data(service_id: int, rate_status: Optional[str], db: Session) -
     ]
     
     return service_data
-
 
 
 #---------------------------------------------------------------------------------------------------------------
