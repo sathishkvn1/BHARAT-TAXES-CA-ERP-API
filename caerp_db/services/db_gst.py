@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy.orm import Session
 
@@ -15,31 +15,34 @@ from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData,
 def save_business_details(
     db: Session,
     business_details_data: BusinessDetailsSchema,
-    task_id: int,  # 0 for insert, non-zero for update
+    task_id: Optional[int],  # task_id is now optional
     user_id: int,
-    id: int  # 0 for insert (new), non-zero for update
+    id: int,  # 0 for insert (new), non-zero for update
+    is_mother_customer: Optional[str] = "no"  # Optional parameter, default is 'no'
 ):
     financial_year_id = 1
     customer_id = 1
     try:
+        is_mother_customer_value = "yes" if is_mother_customer.lower() == "yes" else "no"
         if id == 0:
-            # Insert new CustomerMaster without customer_id
-            customer_number = generate_book_number('CUSTOMER',financial_year_id,customer_id, db)
+            # Insert new CustomerMaster
+            customer_number = generate_book_number('CUSTOMER', financial_year_id, customer_id, db)
             customer_master = CustomerMaster(
                 **business_details_data.model_dump(exclude_unset=True),
                 customer_number=customer_number,
                 created_by=user_id,  # Set created_by field
                 created_on=datetime.now(),  # Set created_on to current datetime
                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
-                effective_to_date=None
+                effective_to_date=None,
+                is_mother_customer=is_mother_customer_value
             )
             db.add(customer_master)
-            db.flush()  # This generates the `id` for the new customer_master
+            db.flush()  # Generate the `id` for the new customer_master
 
-            # Now set `customer_id` to be equal to `id`
-            customer_master.customer_id = customer_master.id  # Set customer_id equal to auto-generated id
-            db.add(customer_master)  # Re-add the customer to update the customer_id
-            db.flush()  # Flush again to save the updated customer_id
+            # Set customer_id equal to auto-generated id
+            customer_master.customer_id = customer_master.id
+            db.add(customer_master)  # Re-add the customer to update customer_id
+            db.flush()
 
         else:
             # Update existing CustomerMaster
@@ -53,26 +56,28 @@ def save_business_details(
 
             customer_master.modified_by = user_id  # Set modified_by field
             customer_master.modified_on = datetime.now()  # Set modified_on field
+            customer_master.is_mother_customer = is_mother_customer_value
+            # Update `is_mother_customer` if provided
+            
 
-        db.flush()  # Ensure changes are applied before updating related tables
+        db.flush()
 
         # Update OffServiceTaskMaster with the new customer_id if task_id is provided
-        if task_id != 0:
+        if task_id:
             service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == task_id).first()
             if not service_task_master:
                 return {"detail": "Service task not found"}
 
-            # Update the task's customer_id with the current customer_id
-            service_task_master.customer_id = customer_master.customer_id  # Use customer_id from the flushed record
+            # Update the task's customer_id
+            service_task_master.customer_id = customer_master.customer_id
             db.add(service_task_master)
 
         db.commit()  # Commit transaction
 
-        # Return the customer_id and a success message
-        return {"customer_id": customer_master.customer_id, "message": "Customer details saved successfully"}
+        return {"customer_id": customer_master.customer_id,"customer_number": customer_master.customer_number, "message": "Customer details saved successfully"}
 
     except Exception as e:
-        db.rollback()  # Rollback the transaction in case of an error
+        db.rollback()  # Rollback transaction in case of error
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------CUSTOMER / BUSINESS DETAILS

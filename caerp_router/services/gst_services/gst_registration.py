@@ -25,13 +25,15 @@ router = APIRouter(
 @router.post("/save_business_details")
 def save_business_details(
     business_details: BusinessDetailsSchema,  # Now a single BusinessDetailsSchema
-    task_id: int,
     id: int,  # 0 for insert, non-zero for update
+    task_id: Optional[int] = None,  # Optional task_id, default is None
+    is_mother_customer: Optional[str] = "no",  # Optional is_mother_customer param, default to 'no'
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    - Save business details and update the customer_id in the task master.
+    - Save business details and update the customer_id in the task master (if task_id provided).
+    - Optionally, indicate if this customer is a 'mother customer' (is_mother_customer).
     
     """
     if not token:
@@ -42,15 +44,12 @@ def save_business_details(
 
     try:
         # Call save_business_details with the required arguments
-        result = db_gst.save_business_details(db, business_details, task_id, user_id, id)
+        result = db_gst.save_business_details(db, business_details, task_id, user_id, id, is_mother_customer)
 
-        return {"success": True, "message": "Saved successfully", "customer_id": result["customer_id"]}
+        return {"success": True, "message": "Saved successfully", "customer_id": result["customer_id"], "customer_number": result["customer_number"]}
 
-   
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
 #--------------Save Customer Details----------------
 
 @router.post("/save_customer_details/{customer_id}")
