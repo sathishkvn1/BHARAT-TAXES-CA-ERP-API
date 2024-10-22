@@ -289,7 +289,6 @@ class AccProformaInvoiceResponceSchema(BaseModel):
 
 #----------------------------------------------------------------------------
 
-   
 class AccTaxInvoiceMasterSchema(BaseModel):
 
     id                      : Optional[int]= None
@@ -304,17 +303,21 @@ class AccTaxInvoiceMasterSchema(BaseModel):
     tax_invoice_date            : Optional[date]= None
     tax_invoice_number          : Optional[str]= None
     account_head_id         : Optional[int]= None
-    offer_total             : Optional[float] = None
+    total_offer_amount             : Optional[float] = None
 
-    coupon_total                : Optional[float] = None
-    grand_total_amount          : Optional[float]= None
-    bill_discount_amount        : Optional[float]= None
+    total_coupon_amount            : Optional[float] = None
+    grand_total_amount            : Optional[float]= None
+    bill_discount_amount         : Optional[float]= None
     additional_discount_amount  : Optional[float]= None
     advance_amount              : Optional[float]= None
-    additional_fee_required     : Optional[float]= None
+    additional_fee_amount     : Optional[float]= None
     round_off_amount            : Optional[float]= None
-    net_amount                  : Optional[float]= None
+    net_amount                 : Optional[float]= None
     remarks                     : Optional[str]= None
+    tax_invoice_status_id       : Optional[int] = None
+    is_locked                       : Optional[str] = 'no'  
+    locked_on                       : Optional[datetime] = None
+    locked_by                       : Optional[int] =  None
 
 
 class AccTaxInvoiceDetailsSchema(BaseModel):
@@ -360,6 +363,7 @@ class AccTaxInvoiceResponceSchema(BaseModel):
     tax_invoice_details : List[AccTaxInvoiceDetailsSchema]
     
 
+  
 class AccTaxInvoiceMasterViewSchema(BaseModel):
     id: Optional[int] = None
     voucher_id: Optional[int] = None
@@ -613,6 +617,7 @@ class AccQuotationDetailsViewSchema(BaseModel):
     quotation_number            : Optional[str]= None
     service_goods_master_id     : Optional[int]= None
     service_goods_name          : Optional[str] =None
+    hsn_sac_code                : Optional[str] = None
     is_main_service             : Optional[str] = 'no'
     is_bundle_service           : Optional[str]= 'no'
     bundle_service_id           : Optional[int]= None
@@ -648,7 +653,8 @@ class AccQuotationDetailsViewSchema(BaseModel):
 
     class Config:
         orm_mode = True
-        from_attributes = True     
+        from_attributes = True           
+
 
 
 class AccQuotationResponseSchema(BaseModel):
