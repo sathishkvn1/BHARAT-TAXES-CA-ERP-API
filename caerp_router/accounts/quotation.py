@@ -830,6 +830,7 @@ def get_tax_invoice_details(
 
 
 
+
 @router.post('/save_tax_invoice')
 def save_tax_invoice(
     work_order_master_id: int,

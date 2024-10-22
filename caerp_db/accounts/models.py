@@ -244,6 +244,7 @@ class AccTaxInvoiceStatus(caerp_base):
 
 
 
+
 class AccTaxInvoiceMaster(caerp_base):
     __tablename__ = 'acc_tax_invoice_master'
 
@@ -261,10 +262,7 @@ class AccTaxInvoiceMaster(caerp_base):
     tax_invoice_number          = Column(String(50), nullable=True)
     account_head_id             = Column(Integer, nullable=True)
     total_offer_amount          = Column(Float, nullable=False,default=0.0)
-
     total_coupon_amount         = Column(Float, nullable=False,default=0.0)
-
-
     grand_total_amount          = Column(Float, nullable=False,default=0.0)
     bill_discount_amount        = Column(Float, nullable=False,default=0.0)
     additional_discount_amount  = Column(Float, nullable=False,default=0.0)
@@ -285,7 +283,6 @@ class AccTaxInvoiceMaster(caerp_base):
     is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on                        = Column(DateTime, nullable=True)
     locked_by                        = Column(String, nullable=True)
-
 
 
 # class AccTaxInvoiceDetails(caerp_base):
@@ -605,6 +602,7 @@ class AccProformaInvoiceDetailsView(caerp_base):
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no') 
 
 
+
 class AccTaxInvoiceMasterView(caerp_base):
     __tablename__ = 'off_view_tax_invoice_master'
 
@@ -684,6 +682,8 @@ class AccTaxInvoiceMasterView(caerp_base):
     is_locked           = Column(Enum('yes', 'no'), nullable=False, default='no')  
     locked_on           = Column(DateTime, nullable=True)
     locked_by           = Column(String(100), nullable=True)
+
+
 
 class AccTaxInvoiceDetailsView(caerp_base):
     __tablename__ = 'off_view_tax_invoice_details'

@@ -1287,7 +1287,6 @@ def get_tax_invoice_details(
 
 
 #---------------------------------------------------------------------------------------------------
-
 def save_tax_invoice(
         db: Session,
         work_order_master_id: int,
