@@ -235,21 +235,25 @@ def generate_quotation_pdf(quotations, file_path):
         # Extract and format data from the quotations object
         # details = quotations[0].quotation_details
         details = quotations[0].quotation_details
-        # details = quotations.get('quotation_details')
-
-        # work_order_master = quotations.quotation_master 
-        total = sum(item.total_amount for item in details)
-        # advance = quotations.quotation_master.advance_amount
-        additional_discount = quotations[0].quotation_master.additional_discount_amount
         gst_amount = sum(item.igst_amount for item in details)
-        total_amount = quotations[0].quotation_master.net_amount
-        round_off  = quotations[0].quotation_master.round_off_amount
-        bill_discount = quotations[0].quotation_master.bill_discount_amount
-        grand_total = quotations[0].quotation_master.grand_total_amount
-        print('FIRST NAME',quotations[0].quotation_master.first_name )
+
+        for item in details:
+            item.service_charge = f"{(item.service_charge + item.govt_agency_fee + item.stamp_fee + item.stamp_duty):.2f}"
+            item.discount_amount = f"{item.discount_amount:.2f}" if item.discount_amount is not None else "0.00"
+            item.igst_amount = f"{(item.igst_amount + item.cgst_amount + item.sgst_amount):.2f}" if item.igst_amount or item.cgst_amount or item.sgst_amount else "0.00"
+            item.total_amount = f"{item.total_amount:.2f}"
+            item.taxable_amount = f"{item.taxable_amount:.2f}"
+        # total = sum(item.total_amount for item in details)
+        # advance = quotations.quotation_master.advance_amount
+        additional_discount = f"{quotations[0].quotation_master.additional_discount_amount:.2f}"
+        total_amount = f"{quotations[0].quotation_master.net_amount:.2f}"
+        round_off  = f"{quotations[0].quotation_master.round_off_amount:.2f}"
+        bill_discount = f"{quotations[0].quotation_master.bill_discount_amount:.2f}"
+        grand_total = f"{quotations[0].quotation_master.grand_total_amount:.2f}"
+        # taxable_amount = f"{quotations[0].quotation_master.taxable_amount:.2f}"
         data = {
             'quotations': details,
-            'total': total,
+            # 'total': total,
             'grand_total': grand_total,
             # 'advance': advance,
             'additional_discount': additional_discount,
@@ -258,7 +262,8 @@ def generate_quotation_pdf(quotations, file_path):
             'current_date': date.today(),
             'work_order_master': quotations[0].quotation_master,
             'round_off':round_off,
-            'bill_discount': bill_discount  
+            'bill_discount': bill_discount,
+            # 'taxable_amount': taxable_amount  
         }
 
         # Render the template with data
@@ -290,7 +295,6 @@ def generate_quotation_pdf(quotations, file_path):
             raise RuntimeError(f'Error generating PDF: {e}')
 
         return open(file_path, "rb")
-
 
 @router.get('/get_quotation_pdf')
 def get_quotation_pdf(
@@ -483,7 +487,6 @@ def get_invoice_details(
 
 # wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
 
-
 def generate_tax_invoice_pdf(invoice, file_path):
 
     # Load the template environment
@@ -497,16 +500,25 @@ def generate_tax_invoice_pdf(invoice, file_path):
 
         # Extract and format data from the quotations object
         details             = invoice[0].tax_invoice_details
-        work_order_master   = invoice[0].tax_invoice_master 
         total = sum(item.total_amount for item in details)
-        advance                 = invoice[0].tax_invoice_master.advance_amount
-        additional_fee_required = invoice[0].tax_invoice_master.additional_fee_amount
-        additional_discount     = invoice[0].tax_invoice_master.additional_discount_amount
         gst_amount              = sum(item.igst_amount for item in details)
-        total_amount            = invoice[0].tax_invoice_master.net_amount
-        round_off               = invoice[0].tax_invoice_master.round_off_amount
-        bill_discount           = invoice[0].tax_invoice_master.bill_discount_amount
-        grand_total             = invoice[0].tax_invoice_master.grand_total_amount
+
+        for item in details:
+            item.service_charge = f"{(item.service_charge+ item.govt_agency_fee + item.stamp_fee + item.stamp_duty):.2f}"
+            item.discount_amount = f"{item.discount_amount:.2f}" if item.discount_amount is not None else "0.00"
+            item.igst_amount = f"{(item.igst_amount + item.cgst_amount + item.sgst_amount):.2f}" if item.igst_amount or item.cgst_amount or item.sgst_amount else "0.00"
+            item.total_amount = f"{item.total_amount:.2f}"
+            item.taxable_amount = f"{item.taxable_amount:.2f}"
+       
+        work_order_master   = invoice[0].tax_invoice_master 
+
+        advance                 = f"{invoice[0].tax_invoice_master.advance_amount:.2f}"
+        additional_fee_required = f"{invoice[0].tax_invoice_master.additional_fee_amount:.2f}"
+        additional_discount     = f"{invoice[0].tax_invoice_master.additional_discount_amount:.2f}"
+        total_amount            = f"{invoice[0].tax_invoice_master.net_amount:.2f}"
+        round_off               = f"{invoice[0].tax_invoice_master.round_off_amount:.2f}"
+        bill_discount           = f"{invoice[0].tax_invoice_master.bill_discount_amount:.2f}"
+        grand_total             = f"{invoice[0].tax_invoice_master.grand_total_amount:.2f}"
 
         # Debug print: Check the content of details
         # print("Invoice Details  === :", invoice)
@@ -537,7 +549,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
         
         # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
-       
+        
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
         
@@ -558,7 +570,7 @@ def generate_tax_invoice_pdf(invoice, file_path):
             raise RuntimeError(f'Error generating PDF: {e}')
 
         return open(file_path, "rb")
-
+    
 @router.get('/get_tax_invoice_pdf')
 def get_tax_invoice_pdf(
      work_order_master_id : int,
@@ -657,6 +669,8 @@ def get_tax_invoice_pdf(
 
 #         return open(file_path, "rb")
 
+
+
 def generate_proforma_invoice_pdf(invoice, file_path):
 
     # Load the template environment
@@ -672,13 +686,21 @@ def generate_proforma_invoice_pdf(invoice, file_path):
         details = invoice[0].proforma_invoice_details
         work_order_master = invoice[0].proforma_invoice_master 
         total = sum(item.total_amount for item in details)
-        advance = invoice[0].proforma_invoice_master.advance_amount
-        additional_discount = invoice[0].proforma_invoice_master.additional_discount_amount
         gst_amount = sum(item.igst_amount for item in details)
-        total_amount = invoice[0].proforma_invoice_master.net_amount
-        round_off  = invoice[0].proforma_invoice_master.round_off_amount
-        bill_discount = invoice[0].proforma_invoice_master.bill_discount_amount
-        grand_total = invoice[0].proforma_invoice_master.grand_total_amount
+
+        for item in details:
+            item.service_charge = f"{(item.service_charge+ item.govt_agency_fee + item.stamp_fee + item.stamp_duty):.2f}"
+            item.discount_amount = f"{item.discount_amount:.2f}" if item.discount_amount is not None else "0.00"
+            item.igst_amount = f"{(item.igst_amount + item.cgst_amount + item.sgst_amount):.2f}" if item.igst_amount or item.cgst_amount or item.sgst_amount else "0.00"
+            item.total_amount = f"{item.total_amount:.2f}"
+            item.taxable_amount = f"{item.taxable_amount:.2f}"
+       
+        advance = f"{invoice[0].proforma_invoice_master.advance_amount:.2f}"
+        additional_discount = f"{invoice[0].proforma_invoice_master.additional_discount_amount:.2f}"
+        total_amount = f"{invoice[0].proforma_invoice_master.net_amount:.2f}"
+        round_off  = f"{invoice[0].proforma_invoice_master.round_off_amount:.2f}"
+        bill_discount = f"{invoice[0].proforma_invoice_master.bill_discount_amount:.2f}"
+        grand_total = f"{invoice[0].proforma_invoice_master.grand_total_amount:.2f}"
 
 
         # Debug print: Check the content of details
@@ -707,7 +729,6 @@ def generate_proforma_invoice_pdf(invoice, file_path):
 
         # Configuration for pdfkit
         
-        # wkhtmltopdf_path = 'D:/sruthi/wkhtmltopdf/bin/wkhtmltopdf.exe'
         wkhtmltopdf_path = 'C:/wkhtmltox/wkhtmltopdf/bin/wkhtmltopdf.exe'
         if not os.path.isfile(wkhtmltopdf_path):
             raise FileNotFoundError(f'wkhtmltopdf executable not found at path: {wkhtmltopdf_path}')
@@ -729,7 +750,6 @@ def generate_proforma_invoice_pdf(invoice, file_path):
             raise RuntimeError(f'Error generating PDF: {e}')
 
         return open(file_path, "rb")
-
 
 
 

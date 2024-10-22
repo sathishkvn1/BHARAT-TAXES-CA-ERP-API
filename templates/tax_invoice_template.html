@@ -71,6 +71,9 @@
         width: 150px; /* Adjust width as needed */
         font-weight: bold;
       }
+      .numeric {
+          text-align: right; /* Useful for aligning numbers */
+      }
     </style>
   </head>
   <body>
@@ -118,6 +121,7 @@
           <th>FEE</th>
           <th>DISCOUNT</th>
           <th>GST AMT</th>
+          <th>TAXABLE AMOUNT</th>
           <th>TOTAL</th>
         </tr>
       </thead>
@@ -125,16 +129,17 @@
         {% for item in invoice %}
 
         <tr>
-          <td>{{ item.service_goods_name }}</td>
-          <td>{{ item.service_charge }}</td>
-          <td>{{ item.discount_amount }}</td>
-          <td>{% if item.igst_amount %}
+          <td class="numeric">{{ item.service_goods_name }}</td>
+          <td class="numeric">{{ item.service_charge }}</td>
+          <td class="numeric">{{ item.discount_amount }}</td>
+          <td class="numeric" >{% if item.igst_amount %}
             {{ item.igst_amount }}
           {% endif %}
           {% if item.cgst_amount %}
             {{ item.cgst_amount + item.sgst_amount }}
           {% endif %}</td>
-          <td>{{ item.total_amount }}</td>
+          <td class="numeric">{{ item.taxable_amount }}</td>
+          <td class="numeric">{{ item.total_amount }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -145,28 +150,28 @@
         <tr class="total-row">
           <td>TOTAL</td>
           <td colspan="3"></td>
-          <td>{{ grand_total }}</td>
+          <td class="numeric">{{ grand_total }}</td>
         </tr>
         <tr>
           <td colspan="3"></td>
           <td>DISCOUNT</td>
-          <td>{{ bill_discount }}</td>
+          <td class="numeric">{{ bill_discount }}</td>
         </tr>
         
         <tr>
           <td colspan="3"></td>
           <td>ADDITIONAL FEE REQUIRED</td>
-          <td>{{ additional_fee_required }}</td>
+          <td class="numeric">{{ additional_fee_required }}</td>
         </tr>
         <tr>
           <td colspan="3"></td>
           <td>ADDITIONAL DISCOUNT</td>
-          <td>{{ additional_discount }}</td>
+          <td class="numeric">{{ additional_discount }}</td>
         </tr>
         <tr>
           <td colspan="3"></td>
           <td>ROUND OFF</td>
-          <td>{{ round_off }}</td>
+          <td class="numeric">{{ round_off }}</td>
         </tr>
         <!-- <tr>
           <td colspan="3"></td>
@@ -176,7 +181,7 @@
         <tr class="total-row">
           <td colspan="3"></td>
           <td>TOTAL AMOUNT</td>
-          <td>{{ total_amount }}</td>
+          <td class="numeric">{{ total_amount }}</td>
         </tr>
       </tbody>
     </table>

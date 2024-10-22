@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
-from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, UsersRole
+from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 
@@ -102,7 +102,8 @@ TABLE_MODEL_MAPPING = {
     "EmployeeMaster":EmployeeMaster,
     "OffServiceTaskMaster":OffServiceTaskMaster,
     "OffServiceDocumentDataMaster":OffServiceDocumentDataMaster,
-    "OffConsultationTaskMaster":OffConsultationTaskMaster
+    "OffConsultationTaskMaster":OffConsultationTaskMaster,
+    "StateDB":StateDB
     
 }
 

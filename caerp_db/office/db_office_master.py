@@ -1153,6 +1153,218 @@ def save_service_document_data_master(
 #------------------------------------------------------------------------------------------------------------
 
 
+# def fetch_available_and_unavailable_dates_and_slots(
+#     consultant_id: Optional[int],
+#     consultation_mode_id: Optional[int],
+#     db: Session,
+#     check_date: Optional[date] = None,
+#     service_goods_master_id: Optional[int] = None,
+#     appointment_id: Optional[int] = None
+# ) -> Dict[str, Any]:
+    
+#     def generate_time_slots(start_time: time, end_time: time, slot_duration: int, consultant_id: int, check_date: date, appointment_id: Optional[int]) -> List[Dict[str, str]]:
+#         available_slots = []
+#         current_time = datetime.combine(check_date, start_time)
+#         end_time = datetime.combine(check_date, end_time)
+
+#         while current_time + timedelta(minutes=slot_duration) <= end_time:
+#             next_time = current_time + timedelta(minutes=slot_duration)
+
+#             is_fully_covered = db.query(OffAppointmentVisitMaster).join(
+#                 OffAppointmentVisitMasterView,
+#                 OffAppointmentVisitMaster.id == OffAppointmentVisitMasterView.visit_master_id
+#             ).filter(
+#                 OffAppointmentVisitMaster.consultant_id == consultant_id,
+#                 OffAppointmentVisitMaster.appointment_date == check_date,
+#                 OffAppointmentVisitMaster.appointment_time_from <= current_time.time(),
+#                 OffAppointmentVisitMaster.appointment_time_to > current_time.time(),
+#                 OffAppointmentVisitMasterView.appointment_status != AppointmentStatusConstants.CANCELED.name,
+#                 OffAppointmentVisitMaster.appointment_master_id != appointment_id
+#             ).first()
+
+#             if not is_fully_covered:
+#                 available_slots.append({
+#                     'start_time': current_time.strftime("%H:%M"),
+#                     'end_time': next_time.strftime("%H:%M"),
+#                 })
+
+#             current_time = next_time
+
+#         return available_slots
+
+#     try:
+#         # Check for service duration based on service_goods_master_id
+#         if service_goods_master_id:
+#             service_detail = db.query(OffConsultantServiceDetails).filter(
+#                 OffConsultantServiceDetails.consultant_id == consultant_id,
+#                 OffConsultantServiceDetails.service_goods_master_id == service_goods_master_id,
+#                 OffConsultantServiceDetails.effective_from_date <= check_date,
+#                 or_(
+#                     OffConsultantServiceDetails.effective_to_date >= check_date,
+#                     OffConsultantServiceDetails.effective_to_date.is_(None)
+#                 )
+#             ).first()
+
+#             if not service_detail or service_detail.slot_duration_in_minutes is None:
+#                 return {'message': "Booking Closed"}  # No duration found
+
+#             slot_duration = service_detail.slot_duration_in_minutes
+
+#         if check_date:
+#             # Check for special schedules (non-normal)
+#             special_schedule = db.query(OffConsultantSchedule).filter(
+#                 OffConsultantSchedule.consultant_id == consultant_id,
+#                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                 OffConsultantSchedule.is_normal_schedule == 'no',
+#                 OffConsultantSchedule.consultation_date == check_date
+#             ).first()
+
+#             if special_schedule:
+#                 available_slots = []
+#                 time_slots = [
+#                     (special_schedule.morning_start_time, special_schedule.morning_end_time),
+#                     (special_schedule.afternoon_start_time, special_schedule.afternoon_end_time)
+#                 ]
+
+#                 for morning_start, morning_end in time_slots:
+#                     if morning_start and morning_end:
+#                         available_slots.extend(generate_time_slots(morning_start, morning_end, slot_duration, consultant_id, check_date, appointment_id))
+
+#                 if available_slots:
+#                     return {'available_slots': available_slots}
+#                 else:
+#                     return {'message': "No available slots for the specified date."}
+
+#             # If no special schedule, check for normal schedules
+#             normal_schedule = db.query(OffConsultantSchedule).filter(
+#                 OffConsultantSchedule.consultant_id == consultant_id,
+#                 OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                 OffConsultantSchedule.is_normal_schedule == 'yes',
+#                 OffConsultantSchedule.effective_from_date <= check_date,
+#                 or_(
+#                     OffConsultantSchedule.effective_to_date.is_(None),
+#                     OffConsultantSchedule.effective_to_date >= check_date
+#                 ),
+#                 OffConsultantSchedule.day_of_week_id == (check_date.weekday() + 1) % 7 + 1
+#             ).first()
+
+#             if normal_schedule:
+#                 # Check for overlapping non-normal schedules
+#                 overlapping_schedule = db.query(OffConsultantSchedule).filter(
+#                     OffConsultantSchedule.consultant_id == consultant_id,
+#                     OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                     OffConsultantSchedule.is_normal_schedule == 'no',
+#                     OffConsultantSchedule.consultation_date == check_date,
+#                     OffConsultantSchedule.day_of_week_id == (check_date.weekday() + 1) % 7 + 1
+#                 ).all()
+
+#                 if overlapping_schedule:
+#                     return {'available_slots': []}
+
+#                 # Generate available slots based on normal schedules
+#                 available_slots = []
+#                 time_slots = [
+#                     (normal_schedule.morning_start_time, normal_schedule.morning_end_time),
+#                     (normal_schedule.afternoon_start_time, normal_schedule.afternoon_end_time)
+#                 ]
+
+#                 for morning_start, morning_end in time_slots:
+#                     if morning_start and morning_end:
+#                         available_slots.extend(generate_time_slots(morning_start, morning_end, slot_duration, consultant_id, check_date, appointment_id))
+
+#                 return {'available_slots': available_slots} if available_slots else {'message': "No available slots for the specified date."}
+
+#             # If neither normal nor special schedule found
+#             return {'message': "No schedule available for the given date."}
+
+#         else:
+#             # Handle date range logic for fetching available and unavailable dates
+#             start_date = datetime.now().date()
+#             end_date = start_date + timedelta(days=30)
+
+#             available_dates = set()
+#             unavailable_dates = set()
+
+#             current_date = start_date
+#             while current_date <= end_date:
+#                 # Check for special schedules first
+#                 special_schedule = db.query(OffConsultantSchedule).filter(
+#                     OffConsultantSchedule.consultant_id == consultant_id,
+#                     OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                     OffConsultantSchedule.is_normal_schedule == 'no',
+#                     OffConsultantSchedule.consultation_date == current_date
+#                 ).first()
+
+#                 if special_schedule:
+#                     available_dates.add(current_date)
+#                 else:
+#                     # Check for normal schedules
+#                     normal_schedule = db.query(OffConsultantSchedule).filter(
+#                         OffConsultantSchedule.consultant_id == consultant_id,
+#                         OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                         OffConsultantSchedule.is_normal_schedule == 'yes',
+#                         OffConsultantSchedule.effective_from_date <= current_date,
+#                         or_(
+#                             OffConsultantSchedule.effective_to_date.is_(None),
+#                             OffConsultantSchedule.effective_to_date >= current_date
+#                         ),
+#                         OffConsultantSchedule.day_of_week_id == (current_date.weekday() + 1) % 7 + 1
+#                     ).first()
+
+#                     if normal_schedule:
+#                         overlapping_schedule = db.query(OffConsultantSchedule).filter(
+#                             OffConsultantSchedule.consultant_id == consultant_id,
+#                             OffConsultantSchedule.consultation_mode_id == consultation_mode_id,
+#                             OffConsultantSchedule.is_normal_schedule == 'no',
+#                             OffConsultantSchedule.consultation_date == current_date,
+#                             OffConsultantSchedule.day_of_week_id == (current_date.weekday() + 1) % 7 + 1
+#                         ).all()
+
+#                         if overlapping_schedule:
+#                             unavailable_dates.add(current_date)
+#                         else:
+#                             available_dates.add(current_date)
+#                     else:
+#                         unavailable_dates.add(current_date)
+
+#                 current_date += timedelta(days=1)
+
+#             # Ensure that available and unavailable dates are non-null, returning message if none
+#             if not available_dates and not unavailable_dates:
+#                 return {'message': "No available or unavailable dates in the specified range."}
+
+#             # Handle special date conflicts with other consultation modes
+#             for available_date in available_dates.copy():
+#                 current_special_schedule = db.query(OffConsultantSchedule).filter(
+#                     OffConsultantSchedule.consultant_id == consultant_id,
+#                     OffConsultantSchedule.is_normal_schedule == 'no',
+#                     OffConsultantSchedule.consultation_date == available_date,
+#                     OffConsultantSchedule.consultation_mode_id == consultation_mode_id
+#                 ).first()
+#                 other_special_schedules = db.query(OffConsultantSchedule).filter(
+#                     OffConsultantSchedule.consultant_id == consultant_id,
+#                     OffConsultantSchedule.is_normal_schedule == 'no',
+#                     OffConsultantSchedule.consultation_date == available_date
+#                 ).filter(OffConsultantSchedule.consultation_mode_id != consultation_mode_id).all()
+#                 if current_special_schedule and other_special_schedules:
+#                          # If both modes have special schedules, keep the date as available
+#                   continue
+#                 if other_special_schedules:
+#                     available_dates.remove(available_date)
+#                     unavailable_dates.add(available_date)
+            
+#             sorted_available_dates = sorted(list(available_dates))
+#             sorted_unavailable_dates = sorted(list(unavailable_dates))
+
+#             return {
+#                 'available_dates': sorted_available_dates,
+#                 'unavailable_dates': sorted_unavailable_dates
+#             }
+
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Error occurred: {str(e)}")
+
+
 def fetch_available_and_unavailable_dates_and_slots(
     consultant_id: Optional[int],
     consultation_mode_id: Optional[int],
@@ -1161,11 +1373,19 @@ def fetch_available_and_unavailable_dates_and_slots(
     service_goods_master_id: Optional[int] = None,
     appointment_id: Optional[int] = None
 ) -> Dict[str, Any]:
-    
+
     def generate_time_slots(start_time: time, end_time: time, slot_duration: int, consultant_id: int, check_date: date, appointment_id: Optional[int]) -> List[Dict[str, str]]:
         available_slots = []
         current_time = datetime.combine(check_date, start_time)
         end_time = datetime.combine(check_date, end_time)
+        
+        # Get the current datetime
+        now = datetime.now()
+
+        # Only adjust time if the selected date is today
+        if check_date == now.date():
+            if current_time < now:
+                current_time = now  # Start from the current time if the slot is in the past
 
         while current_time + timedelta(minutes=slot_duration) <= end_time:
             next_time = current_time + timedelta(minutes=slot_duration)
@@ -1363,6 +1583,7 @@ def fetch_available_and_unavailable_dates_and_slots(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error occurred: {str(e)}")
+
 
 #------------------------------------------------------------------------------------------------------------
 
