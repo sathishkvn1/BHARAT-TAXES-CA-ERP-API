@@ -1569,14 +1569,15 @@ def fetch_available_and_unavailable_dates_and_slots(
                 other_special_schedules = db.query(OffConsultantSchedule).filter(
                     OffConsultantSchedule.consultant_id == consultant_id,
                     OffConsultantSchedule.is_normal_schedule == 'no',
-                    OffConsultantSchedule.consultation_date == available_date,
-                    OffConsultantSchedule.consultation_mode_id != consultation_mode_id
-                ).all()
-
-                if current_special_schedule and not other_special_schedules:
+                    OffConsultantSchedule.consultation_date == available_date
+                ).filter(OffConsultantSchedule.consultation_mode_id != consultation_mode_id).all()
+                if current_special_schedule and other_special_schedules:
+                         # If both modes have special schedules, keep the date as available
+                  continue
+                if other_special_schedules:
                     available_dates.remove(available_date)
                     unavailable_dates.add(available_date)
-
+            
             sorted_available_dates = sorted(list(available_dates))
             sorted_unavailable_dates = sorted(list(unavailable_dates))
 
@@ -3797,6 +3798,7 @@ def get_work_order_details(
                            work_order_details_id : Optional[int] = None,
                            ) -> List[Dict]:
 
+    is_editable = True
     if entry_point == 'WORK_ORDER':
             try:
                 data = []
@@ -3809,6 +3811,8 @@ def get_work_order_details(
                     return {
                         'message': "Work order not found",
                     }
+                if work_order_master_data.work_order_status_id != 1:
+                    is_editable = False
                 query = db.query(WorkOrderDetailsView).filter(
                         WorkOrderDetailsView.work_order_master_id == id,
                         WorkOrderDetailsView.is_main_service == 'yes',
@@ -3847,10 +3851,15 @@ def get_work_order_details(
 
                 work_order_data = WorkOrderResponseSchema(
                     work_order=OffViewWorkOrderMasterSchema.model_validate(work_order_master_data),
-                    service_data=service_data
+                    service_data=service_data,
+                    is_editable = is_editable
                 )
                 
                 data.append(work_order_data.dict())  # Convert to dictionary format if required
+                # return {
+                #     'data' : data,
+                #     'is_editable': is_editable
+                # }
                 return data
 
             except SQLAlchemyError as e:
@@ -3920,7 +3929,8 @@ def get_work_order_details(
                 work_order=transformed_data,
 
                 # work_order=OffAppointmentMasterSchema.model_validate(transformed_data),
-                service_data=[]
+                service_data=[],
+                is_editable = is_editable
             )
     elif entry_point == 'ENQUIRY':
         if id is None:
@@ -3969,7 +3979,8 @@ def get_work_order_details(
         # data = enquiry_master_data
         data = WorkOrderResponseSchema(
             work_order= work_order_data,
-            service_data=[]
+            service_data=[],
+            is_editable= is_editable
         )
     else:
             return {
@@ -3978,8 +3989,12 @@ def get_work_order_details(
             }
             # raise ValueError("Invalid entry point")
     # if data:
-
     return data
+    # return {
+    #     'data' : data,
+    #     'is_editable': is_editable}
+   
+
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,

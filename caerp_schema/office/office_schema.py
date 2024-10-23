@@ -1307,10 +1307,12 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
         from_attributes = True
 
 
+
+
 class WorkOrderResponseSchema(BaseModel):
     work_order: OffViewWorkOrderMasterSchema
-    # service_data: List[WorkOrderDetailsSchema]
     service_data: List[OffViewWorkOrderDetailsSchema]
+    is_editable : Optional[bool] = False
     class Config:
         orm_mode = True
         from_attributes = True

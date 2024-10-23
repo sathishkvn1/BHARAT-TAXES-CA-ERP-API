@@ -281,10 +281,10 @@ class AccInvoiceResponceSchema(BaseModel):
     invoice_details         : List[AccProformaInvoiceDetailsSchema]
 
 
-class AccProformaInvoiceResponceSchema(BaseModel):
-    work_order_master : OffViewWorkOrderMasterSchema
-    proforma_invoice_master : AccProformaInvoiceMasterSchema
-    proforma_invoice_details : List[AccProformaInvoiceDetailsSchema]
+# class AccProformaInvoiceResponceSchema(BaseModel):
+#     work_order_master : OffViewWorkOrderMasterSchema
+#     proforma_invoice_master : AccProformaInvoiceMasterSchema
+#     proforma_invoice_details : List[AccProformaInvoiceDetailsSchema]
     
 
 #----------------------------------------------------------------------------
@@ -357,10 +357,12 @@ class AccTaxInvoiceDetailsSchema(BaseModel):
 class AccTaxInvoiceShema(BaseModel):
     tax_invoice_master : AccTaxInvoiceMasterSchema
     tax_invoice_details : List[AccTaxInvoiceDetailsSchema]
-class AccTaxInvoiceResponceSchema(BaseModel):
-    work_order_master : OffViewWorkOrderMasterSchema
-    tax_invoice_master : AccTaxInvoiceMasterSchema
-    tax_invoice_details : List[AccTaxInvoiceDetailsSchema]
+
+
+# class AccTaxInvoiceResponceSchema(BaseModel):
+#     work_order_master : OffViewWorkOrderMasterSchema
+#     tax_invoice_master : AccTaxInvoiceMasterSchema
+#     tax_invoice_details : List[AccTaxInvoiceDetailsSchema]
     
 
   
@@ -485,6 +487,7 @@ class AccTaxInvoiceDetailsViewSchema(BaseModel):
 class AccTaxInvoiceResponceSchema(BaseModel):
     tax_invoice_master: AccTaxInvoiceMasterViewSchema
     tax_invoice_details: Optional[List[AccTaxInvoiceDetailsViewSchema]]
+    is_editable : Optional[bool] = False
 
 
 class AccProformaInvoiceMasterViewSchema(BaseModel):
@@ -606,6 +609,7 @@ class AccProformaInvoiceDetailsViewSchema(BaseModel):
 class AccProformaInvoiceResponceSchema(BaseModel):
     proforma_invoice_master: AccProformaInvoiceMasterViewSchema
     proforma_invoice_details: Optional[List[AccProformaInvoiceDetailsViewSchema]]
+    is_editable              : Optional[bool]= False
 
 
 class AccQuotationDetailsViewSchema(BaseModel):
@@ -659,4 +663,5 @@ class AccQuotationDetailsViewSchema(BaseModel):
 
 class AccQuotationResponseSchema(BaseModel):
     quotation_master            : AccQuotationMasterViewSchema
-    quotation_details           : List[AccQuotationDetailsViewSchema]    
+    quotation_details           : List[AccQuotationDetailsViewSchema]
+    is_editable                 : Optional[bool] = False
