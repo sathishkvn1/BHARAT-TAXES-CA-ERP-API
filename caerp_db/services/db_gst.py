@@ -83,6 +83,145 @@ def save_business_details(
 #-------CUSTOMER / BUSINESS DETAILS
 
 
+# def save_customer_details(customer_id: int, 
+#                           customer_data: CustomerRequestSchema, 
+#                           user_id: int, 
+#                           db: Session):
+#     try:
+#         # Handle Additional Trade Names
+#         for additional_trade_name in customer_data.additional_trade_name:
+#             if additional_trade_name.id == 0:
+#                 new_trade_name = CustomerAdditionalTradeName(
+#                     customer_id=customer_id,
+#                     **additional_trade_name.model_dump(exclude_unset=True),  # Use model_dump to pass fields dynamically
+#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                     effective_to_date=None,
+#                     created_by=user_id,
+#                     created_on=datetime.now()
+#                 )
+#                 db.add(new_trade_name)
+#             else:
+#                 existing_trade_name = db.query(CustomerAdditionalTradeName).filter_by(id=additional_trade_name.id).first()
+#                 if existing_trade_name:
+#                     for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
+#                         setattr(existing_trade_name, key, value)
+#                     existing_trade_name.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                     existing_trade_name.effective_to_date=None
+#                     existing_trade_name.modified_by = user_id
+#                     existing_trade_name.modified_on = datetime.now()
+
+#         # Handle Casual Taxable Person Details
+#         if customer_data.casual_taxable_person.id == 0:
+#             casual_taxable_person = CustomerGSTCasualTaxablePersonDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.casual_taxable_person.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(casual_taxable_person)
+#         else:
+#             existing_casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(id=customer_data.casual_taxable_person.id).first()
+#             if existing_casual_taxable_person:
+#                 for key, value in customer_data.casual_taxable_person.model_dump(exclude_unset=True).items():
+#                     setattr(existing_casual_taxable_person, key, value)
+#                 existing_casual_taxable_person.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_casual_taxable_person.effective_to_date=None
+#                 existing_casual_taxable_person.modified_by = user_id
+#                 existing_casual_taxable_person.modified_on = datetime.now()
+
+#         # Handle Composition Option
+#         if customer_data.option_for_composition.id == 0:
+#             composition_option = CustomerGSTCompositionOptedPersonDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.option_for_composition.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(composition_option)
+#         else:
+#             existing_composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(id=customer_data.option_for_composition.id).first()
+#             if existing_composition_option:
+#                 for key, value in customer_data.option_for_composition.model_dump(exclude_unset=True).items():
+#                     setattr(existing_composition_option, key, value)
+#                 existing_composition_option.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_composition_option.effective_to_date=None
+#                 existing_composition_option.modified_by = user_id
+#                 existing_composition_option.modified_on = datetime.now()
+
+#         # Handle Other GST Details
+#         if customer_data.reason_to_obtain_registration.id == 0:
+#             gst_other_details = CustomerGSTOtherDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(gst_other_details)
+#         else:
+#             existing_gst_other_details = db.query(CustomerGSTOtherDetails).filter_by(id=customer_data.reason_to_obtain_registration.id).first()
+#             if existing_gst_other_details:
+#                 for key, value in customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True).items():
+#                     setattr(existing_gst_other_details, key, value)
+#                 existing_gst_other_details.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_gst_other_details.effective_to_date=None
+#                 existing_gst_other_details.modified_by = user_id
+#                 existing_gst_other_details.modified_on = datetime.now()
+
+#         # Handle Existing Registrations
+#         for registration in customer_data.existing_registrations:
+#             if registration.id == 0:
+#                 new_registration = CustomerExistingRegistrationDetails(
+#                     customer_id=customer_id,
+#                     **registration.model_dump(exclude_unset=True),
+#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                     effective_to_date=None,
+#                     created_by=user_id,
+#                     created_on=datetime.now()
+#                 )
+#                 db.add(new_registration)
+#             else:
+#                 existing_registration = db.query(CustomerExistingRegistrationDetails).filter_by(id=registration.id).first()
+#                 if existing_registration:
+#                     for key, value in registration.model_dump(exclude_unset=True).items():
+#                         setattr(existing_registration, key, value)
+#                     existing_registration.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                     existing_registration.effective_to_date=None
+#                     existing_registration.modified_by = user_id
+#                     existing_registration.modified_on = datetime.now()
+
+#         # Handle Authorization
+#         if customer_id >= 0:  # Check if it's an existing customer or a new customer
+#             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
+
+#             if existing_authorization:  # Update the existing authorization
+#                 for key, value in customer_data.authorization.model_dump(exclude_unset=True).items():
+#                     setattr(existing_authorization, key, value)
+#                 existing_authorization.effective_from_date = datetime.now()  
+#                 existing_authorization.effective_to_date = None 
+#                 existing_authorization.modified_by = user_id  
+#                 existing_authorization.modified_on = datetime.now()  
+#             else:  
+#                 new_authorization = CustomerMaster(
+#                     customer_id=customer_id,
+#                     **customer_data.authorization.model_dump(exclude_unset=True),
+#                     effective_from_date=datetime.now(),  
+#                     effective_to_date=None,  
+#                     created_by=user_id,  
+#                     created_on=datetime.now()  
+#                 )
+#                 db.add(new_authorization)
+#         # Commit transaction
+#         db.commit()
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           user_id: int, 
@@ -93,8 +232,8 @@ def save_customer_details(customer_id: int,
             if additional_trade_name.id == 0:
                 new_trade_name = CustomerAdditionalTradeName(
                     customer_id=customer_id,
-                    **additional_trade_name.model_dump(exclude_unset=True),  # Use model_dump to pass fields dynamically
-                    effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                    **additional_trade_name.model_dump(exclude_unset=True),
+                    effective_from_date=datetime.now(),
                     effective_to_date=None,
                     created_by=user_id,
                     created_on=datetime.now()
@@ -105,17 +244,37 @@ def save_customer_details(customer_id: int,
                 if existing_trade_name:
                     for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
                         setattr(existing_trade_name, key, value)
-                    existing_trade_name.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                    existing_trade_name.effective_to_date=None
+                    existing_trade_name.effective_from_date = datetime.now()
+                    existing_trade_name.effective_to_date = None
                     existing_trade_name.modified_by = user_id
                     existing_trade_name.modified_on = datetime.now()
 
         # Handle Casual Taxable Person Details
+        if customer_data.casual_taxable_person.is_applying_as_casual_taxable_person == "no":
+            # When is_applying_as_casual_taxable_person is "no", set other fields to None
+            casual_taxable_person_data = {
+                "id": customer_data.casual_taxable_person.id,
+                "is_applying_as_casual_taxable_person": customer_data.casual_taxable_person.is_applying_as_casual_taxable_person,
+                "gst_registration_required_from_date": None,
+                "gst_registration_required_to_date": None,
+                "estimated_igst_turnover": None,
+                "estimated_net_igst_liability": None,
+                "estimated_cgst_turnover": None,
+                "estimated_net_cgst_liability": None,
+                "estimated_sgst_turnover": None,
+                "estimated_net_sgst_liability": None,
+                "estimated_cess_turnover": None,
+                "estimated_net_cess_liability": None
+            }
+        else:
+            # Use the actual values when the person is applying as a casual taxable person
+            casual_taxable_person_data = customer_data.casual_taxable_person.model_dump(exclude_unset=True)
+
         if customer_data.casual_taxable_person.id == 0:
             casual_taxable_person = CustomerGSTCasualTaxablePersonDetails(
                 customer_id=customer_id,
-                **customer_data.casual_taxable_person.model_dump(exclude_unset=True),
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                **casual_taxable_person_data,
+                effective_from_date=datetime.now(),
                 effective_to_date=None,
                 created_by=user_id,
                 created_on=datetime.now()
@@ -124,19 +283,32 @@ def save_customer_details(customer_id: int,
         else:
             existing_casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(id=customer_data.casual_taxable_person.id).first()
             if existing_casual_taxable_person:
-                for key, value in customer_data.casual_taxable_person.model_dump(exclude_unset=True).items():
+                for key, value in casual_taxable_person_data.items():
                     setattr(existing_casual_taxable_person, key, value)
-                existing_casual_taxable_person.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                existing_casual_taxable_person.effective_to_date=None
+                existing_casual_taxable_person.effective_from_date = datetime.now()
+                existing_casual_taxable_person.effective_to_date = None
                 existing_casual_taxable_person.modified_by = user_id
                 existing_casual_taxable_person.modified_on = datetime.now()
 
         # Handle Composition Option
+        if customer_data.option_for_composition.is_applying_as_composition_taxable_person == "no":
+            # When is_applying_as_composition_taxable_person is "no", set other fields to None
+            composition_option_data = {
+                "id": customer_data.option_for_composition.id,
+                "is_applying_as_composition_taxable_person": customer_data.option_for_composition.is_applying_as_composition_taxable_person,
+                "option_1": "no",
+                "option_2": "no",
+                "option_3": "no"
+            }
+        else:
+            # Use the actual values when applying as a composition taxable person
+            composition_option_data = customer_data.option_for_composition.model_dump(exclude_unset=True)
+
         if customer_data.option_for_composition.id == 0:
             composition_option = CustomerGSTCompositionOptedPersonDetails(
                 customer_id=customer_id,
-                **customer_data.option_for_composition.model_dump(exclude_unset=True),
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                **composition_option_data,
+                effective_from_date=datetime.now(),
                 effective_to_date=None,
                 created_by=user_id,
                 created_on=datetime.now()
@@ -145,10 +317,10 @@ def save_customer_details(customer_id: int,
         else:
             existing_composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(id=customer_data.option_for_composition.id).first()
             if existing_composition_option:
-                for key, value in customer_data.option_for_composition.model_dump(exclude_unset=True).items():
+                for key, value in composition_option_data.items():
                     setattr(existing_composition_option, key, value)
-                existing_composition_option.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                existing_composition_option.effective_to_date=None
+                existing_composition_option.effective_from_date = datetime.now()
+                existing_composition_option.effective_to_date = None
                 existing_composition_option.modified_by = user_id
                 existing_composition_option.modified_on = datetime.now()
 
@@ -157,7 +329,7 @@ def save_customer_details(customer_id: int,
             gst_other_details = CustomerGSTOtherDetails(
                 customer_id=customer_id,
                 **customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True),
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                effective_from_date=datetime.now(),
                 effective_to_date=None,
                 created_by=user_id,
                 created_on=datetime.now()
@@ -168,8 +340,8 @@ def save_customer_details(customer_id: int,
             if existing_gst_other_details:
                 for key, value in customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True).items():
                     setattr(existing_gst_other_details, key, value)
-                existing_gst_other_details.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                existing_gst_other_details.effective_to_date=None
+                existing_gst_other_details.effective_from_date = datetime.now()
+                existing_gst_other_details.effective_to_date = None
                 existing_gst_other_details.modified_by = user_id
                 existing_gst_other_details.modified_on = datetime.now()
 
@@ -179,7 +351,7 @@ def save_customer_details(customer_id: int,
                 new_registration = CustomerExistingRegistrationDetails(
                     customer_id=customer_id,
                     **registration.model_dump(exclude_unset=True),
-                    effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                    effective_from_date=datetime.now(),
                     effective_to_date=None,
                     created_by=user_id,
                     created_on=datetime.now()
@@ -190,32 +362,33 @@ def save_customer_details(customer_id: int,
                 if existing_registration:
                     for key, value in registration.model_dump(exclude_unset=True).items():
                         setattr(existing_registration, key, value)
-                    existing_registration.effective_from_date=datetime.now()  # Set effective_from_date to current date
-                    existing_registration.effective_to_date=None
+                    existing_registration.effective_from_date = datetime.now()
+                    existing_registration.effective_to_date = None
                     existing_registration.modified_by = user_id
                     existing_registration.modified_on = datetime.now()
 
         # Handle Authorization
-        if customer_id >= 0:  # Check if it's an existing customer or a new customer
+        if customer_id >= 0:
             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
 
-            if existing_authorization:  # Update the existing authorization
+            if existing_authorization:
                 for key, value in customer_data.authorization.model_dump(exclude_unset=True).items():
                     setattr(existing_authorization, key, value)
-                existing_authorization.effective_from_date = datetime.now()  
-                existing_authorization.effective_to_date = None 
-                existing_authorization.modified_by = user_id  
-                existing_authorization.modified_on = datetime.now()  
-            else:  
+                existing_authorization.effective_from_date = datetime.now()
+                existing_authorization.effective_to_date = None
+                existing_authorization.modified_by = user_id
+                existing_authorization.modified_on = datetime.now()
+            else:
                 new_authorization = CustomerMaster(
                     customer_id=customer_id,
                     **customer_data.authorization.model_dump(exclude_unset=True),
-                    effective_from_date=datetime.now(),  
-                    effective_to_date=None,  
-                    created_by=user_id,  
-                    created_on=datetime.now()  
+                    effective_from_date=datetime.now(),
+                    effective_to_date=None,
+                    created_by=user_id,
+                    created_on=datetime.now()
                 )
                 db.add(new_authorization)
+
         # Commit transaction
         db.commit()
 

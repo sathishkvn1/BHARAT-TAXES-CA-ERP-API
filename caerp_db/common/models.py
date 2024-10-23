@@ -176,6 +176,7 @@ class StateDB(caerp_base):
     state_name                  = Column(String(50), nullable=False)
     country                     = relationship("CountryDB", back_populates="states")
     districts                   = relationship("DistrictDB",back_populates="states")
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
     # post_offices = relationship("PostOfficeView", back_populates="state_name")
 
 
