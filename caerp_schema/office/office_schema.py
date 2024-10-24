@@ -183,6 +183,8 @@ class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master      : OffAppointmentVisitMasterViewSchema
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
+    is_editable       : Optional[bool] = False
+
 
  
 
@@ -744,6 +746,7 @@ class OffViewEnquiryDetailsSchema(BaseModel):
 class OffViewEnquiryResponseSchema(BaseModel):
     enquiry_master  : OffViewEnquiryMasterSchema
     enquiry_details : List[OffViewEnquiryDetailsSchema]
+    is_editable     : Optional[bool] = False
 
     class Config:
         orm_mode        = True

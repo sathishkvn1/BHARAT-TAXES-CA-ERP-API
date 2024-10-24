@@ -674,6 +674,7 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 
 
 #-------------get_consultancy_services-------------------------------------------------------------------
+
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -780,6 +781,7 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
@@ -3356,7 +3358,6 @@ def save_enquiry_master(
 
 #-------------------------------------------------------------------------------------------------------------
 
-
 def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -3455,6 +3456,7 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #------------------------------------------------------------------------------------------------
     # WORK ORDER
