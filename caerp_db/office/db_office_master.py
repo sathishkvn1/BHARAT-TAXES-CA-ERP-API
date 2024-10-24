@@ -588,7 +588,6 @@ def save_services_goods_master(
         db.rollback()
         raise e
 #--------------------------------------------------------------------------------------------------------
-
 def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
                                      action: AppointmentStatusConstants, 
@@ -601,7 +600,7 @@ def reschedule_or_cancel_appointment(db: Session,
     # Fetch the status ID based on the action
     status_name = ""
     if action == AppointmentStatusConstants.RESCHEDULED:
-        status_name = "RESCHEDULED"
+        status_name = "NEW"
     elif action == AppointmentStatusConstants.CANCELED:
         status_name = "CANCELED"
     else:
@@ -654,7 +653,10 @@ def reschedule_or_cancel_appointment(db: Session,
         
         db.commit()
         return {"success": True, "message": "Appointment canceled successfully"}
-#-------------------------------get_appointment_info
+
+
+
+#-------------------------------get_appointment_info----------------------------------------
 def get_appointment_info(db: Session, type: str) -> List[dict]:
     if type == "cancellation_reasons":
         # Query the database to get unique cancellation reasons
