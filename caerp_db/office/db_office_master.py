@@ -749,7 +749,9 @@ def get_appointments(
                 for column in visit_details.__table__.columns
             }
             visit_master_schema = OffAppointmentVisitMasterViewSchema(**visit_master_data)
-
+            is_editable = False
+            if visit_master_schema.appointment_status_id in [1, 2]: 
+                is_editable = True
             # Create visit detail schema using the OffAppointmentVisitDetailsViewSchema
             visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
                 visit_master_id=visit_details.visit_master_id, 
@@ -764,7 +766,8 @@ def get_appointments(
                 appointments[visit_master_schema.visit_master_id] = ResponseSchema(
                     appointment_master=appointment_master_schema,
                     visit_master=visit_master_schema,
-                    visit_details=[visit_detail_schema]  # Initialize visit details list
+                    visit_details=[visit_detail_schema] , # Initialize visit details list
+                    is_editable = is_editable
                 )
             else:
                 appointments[visit_master_schema.visit_master_id].visit_details.append(visit_detail_schema)
@@ -775,6 +778,7 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 #---service-goods-master  swathy---------------------------
@@ -3419,6 +3423,8 @@ def save_enquiry_master(
 
 
 #-------------------------------------------------------------------------------------------------------------
+
+
 def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -3480,7 +3486,9 @@ def get_enquiries(
         # Iterate over query result
         for enquiry_details_data in query_result:
             enquiry_id = enquiry_details_data.enquiry_master_id
-
+            is_editable = False
+            if enquiry_details_data.enquiry_status_id ==1:
+                is_editable = True
             # Get the enquiry master corresponding to the enquiry details
             enquiry_master_data = db.query(OffViewEnquiryMaster).filter_by(
                 enquiry_master_id=enquiry_id
@@ -3494,12 +3502,13 @@ def get_enquiries(
 
                 # Convert enquiry_details_data to schema
                 enquiry_details_schema = OffViewEnquiryDetailsSchema(**enquiry_details_data.__dict__)
-
+                
                 if enquiry_id not in enquiry_dict:
                     # Create new enquiry entry in dictionary
                     enquiry_dict[enquiry_id] = {
                         "enquiry_master": enquiry_master_schema,
-                        "enquiry_details": [enquiry_details_schema]
+                        "enquiry_details": [enquiry_details_schema],
+                        "is_editable" : is_editable
                     }
                 else:
                     # Append enquiry details to existing entry
@@ -3514,8 +3523,6 @@ def get_enquiries(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 #------------------------------------------------------------------------------------------------
     # WORK ORDER

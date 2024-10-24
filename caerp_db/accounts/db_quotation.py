@@ -413,6 +413,7 @@ def send_tax_invoice(
     }
     return result
 
+
 def get_quotation_data(
     db: Session,
     include_details: Optional[bool] = Query(False),
@@ -486,16 +487,7 @@ def get_quotation_data(
         else:
             details_schema = []
 
-        # Construct the response schema
-        # quotations.append(
-        #     AccQuotationResponseSchema(
-        #         quotation_master=AccQuotationMasterViewSchema.model_validate(master.__dict__),
-        #         quotation_details=details_schema
-
-        #     )
-        # )
-        if quotation_master_id:
-            if master.quotation_status_id == 1 or master.quotation_status_id == 3:
+        if master.quotation_status_id in [1,3]:
                 is_editable = True
             
         quotations.append(
@@ -512,7 +504,6 @@ def get_quotation_data(
         #     'is_editable': is_editable
         #     }
     return quotations
- 
 #-------------------------------------------------------------
 # def generate_profoma_invoice_details(
 #         db: Session,
@@ -1152,6 +1143,8 @@ def consultation_invoice_generation(
         }
 
 #---------------------------------------------------------------------------------------------------
+
+
 def get_proforma_invoice_details(
     db: Session,
     work_order_master_id: Optional[int] = None,
@@ -1215,9 +1208,8 @@ def get_proforma_invoice_details(
             else:
                 invoice_details_list =[]
             is_editable = False
-            if proforma_invoice_master_id:
-                if master.proforma_invoice_status_id == 1:
-                    is_editable = True
+            if master.proforma_invoice_status_id == 1:
+                is_editable = True
             invoice_response_data.append(
                  AccProformaInvoiceResponceSchema(
                 proforma_invoice_master=AccProformaInvoiceMasterViewSchema.model_validate(master.__dict__),
@@ -1240,6 +1232,8 @@ def get_proforma_invoice_details(
     except Exception as e:
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred.")
+    
+
 
 def get_tax_invoice_details(
     db: Session,
@@ -1304,9 +1298,8 @@ def get_tax_invoice_details(
             else:
                 invoice_details_list =[]
             is_editable = False
-            if tax_invoice_master_id:
-                if master.tax_invoice_status_id == 1:
-                    is_editable = True
+            if master.tax_invoice_status_id == 1:
+                is_editable = True
             invoice_response_data.append(
                  AccTaxInvoiceResponceSchema(
                 tax_invoice_master=AccTaxInvoiceMasterViewSchema.model_validate(master.__dict__),
@@ -1315,22 +1308,13 @@ def get_tax_invoice_details(
             )
             )
 
-        # If tax_invoice_master_id, return is_editable = true or false 
-        # if tax_invoice_master_id:
-        #     if master.tax_invoice_status_id == 1:
-        #         is_editable = True
-        #     else:
-        #         is_editable = False
-            # return {
-            #     'invoice_response_data' : invoice_response_data,
-            #     'is_editable' : is_editable
-            # }
-
-        
+               
         return invoice_response_data
     # except Exception as e:
     #     print(f"Error: {e}")
     #     raise HTTPException(status_code=500, detail="An internal error occurred.")
+
+
 
 #---------------------------------------------------------------------------------------------------
 def save_tax_invoice(
