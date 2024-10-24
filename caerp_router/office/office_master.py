@@ -70,17 +70,16 @@ def save_appointment_details(
 
     try:
         for appointment in appointment_data:
-            db_office_master.save_appointment_visit_master(
+            result=db_office_master.save_appointment_visit_master(
                 db, id, appointment, user_id
             )
 
-        return {"success": True, "message": "Saved successfully"}
+        return {"success": True, "message": "Saved successfully","id": result["id"]}
     
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-# # get all
 
 #---------------------------------------------------------------------------------------------------------------
 @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
@@ -328,6 +327,37 @@ def save_services_goods_master(
 
 
 #-------------------------------------------------------------------------------------------------------
+# @router.post("/services/save_off_document_master/{id}")
+# def save_off_document_master(
+#     id: int,
+#     data: OffDocumentDataBase, 
+#     document_type: str = Query(enum=["DOCUMENT", "DATA"]),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         result = db_office_master.save_off_document_master(
+#             db, id, data, document_type
+#         )
+        
+#         # Return the message from the database function
+
+#         if result["success"]:
+          
+#             return {"success": True, "message":result["message"]}
+#         else:
+#             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
+
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 @router.post("/services/save_off_document_master/{id}")
 def save_off_document_master(
     id: int,
@@ -344,11 +374,13 @@ def save_off_document_master(
             db, id, data, document_type
         )
         
-        # Return the message from the database function
-
+        # Return the message and ID from the database function
         if result["success"]:
-          
-            return {"success": True, "message":result["message"]}
+            return {
+                "success": True, 
+                "message": result["message"],
+                "id": result.get("id")  # Include the saved/updated record ID
+            }
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
@@ -356,6 +388,9 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 
 #----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
@@ -1516,9 +1551,47 @@ def get_consultant_employees(
 
 #-------------------------------------------------------------------------------------------------------------
 
+# @router.post("/save_consultant_service_details/")
+# def save_consultant_service_details(
+#     data: List[ConsultantService],
+#     action_type: RecordActionType,
+#     consultant_id: Optional[int] = None,
+#     service_id: Optional[int] = None,
+#     id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Save or update consultant service details.
+#     To save give action_type =Update and Insert
+#     id:0
+#     consultant_id:1
+#     service_id:88
+#     these data should be given
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         for item in data:
+#             db_office_master.save_consultant_service_details_db(
+#                 item, consultant_id, service_id, user_id, action_type, db, id
+#             )
+        
+#         return {"success": True, "detail": "Saved successfully"}
+    
+#     except ValueError as ve:
+#         raise HTTPException(status_code=400, detail=str(ve))
+    
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
-    data: List[ConsultantService],
+    data: ConsultantService,
     action_type: RecordActionType,
     consultant_id: Optional[int] = None,
     service_id: Optional[int] = None,
@@ -1529,9 +1602,9 @@ def save_consultant_service_details(
     """
     Save or update consultant service details.
     To save give action_type =Update and Insert
-    id:0
-    consultant_id:1
-    service_id:88
+    id: 0
+    consultant_id: 1
+    service_id: 88
     these data should be given
     """
     if not token:
@@ -1541,12 +1614,11 @@ def save_consultant_service_details(
     user_id = auth_info.get("user_id")
     
     try:
-        for item in data:
-            db_office_master.save_consultant_service_details_db(
-                item, consultant_id, service_id, user_id, action_type, db, id
-            )
+        record_id = db_office_master.save_consultant_service_details_db(
+            data, consultant_id, service_id, user_id, action_type, db, id
+        )
         
-        return {"success": True, "detail": "Saved successfully"}
+        return {"success": True, "detail": "Saved successfully", "id": record_id}
     
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -1554,7 +1626,6 @@ def save_consultant_service_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-     
 #------------------------------------------------------------------------------------------------
 @router.get("/get_service_details_by_consultant/", response_model=ConsultantServiceDetailsListResponse)
 def get_service_details_by_consultant(
@@ -1613,6 +1684,35 @@ def get_service_details_by_consultant(
 
 #-------------------------------------------------------------------------------------------------------------
 
+# @router.post("/save_consultant_schedule/")
+# def save_consultant_schedule(
+#     schedules: List[ConsultantScheduleCreate], 
+#     action_type: RecordActionType,
+#     id: Optional[int] = None,
+#     consultant_id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         for data in schedules:
+#             db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
+#         return {"success": True, "detail": "Saved successfully"}
+    
+#     except Exception as e:
+#         print(f"Error in endpoint: {e}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+    
+#  #-------------------------------------------------------------------------------------------------------------   
+    
+
 @router.post("/save_consultant_schedule/")
 def save_consultant_schedule(
     schedules: List[ConsultantScheduleCreate], 
@@ -1629,19 +1729,20 @@ def save_consultant_schedule(
     user_id = auth_info.get("user_id")
     
     try:
-        for data in schedules:
-            db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        # Assuming only one schedule will be saved/updated at a time.
+        # If multiple schedules are needed, this can be adjusted to return a list of ids.
+        last_saved_id = None
         
-        return {"success": True, "detail": "Saved successfully"}
+        for data in schedules:
+            last_saved_id = db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
+        return {"success": True, "detail": "Saved successfully", "id": last_saved_id}
     
     except Exception as e:
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    
- #-------------------------------------------------------------------------------------------------------------   
-    
-        
+
 from fastapi import Query
 @router.get("/get_time_slots/", response_model=List[TimeSlotResponse])
 def get_time_slots(
@@ -1734,13 +1835,12 @@ def save_enquiry_details(
             db, id, enquiry_data, user_id
         )
 
-        return {"success": True, "message": "Saved successfully"}
+        return {"success": True, "message": "Saved successfully","id": result["id"]}
     
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 #-------------------------------------------------------------------------------------------------------------
 

@@ -321,7 +321,6 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
@@ -475,7 +474,8 @@ def save_appointment_visit_master(
         return {
             "appointment_master": appointment_master,
             "visit_master": existing_visit_master if existing_visit_master else new_visit_master,
-            "visit_details": visit_details_list  # Return the list of visit details
+            "visit_details": visit_details_list ,
+            "id": appointment_master.id 
         }
 
     except IntegrityError as e:
@@ -487,6 +487,8 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 #------------------------------------------------------------------------------------------------------------
 #///////////////////////////////////////////////////
@@ -1595,13 +1597,63 @@ def fetch_available_and_unavailable_dates_and_slots(
 
 #------------------------------------------------------------------------------------------------------------
 
+# def save_off_document_master(
+#     db: Session,
+#     id: int,
+#     data: OffDocumentDataMasterBase,
+#     type: str
+# ):
+    
+#     try:
+#         # Retrieve the document type record based on the provided type
+#         document_type_record = db.query(OffDocumentDataType).filter(
+#             OffDocumentDataType.document_data_type == type
+#         ).first()
+
+#         if not document_type_record:
+#             raise HTTPException(status_code=400, detail="Invalid document type")
+        
+#         document_data_type_id = document_type_record.id
+        
+#         if id == 0:
+#             document_master = OffDocumentDataMaster(
+#                 **data.model_dump(),
+#                 document_data_type_id=document_data_type_id
+#             )
+#             db.add(document_master)
+#             db.commit()
+#             db.refresh(document_master)
+#             return {"success": True, "message": "Saved successfully"}
+        
+#         else:
+#             document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
+#             if not document:
+#                 # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
+#                 return {"success": True, "message": "Document with the given ID was not found"}
+
+#             # Update the document type if needed
+#             if document.document_data_type_id != document_data_type_id:
+#                 document.document_data_type_id = document_data_type_id
+            
+#             # Update other fields
+#             for key, value in data.model_dump().items():
+#                 setattr(document, key, value)
+            
+#             db.commit()
+#             db.refresh(document)
+#             return {"success": True, "message": "Updated successfully"}
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 def save_off_document_master(
     db: Session,
     id: int,
     data: OffDocumentDataMasterBase,
     type: str
 ):
-    
     try:
         # Retrieve the document type record based on the provided type
         document_type_record = db.query(OffDocumentDataType).filter(
@@ -1614,6 +1666,7 @@ def save_off_document_master(
         document_data_type_id = document_type_record.id
         
         if id == 0:
+            # Create a new document
             document_master = OffDocumentDataMaster(
                 **data.model_dump(),
                 document_data_type_id=document_data_type_id
@@ -1621,13 +1674,18 @@ def save_off_document_master(
             db.add(document_master)
             db.commit()
             db.refresh(document_master)
-            return {"success": True, "message": "Saved successfully"}
+            # Return the success message with the new record ID
+            return {
+                "success": True, 
+                "message": "Saved successfully", 
+                "id": document_master.id
+            }
         
         else:
+            # Update an existing document
             document = db.query(OffDocumentDataMaster).filter(OffDocumentDataMaster.id == id).first()
             if not document:
-                # raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id {id} not found")
-                return {"success": True, "message": "Document with the given ID was not found"}
+                return {"success": False, "message": "Document with the given ID was not found"}
 
             # Update the document type if needed
             if document.document_data_type_id != document_data_type_id:
@@ -1639,13 +1697,17 @@ def save_off_document_master(
             
             db.commit()
             db.refresh(document)
-            return {"success": True, "message": "Updated successfully"}
+            # Return the success message with the updated record ID
+            return {
+                "success": True, 
+                "message": "Updated successfully", 
+                "id": document.id
+            }
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 
 #-----------Aparna----------------------------------------------------------------------------------------------
@@ -2401,6 +2463,80 @@ def _get_all_groups(db: Session) -> List[Service_Group]:
 
 #------------------------------------------------------------------------------------------------------------
 
+# def save_consultant_service_details_db(
+#     data: ConsultantService,
+#     consultant_id: Optional[int],
+#     service_id: Optional[int],
+#     user_id: int,
+#     action_type: RecordActionType,
+#     db: Session,
+#     id: Optional[int] = None
+# ):
+#     try:
+#         if action_type == RecordActionType.UPDATE_AND_INSERT:
+#             if consultant_id is None or service_id is None:
+#                 raise ValueError("consultant_id and service_id are required for UPDATE_AND_INSERT")
+            
+#             # Check if there is an existing active record
+#             existing_record = db.query(OffConsultantServiceDetails).filter(
+#                 OffConsultantServiceDetails.consultant_id == consultant_id,
+#                 OffConsultantServiceDetails.service_goods_master_id == service_id,
+#                 OffConsultantServiceDetails.effective_to_date.is_(None)
+#             ).first()
+            
+#             if existing_record:
+#                 # Update existing record's effective_to_date if it's None
+#                 existing_record.effective_to_date = data.effective_from_date - timedelta(days=1)
+#                 existing_record.modified_by = user_id
+#                 existing_record.modified_on = datetime.now()
+#                 db.commit()
+            
+#                 # Insert a new record
+#             new_record_data = {
+#                     "service_goods_master_id": service_id,
+#                     "consultation_fee": data.consultation_fee,
+#                     "slot_duration_in_minutes": data.slot_duration_in_minutes,
+#                     "effective_from_date": data.effective_from_date,
+#                     "effective_to_date": None, 
+#                     "consultant_id": consultant_id,
+#                     "created_by": user_id,
+#                     "created_on": datetime.now()
+#                 }
+
+#             new_record = OffConsultantServiceDetails(**new_record_data)
+#             db.add(new_record)
+#             db.commit()
+        
+#         elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+#             # Find the existing record by id
+#             existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
+            
+#             if existing_record:
+#                 # Log the existing record before update
+#                 print(f"Existing record before update: {existing_record.__dict__}")
+                
+#                 # Update existing record with new data
+#                 for key, value in data.model_dump().items():
+#                     if value is not None:
+#                         setattr(existing_record, key, value)
+                
+#                 existing_record.modified_by = user_id
+#                 existing_record.modified_on = datetime.now()
+#                 db.commit()
+
+#                 # Log the existing record after update
+#                 print(f"Existing record after update: {existing_record.__dict__}")
+
+#             else:
+#                 raise ValueError(f"Record with ID {id} not found.")
+        
+#         else:
+#             raise ValueError("Invalid action type or ID provided.")
+    
+#     except Exception as e:
+#         # db.rollback()
+#         raise e
+
 def save_consultant_service_details_db(
     data: ConsultantService,
     consultant_id: Optional[int],
@@ -2428,31 +2564,31 @@ def save_consultant_service_details_db(
                 existing_record.modified_by = user_id
                 existing_record.modified_on = datetime.now()
                 db.commit()
-            
-                # Insert a new record
+
+            # Insert a new record
             new_record_data = {
-                    "service_goods_master_id": service_id,
-                    "consultation_fee": data.consultation_fee,
-                    "slot_duration_in_minutes": data.slot_duration_in_minutes,
-                    "effective_from_date": data.effective_from_date,
-                    "effective_to_date": None, 
-                    "consultant_id": consultant_id,
-                    "created_by": user_id,
-                    "created_on": datetime.now()
-                }
+                "service_goods_master_id": service_id,
+                "consultation_fee": data.consultation_fee,
+                "slot_duration_in_minutes": data.slot_duration_in_minutes,
+                "effective_from_date": data.effective_from_date,
+                "effective_to_date": None,
+                "consultant_id": consultant_id,
+                "created_by": user_id,
+                "created_on": datetime.now()
+            }
 
             new_record = OffConsultantServiceDetails(**new_record_data)
             db.add(new_record)
             db.commit()
-        
+            db.refresh(new_record)  # Refresh to get the ID of the new record
+
+            return new_record.id  # Return the new record ID
+
         elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
             # Find the existing record by id
             existing_record = db.query(OffConsultantServiceDetails).filter(OffConsultantServiceDetails.id == id).first()
             
             if existing_record:
-                # Log the existing record before update
-                print(f"Existing record before update: {existing_record.__dict__}")
-                
                 # Update existing record with new data
                 for key, value in data.model_dump().items():
                     if value is not None:
@@ -2461,9 +2597,8 @@ def save_consultant_service_details_db(
                 existing_record.modified_by = user_id
                 existing_record.modified_on = datetime.now()
                 db.commit()
-
-                # Log the existing record after update
-                print(f"Existing record after update: {existing_record.__dict__}")
+                
+                return existing_record.id  # Return the updated record ID
 
             else:
                 raise ValueError(f"Record with ID {id} not found.")
@@ -2472,183 +2607,13 @@ def save_consultant_service_details_db(
             raise ValueError("Invalid action type or ID provided.")
     
     except Exception as e:
-        # db.rollback()
+        db.rollback()
         raise e
-
 
 
 
 #------------------------------------------------------------------------------------------------------------
 # from datetime import timedelta
-# def save_consultant_schedule(
-#     schedule_data: ConsultantScheduleCreate,
-#     consultant_id: Optional[int],
-#     user_id: int,
-#     id: Optional[int],
-#     action_type: RecordActionType,
-#     db: Session
-# ):
-#     try:
-#         schedule_dict = schedule_data.model_dump()
-
-#         if schedule_data.is_normal_schedule == "no":
-#             if not schedule_data.consultation_date:
-#                 raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
-            
-#             # Remove effective_from_date if present
-#             schedule_dict.pop("effective_from_date", None)
-            
-#             # Assign day_of_week_id using SQL query
-#             day_of_week_query = f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')"
-           
-#             print(" day_of_week_query", day_of_week_query)
-#             day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
-#             print(" Day of Week ID", day_of_week_id)
-            
-            
-#             # Assign day_of_week_id to schedule_dict
-#             schedule_dict['day_of_week_id'] = day_of_week_id
-        
-#         if action_type == RecordActionType.UPDATE_AND_INSERT:
-#             if consultant_id is None:
-#                 raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
-               
-            
-#             schedule_dict['consultant_id'] = consultant_id
-
-#             # Query existing active schedule
-#             existing_schedule = db.query(OffConsultantSchedule).filter(
-#                 OffConsultantSchedule.consultant_id == consultant_id,
-#                 OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
-#                 OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
-#                 OffConsultantSchedule.effective_to_date.is_(None)
-#             ).first()
-#             print("Ecccccccccc",existing_schedule)
-
-#             if existing_schedule:
-#                 # print("haiii")
-#                 # Calculate new effective_to_date
-                
-
-#                 new_effective_to_date = schedule_dict['effective_from_date'] - timedelta(days=1)
-
-#                 # Update existing schedule
-#                 existing_schedule.effective_to_date = new_effective_to_date
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
-#                 db.commit()
-
-#             # Create new schedule
-#             new_schedule = OffConsultantSchedule(**schedule_dict, created_by=user_id, created_on=datetime.now())
-#             db.add(new_schedule)
-#             db.commit()
-#             return True
-
-#         elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-#             # Handle UPDATE_ONLY case
-#             existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
-#             if existing_schedule:
-#                 for key, value in schedule_dict.items():
-#                     setattr(existing_schedule, key, value)
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
-#                 db.commit()
-#                 return True
-#             else:
-#                 raise ValueError(f"Schedule with ID {id} not found.")
-        
-#         else:
-#             raise ValueError("Invalid action type or ID provided.")
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=400, detail=str(e))
-
-
-# def save_consultant_schedule(
-#     schedule_data: ConsultantScheduleCreate,
-#     consultant_id: Optional[int],
-#     user_id: int,
-#     id: Optional[int],
-#     action_type: RecordActionType,
-#     db: Session
-# ):
-#     try:
-#         # Convert schedule_data to dictionary format for processing
-#         schedule_dict = schedule_data.model_dump()
-#         print("schedule_dict",schedule_dict)
-
-#         # Handle special schedules (`is_normal_schedule == "no"`)
-#         if schedule_data.is_normal_schedule == "no":
-#             if not schedule_data.consultation_date:
-#                 raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
-            
-#             # Remove `effective_from_date` as it's not needed in special schedules
-#             schedule_dict.pop("effective_from_date", None)
-
-#             # Assign `day_of_week_id` using SQL query based on `consultation_date`
-#             day_of_week_query = f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')"
-#             day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
-#             schedule_dict['day_of_week_id'] = day_of_week_id
-
-#             # Directly insert the new schedule for the consultant
-#             new_schedule = OffConsultantSchedule(**schedule_dict, consultant_id=consultant_id, created_by=user_id, created_on=datetime.now())
-#             db.add(new_schedule)
-#             db.commit()
-#             return True
-
-#         elif schedule_data.is_normal_schedule == "yes" and action_type == RecordActionType.UPDATE_AND_INSERT:
-#             if consultant_id is None:
-#                 raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
-
-#             # Ensure `effective_from_date` is provided
-#             effective_from_date = schedule_dict.get('effective_from_date')
-#             if not effective_from_date:
-#                 raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
-
-#             # Query for the existing schedule (active record)
-#             existing_schedule = db.query(OffConsultantSchedule).filter(
-#                 OffConsultantSchedule.consultant_id == consultant_id,
-#                 OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
-#                 OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
-#                 OffConsultantSchedule.effective_to_date.is_(None)
-#             ).first()
-
-#             # If an active schedule exists, update its `effective_to_date`
-#             if existing_schedule:
-#                 new_effective_to_date = effective_from_date - timedelta(days=1)
-#                 print("new_effective_to_date",new_effective_to_date)
-#                 existing_schedule.effective_to_date = new_effective_to_date
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
-#                 db.commit()  # Commit the update for the existing schedule
-
-#             # Insert the new schedule
-#             new_schedule = OffConsultantSchedule(**schedule_dict, consultant_id=consultant_id, created_by=user_id, created_on=datetime.now())
-#             db.add(new_schedule)
-#             db.commit()
-#             return True
-
-#         elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-#             # Handle the update of an existing schedule based on the provided ID
-#             existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
-#             if existing_schedule:
-#                 for key, value in schedule_dict.items():
-#                     setattr(existing_schedule, key, value)
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
-#                 db.commit()
-#                 return True
-#             else:
-#                 raise ValueError(f"Schedule with ID {id} not found.")
-
-#         else:
-#             raise ValueError("Invalid action type or ID provided.")
-
-#     except Exception as e:
-#         db.rollback()  # Rollback changes in case of an error
-#         raise HTTPException(status_code=400, detail=str(e))
-
 
 # def save_consultant_schedule(
 #     schedule_data: ConsultantScheduleCreate,
@@ -2667,20 +2632,21 @@ def save_consultant_service_details_db(
 #         if schedule_data.is_normal_schedule == "no":
 #             if not schedule_data.consultation_date:
 #                 raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
-
+            
 #             # Remove `effective_from_date` as it's not needed in special schedules
 #             schedule_dict.pop("effective_from_date", None)
 
 #             # Assign `day_of_week_id` using SQL query based on `consultation_date`
+#             # day_of_week_query = f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')"
 #             day_of_week_query = text(f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')")
 #             day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
 #             schedule_dict['day_of_week_id'] = day_of_week_id
 
-#             # Handle `INSERT_ONLY` action type
+#             # INSERT ONLY logic
 #             if action_type == RecordActionType.INSERT_ONLY:
 #                 if consultant_id is None:
 #                     raise ValueError("consultant_id is required for INSERT_ONLY")
-
+                
 #                 # Check if the record already exists to avoid duplicates
 #                 existing_schedule = db.query(OffConsultantSchedule).filter(
 #                     OffConsultantSchedule.consultant_id == consultant_id,
@@ -2702,12 +2668,8 @@ def save_consultant_service_details_db(
 #                 db.commit()
 #                 return True
 
-#             # Handle `UPDATE_ONLY` action type
-#             elif action_type == RecordActionType.UPDATE_ONLY:
-              
-#                 if id is None:
-#                     raise ValueError("ID is required for UPDATE_ONLY")
-                
+#             # UPDATE ONLY logic
+#             elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
 #                 # Fetch the existing schedule based on the provided ID
 #                 existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
 
@@ -2729,60 +2691,64 @@ def save_consultant_service_details_db(
 #             else:
 #                 raise ValueError("Invalid action type for special schedules (is_normal_schedule = 'no').")
 
-#         # Handle normal schedules (`is_normal_schedule == "yes"`) and `UPDATE_AND_INSERT`
-#         elif schedule_data.is_normal_schedule == "yes" and action_type == RecordActionType.UPDATE_AND_INSERT:
-#             if consultant_id is None:
-#                 raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+#         # Handle normal schedules (`is_normal_schedule == "yes"`)
+#         elif schedule_data.is_normal_schedule == "yes":
+#             if action_type == RecordActionType.UPDATE_AND_INSERT:
+#                 if consultant_id is None:
+#                     raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
 
-#             # Ensure `effective_from_date` is provided
-#             effective_from_date = schedule_dict.get('effective_from_date')
-#             if not effective_from_date:
-#                 raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
+#                 # Ensure `effective_from_date` is provided
+#                 effective_from_date = schedule_dict.get('effective_from_date')
+#                 if not effective_from_date:
+#                     raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
 
-#             # Query for the existing schedule (active record)
-#             existing_schedule = db.query(OffConsultantSchedule).filter(
-#                 OffConsultantSchedule.consultant_id == consultant_id,
-#                 OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
-#                 OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
-#                 OffConsultantSchedule.effective_to_date.is_(None)
-#             ).first()
+#                 # Query for the existing schedule (active record)
+#                 existing_schedule = db.query(OffConsultantSchedule).filter(
+#                     OffConsultantSchedule.consultant_id == consultant_id,
+#                     OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
+#                     OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
+#                     OffConsultantSchedule.effective_to_date.is_(None)
+#                 ).first()
 
-#             # If an active schedule exists, update its `effective_to_date`
-#             if existing_schedule:
-#                 new_effective_to_date = effective_from_date - timedelta(days=1)
-#                 existing_schedule.effective_to_date = new_effective_to_date
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
-#                 db.commit()  # Commit the update for the existing schedule
+#                 # If an active schedule exists, update its `effective_to_date`
+#                 if existing_schedule:
+#                     new_effective_to_date = effective_from_date - timedelta(days=1)
+#                     print("new_effective_to_date", new_effective_to_date)
+#                     existing_schedule.effective_to_date = new_effective_to_date
+#                     existing_schedule.modified_by = user_id
+#                     existing_schedule.modified_on = datetime.now()
+#                     db.commit()  # Commit the update for the existing schedule
 
-#             # Insert the new schedule
-#             new_schedule = OffConsultantSchedule(
-#                 **schedule_dict, 
-#                 consultant_id=consultant_id, 
-#                 created_by=user_id, 
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_schedule)
-#             db.commit()
-#             return True
-        
-#         elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-#             # Handle the update of an existing schedule based on the provided ID
-#             existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
-#             if existing_schedule:
-#                 for key, value in schedule_dict.items():
-#                     setattr(existing_schedule, key, value)
-#                 existing_schedule.modified_by = user_id
-#                 existing_schedule.modified_on = datetime.now()
+#                 # Insert the new schedule
+#                 new_schedule = OffConsultantSchedule(
+#                     **schedule_dict, 
+#                     consultant_id=consultant_id, 
+#                     created_by=user_id, 
+#                     created_on=datetime.now()
+#                 )
+#                 db.add(new_schedule)
 #                 db.commit()
 #                 return True
-#             else:
-#                 raise ValueError(f"Schedule with ID {id} not found.")
-        
 
+#             # UPDATE ONLY logic for normal schedule
+#             elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+#                 # Handle the update of an existing schedule based on the provided ID
+#                 existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+#                 if existing_schedule:
+#                     for key, value in schedule_dict.items():
+#                         setattr(existing_schedule, key, value)
+#                     existing_schedule.modified_by = user_id
+#                     existing_schedule.modified_on = datetime.now()
+#                     db.commit()
+#                     return True
+#                 else:
+#                     raise ValueError(f"Schedule with ID {id} not found.")
+
+#             else:
+#                 raise ValueError("Invalid action type for normal schedules (is_normal_schedule = 'yes').")
 
 #         else:
-#             raise ValueError("Invalid action type or ID provided.")
+#             raise ValueError("Invalid schedule type or action type provided.")
 
 #     except Exception as e:
 #         db.rollback()  # Rollback changes in case of an error
@@ -2796,32 +2762,25 @@ def save_consultant_schedule(
     id: Optional[int],
     action_type: RecordActionType,
     db: Session
-):
+) -> int:  # Ensure the function returns an int (the ID of the saved/updated record)
     try:
-        # Convert schedule_data to dictionary format for processing
         schedule_dict = schedule_data.model_dump()
-        print("schedule_dict", schedule_dict)
 
-        # Handle special schedules (`is_normal_schedule == "no"`)
+        # Handle special schedules (is_normal_schedule == "no")
         if schedule_data.is_normal_schedule == "no":
             if not schedule_data.consultation_date:
                 raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
-            
-            # Remove `effective_from_date` as it's not needed in special schedules
+
             schedule_dict.pop("effective_from_date", None)
 
-            # Assign `day_of_week_id` using SQL query based on `consultation_date`
-            # day_of_week_query = f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')"
             day_of_week_query = text(f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')")
             day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
             schedule_dict['day_of_week_id'] = day_of_week_id
 
-            # INSERT ONLY logic
             if action_type == RecordActionType.INSERT_ONLY:
                 if consultant_id is None:
                     raise ValueError("consultant_id is required for INSERT_ONLY")
-                
-                # Check if the record already exists to avoid duplicates
+
                 existing_schedule = db.query(OffConsultantSchedule).filter(
                     OffConsultantSchedule.consultant_id == consultant_id,
                     OffConsultantSchedule.consultation_date == schedule_data.consultation_date,
@@ -2831,7 +2790,6 @@ def save_consultant_schedule(
                 if existing_schedule:
                     raise ValueError("A schedule for this consultant on this date already exists.")
 
-                # Insert the new schedule
                 new_schedule = OffConsultantSchedule(
                     **schedule_dict, 
                     consultant_id=consultant_id, 
@@ -2840,43 +2798,32 @@ def save_consultant_schedule(
                 )
                 db.add(new_schedule)
                 db.commit()
-                return True
+                db.refresh(new_schedule)
+                return new_schedule.id  # Return the new schedule ID
 
-            # UPDATE ONLY logic
             elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-                # Fetch the existing schedule based on the provided ID
                 existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
 
                 if not existing_schedule:
                     raise ValueError(f"Schedule with ID {id} not found.")
 
-                # Update only the fields that are provided in the schedule_dict
                 for key, value in schedule_dict.items():
                     setattr(existing_schedule, key, value)
 
-                # Update the modification metadata
                 existing_schedule.modified_by = user_id
                 existing_schedule.modified_on = datetime.now()
-                
-                # Commit the update to the existing schedule
                 db.commit()
-                return True
+                return existing_schedule.id  # Return the updated schedule ID
 
-            else:
-                raise ValueError("Invalid action type for special schedules (is_normal_schedule = 'no').")
-
-        # Handle normal schedules (`is_normal_schedule == "yes"`)
         elif schedule_data.is_normal_schedule == "yes":
             if action_type == RecordActionType.UPDATE_AND_INSERT:
                 if consultant_id is None:
                     raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
 
-                # Ensure `effective_from_date` is provided
                 effective_from_date = schedule_dict.get('effective_from_date')
                 if not effective_from_date:
                     raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
 
-                # Query for the existing schedule (active record)
                 existing_schedule = db.query(OffConsultantSchedule).filter(
                     OffConsultantSchedule.consultant_id == consultant_id,
                     OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
@@ -2884,16 +2831,13 @@ def save_consultant_schedule(
                     OffConsultantSchedule.effective_to_date.is_(None)
                 ).first()
 
-                # If an active schedule exists, update its `effective_to_date`
                 if existing_schedule:
                     new_effective_to_date = effective_from_date - timedelta(days=1)
-                    print("new_effective_to_date", new_effective_to_date)
                     existing_schedule.effective_to_date = new_effective_to_date
                     existing_schedule.modified_by = user_id
                     existing_schedule.modified_on = datetime.now()
-                    db.commit()  # Commit the update for the existing schedule
+                    db.commit()
 
-                # Insert the new schedule
                 new_schedule = OffConsultantSchedule(
                     **schedule_dict, 
                     consultant_id=consultant_id, 
@@ -2902,11 +2846,10 @@ def save_consultant_schedule(
                 )
                 db.add(new_schedule)
                 db.commit()
-                return True
+                db.refresh(new_schedule)
+                return new_schedule.id  # Return the new schedule ID
 
-            # UPDATE ONLY logic for normal schedule
             elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
-                # Handle the update of an existing schedule based on the provided ID
                 existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
                 if existing_schedule:
                     for key, value in schedule_dict.items():
@@ -2914,20 +2857,11 @@ def save_consultant_schedule(
                     existing_schedule.modified_by = user_id
                     existing_schedule.modified_on = datetime.now()
                     db.commit()
-                    return True
-                else:
-                    raise ValueError(f"Schedule with ID {id} not found.")
-
-            else:
-                raise ValueError("Invalid action type for normal schedules (is_normal_schedule = 'yes').")
-
-        else:
-            raise ValueError("Invalid schedule type or action type provided.")
+                    return existing_schedule.id  # Return the updated schedule ID
 
     except Exception as e:
-        db.rollback()  # Rollback changes in case of an error
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-
 
 
 #-------------- TASK #------------------------------------------------------------------------------------------------------------
@@ -3372,8 +3306,7 @@ def save_enquiry_master(
                 else:
                     # Check for existing detail or insert new one
                     existing_detail = db.query(OffEnquiryDetails).filter_by(
-                        enquiry_master_id=enquiry_master_id,
-                        enquiry_date=detail_data_dict.get("enquiry_date")
+                        enquiry_master_id=enquiry_master_id
                     ).first()
 
                     if existing_detail:
@@ -3406,7 +3339,8 @@ def save_enquiry_master(
 
         return {
             "enquiry_master": enquiry_master_schema,
-            "enquiry_details": enquiry_details_schema
+            "enquiry_details": enquiry_details_schema,
+            "id": enquiry_master.id
         }
 
     except IntegrityError as e:
@@ -3419,8 +3353,6 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 #-------------------------------------------------------------------------------------------------------------
 
