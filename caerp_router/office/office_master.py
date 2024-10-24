@@ -162,46 +162,113 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     return {"info": info}
 
 #-------------get all-------------------------------------------------------------------------
-@router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
-def get_and_search_appointments(
-    consultant_id: Optional[str] = "ALL",
-    service_id: Optional[str] = "ALL",
-    status_id: Optional[str] = "ALL",
+
+def get_appointments(
+    db: Session,
+    search_value: Union[str, int] = "ALL",
+    id: Optional[int] = 0,
+    consultant_id: Optional[Union[int, str]] = "ALL",
+    service_id: Optional[Union[int, str]] = "ALL",
+    status_id: Optional[Union[int, str]] = "ALL",
     from_date: Optional[date] = None,
     to_date: Optional[date] = None,
-    mobile_number: Optional[str] = None,
-    id: Optional[int] = 0,
-    search_value: Union[str, int] = "ALL",
-    db: Session = Depends(get_db)
-):
-    """
-    Retrieve Appointment based on Parameters.
+    mobile_number: Optional[str] = None
+) -> List[ResponseSchema]:
+    try:
+        # Prepare search conditions
+        search_conditions = []
 
-    Parameters:
-    
-    - **consultant_id**: consultant ID.
-    - **service_id**: service ID.
-    - **status_id**: status ID.
-    - **effective_from_date**: Effective from date (default: today's date).
-    - **effective_to_date**: Effective to date (default: today's date).
-    - **search_value**: Search value Can be 'mobile_number', 'email_id', or 'ALL'.
-    - **mobile_number**: Search with 'mobile_number' to get the specific details.
+        # Mobile number filter
+        if mobile_number:
+            search_conditions.append(OffAppointmentVisitMasterView.mobile_number == mobile_number)
+        else:
+            # Date range filter
+            if from_date and to_date:
+                search_conditions.append(OffAppointmentVisitMasterView.appointment_date.between(from_date, to_date))
+            if id != 0:
+                search_conditions.append(OffAppointmentVisitMasterView.appointment_master_id == id)
+            if consultant_id != "ALL":
+                search_conditions.append(OffAppointmentVisitMasterView.consultant_id == consultant_id)
+            if status_id != "ALL":
+                search_conditions.append(OffAppointmentVisitMasterView.appointment_status_id == status_id)
+            if search_value != "ALL":
+                search_conditions.append(
+                    or_(
+                        OffAppointmentVisitMasterView.mobile_number.like(f"%{search_value}%"),
+                        OffAppointmentVisitMasterView.email_id.like(f"%{search_value}%")
+                    )
+                )
 
-    """
-    result = db_office_master.get_appointments(
-        db,
-        consultant_id=consultant_id,
-        service_id=service_id,
-        status_id=status_id,
-        from_date=from_date,
-        to_date=to_date,
-        mobile_number=mobile_number,
-        id=id,
-        search_value=search_value
-    )
-    return {"Appointments": result}
+        # Main query to fetch visit details along with their associated appointment masters
+        main_service_query = db.query(
+            OffAppointmentVisitMasterView,
+            OffAppointmentVisitDetailsView
+        ).join(
+            OffAppointmentVisitDetailsView,
+            OffAppointmentVisitDetailsView.visit_master_id == OffAppointmentVisitMasterView.visit_master_id
+        ).filter(
+            *search_conditions,
+            OffAppointmentVisitDetailsView.is_deleted == "no"
+        )
 
+        if service_id != "ALL":
+            main_service_query = main_service_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
 
+        # Order by appointment date (descending) and full name (ascending)
+        main_service_query = main_service_query.order_by(
+            OffAppointmentVisitMasterView.appointment_date.desc(),
+            OffAppointmentVisitMasterView.full_name.asc()
+        )
+
+        # Execute the query to fetch all relevant results
+        main_service_results = main_service_query.all()
+
+        # Organize appointments
+        appointments = {}
+        
+        for appointment_master, visit_details in main_service_results:
+            # Extract data from appointment master
+            appointment_master_data = {
+                column.name: getattr(appointment_master, column.name)
+                for column in appointment_master.__table__.columns
+            }
+            appointment_master_schema = OffAppointmentMasterViewSchema(**appointment_master_data)
+
+            # Create the visit master schema from visit details
+            visit_master_data = {
+                column.name: getattr(visit_details, column.name)
+                for column in visit_details.__table__.columns
+            }
+            visit_master_schema = OffAppointmentVisitMasterViewSchema(**visit_master_data)
+            is_editable = False
+            if visit_master_schema.appointment_status_id ==1 : 
+                is_editable = True
+            # Create visit detail schema using the OffAppointmentVisitDetailsViewSchema
+            visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
+                visit_master_id=visit_details.visit_master_id, 
+                visit_details_id=visit_details.visit_details_id,
+                service_id=visit_details.service_id,
+                service_goods_name=visit_details.service_goods_name,
+                is_main_service=visit_details.is_main_service  # Ensure is_main_service is provided
+            )
+
+            # Group by visit master ID
+            if visit_master_schema.visit_master_id not in appointments:
+                appointments[visit_master_schema.visit_master_id] = ResponseSchema(
+                    appointment_master=appointment_master_schema,
+                    visit_master=visit_master_schema,
+                    visit_details=[visit_detail_schema] , # Initialize visit details list
+                    is_editable = is_editable
+                )
+            else:
+                appointments[visit_master_schema.visit_master_id].visit_details.append(visit_detail_schema)
+
+        return list(appointments.values())  # Return the list of grouped appointments
+
+    except HTTPException as http_error:
+        raise http_error
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #-------------------------swathy-------------------------------------------------------------------------------
 
