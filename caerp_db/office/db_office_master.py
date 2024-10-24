@@ -606,7 +606,7 @@ def reschedule_or_cancel_appointment(db: Session,
     if action == AppointmentStatusConstants.RESCHEDULED:
         status_name = "NEW"
     elif action == AppointmentStatusConstants.CANCELED:
-        status_name = "CANCELED"
+        status_name = "CANCELLED"
     else:
         raise HTTPException(status_code=400, detail="Invalid action")
     
@@ -3351,6 +3351,7 @@ def get_all_consultation_task_master_details(
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=str(e))
 
+
 def save_enquiry_master(
     db: Session,
     enquiry_master_id: int,
@@ -3416,8 +3417,8 @@ def save_enquiry_master(
                     else:
                         return {"detail": "Enquiry details not found"}
 
-        # Case 3: Insert new details to an existing enquiry (INSERT_ONLY)
-        elif enquiry_master_id > 0 and action_type == RecordActionType.INSERT_ONLY:
+        # Case 3: Insert new details to an existing enquiry UPDATE_AND_INSERT
+        elif enquiry_master_id > 0 and action_type == RecordActionType.UPDATE_AND_INSERT:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
                 return {"detail": "Enquiry master not found"}
@@ -3458,6 +3459,8 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
 #-------------------------------------------------------------------------------------------------------------
 
 def get_enquiries(
