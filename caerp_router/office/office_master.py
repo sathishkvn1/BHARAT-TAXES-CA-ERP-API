@@ -40,6 +40,7 @@ UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 #--------------------save_appointment_details-------------------------------------------------------
+
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
@@ -74,7 +75,8 @@ def save_appointment_details(
                 db, id, appointment, user_id
             )
 
-        return {"success": True, "message": "Saved successfully","id": result["id"]}
+        return {"success": True, "message": "Saved successfully","id": result["id"],"visit_master_id": result["visit_master_id"], "consultant_id":result["consultant_id"]}
+           
     
     except HTTPException as e:
         raise e
@@ -136,6 +138,9 @@ async def reschedule_or_cancel_appointment(
    
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
+
+
+
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
                                

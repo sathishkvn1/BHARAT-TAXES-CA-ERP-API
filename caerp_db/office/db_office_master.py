@@ -475,7 +475,10 @@ def save_appointment_visit_master(
             "appointment_master": appointment_master,
             "visit_master": existing_visit_master if existing_visit_master else new_visit_master,
             "visit_details": visit_details_list ,
-            "id": appointment_master.id 
+            "id": appointment_master.id,
+            "visit_master_id": visit_master.id,
+            "consultant_id": visit_master.consultant_id,
+              # Return the list of visit details
         }
 
     except IntegrityError as e:
@@ -487,6 +490,7 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
