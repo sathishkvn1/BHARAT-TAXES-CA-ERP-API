@@ -40,29 +40,13 @@ UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 #--------------------save_appointment_details-------------------------------------------------------
-
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
     appointment_data: List[OffAppointmentDetails], 
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-    
 ):
-    """
-   - Save or create appointment details for a specific ID.
-    - **data**: Data for the visit master, provided as parameters of type OffAppointmentDetails.
-    - **id**: An optional integer parameter with a default value of 0, indicating the appointment_details's identifier.
-    - **action_type (RecordActionType)**: The action type to be performed, indicating whether to insert or update the appointment details.
-
-    - If appointment_master id is 0, it indicates the creation of a new appointment_details.
-    - Returns: The newly created appointment_details as the response.
-    - If appointment_master id is not 0, it indicates the update of an existing appointment_details.
-    - Returns: The updated appointment_details as the response.
-    - If action_type is INSERT_ONLY, the id parameter should be 0.
-    - If action_type is UPDATE_ONLY, the id parameter should be greater than 0.
-    """
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -71,17 +55,23 @@ def save_appointment_details(
 
     try:
         for appointment in appointment_data:
-            result=db_office_master.save_appointment_visit_master(
+            result = db_office_master.save_appointment_visit_master(
                 db, id, appointment, user_id
             )
 
-        return {"success": True, "message": "Saved successfully","id": result["id"],"visit_master_id": result["visit_master_id"], "consultant_id":result["consultant_id"]}
-           
+        return {
+            "success": True,
+            "message": "Saved successfully",
+            "id": result["id"],
+            "visit_master_id": result.get("visit_master_id", None),
+            "consultant_id": result.get("consultant_id", None)
+        }
     
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 
 #---------------------------------------------------------------------------------------------------------------
 @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
@@ -1746,6 +1736,45 @@ def save_consultant_schedule(
     except Exception as e:
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+# @router.post("/save_consultant_schedule/")
+# def save_consultant_schedule(
+#     schedules: List[ConsultantScheduleCreate], 
+#     action_type: RecordActionType,
+#     id: Optional[int] = None,
+#     consultant_id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     saved_schedules = []
+
+#     try:
+#         # Iterate over each schedule and save/update it.
+#         for data in schedules:
+#             saved_id, effective_from_date = db_office_master.save_consultant_schedule(
+#                 data, 
+#                 consultant_id, 
+#                 user_id, 
+#                 id, 
+#                 action_type, 
+#                 db
+#             )
+#             saved_schedules.append({
+#                 "id": saved_id,
+#                 "effective_from_date": effective_from_date  # Return the `effective_from_date` if needed
+#             })
+        
+#         return {"success": True, "detail": "Saved successfully", "schedules": saved_schedules}
+    
+#     except Exception as e:
+#         print(f"Error in endpoint: {e}")
+#         raise HTTPException(status_code=400, detail=str(e))
 
 
 from fastapi import Query
