@@ -1809,39 +1809,71 @@ def get_time_slots(
 #------------------------------------------------------------------------------------------------
 ###################ENQUIRY####################################################
 #------------------------------------------------------------------------------------------------
+# @router.post("/enquiry/save_enquiry_details/{id}")
+# def save_enquiry_details(
+#     id: int,
+#     enquiry_data: OffEnquiryResponseSchema,
+    
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#    - Save or create enquiry details for a specific ID.
+#     - **enquiry_data**: Data for the enquiry master and details, provided as parameters of type OffEnquiryResponseSchema.
+#     - **id**: An optional integer parameter with a default value of 0, indicating the enquiry master's identifier.
+    
+#     - If enquiry_master id is 0, it indicates the creation of a new enquiry.
+#     - Returns: The newly created enquiry details as the response.
+#     - If enquiry_master id is not 0, it indicates the update of an existing enquiry.
+#     - Returns: The updated enquiry details as the response.
+    
+#     """
+
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         result = db_office_master.save_enquiry_master(
+#             db, id, enquiry_data, user_id
+#         )
+
+#         return {"success": True, "message": "Saved successfully","id": result["id"]}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+
 @router.post("/enquiry/save_enquiry_details/{id}")
 def save_enquiry_details(
     id: int,
+    action_type: RecordActionType,
     enquiry_data: OffEnquiryResponseSchema,
-    
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-   - Save or create enquiry details for a specific ID.
-    - **enquiry_data**: Data for the enquiry master and details, provided as parameters of type OffEnquiryResponseSchema.
-    - **id**: An optional integer parameter with a default value of 0, indicating the enquiry master's identifier.
-    
-    - If enquiry_master id is 0, it indicates the creation of a new enquiry.
-    - Returns: The newly created enquiry details as the response.
-    - If enquiry_master id is not 0, it indicates the update of an existing enquiry.
-    - Returns: The updated enquiry details as the response.
-    
+    Save or create enquiry details based on action type and ID.
     """
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
+
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
     try:
         result = db_office_master.save_enquiry_master(
-            db, id, enquiry_data, user_id
+            db, id, enquiry_data, user_id, action_type
         )
 
-        return {"success": True, "message": "Saved successfully","id": result["id"]}
-    
+        return {"success": True, "message": "Saved successfully", "id": result["id"]}
+
     except HTTPException as e:
         raise e
     except Exception as e:

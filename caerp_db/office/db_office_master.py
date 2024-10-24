@@ -3235,6 +3235,9 @@ def get_all_consultation_task_master_details(
 #     enquiry_data: OffEnquiryResponseSchema,
 #     user_id: int
 # ) -> Dict[str, Union[Dict, List[Dict]]]:
+#     financial_year_id = 1
+#     customer_id = 1
+    
 #     try:
 #         # Begin the transaction
 #         db.begin()
@@ -3252,7 +3255,8 @@ def get_all_consultation_task_master_details(
 #             # Insert related enquiry details
 #             enquiry_details_list = []
 #             for detail_data in enquiry_data.enquiry_details:
-#                 enquiry_number = generate_book_number('ENQUIRY', db)
+    
+#                 enquiry_number = generate_book_number('ENQUIRY',financial_year_id,customer_id, db)
 #                 enquiry_detail = OffEnquiryDetails(
 #                     enquiry_master_id=enquiry_master.id,
 #                     enquiry_number=enquiry_number,
@@ -3299,8 +3303,7 @@ def get_all_consultation_task_master_details(
 #                 else:
 #                     # Check for existing detail or insert new one
 #                     existing_detail = db.query(OffEnquiryDetails).filter_by(
-#                         enquiry_master_id=enquiry_master_id,
-#                         enquiry_date=detail_data_dict.get("enquiry_date")
+#                         enquiry_master_id=enquiry_master_id
 #                     ).first()
 
 #                     if existing_detail:
@@ -3313,7 +3316,7 @@ def get_all_consultation_task_master_details(
 #                         existing_detail.modified_on = datetime.now()
 #                         enquiry_details_list.append(existing_detail)
 #                     else:
-#                         enquiry_number = generate_book_number('ENQUIRY', db)
+#                         enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id,db)
 #                         new_enquiry_detail = OffEnquiryDetails(
 #                             enquiry_master_id=enquiry_master.id,
 #                             enquiry_number=enquiry_number,
@@ -3333,7 +3336,8 @@ def get_all_consultation_task_master_details(
 
 #         return {
 #             "enquiry_master": enquiry_master_schema,
-#             "enquiry_details": enquiry_details_schema
+#             "enquiry_details": enquiry_details_schema,
+#             "id": enquiry_master.id
 #         }
 
 #     except IntegrityError as e:
@@ -3351,17 +3355,18 @@ def save_enquiry_master(
     db: Session,
     enquiry_master_id: int,
     enquiry_data: OffEnquiryResponseSchema,
-    user_id: int
+    user_id: int,
+    action_type: RecordActionType
 ) -> Dict[str, Union[Dict, List[Dict]]]:
     financial_year_id = 1
     customer_id = 1
-    
+
     try:
         # Begin the transaction
         db.begin()
 
-        if enquiry_master_id == 0:
-            # Insert new enquiry master record
+        # Case 1: Insert new enquiry master and details (INSERT_ONLY)
+        if enquiry_master_id == 0 and action_type == RecordActionType.INSERT_ONLY:
             enquiry_master = OffEnquiryMaster(
                 created_by=user_id,
                 created_on=datetime.now(),
@@ -3370,11 +3375,9 @@ def save_enquiry_master(
             db.add(enquiry_master)
             db.flush()  # Ensure the ID is generated
 
-            # Insert related enquiry details
             enquiry_details_list = []
             for detail_data in enquiry_data.enquiry_details:
-    
-                enquiry_number = generate_book_number('ENQUIRY',financial_year_id,customer_id, db)
+                enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
                 enquiry_detail = OffEnquiryDetails(
                     enquiry_master_id=enquiry_master.id,
                     enquiry_number=enquiry_number,
@@ -3385,65 +3388,52 @@ def save_enquiry_master(
                 db.add(enquiry_detail)
                 enquiry_details_list.append(enquiry_detail)
 
-        elif enquiry_master_id > 0:
-            # Fetch existing enquiry master record
+        # Case 2: Update existing enquiry master and details (UPDATE_ONLY)
+        elif enquiry_master_id > 0 and action_type == RecordActionType.UPDATE_ONLY:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
-                return {"detail":"Enquiry master not found"}
+                return {"detail": "Enquiry master not found"}
 
-            # Update enquiry master
             enquiry_master_data = enquiry_data.enquiry_master.model_dump(exclude_unset=True)
             for field, value in enquiry_master_data.items():
                 setattr(enquiry_master, field, value)
             enquiry_master.modified_by = user_id
             enquiry_master.modified_on = datetime.now()
 
-            # Process enquiry details
             enquiry_details_list = []
             for detail_data in enquiry_data.enquiry_details:
                 detail_data_dict = detail_data.model_dump(exclude_unset=True)
                 detail_id = detail_data_dict.get("id")
 
                 if detail_id:
-                    # Update existing detail if ID is provided
                     existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
                     if existing_detail:
                         for key, value in detail_data_dict.items():
-                            if key == "remarks" and existing_detail.remarks:
-                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                            else:
-                                setattr(existing_detail, key, value)
+                            setattr(existing_detail, key, value)
                         existing_detail.modified_by = user_id
                         existing_detail.modified_on = datetime.now()
                         enquiry_details_list.append(existing_detail)
                     else:
-                        return {"detail":"Enquiry details not found"}
-                else:
-                    # Check for existing detail or insert new one
-                    existing_detail = db.query(OffEnquiryDetails).filter_by(
-                        enquiry_master_id=enquiry_master_id
-                    ).first()
+                        return {"detail": "Enquiry details not found"}
 
-                    if existing_detail:
-                        for key, value in detail_data_dict.items():
-                            if key == "remarks" and existing_detail.remarks:
-                                setattr(existing_detail, key, existing_detail.remarks + "\n" + value)
-                            else:
-                                setattr(existing_detail, key, value)
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.now()
-                        enquiry_details_list.append(existing_detail)
-                    else:
-                        enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id,db)
-                        new_enquiry_detail = OffEnquiryDetails(
-                            enquiry_master_id=enquiry_master.id,
-                            enquiry_number=enquiry_number,
-                            created_by=user_id,
-                            created_on=datetime.now(),
-                            **detail_data_dict
-                        )
-                        db.add(new_enquiry_detail)
-                        enquiry_details_list.append(new_enquiry_detail)
+        # Case 3: Insert new details to an existing enquiry (INSERT_ONLY)
+        elif enquiry_master_id > 0 and action_type == RecordActionType.INSERT_ONLY:
+            enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
+            if not enquiry_master:
+                return {"detail": "Enquiry master not found"}
+
+            enquiry_details_list = []
+            for detail_data in enquiry_data.enquiry_details:
+                enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
+                new_enquiry_detail = OffEnquiryDetails(
+                    enquiry_master_id=enquiry_master.id,
+                    enquiry_number=enquiry_number,
+                    created_by=user_id,
+                    created_on=datetime.now(),
+                    **detail_data.model_dump(exclude_unset=True)
+                )
+                db.add(new_enquiry_detail)
+                enquiry_details_list.append(new_enquiry_detail)
 
         # Commit the transaction
         db.commit()
@@ -3464,12 +3454,10 @@ def save_enquiry_master(
             raise HTTPException(status_code=400, detail="Duplicate entry detected.")
         else:
             raise e
-    
+
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
 #-------------------------------------------------------------------------------------------------------------
 
 def get_enquiries(
