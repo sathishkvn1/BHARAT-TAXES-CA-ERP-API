@@ -16,7 +16,7 @@ from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_router.common.common_functions import update_column_value
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
-from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema
+from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema, WorkOrderViewResponseSchema
 from typing import Union,List
 from sqlalchemy import and_, insert,or_, func
 from pathlib import Path 
@@ -2957,6 +2957,9 @@ def save_off_consultation_task_master(
                 db.add(new_detail)
 
             db.commit()
+            appointment_visit_master_id = data.visit_master_id
+            update_column_value(db,'off_appointment_visit_master',appointment_visit_master_id,'appointment_status_id',2)
+
             return {"message": "Created successfully"}
 
         else:
@@ -3009,7 +3012,6 @@ def save_off_consultation_task_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
@@ -3789,6 +3791,7 @@ def delete_offer_master(db, offer_master_id,action_type,deleted_by):
 
 
 #------------------WORKORDER---------------------------------------------------------------------------
+
 def get_work_order_details( 
                            db: Session,                            
                            entry_point: EntryPoint,
@@ -3895,7 +3898,7 @@ def get_work_order_details(
             first_name = full_name[0] if len(full_name) > 0 else ""
             middle_name = full_name[1] if len(full_name) > 2 else ""
             last_name = full_name[-1] if len(full_name) > 1 else ""
-
+        
             # Transforming the data
             transformed_data = {
                 # "work_order_master_id" : visit_data.,
@@ -3924,6 +3927,8 @@ def get_work_order_details(
                 "customer_number": visit_data.customer_number
 
             }
+            
+            update_column_value(db,'off_appointment_visit_master',visit_master_id,'appointment_status_id',4)
 
             data = WorkOrderResponseSchema(
                 work_order=transformed_data,
@@ -3993,8 +3998,7 @@ def get_work_order_details(
     # return {
     #     'data' : data,
     #     'is_editable': is_editable}
-   
-
+    
 #------------------------------------------------------------------------------------------------------------
 def get_work_order_list(
     db: Session,
@@ -4036,13 +4040,30 @@ def get_work_order_list(
             
             # Execute the query
             query_result = db.query(WorkOrderMasterView).filter(and_(*search_conditions)).all()
+            # print("SQL Query:", db.query(WorkOrderMasterView).filter(and_(*search_conditions)))
 
-            # if not query_result:
-            #     raise HTTPException(status_code=404, detail="Work_order not found")
+         
+            work_order_data = []
+            # print(f"Number of records fetched: {len(query_result)}")
+            for work_order in query_result:
+                # print("Work Order Object:", work_order)
 
-           
+              
+              
+                is_editable = True
+                if work_order.work_order_status_id != 1:
+                    is_editable = False
+                # print(f"Work Order ID: {work_order.work_order_master_id}, Is Editable: {is_editable}")
+               
+                # print(f"Work Order Number: {work_order.work_order_number}, Status ID: {work_order.work_order_status_id}")
+                work_order_data.append( WorkOrderViewResponseSchema(
+                work_order=  work_order,
+                is_editable= is_editable
 
-            return query_result
+            ))
+                # print("Final Work Order Data:", work_order_data)
+
+            return work_order_data
 
         except HTTPException as http_error:
             raise http_error
@@ -4051,6 +4072,7 @@ def get_work_order_list(
          
             # except HTTPException as http_error:
             # raise http_error
+
 #------------------------------------------------------------------------------------------------------------
 
 def get_business_activity_master_by_type_id(
@@ -4110,6 +4132,7 @@ def get_business_activity_by_master_id(
 
 #----------------------------------------------------------------------------------------------------
 
+
 def save_work_order(
     request: CreateWorkOrderRequest,
     db: Session,
@@ -4123,6 +4146,7 @@ def save_work_order(
            
             work_order_number = generate_book_number('WORK_ORDER',financial_year_id,customer_id, db)
             enquiry_details_id = request.master.enquiry_details_id
+            appointment_visit_master_id = request.master.visit_master_id
             master_data = request.master.model_dump()
             master_data['created_on'] = datetime.now()
             master_data['created_by'] = user_id
@@ -4160,6 +4184,9 @@ def save_work_order(
             db.commit()
             if enquiry_details_id:
                  update_column_value(db,'off_enquiry_details',enquiry_details_id,'enquiry_status_id',2)
+            if appointment_visit_master_id:
+                update_column_value(db,'off_appointment_visit_master',appointment_visit_master_id,'appointment_status_id',5)
+
 
             return {"message": "Work order created successfully", 
                     "work_order_master_id": master.id,
@@ -4313,7 +4340,6 @@ def save_work_order(
         except SQLAlchemyError as e:
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
-
 
 #-------------------------------------------------------------------------------------------------------------
 def get_utility_document_by_nature_of_possession(

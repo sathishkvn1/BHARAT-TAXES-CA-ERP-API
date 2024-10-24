@@ -547,7 +547,18 @@ def get_consultants_and_services(
         # Fetch consultants for the given service_id from off_view_consultant_details table
         consultants = db_office_master.get_consultants_for_service(db, service_id)
         # Convert consultants to a list of dictionaries
-        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        # consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        consultants_data = [
+    {
+        "id": consultant.consultant_id,
+        "first_name": consultant.first_name,
+        "middle_name": consultant.middle_name,
+        "last_name": consultant.last_name,
+        "consultant_details_effective_from_date": consultant.consultant_details_effective_from_date,
+        "consultant_details_effective_to_date": consultant.consultant_details_effective_to_date
+    }
+    for consultant in consultants
+]
         return {"consultants": consultants_data}
     
     else:
@@ -1817,6 +1828,9 @@ def save_off_consultation_task_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 #-----------------------------------------------------------------------------------------
 
 # @router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
@@ -2523,15 +2537,14 @@ def get_work_order_details(
 
 #------------------------------------------------------------------------------------------------------------
 
-
-@router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
+@router.get('/get_work_order_list')
 def get_work_order_list(
     
    
     work_order_number 	    : Optional[str]= None,
     search_value            :  Union[str, int] = "ALL",
 
-    work_order_from_date  	: Optional[date]= None,
+    work_ordetr_from_date  	: Optional[date]= None,
     work_order_to_date  	: Optional[date]= None,
     work_order_status_id 	: Optional[Union[int, str]] = "ALL",
     # mobile_number  	    : Optional[str]= None,
@@ -2556,9 +2569,10 @@ def get_work_order_list(
     - 404: No data present based on the filter criteria.
     """
     results = db_office_master.get_work_order_list(
-         db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
+         db,search_value,work_order_number,work_order_status_id,work_ordetr_from_date,work_order_to_date)
     
     return results
+    # return WorkOrderResponseModel(work_orders=results)
 
 
 #-------------------------------------------------------------------------------------------------------------

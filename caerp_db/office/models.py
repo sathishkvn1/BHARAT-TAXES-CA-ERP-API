@@ -1245,7 +1245,7 @@ class WorkOrderMasterView(caerp_base):
     appointment_master_id   = Column(Integer, nullable=True)
     visit_master_id         =  Column(Integer, nullable=True)
     enquiry_details_id      = Column(Integer, nullable=True)
-    work_order_number       = Column(Integer, nullable=False)
+    work_order_number       = Column(String(50), nullable=False)
     work_order_date         = Column(Date, nullable=True)
     first_name              = Column(String, nullable=True)
     middle_name             = Column(String, nullable=True)
@@ -1483,4 +1483,5 @@ class OffViewServiceTaskMaster(caerp_base):
     is_locked                      = Column(Enum('yes', 'no'), nullable=False, default='no')
     locked_on                      = Column(DateTime, nullable=True)
     locked_by                      = Column(Integer, nullable=True)
+
 

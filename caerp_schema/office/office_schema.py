@@ -1203,7 +1203,6 @@ class ServiceRequest(BaseModel):
     input_date: str
 
 
-
 class OffViewWorkOrderMasterSchema(BaseModel):
 
     work_order_master_id     : Optional[int] =None
@@ -1219,7 +1218,7 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     first_name          : Optional[str] = None
     middle_name         : Optional[str] = None
     last_name           : Optional[str] = None
-    gender_id           : int
+    gender_id           : Optional[int] = None
     gender              : Optional[str] = None
     date_of_birth       : Optional[date] = None
     mobile_number       : Optional[str] = None
@@ -1254,10 +1253,18 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     contact_person_email_id         : Optional[str] = None
     work_order_status_id            : Optional[int] = None
     work_order_status               : Optional[str] = None
+    # is_editable                     : Optional[bool]= False
     class Config:
         orm_mode = True
         from_attributes = True
-  
+
+
+class WorkOrderViewResponseSchema(BaseModel):
+    work_order: OffViewWorkOrderMasterSchema
+    is_editable: Optional[bool] =False
+
+    class Config:
+        orm_mode = True
 
 class OffViewWorkOrderDetailsSchema(BaseModel):
     
