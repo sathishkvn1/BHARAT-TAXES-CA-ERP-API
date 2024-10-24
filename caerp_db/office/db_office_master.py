@@ -3358,6 +3358,7 @@ def save_enquiry_master(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-------------------------------------------------------------------------------------------------------------
 
 def get_enquiries(
