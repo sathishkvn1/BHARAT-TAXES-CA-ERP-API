@@ -280,6 +280,47 @@ def get_all_service_goods_master_test(
 
 #--------------------------------------------------------------------------------------------------------
 
+# @router.post("/services/save_services_goods_master/{id}")
+# def save_services_goods_master(
+#     id: int,
+#     data: List[SaveServicesGoodsMasterRequest], 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):  
+#     """
+#     Save or update service and goods master records.
+
+#     This endpoint allows the user to save or update records in the service and goods master table.
+#     If the `id` is 0, it will insert new records; otherwise, it will update the existing records with the specified `id`.
+
+#     - **id**: The ID of the master record. Use 0 for new records.
+#     - **data**: A list of `SaveServicesGoodsMasterRequest` objects containing the master and detail data to be saved or updated.
+    
+#     **Returns**:
+#     - A JSON object indicating the success status and a message detailing the action performed (insert or update).
+
+#     """  
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         result_message = ""
+#         for service in data:
+#             result = db_office_master.save_services_goods_master(
+#                 db, id, service, user_id
+#             )
+#             result_message = result["message"]
+        
+#         return {"success": True, "message": result_message}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 @router.post("/services/save_services_goods_master/{id}")
 def save_services_goods_master(
     id: int,
@@ -297,8 +338,7 @@ def save_services_goods_master(
     - **data**: A list of `SaveServicesGoodsMasterRequest` objects containing the master and detail data to be saved or updated.
     
     **Returns**:
-    - A JSON object indicating the success status and a message detailing the action performed (insert or update).
-
+    - A JSON object indicating the success status, a message detailing the action performed (insert or update), and the ID of the record affected.
     """  
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -308,13 +348,16 @@ def save_services_goods_master(
 
     try:
         result_message = ""
+        inserted_id = None  # Variable to hold the inserted ID
         for service in data:
             result = db_office_master.save_services_goods_master(
                 db, id, service, user_id
             )
             result_message = result["message"]
+            if "inserted_id" in result:
+                inserted_id = result["inserted_id"]
         
-        return {"success": True, "message": result_message}
+        return {"success": True, "message": result_message, "id": inserted_id}
     
     except HTTPException as e:
         raise e
@@ -3922,6 +3965,7 @@ def upload_hsn_sac_master_details(
                 )
                 db.add(master_entry)
                 db.flush()  # Flush to get the master_entry.id
+                rows_processed += 1 
                 existing_entry = master_entry  # Assign the newly created entry
 
             # Handle the rate logic if required

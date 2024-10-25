@@ -381,12 +381,103 @@ def get_appointment_details(appointment_id :int , db:Session):
 
 #######--SERVICE_GOODS-MASTER--#############################################################
 
+# def save_services_goods_master(
+#     db: Session,
+#     id: int,
+#     data: SaveServicesGoodsMasterRequest,
+#     user_id: int
+# ):
+#     try:
+#         if id == 0:
+#             for master_data in data.master:
+#                 new_master_data = master_data.model_dump()
+#                 new_master_data.update({
+#                     "created_by": user_id,
+#                     "created_on": datetime.now()
+#                 })
+#                 new_master = OffServiceGoodsMaster(**new_master_data)
+#                 db.add(new_master)
+#                 db.flush()  # Ensure new_master.id is available for details
+
+#                 if master_data.is_bundled_service == 'yes':
+#                     for detail_data in data.details:
+#                         new_detail_data = detail_data.model_dump()
+#                         new_detail_data.update({
+#                             "bundled_service_goods_id": new_master.id,
+#                             "created_by": user_id,
+#                             "created_on": datetime.now()
+#                         })
+#                         new_detail = OffServiceGoodsDetails(**new_detail_data)
+#                         db.add(new_detail)
+
+#             db.commit()
+#             return {"success": True, "message": "Saved successfully", "action": "insert"}
+
+#         else:
+#             existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
+#             if not existing_master:
+#                 # raise HTTPException(status_code=404, detail="Master record not found")
+#                 return {"message":" master record not found"}
+                
+#             master_update_data = data.master[0].model_dump()
+#             for key, value in master_update_data.items():
+#                 setattr(existing_master, key, value)
+#             existing_master.modified_by = user_id
+#             existing_master.modified_on = datetime.now()
+
+#             if existing_master.is_bundled_service == 'yes':
+#                 existing_details = db.query(OffServiceGoodsDetails).filter(
+#                     OffServiceGoodsDetails.bundled_service_goods_id == existing_master.id
+#                 ).all()
+
+#                 existing_detail_dict = {detail.service_goods_master_id: detail for detail in existing_details}
+#                 incoming_detail_dict = {detail.service_goods_master_id: detail for detail in data.details}
+
+#                 for detail_data in data.details:
+#                     detail_data_dict = detail_data.model_dump()
+#                     existing_detail = existing_detail_dict.get(detail_data.service_goods_master_id)
+
+#                     if existing_detail:
+#                         for key, value in detail_data_dict.items():
+#                             setattr(existing_detail, key, value)
+#                         existing_detail.modified_by = user_id
+#                         existing_detail.modified_on = datetime.now()
+#                     else:
+#                         new_detail_data = detail_data_dict
+#                         new_detail_data.update({
+#                             "bundled_service_goods_id": existing_master.id,
+#                             "created_by": user_id,
+#                             "created_on": datetime.now()
+#                         })
+#                         new_detail = OffServiceGoodsDetails(**new_detail_data)
+#                         db.add(new_detail)
+
+#                 for service_goods_master_id, existing_detail in existing_detail_dict.items():
+#                     if service_goods_master_id not in incoming_detail_dict:
+                        
+#                         existing_detail.is_deleted = "yes"
+#                         existing_detail.deleted_by = user_id
+#                         existing_detail.deleted_on = datetime.now()
+                        
+
+
+#             db.commit()
+#             return {"success": True, "message": "Updated successfully", "action": "update"}
+
+#     except OperationalError as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail="Database connection error.")
+#     except Exception as e:
+#         db.rollback()
+#         raise e
+
 def save_services_goods_master(
     db: Session,
     id: int,
     data: SaveServicesGoodsMasterRequest,
     user_id: int
 ):
+    inserted_id = None  # Variable to hold the inserted ID
     try:
         if id == 0:
             for master_data in data.master:
@@ -399,6 +490,8 @@ def save_services_goods_master(
                 db.add(new_master)
                 db.flush()  # Ensure new_master.id is available for details
 
+                inserted_id = new_master.id  # Store the ID of the newly inserted master record
+
                 if master_data.is_bundled_service == 'yes':
                     for detail_data in data.details:
                         new_detail_data = detail_data.model_dump()
@@ -409,15 +502,19 @@ def save_services_goods_master(
                         })
                         new_detail = OffServiceGoodsDetails(**new_detail_data)
                         db.add(new_detail)
+                        db.flush()  # Ensure new_detail.id is available if needed
+
+                        # Optionally, you could store the ID of the first inserted detail
+                        if inserted_id is None:
+                            inserted_id = new_detail.id
 
             db.commit()
-            return {"success": True, "message": "Saved successfully", "action": "insert"}
+            return {"success": True, "message": "Saved successfully", "inserted_id": inserted_id}
 
         else:
             existing_master = db.query(OffServiceGoodsMaster).filter(OffServiceGoodsMaster.id == id).first()
             if not existing_master:
-                # raise HTTPException(status_code=404, detail="Master record not found")
-                return {"message":" master record not found"}
+                return {"message": "Master record not found"}
                 
             master_update_data = data.master[0].model_dump()
             for key, value in master_update_data.items():
@@ -451,18 +548,16 @@ def save_services_goods_master(
                         })
                         new_detail = OffServiceGoodsDetails(**new_detail_data)
                         db.add(new_detail)
+                        inserted_id = new_detail.id  # Store the ID of the newly inserted detail record
 
                 for service_goods_master_id, existing_detail in existing_detail_dict.items():
                     if service_goods_master_id not in incoming_detail_dict:
-                        
                         existing_detail.is_deleted = "yes"
                         existing_detail.deleted_by = user_id
                         existing_detail.deleted_on = datetime.now()
-                        
-
 
             db.commit()
-            return {"success": True, "message": "Updated successfully", "action": "update"}
+            return {"success": True, "message": "Updated successfully", "id": inserted_id}
 
     except OperationalError as e:
         db.rollback()
@@ -5019,7 +5114,7 @@ def get_all_hsn_sac_master_details(
 
     # Apply hsn_sac_code filter if not "ALL"
     if hsn_sac_code != "ALL":
-        query = query.filter(AppViewHsnSacMaster.hsn_sac_code == str(hsn_sac_code))
+        query = query.filter(AppViewHsnSacMaster.hsn_sac_code.like(f"{hsn_sac_code}%"))
     
     # Determine the effective date to filter records
     if effective_date:
