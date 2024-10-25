@@ -1621,3 +1621,20 @@ class ServiceResponse(BaseModel):
 #     data: List[BundlePriceResponse]
 #     aggregated_data: List[BundlePriceResponse] 
 
+class AppViewHsnSacMasterSchema(BaseModel):
+    hsn_sac_master_id     : int
+    hsn_sac_class_id      : int
+    hsn_sac_class         : str
+    hsn_sac_id            : int
+    hsn_sac_code          : str
+    hsn_sac_description   : Optional[str]
+    gst_rate              : Optional[float]
+    cess_rate             : Optional[float]
+    additional_cess_rate  : Optional[float]
+    effective_from_date   : Optional[date]
+    effective_to_date     : Optional[date]
+    is_deleted            : str
+    tax_master_id         : int
+
+    class Config:
+        orm_mode = True

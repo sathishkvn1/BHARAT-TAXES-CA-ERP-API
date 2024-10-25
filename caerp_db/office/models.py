@@ -1485,3 +1485,46 @@ class OffViewServiceTaskMaster(caerp_base):
     locked_by                      = Column(Integer, nullable=True)
 
 
+class AppHsnSacTaxMaster(caerp_base):
+    __tablename__ = 'app_hsn_sac_tax_master'
+
+    id                   = Column(Integer, primary_key=True, autoincrement=True)
+    hsn_sac_id           = Column(Integer, nullable=False)
+    gst_rate             = Column(Float, nullable=True)
+    cess_rate            = Column(Float, nullable=True)
+    additional_cess_rate = Column(Float, nullable=True)
+    effective_from_date  = Column(Date, nullable=True)
+    effective_to_date    = Column(Date, nullable=True)
+    is_deleted           = Column(Enum('yes', 'no'), default='no', nullable=False)
+
+
+
+class AppHsnSacMaster(caerp_base):
+    __tablename__ = 'app_hsn_sac_master'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hsn_sac_class_id = Column(Integer, nullable=False)
+    hsn_sac_code = Column(String(20), unique=True, nullable=False)
+    hsn_sac_description = Column(String(2000), default=None)
+    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+
+
+class AppViewHsnSacMaster(caerp_base):
+    __tablename__ = 'app_view_hsn_sac_master'
+    hsn_sac_master_id      = Column(Integer, primary_key=True)
+    hsn_sac_class_id       = Column(Integer, nullable=False)
+    hsn_sac_class          = Column(String(100), nullable=False)
+    hsn_sac_id             = Column(Integer, nullable=False)
+    hsn_sac_code           = Column(String(20), nullable=False)
+    hsn_sac_description    = Column(String(2000), nullable=True)
+    gst_rate               = Column(Float, default=0.0)
+    cess_rate              = Column(Float, default=0.0)
+    additional_cess_rate   = Column(Float, default=0.0)
+    effective_from_date    = Column(Date, nullable=True)
+    effective_to_date      = Column(Date, nullable=True)
+    is_deleted             = Column(Enum('yes', 'no'), nullable=False)
+    tax_master_id          = Column(Integer, nullable=False)
+    
+
+
+

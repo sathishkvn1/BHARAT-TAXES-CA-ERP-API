@@ -3,6 +3,7 @@ import os
 from shutil import Error
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from fastapi.responses import JSONResponse, StreamingResponse
+import pandas as pd
 import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
@@ -12,11 +13,11 @@ from caerp_db.database import  get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import   AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -26,7 +27,7 @@ from sqlalchemy import insert, text,null
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
 from pathlib import Path 
-
+from io import BytesIO
 from sqlalchemy import select, func, and_
 from collections import defaultdict
 from settings import BASE_URL
@@ -3815,3 +3816,210 @@ def save_consultant_schedule_detail_test(
     except Exception as e:
         db.rollback()  # Rollback changes in case of an error
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+@router.get('/services/get_all_hsn_sac_master_details', response_model=List[AppViewHsnSacMasterSchema])
+def get_all_hsn_sac_master_details(
+    db: Session = Depends(get_db),
+    group: str = Query(..., enum=["ALL", "GOODS", "SERVICE"]),
+    hsn_sac_code: Union[str, int] = "ALL",
+    effective_date: Optional[date] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+):  
+    """
+    This endpoint retrieves HSN/SAC master details by applying the following filters:
+    - **group**: Filter by HSN/SAC class (ALL, GOODS, SERVICE). Defaults to ALL if not provided.
+    - **hsn_sac_code**: Specify a specific HSN/SAC code, or 'ALL' to fetch all matching records.
+    - **effective_date**: If provided, the records valid for the given effective date will be returned. Defaults to the current date if not provided.
+    """
+
+    try:
+        if not token:
+            raise HTTPException(status_code=401, detail="Token is missing")
+
+        results = db_office_master.get_all_hsn_sac_master_details(db, group, hsn_sac_code, effective_date)
+
+        if not results:
+            return []
+
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+
+
+########-UPLOAD HSN SAC MASTER DETAILS#########
+
+@router.post('/services/upload_hsn_sac_master_details')
+def upload_hsn_sac_master_details(
+    db: Session = Depends(get_db),
+    item_category: str = Query(..., enum=["GOODS", "SERVICE"]),
+    upload_what: str = Query(..., enum=["MASTER DATA ONLY", "MASTER DATA AND TAX RATE", "TAX RATE ONLY"]),
+    effective_date: Optional[date] = Query(None, description="Provide an effective date if 'MASTER DATA AND TAX RATE' or 'TAX RATE ONLY' option is selected"),
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2.oauth2_scheme)
+):  
+    """
+    Upload HSN/SAC Master Data with Optional Tax Rate.
+
+    This endpoint allows uploading and processing HSN/SAC master data and optionally updating the associated tax rates. The behavior of the upload depends on the value of the `upload_what` query parameter, which can take one of three options:
+
+    - **MASTER DATA ONLY**: 
+      - Inserts new entries into the HSN/SAC master table.
+      - If an HSN/SAC code already exists in the database, it is skipped, and only new HSN/SAC codes are inserted.
+      - No tax rate data is processed.
+
+    - **MASTER DATA AND TAX RATE**: 
+      - Inserts new entries into the HSN/SAC master table (same as in `MASTER DATA ONLY`).
+      - Additionally, it updates or inserts tax rate entries for the HSN/SAC codes.
+      - If a new effective tax rate is provided and there is an existing active tax rate (without an `effective_to_date`), the old rate's `effective_to_date` is set to one day before the new `effective_from_date`. The new rate is then inserted.
+
+    - **TAX RATE ONLY**:
+       - Updates or inserts tax rate entries for the existing HSN/SAC codes.
+       - No master data is modified.
+       - If a new tax rate with a future `effective_from_date` is provided, the existing tax rate (without an `effective_to_date`) will be updated to end the day before the new rate becomes effective.
+    
+    **Conditions**:   
+      - The upload file must contain appropriate columns depending on the selected `upload_what` option.
+    """
+
+    try:
+        # Validation for effective date based on upload_what
+        if upload_what in ["MASTER DATA AND TAX RATE", "TAX RATE ONLY"] and not effective_date:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Effective date is required for 'MASTER DATA AND TAX RATE' or 'TAX RATE ONLY' uploads."
+            )
+
+        # # Validate if the effective date is in the future
+        # if upload_what in ["MASTER DATA AND TAX RATE", "TAX RATE ONLY"]:
+        #     if effective_date <= datetime.now().date():
+        #         raise HTTPException(
+        #             status_code=status.HTTP_400_BAD_REQUEST,
+        #             detail="Effective date must be greater than the current date."
+        #         )
+
+        # Read the uploaded file
+        file_content = BytesIO(file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+        # Normalize column names
+        df.columns = df.columns.str.strip()
+
+        # Check required columns based on upload type
+        if upload_what == "MASTER DATA ONLY":
+            required_columns = ['HSN/SAC CODE', 'DESCRIPTION']
+        elif upload_what == "MASTER DATA AND TAX RATE":
+            required_columns = ['HSN/SAC CODE', 'DESCRIPTION', 'GST RATE', 'CESS RATE']
+        elif upload_what == "TAX RATE ONLY":
+            required_columns = ['HSN/SAC CODE', 'GST RATE', 'CESS RATE']
+
+        for col in required_columns:
+            if col not in df.columns:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                    detail=f"The uploaded file is missing the '{col}' column.")
+
+        # Determine hsn_sac_class_id based on item_category
+        hsn_sac_class_id = 1 if item_category == "GOODS" else 2  # 1 for GOODS, 2 for SERVICE
+
+        # Track duplicates and rows processed
+        all_duplicates = True
+        rows_processed = 0
+
+        # Process the data
+        for _, row in df.iterrows():
+            hsn_sac_code = row['HSN/SAC CODE']
+            description = row['DESCRIPTION'] if 'DESCRIPTION' in row else None
+
+            if isinstance(hsn_sac_code, float) and pd.isna(hsn_sac_code):
+                continue  # Skip if HSN/SAC CODE is NaN
+
+            # Convert the HSN/SAC CODE to a string and clean it
+            hsn_sac_code = str(hsn_sac_code).strip()
+            if hsn_sac_code.endswith('.0'):
+                hsn_sac_code = hsn_sac_code[:-2]  # Remove trailing .0 from float conversion
+
+            if not hsn_sac_code or not description or (isinstance(description, float) and pd.isna(description)):
+                continue  # Skip this row if code or description is missing
+
+            description = str(description).strip()
+
+            # Check if the HSN/SAC code already exists in the database
+            existing_entry = db.query(AppHsnSacMaster).filter(
+                AppHsnSacMaster.hsn_sac_code == hsn_sac_code,
+                AppHsnSacMaster.hsn_sac_class_id == hsn_sac_class_id,
+                AppHsnSacMaster.is_deleted == 'no'
+            ).first()
+
+            # If the HSN/SAC code does not exist, insert it into the master table
+            if not existing_entry:
+                master_entry = AppHsnSacMaster(
+                    hsn_sac_code=hsn_sac_code,
+                    hsn_sac_description=description,
+                    hsn_sac_class_id=hsn_sac_class_id
+                )
+                db.add(master_entry)
+                db.flush()  # Flush to get the master_entry.id
+                existing_entry = master_entry  # Assign the newly created entry
+
+            # Handle the rate logic if required
+            if upload_what in ["MASTER DATA AND TAX RATE", "TAX RATE ONLY"]:
+                gst_rate = float(row['GST RATE']) if 'GST RATE' in row and pd.notnull(row['GST RATE']) else 0.0
+                cess_rate = float(row['CESS RATE']) if 'CESS RATE' in row and pd.notnull(row['CESS RATE']) else 0.0
+
+                # Check if there is an existing active entry (no effective_to_date set)
+                existing_active_tax_entry = db.query(AppHsnSacTaxMaster).filter(
+                    AppHsnSacTaxMaster.hsn_sac_id == existing_entry.id,
+                    AppHsnSacTaxMaster.effective_to_date == None,  # Ensure no effective_to_date
+                    AppHsnSacTaxMaster.is_deleted == 'no'
+                ).first()
+
+                # Update the effective_to_date if there's an existing active row
+                if existing_active_tax_entry:
+                    # Set effective_to_date to one day before the new effective_from_date
+                    existing_active_tax_entry.effective_to_date = effective_date - timedelta(days=1)
+                    db.add(existing_active_tax_entry)
+
+                # Check if the rate entry already exists for the same effective date
+                existing_tax_entry = db.query(AppHsnSacTaxMaster).filter(
+                    AppHsnSacTaxMaster.hsn_sac_id == existing_entry.id,
+                    AppHsnSacTaxMaster.effective_from_date == effective_date,
+                    AppHsnSacTaxMaster.is_deleted == 'no'
+                ).first()
+
+                # If the rate entry already exists, update it instead of raising an error
+                if existing_tax_entry:
+                    existing_tax_entry.gst_rate = gst_rate
+                    existing_tax_entry.cess_rate = cess_rate
+                    existing_tax_entry.additional_cess_rate = 0.0  # Default to 0
+                    db.add(existing_tax_entry)  # Re-add it to the session to ensure changes are saved
+                    rows_processed += 1  # Track the number of updated records
+                else:
+                    # Insert new tax rate data for the corresponding HSN/SAC if no entry exists
+                    tax_entry = AppHsnSacTaxMaster(
+                        hsn_sac_id=existing_entry.id,  # Use the existing or newly created master record's ID
+                        gst_rate=gst_rate,
+                        cess_rate=cess_rate,
+                        additional_cess_rate=0.0,  # Default to 0
+                        effective_from_date=effective_date
+                    )
+                    db.add(tax_entry)
+                    rows_processed += 1  # Track the number of inserted records
+
+            # Skip the duplicate master entry if no tax rates need to be added
+            if upload_what == "MASTER DATA ONLY":
+                continue
+
+        db.commit()
+
+        # Return the appropriate message based on duplicates and new entries
+        if rows_processed == 0:
+            return {"message": "All entries are duplicates or no new tax rates were added."}
+        else:
+            return {"success": True, "message": f"Uploaded successfully."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process the file: {str(e)}")

@@ -11,7 +11,7 @@ from caerp_db.hash import Hash
 from typing import Any, Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
+from caerp_db.office.models import AppDayOfWeek, AppViewHsnSacMaster, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_router.common.common_functions import update_column_value
@@ -3211,6 +3211,7 @@ def save_enquiry_master(
 ) -> Dict[str, Union[Dict, List[Dict]]]:
     financial_year_id = 1
     customer_id = 1
+    visit_details_id = None  # Initialize visit_details_id
 
     try:
         # Begin the transaction
@@ -3224,10 +3225,10 @@ def save_enquiry_master(
                 **enquiry_data.enquiry_master.model_dump(exclude_unset=True)
             )
             db.add(enquiry_master)
-            db.flush()  # Ensure the ID is generated
+            db.flush()  # Ensure the ID is generated for enquiry_master
 
             enquiry_details_list = []
-            for detail_data in enquiry_data.enquiry_details:
+            for i, detail_data in enumerate(enquiry_data.enquiry_details):
                 enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
                 enquiry_detail = OffEnquiryDetails(
                     enquiry_master_id=enquiry_master.id,
@@ -3237,10 +3238,15 @@ def save_enquiry_master(
                     **detail_data.model_dump(exclude_unset=True)
                 )
                 db.add(enquiry_detail)
+                db.flush()  # Ensure the ID is generated for each enquiry_detail
                 enquiry_details_list.append(enquiry_detail)
 
+                # Set visit_details_id to the first enquiry detail added
+                if i == 0:
+                    visit_details_id = enquiry_detail.id
+
         # Case 2: Update existing enquiry master and details (UPDATE_ONLY)
-        elif enquiry_master_id > 0 and action_type == RecordActionType.UPDATE_ONLY:
+        elif enquiry_master_id != 0 and action_type == RecordActionType.UPDATE_ONLY:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
                 return {"detail": "Enquiry master not found"}
@@ -3264,17 +3270,22 @@ def save_enquiry_master(
                         existing_detail.modified_by = user_id
                         existing_detail.modified_on = datetime.now()
                         enquiry_details_list.append(existing_detail)
+                        db.flush()
+
+                        # Set visit_details_id to the first updated detail's ID, if required
+                        if not visit_details_id:
+                            visit_details_id = existing_detail.id
                     else:
                         return {"detail": "Enquiry details not found"}
 
-        # Case 3: Insert new details to an existing enquiry UPDATE_AND_INSERT
-        elif enquiry_master_id > 0 and action_type == RecordActionType.UPDATE_AND_INSERT:
+        # Case 3: Insert new details to an existing enquiry (UPDATE_AND_INSERT)
+        elif enquiry_master_id != 0 and action_type == RecordActionType.UPDATE_AND_INSERT:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
                 return {"detail": "Enquiry master not found"}
 
             enquiry_details_list = []
-            for detail_data in enquiry_data.enquiry_details:
+            for i, detail_data in enumerate(enquiry_data.enquiry_details):
                 enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
                 new_enquiry_detail = OffEnquiryDetails(
                     enquiry_master_id=enquiry_master.id,
@@ -3284,7 +3295,12 @@ def save_enquiry_master(
                     **detail_data.model_dump(exclude_unset=True)
                 )
                 db.add(new_enquiry_detail)
+                db.flush()  # Ensure the ID is generated for each new_enquiry_detail
                 enquiry_details_list.append(new_enquiry_detail)
+
+                # Set visit_details_id to the first newly added detail's ID
+                if i == 0:
+                    visit_details_id = new_enquiry_detail.id
 
         # Commit the transaction
         db.commit()
@@ -3294,9 +3310,12 @@ def save_enquiry_master(
         enquiry_details_schema = [{column.name: getattr(detail, column.name) for column in OffEnquiryDetails.__table__.columns} for detail in enquiry_details_list]
 
         return {
+            "success": True,
+            "message": "Saved successfully",
             "enquiry_master": enquiry_master_schema,
             "enquiry_details": enquiry_details_schema,
-            "id": enquiry_master.id
+            "id": enquiry_master.id,
+            "visit_details_id": visit_details_id
         }
 
     except IntegrityError as e:
@@ -3309,7 +3328,6 @@ def save_enquiry_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -4985,3 +5003,39 @@ def save_work_order_dependancies(
 # Function to save consultant schedule
 
  
+def get_all_hsn_sac_master_details(
+    db: Session,
+    group: str,
+    hsn_sac_code: Union[str, int],
+    effective_date: Optional[date]
+) -> List[AppViewHsnSacMaster]:
+    
+    # Start with the base query, filtering out deleted records
+    query = db.query(AppViewHsnSacMaster).filter(AppViewHsnSacMaster.is_deleted == 'no')
+
+    # Apply group filter if specified and is not "ALL"
+    if group != "ALL":
+        query = query.filter(AppViewHsnSacMaster.hsn_sac_class == group)
+
+    # Apply hsn_sac_code filter if not "ALL"
+    if hsn_sac_code != "ALL":
+        query = query.filter(AppViewHsnSacMaster.hsn_sac_code == str(hsn_sac_code))
+    
+    # Determine the effective date to filter records
+    if effective_date:
+        # Filter based on the provided effective date
+        query = query.filter(
+            (AppViewHsnSacMaster.effective_from_date <= effective_date) &
+            ((AppViewHsnSacMaster.effective_to_date.is_(None)) | (AppViewHsnSacMaster.effective_to_date >= effective_date))
+        )
+    else:
+        # If no effective date is provided, you can either return all valid records
+        # or filter by current date to get valid records
+        current_date = date.today()
+        query = query.filter(
+            (AppViewHsnSacMaster.effective_from_date <= current_date) &
+            ((AppViewHsnSacMaster.effective_to_date.is_(None)) | (AppViewHsnSacMaster.effective_to_date >= current_date))
+        )
+
+    # Return all matching records
+    return query.all()
