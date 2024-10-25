@@ -1584,6 +1584,44 @@ def get_consultant_employees(
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
+# @router.post("/save_consultant_service_details/")
+# def save_consultant_service_details(
+#     data: ConsultantService,
+#     action_type: RecordActionType,
+#     consultant_id: Optional[int] = None,
+#     service_id: Optional[int] = None,
+#     id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Save or update consultant service details.
+#     To save give action_type =Update and Insert
+#     id: 0
+#     consultant_id: 1
+#     service_id: 88
+#     these data should be given
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         record_id = db_office_master.save_consultant_service_details_db(
+#             data, consultant_id, service_id, user_id, action_type, db, id
+#         )
+        
+#         return {"success": True, "detail": "Saved successfully", "id": record_id}
+    
+#     except ValueError as ve:
+#         raise HTTPException(status_code=400, detail=str(ve))
+    
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
     data: ConsultantService,
@@ -1596,15 +1634,15 @@ def save_consultant_service_details(
 ):
     """
     Save or update consultant service details.
-    To save give action_type =Update and Insert
+    To save, provide action_type as UPDATE_AND_INSERT.
     id: 0
     consultant_id: 1
     service_id: 88
-    these data should be given
+    These data should be provided.
     """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
-    
+
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     
@@ -1613,7 +1651,15 @@ def save_consultant_service_details(
             data, consultant_id, service_id, user_id, action_type, db, id
         )
         
-        return {"success": True, "detail": "Saved successfully", "id": record_id}
+        # Include consultant_id, service_id, and effective_from_date in the response
+        return {
+            "success": True,
+            "detail": "Saved successfully",
+            "id": record_id,
+            "consultant_id": consultant_id,
+            "service_id": service_id,
+            "effective_from_date": data.effective_from_date,  # Assuming data has this attribute
+        }
     
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
