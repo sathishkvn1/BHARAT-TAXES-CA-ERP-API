@@ -1679,6 +1679,7 @@ def get_service_details_by_consultant(
 
 #-------------------------------------------------------------------------------------------------------------
 
+
 # @router.post("/save_consultant_schedule/")
 # def save_consultant_schedule(
 #     schedules: List[ConsultantScheduleCreate], 
@@ -1695,18 +1696,19 @@ def get_service_details_by_consultant(
 #     user_id = auth_info.get("user_id")
     
 #     try:
-#         for data in schedules:
-#             db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+#         # Assuming only one schedule will be saved/updated at a time.
+#         # If multiple schedules are needed, this can be adjusted to return a list of ids.
+#         last_saved_id = None
         
-#         return {"success": True, "detail": "Saved successfully"}
+#         for data in schedules:
+#             last_saved_id = db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
+#         return {"success": True, "detail": "Saved successfully", "id": last_saved_id}
     
 #     except Exception as e:
 #         print(f"Error in endpoint: {e}")
 #         raise HTTPException(status_code=400, detail=str(e))
 
-    
-#  #-------------------------------------------------------------------------------------------------------------   
-    
 
 @router.post("/save_consultant_schedule/")
 def save_consultant_schedule(
@@ -1724,57 +1726,25 @@ def save_consultant_schedule(
     user_id = auth_info.get("user_id")
     
     try:
-        # Assuming only one schedule will be saved/updated at a time.
-        # If multiple schedules are needed, this can be adjusted to return a list of ids.
         last_saved_id = None
+        effective_from_date = None  # Initialize the effective_from_date
         
         for data in schedules:
-            last_saved_id = db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+            last_saved_id, effective_from_date = db_office_master.save_consultant_schedule(
+                data, consultant_id, user_id, id, action_type, db
+            )
         
-        return {"success": True, "detail": "Saved successfully", "id": last_saved_id}
+        return {
+            "success": True, 
+            "detail": "Saved successfully", 
+            "id": last_saved_id,
+            "effective_from_date": effective_from_date  # Include the effective_from_date in the response
+        }
     
     except Exception as e:
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-# @router.post("/save_consultant_schedule/")
-# def save_consultant_schedule(
-#     schedules: List[ConsultantScheduleCreate], 
-#     action_type: RecordActionType,
-#     id: Optional[int] = None,
-#     consultant_id: Optional[int] = None,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-    
-#     saved_schedules = []
-
-#     try:
-#         # Iterate over each schedule and save/update it.
-#         for data in schedules:
-#             saved_id, effective_from_date = db_office_master.save_consultant_schedule(
-#                 data, 
-#                 consultant_id, 
-#                 user_id, 
-#                 id, 
-#                 action_type, 
-#                 db
-#             )
-#             saved_schedules.append({
-#                 "id": saved_id,
-#                 "effective_from_date": effective_from_date  # Return the `effective_from_date` if needed
-#             })
-        
-#         return {"success": True, "detail": "Saved successfully", "schedules": saved_schedules}
-    
-#     except Exception as e:
-#         print(f"Error in endpoint: {e}")
-#         raise HTTPException(status_code=400, detail=str(e))
 
 
 from fastapi import Query
