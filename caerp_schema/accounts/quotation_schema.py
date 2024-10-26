@@ -433,10 +433,9 @@ class AccTaxInvoiceMasterViewSchema(BaseModel):
     is_deleted: Optional[str] = None
     deleted_by: Optional[int] = None
     deleted_on: Optional[datetime] = None
-    is_locked: Optional[str] = None
+    is_locked: Optional[str] = 'no'
     locked_on: Optional[datetime] = None
-    locked_by: Optional[str] = None
-
+    locked_by: Optional[int] = None
 
 class AccTaxInvoiceDetailsViewSchema(BaseModel):
     id: Optional[int] = None
@@ -556,9 +555,10 @@ class AccProformaInvoiceMasterViewSchema(BaseModel):
     is_deleted: Optional[str] = None
     deleted_by: Optional[int] = None
     deleted_on: Optional[datetime] = None
-    is_locked: Optional[str] = None
+    is_locked: Optional[str] = 'no'
     locked_on: Optional[datetime] = None
-    locked_by: Optional[str] = None
+    locked_by: Optional[int] = None
+
 
 
 class AccProformaInvoiceDetailsViewSchema(BaseModel):
