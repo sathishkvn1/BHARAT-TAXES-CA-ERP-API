@@ -565,7 +565,12 @@ def save_services_goods_master(
     except Exception as e:
         db.rollback()
         raise e
+
+
+
+
 #--------------------------------------------------------------------------------------------------------
+
 def reschedule_or_cancel_appointment(db: Session,
                                      request_data: RescheduleOrCancelRequest,
                                      action: AppointmentStatusConstants, 
@@ -3324,13 +3329,16 @@ def save_enquiry_master(
 
             enquiry_details_list = []
             for i, detail_data in enumerate(enquiry_data.enquiry_details):
+                detail_data_dict = detail_data.model_dump(exclude_unset=True)
+                detail_data_dict.pop("id", None)  # Ensure `id` is not included for new inserts
                 enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
+                
                 enquiry_detail = OffEnquiryDetails(
                     enquiry_master_id=enquiry_master.id,
                     enquiry_number=enquiry_number,
                     created_by=user_id,
                     created_on=datetime.now(),
-                    **detail_data.model_dump(exclude_unset=True)
+                    **detail_data_dict
                 )
                 db.add(enquiry_detail)
                 db.flush()  # Ensure the ID is generated for each enquiry_detail
@@ -3344,8 +3352,7 @@ def save_enquiry_master(
         elif enquiry_master_id != 0 and action_type == RecordActionType.UPDATE_ONLY:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
-                return {"detail": "Enquiry master not found"}
-
+                return {"detail":"Enquiry master not found"}
             enquiry_master_data = enquiry_data.enquiry_master.model_dump(exclude_unset=True)
             for field, value in enquiry_master_data.items():
                 setattr(enquiry_master, field, value)
@@ -3357,37 +3364,46 @@ def save_enquiry_master(
                 detail_data_dict = detail_data.model_dump(exclude_unset=True)
                 detail_id = detail_data_dict.get("id")
 
-                if detail_id:
+                if detail_id and detail_id > 0:
                     existing_detail = db.query(OffEnquiryDetails).filter_by(id=detail_id, enquiry_master_id=enquiry_master_id).first()
-                    if existing_detail:
-                        for key, value in detail_data_dict.items():
+                    if existing_detail is None:
+                        return {"detail":"Enquiry details not found"}
+                    for key, value in detail_data_dict.items():
+                        if key == "remarks" and existing_detail.remarks:
+                            # Append new remarks to existing remarks
+                            new_remarks = existing_detail.remarks + "\n" + value
+                            setattr(existing_detail, key, new_remarks)
+                        else:
                             setattr(existing_detail, key, value)
-                        existing_detail.modified_by = user_id
-                        existing_detail.modified_on = datetime.now()
-                        enquiry_details_list.append(existing_detail)
-                        db.flush()
+                    existing_detail.modified_by = user_id
+                    existing_detail.modified_on = datetime.now()
+                    enquiry_details_list.append(existing_detail)
+                    db.flush()
 
-                        # Set visit_details_id to the first updated detail's ID, if required
-                        if not visit_details_id:
-                            visit_details_id = existing_detail.id
-                    else:
-                        return {"detail": "Enquiry details not found"}
+                    # Set visit_details_id to the first updated detail's ID, if required
+                    if not visit_details_id:
+                        visit_details_id = existing_detail.id
+                else:
+                    return[]
 
         # Case 3: Insert new details to an existing enquiry (UPDATE_AND_INSERT)
         elif enquiry_master_id != 0 and action_type == RecordActionType.UPDATE_AND_INSERT:
             enquiry_master = db.query(OffEnquiryMaster).filter_by(id=enquiry_master_id).first()
             if not enquiry_master:
-                return {"detail": "Enquiry master not found"}
+                return {"detail":"Enquiry master not found"}
 
             enquiry_details_list = []
             for i, detail_data in enumerate(enquiry_data.enquiry_details):
+                detail_data_dict = detail_data.model_dump(exclude_unset=True)
+                detail_data_dict.pop("id", None)  # Ensure `id` is not included for new inserts
                 enquiry_number = generate_book_number('ENQUIRY', financial_year_id, customer_id, db)
+                
                 new_enquiry_detail = OffEnquiryDetails(
                     enquiry_master_id=enquiry_master.id,
                     enquiry_number=enquiry_number,
                     created_by=user_id,
                     created_on=datetime.now(),
-                    **detail_data.model_dump(exclude_unset=True)
+                    **detail_data_dict
                 )
                 db.add(new_enquiry_detail)
                 db.flush()  # Ensure the ID is generated for each new_enquiry_detail

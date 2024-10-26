@@ -2,6 +2,7 @@ from fastapi import FastAPI,APIRouter, Depends, HTTPException, Header, Request, 
   
 from fastapi.param_functions import Depends
 from fastapi.security.oauth2 import OAuth2PasswordRequestForm
+from caerp_db.services.model import CustomerMaster
 from caerp_schema.common.common_schema import CustomerLoginRequest, LoginRequest
 from sqlalchemy.orm import Session
 from caerp_db.database import get_db
@@ -69,6 +70,7 @@ logger = logging.getLogger(__name__)
 #         content={"message": exc.detail},
 #         headers=exc.headers
 #     )
+
 
 
 @router.post('/admin-login')
@@ -242,7 +244,11 @@ def get_token(
                 except Exception as e:
                     # Handle sms sending failure
                     print(f"Failed to send message: {str(e)}")
-
+                mother_customer_data =  db.query(CustomerMaster).filter(
+                     CustomerMaster.is_mother_customer== 'yes',
+                     CustomerMaster.is_deleted == 'no').first()
+                if mother_customer_data: 
+                     mother_customer_id = mother_customer_data.customer_id
                 # Query the roles associated with the user
                 roles = db.query(models.UserRole).filter(
                     models.UserRole.employee_id == user.employee_id,
@@ -268,12 +274,12 @@ def get_token(
                     'mobile_otp_id'         :mobile_otp_id,
                     'is_password_reset'     : password_reset_status, 
                     'financial_year_id'     : 1,
-                    'mother_customer_id'    : 1,
+                    'mother_customer_id'    :  mother_customer_id ,
                     'branch_id'             : 1
                     
                 }
 
-                
+                print('data', data)
                 access_token = oauth2.create_access_token(data=data)               
             
 
@@ -288,7 +294,7 @@ def get_token(
                 # Raise a more specific HTTPException
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to log in: " + str(e))
 
-            
+                 
 
 def authenticate_user(token: str) -> Dict[str, Union[int, None]]:
     if not token:
