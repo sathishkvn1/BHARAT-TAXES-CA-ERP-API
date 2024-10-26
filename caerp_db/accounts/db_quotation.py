@@ -810,7 +810,7 @@ def generate_profoma_invoice_details(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-#----------------------------------------------------------------------------------------------------------
+# #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
         work_order_master_id: int,
@@ -822,7 +822,7 @@ def save_service_task_details(
         customer_id: int
 ):
     try: 
-        task_number = generate_book_number('TASK',financial_year_id,customer_id,db)
+        task_number = generate_book_number('SERVICE_TASK',financial_year_id,customer_id,db)
         new_task = OffServiceTaskMaster(
             work_order_master_id=work_order_master_id,
             work_order_details_id=work_order_details_id,
@@ -843,7 +843,7 @@ def save_service_task_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-   
+    
 
 
 #----------------------------------------------------------------------------------------------
