@@ -5107,12 +5107,12 @@ def save_work_order_dependancies(
 
 # Function to save consultant schedule
 
- 
+
 def get_all_hsn_sac_master_details(
     db: Session,
-    group: str,
-    hsn_sac_code: Union[str, int],
-    effective_date: Optional[date]
+    group: Union[int, str] = 'ALL',
+    hsn_sac_code: Union[str, int] = 'ALL',  
+    effective_date: Optional[date] = None   
 ) -> List[AppViewHsnSacMaster]:
     
     # Start with the base query, filtering out deleted records
@@ -5120,12 +5120,12 @@ def get_all_hsn_sac_master_details(
 
     # Apply group filter if specified and is not "ALL"
     if group != "ALL":
-        query = query.filter(AppViewHsnSacMaster.hsn_sac_class == group)
-
+        query = query.filter(AppViewHsnSacMaster.hsn_sac_class_id == group)
+    
     # Apply hsn_sac_code filter if not "ALL"
+    
     if hsn_sac_code != "ALL":
         query = query.filter(AppViewHsnSacMaster.hsn_sac_code.like(f"{hsn_sac_code}%"))
-    
     # Determine the effective date to filter records
     if effective_date:
         # Filter based on the provided effective date
@@ -5144,3 +5144,5 @@ def get_all_hsn_sac_master_details(
 
     # Return all matching records
     return query.all()
+
+ 
