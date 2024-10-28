@@ -25,7 +25,7 @@ from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
 
 
-from caerp_db.services.model import GstReasonToObtainRegistration, GstTypeOfRegistration
+from caerp_db.services.model import AppConstitutionStakeholders, GstReasonToObtainRegistration, GstTypeOfRegistration
 
 router = APIRouter(
     tags=['LIBRARY FUNCTIONS']
@@ -103,7 +103,8 @@ TABLE_MODEL_MAPPING = {
     "OffServiceTaskMaster":OffServiceTaskMaster,
     "OffServiceDocumentDataMaster":OffServiceDocumentDataMaster,
     "OffConsultationTaskMaster":OffConsultationTaskMaster,
-    "StateDB":StateDB
+    "StateDB":StateDB,
+    "AppConstitutionStakeholders":AppConstitutionStakeholders
     
 }
 

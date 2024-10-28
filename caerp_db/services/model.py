@@ -521,3 +521,14 @@ class CustomerGstStateSpecificInformation(caerp_base):
     is_deleted                                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                                  = Column(Integer, nullable=True)
     deleted_on                                  = Column(Date, nullable=True)
+
+
+
+class AppConstitutionStakeholders(caerp_base):
+    __tablename__ = 'app_constitution_stakeholders'
+
+    id                        = Column(Integer, primary_key=True, autoincrement=True)
+    constitution_id            = Column(Integer, nullable=True)
+    stakeholder                = Column(String(100), nullable=False)
+    is_deleted                = Column(Enum('yes', 'no'), nullable=False, default='no')
+
