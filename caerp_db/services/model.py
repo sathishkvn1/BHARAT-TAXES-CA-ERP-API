@@ -299,7 +299,6 @@ class StakeHolderContactDetails(caerp_base):
     deleted_by                       = Column(Integer, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
-
 class StakeHolderAddress(caerp_base):
     __tablename__ = 'stake_holder_address'
 
@@ -313,6 +312,7 @@ class StakeHolderAddress(caerp_base):
     city_id                   = Column(Integer, nullable=True)
     village_id                = Column(Integer, nullable=True)
     post_office_id            = Column(Integer, nullable=True)
+    taluk_id                  = Column(Integer, nullable=False)
     lsg_type_id               = Column(Integer, nullable=True)
     lsg_id                    = Column(Integer, nullable=True)
     locality                  = Column(String(100), nullable=True)
@@ -330,7 +330,6 @@ class StakeHolderAddress(caerp_base):
     is_deleted                = Column(Enum('yes', 'NO'), nullable=False, default='no')
     deleted_by                = Column(Integer, nullable=True)
     deleted_on                = Column(DateTime, nullable=True)
-
 
 class CustomerStakeHolder(caerp_base):
     __tablename__ = 'customer_stake_holders'

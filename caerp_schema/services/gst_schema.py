@@ -118,6 +118,7 @@ class AddressSchema(BaseModel):
     city_id        : Optional[int]
     village_id     : Optional[int]
     post_office_id : Optional[int]
+    taluk_id       : Optional[int]
     lsg_type_id    : Optional[int]
     lsg_id         : Optional[int]
     locality       : Optional[str]
