@@ -446,9 +446,9 @@ class EmployeeMaster(caerp_base):
     is_deleted           = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by           = Column(Integer, default=None)
     deleted_on           = Column(DateTime, default=None)
-    is_locked                        = Column(Enum('yes', 'no'), nullable=False, default='no')  
-    locked_on                        = Column(DateTime, nullable=True)
-    locked_by                        = Column(String, nullable=True)
+    is_locked            = Column(Enum('yes', 'no'), nullable=False, default='no')  
+    locked_on            = Column(DateTime, nullable=True)
+    locked_by            = Column(String, nullable=True)
 
 
 
@@ -744,3 +744,15 @@ class AppActivityHistory(caerp_base):
     action_type = Column(Enum('INSERT', 'UPDATE', 'DELETE', 'SELECT'), nullable=False)
     db_table_name = Column(String(50), nullable=False)
     action_query = Column(Text, nullable=False)
+
+
+
+
+
+class AppConstitutionStakeholders(caerp_base):
+    __tablename__ = 'app_constitution_stakeholders'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    constitution_id            = Column(Integer,nullable=False)
+    stakeholder                      = Column(String, nullable=False)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
