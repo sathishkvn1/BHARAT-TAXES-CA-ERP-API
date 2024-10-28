@@ -524,11 +524,33 @@ class CustomerGstStateSpecificInformation(caerp_base):
 
 
 
-class AppConstitutionStakeholders(caerp_base):
-    __tablename__ = 'app_constitution_stakeholders'
 
-    id                        = Column(Integer, primary_key=True, autoincrement=True)
-    constitution_id            = Column(Integer, nullable=True)
-    stakeholder                = Column(String(100), nullable=False)
-    is_deleted                = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+#---------------Jurisdiction
+class GstViewRange(caerp_base):
+    __tablename__ = 'gst_view_range'
+
+    range_id             = Column(Integer, primary_key=True)
+    range_name           = Column(String)
+    range_code           = Column(String)
+    jurisdiction         = Column(String)
+    address              = Column(String)
+    pin                  = Column(String)
+    phone                = Column(String)
+    fax                  = Column(String)
+    email                = Column(String)
+    division_id          = Column(Integer)
+    division_name        = Column(String)
+    division_code        = Column(String)
+    commissionerate_id   = Column(Integer)
+    commissionerate_name = Column(String)
+    commissionerate_code = Column(String)
+    zone_id              = Column(Integer)
+    zone_name            = Column(String)
+    zone_code            = Column(String)
+    district_id          = Column(Integer)
+    district_name        = Column(String)
+    state_id             = Column(Integer)
+    state_name           = Column(String)
+    country_id           = Column(Integer)
+    country_name_english = Column(String)

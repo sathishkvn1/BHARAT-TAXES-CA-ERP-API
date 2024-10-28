@@ -1,13 +1,14 @@
 from datetime import date, datetime, timedelta
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, UploadFile,status,Depends
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
-from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -83,6 +84,145 @@ def save_business_details(
 #-------CUSTOMER / BUSINESS DETAILS
 
 
+# def save_customer_details(customer_id: int, 
+#                           customer_data: CustomerRequestSchema, 
+#                           user_id: int, 
+#                           db: Session):
+#     try:
+#         # Handle Additional Trade Names
+#         for additional_trade_name in customer_data.additional_trade_name:
+#             if additional_trade_name.id == 0:
+#                 new_trade_name = CustomerAdditionalTradeName(
+#                     customer_id=customer_id,
+#                     **additional_trade_name.model_dump(exclude_unset=True),  # Use model_dump to pass fields dynamically
+#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                     effective_to_date=None,
+#                     created_by=user_id,
+#                     created_on=datetime.now()
+#                 )
+#                 db.add(new_trade_name)
+#             else:
+#                 existing_trade_name = db.query(CustomerAdditionalTradeName).filter_by(id=additional_trade_name.id).first()
+#                 if existing_trade_name:
+#                     for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
+#                         setattr(existing_trade_name, key, value)
+#                     existing_trade_name.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                     existing_trade_name.effective_to_date=None
+#                     existing_trade_name.modified_by = user_id
+#                     existing_trade_name.modified_on = datetime.now()
+
+#         # Handle Casual Taxable Person Details
+#         if customer_data.casual_taxable_person.id == 0:
+#             casual_taxable_person = CustomerGSTCasualTaxablePersonDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.casual_taxable_person.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(casual_taxable_person)
+#         else:
+#             existing_casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(id=customer_data.casual_taxable_person.id).first()
+#             if existing_casual_taxable_person:
+#                 for key, value in customer_data.casual_taxable_person.model_dump(exclude_unset=True).items():
+#                     setattr(existing_casual_taxable_person, key, value)
+#                 existing_casual_taxable_person.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_casual_taxable_person.effective_to_date=None
+#                 existing_casual_taxable_person.modified_by = user_id
+#                 existing_casual_taxable_person.modified_on = datetime.now()
+
+#         # Handle Composition Option
+#         if customer_data.option_for_composition.id == 0:
+#             composition_option = CustomerGSTCompositionOptedPersonDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.option_for_composition.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(composition_option)
+#         else:
+#             existing_composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(id=customer_data.option_for_composition.id).first()
+#             if existing_composition_option:
+#                 for key, value in customer_data.option_for_composition.model_dump(exclude_unset=True).items():
+#                     setattr(existing_composition_option, key, value)
+#                 existing_composition_option.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_composition_option.effective_to_date=None
+#                 existing_composition_option.modified_by = user_id
+#                 existing_composition_option.modified_on = datetime.now()
+
+#         # Handle Other GST Details
+#         if customer_data.reason_to_obtain_registration.id == 0:
+#             gst_other_details = CustomerGSTOtherDetails(
+#                 customer_id=customer_id,
+#                 **customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True),
+#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                 effective_to_date=None,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(gst_other_details)
+#         else:
+#             existing_gst_other_details = db.query(CustomerGSTOtherDetails).filter_by(id=customer_data.reason_to_obtain_registration.id).first()
+#             if existing_gst_other_details:
+#                 for key, value in customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True).items():
+#                     setattr(existing_gst_other_details, key, value)
+#                 existing_gst_other_details.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                 existing_gst_other_details.effective_to_date=None
+#                 existing_gst_other_details.modified_by = user_id
+#                 existing_gst_other_details.modified_on = datetime.now()
+
+#         # Handle Existing Registrations
+#         for registration in customer_data.existing_registrations:
+#             if registration.id == 0:
+#                 new_registration = CustomerExistingRegistrationDetails(
+#                     customer_id=customer_id,
+#                     **registration.model_dump(exclude_unset=True),
+#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
+#                     effective_to_date=None,
+#                     created_by=user_id,
+#                     created_on=datetime.now()
+#                 )
+#                 db.add(new_registration)
+#             else:
+#                 existing_registration = db.query(CustomerExistingRegistrationDetails).filter_by(id=registration.id).first()
+#                 if existing_registration:
+#                     for key, value in registration.model_dump(exclude_unset=True).items():
+#                         setattr(existing_registration, key, value)
+#                     existing_registration.effective_from_date=datetime.now()  # Set effective_from_date to current date
+#                     existing_registration.effective_to_date=None
+#                     existing_registration.modified_by = user_id
+#                     existing_registration.modified_on = datetime.now()
+
+#         # Handle Authorization
+#         if customer_id >= 0:  # Check if it's an existing customer or a new customer
+#             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
+
+#             if existing_authorization:  # Update the existing authorization
+#                 for key, value in customer_data.authorization.model_dump(exclude_unset=True).items():
+#                     setattr(existing_authorization, key, value)
+#                 existing_authorization.effective_from_date = datetime.now()  
+#                 existing_authorization.effective_to_date = None 
+#                 existing_authorization.modified_by = user_id  
+#                 existing_authorization.modified_on = datetime.now()  
+#             else:  
+#                 new_authorization = CustomerMaster(
+#                     customer_id=customer_id,
+#                     **customer_data.authorization.model_dump(exclude_unset=True),
+#                     effective_from_date=datetime.now(),  
+#                     effective_to_date=None,  
+#                     created_by=user_id,  
+#                     created_on=datetime.now()  
+#                 )
+#                 db.add(new_authorization)
+#         # Commit transaction
+#         db.commit()
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           user_id: int, 
@@ -800,6 +940,99 @@ def get_stakeholder_details(db: Session,
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#----get activity
+def fetch_business_activities(
+    db: Session, 
+    activity_type_id: Optional[int], 
+    business_activity_master_id: Optional[int],
+    user_id: int
+) -> Dict[str, Any]:
+    # Base query with joins
+    stmt = (
+        select(
+            BusinessActivityType.id.label("business_activity_type_id"),
+            BusinessActivityType.business_activity_type,
+            BusinessActivityMaster.id.label("business_activity_master_id"),
+            BusinessActivityMaster.business_activity,
+            BusinessActivity.id.label("activity_id"),
+            BusinessActivity.business_activity.label("activity")
+        )
+        .join(BusinessActivityMaster, BusinessActivityType.id == BusinessActivityMaster.business_activity_type_id)
+        .join(BusinessActivity, BusinessActivityMaster.id == BusinessActivity.activity_master_id)
+        .where(
+            BusinessActivityType.is_deleted == 'no',
+            BusinessActivityMaster.is_deleted == 'no',
+            BusinessActivity.is_deleted == 'no'
+        )
+    )
+
+    # Apply filters conditionally
+    if activity_type_id:
+        stmt = stmt.where(BusinessActivityType.id == activity_type_id)
+    if business_activity_master_id:
+        stmt = stmt.where(BusinessActivityMaster.id == business_activity_master_id)
+
+    # Execute the query
+    result = db.execute(stmt).all()
+
+    # Return empty list if no results found
+    if not result:
+        return {"business_activities": []}
+
+    # Check if only activity_type_id is provided
+    if activity_type_id and not business_activity_master_id:
+        # Simplified response with only business_activity_master_id and business_activity fields
+        business_activities = [
+            {
+                "business_activity_master_id": row[2],
+                "business_activity": row[3]
+            }
+            for row in result
+        ]
+        # Remove duplicates if any
+        unique_business_activities = []
+        seen_ids = set()
+        for activity in business_activities:
+            if activity["business_activity_master_id"] not in seen_ids:
+                unique_business_activities.append(activity)
+                seen_ids.add(activity["business_activity_master_id"])
+
+        return {"business_activities": unique_business_activities}
+
+    # Check if only business_activity_master_id is provided
+    if business_activity_master_id and not activity_type_id:
+        # Return only the activities related to the business_activity_master_id
+        activities = [
+            {
+                "activity_id": row[4],
+                "activity": row[5]
+            }
+            for row in result
+            if row[2] == business_activity_master_id  # Filter by business_activity_master_id
+        ]
+        return {"activities": activities}
+
+    # If both parameters are provided, return filtered activities
+    activities_dict = {}
+    for row in result:
+        business_activity_master_id = row[2]
+        if business_activity_master_id not in activities_dict:
+            activities_dict[business_activity_master_id] = {
+                "business_activity_master_id": business_activity_master_id,
+                "business_activity": row[3],
+                "activities": []
+            }
+        
+        activities_dict[business_activity_master_id]["activities"].append({
+            "activity_id": row[4],
+            "activity": row[5]
+        })
+
+    # Convert dictionary to list for the final response
+    activities = list(activities_dict.values())
+
+    return {"business_activities": activities}
+
 
 
 #----------------Save Business Place----------
@@ -1129,7 +1362,7 @@ def save_goods_commodities_details(
             db.commit()  # Commit to save the new entry
             db.refresh(new_entry)  # Refresh to get the updated instance with id
 
-            return {"success": True, "message": "New data saved successfully"}
+            return {"success": True, "message": "Data saved successfully"}
 
         else:
             # Fetch the existing record by ID for updating
@@ -1271,3 +1504,50 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+#-------jurisdicition
+
+
+
+
+def get_details_by_pin(db: Session, pin: str,user_id:int) -> List[RangeDetailsSchema]:
+    try:
+        # Query the view where jurisdiction contains the PIN or pin matches the PIN
+        range_details = db.query(GstViewRange).filter(
+            or_(
+                GstViewRange.jurisdiction.contains(pin),
+                GstViewRange.pin == pin
+            )
+        ).all()  # Fetch all matching records
+
+        if range_details:
+            # Manually create RangeDetailsSchema instances from SQLAlchemy model attributes
+            range_info_list = [
+                RangeDetailsSchema(
+                    Range_id=range_detail.range_id,
+                    Range=range_detail.range_name,
+                    Division_id=range_detail.division_id,
+                    Division=range_detail.division_name,
+                    Commissionerate_id=range_detail.commissionerate_id,
+                    Commissionerate=range_detail.commissionerate_name,
+                    Zone_id=range_detail.zone_id,
+                    Zone=range_detail.zone_name,
+                    State_id=range_detail.state_id,
+                    State=range_detail.state_name,
+                    District_id=range_detail.district_id,
+                    District=range_detail.district_name,
+                    Country_id=range_detail.country_id,
+                    Country=range_detail.country_name_english
+                )
+                for range_detail in range_details
+            ]
+            return range_info_list  # Return list of matching range details
+        else:
+            return []  # Return an empty list if no results are found
+            
+    except Exception as e:
+        # Properly handle exceptions and provide useful feedback
+        raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")

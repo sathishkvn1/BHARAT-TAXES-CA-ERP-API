@@ -1,11 +1,14 @@
 from enum import Enum
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi import HTTPException, status
 
+
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
-from caerp_db.common.models import AppDesignation, BloodGroupDB, BusinessActivityType, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
+from caerp_db.common.models import AppConstitutionStakeholders, AppDesignation, BloodGroupDB, BusinessActivityType, CountryDB, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 
@@ -23,9 +26,10 @@ from typing import Optional
 from datetime import datetime
 from caerp_auth import oauth2
 from caerp_auth.authentication import authenticate_user
+from typing import List
 
 
-from caerp_db.services.model import AppConstitutionStakeholders, GstReasonToObtainRegistration, GstTypeOfRegistration
+from caerp_db.services.model import GstReasonToObtainRegistration, GstTypeOfRegistration
 
 router = APIRouter(
     tags=['LIBRARY FUNCTIONS']
@@ -39,6 +43,12 @@ class ActionType(str, Enum):
 class LockType(str, Enum):
     LOCK = 'LOCK'
     UNLOCK = 'UNLOCK'
+
+class FetchRecordsRequest(BaseModel):
+    search_key_id: int
+    search_key_field: str  # Add this line
+    fields: List[str] = None
+
 
 from api_library.api_library import DynamicAPI
 
@@ -104,7 +114,9 @@ TABLE_MODEL_MAPPING = {
     "OffServiceDocumentDataMaster":OffServiceDocumentDataMaster,
     "OffConsultationTaskMaster":OffConsultationTaskMaster,
     "StateDB":StateDB,
+    "CountryDB":CountryDB,
     "AppConstitutionStakeholders":AppConstitutionStakeholders
+    
     
 }
 
@@ -553,4 +565,153 @@ def update_column_value(db: Session, table_name: str, row_id: int, field_name: s
         db.rollback()
         print(f"An error occurred: {e}")
 
-  
+from typing import List
+
+
+def fetch_related_records(
+    db: Session,
+    model: Type,               # The model to query (e.g., AppState)
+    search_key_model: Type,    # The model containing the foreign key (e.g., AppCountry)
+    search_key_id: int,        # The ID value of the foreign key used to filter records
+    search_key_field: str,     # The name of the foreign key field in the model (e.g., country_id)
+    fields: List[str] = None   # Optional list of specific fields to retrieve
+) -> List[dict]:
+    try:
+        # Prepare the query to filter records by joining the search_key_model
+        query = (
+            db.query(model)
+            .join(search_key_model, getattr(model, search_key_field) == search_key_model.id)
+            .filter(search_key_model.id == search_key_id)
+        )
+        print("Generated SQL Query:", str(query))
+        
+        # If specific fields are provided, select only those fields
+        if fields:
+            query = query.with_entities(*[getattr(model, field) for field in fields])
+        
+        # Execute the query and fetch results
+        records = query.all()
+        
+        # Convert query results to dictionaries if fields are specified
+        if fields:
+            return [dict(zip(fields, record)) for record in records]
+        
+        # Return the full record if no specific fields are provided
+        return records
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+# @router.post("/fetch-related-records/{model_name}/{search_key_model_name}")
+# async def fetch_related_records_endpoint(
+#     model_name: str,
+#     search_key_model_name: str,
+#     request: FetchRecordsRequest,
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     db: Session = Depends(get_db)
+# ):
+    
+#     """
+#     model_name (string): The name of the primary model to query .
+#     search_key_model_name (string): The name of the model that contains the foreign key referenced by the primary model.
+#     Example: AppBusinessConstitution (this model does not contain a foreign key; instead, the foreign key exists in AppConstitutionStakeholders, referencing AppBusinessConstitution).
+#     search_key_id:This is the ID of the record in the related (foreign key) model that you want to filter by. It represents a specific instance of that model.
+#     search_key_field: Defines which field in your model you will use to join with the foreign key model.
+
+#     eg-
+#    model_name: AppConstitutionStakeholders
+#    search_key_model_name :  AppBusinessConstitution
+
+#     {
+#     "search_key_id": 2,
+#     "search_key_field": "constitution_id",
+#     "fields": [
+#         "id","stakeholder" 
+#     ]
+#     }
+#     """
+
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     # Check if the model names exist in the mapping
+#     model = TABLE_MODEL_MAPPING.get(model_name)
+#     search_key_model = TABLE_MODEL_MAPPING.get(search_key_model_name)
+
+#     if not model or not search_key_model:
+#         raise HTTPException(status_code=400, detail="Invalid model names provided.")
+
+#     # Call the common function with the mapped models
+#     records = fetch_related_records(
+#         db=db,
+#         model=model,
+#         search_key_model=search_key_model,
+#         search_key_id=request.search_key_id,
+#         search_key_field=request.search_key_field,  # Use the field from the request
+#         fields=request.fields
+#     )
+
+#     return records
+
+
+@router.post("/fetch-related-records/{model_name}/{search_key_model_name}")
+async def fetch_related_records_endpoint(
+    model_name: str,
+    search_key_model_name: str,
+    request: FetchRecordsRequest,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetch related records based on the primary and foreign key models.
+
+    Parameters:
+    - model_name (string): The name of the primary model to query.
+    - search_key_model_name (string): The name of the model that contains the foreign key referenced by the primary model.
+      Example: AppBusinessConstitution (this model does not contain a foreign key; instead, the foreign key exists in AppConstitutionStakeholders, referencing AppBusinessConstitution).
+    - request (FetchRecordsRequest): The request body containing parameters to filter the records.
+
+    Request Body Example:
+
+    model_name: AppConstitutionStakeholders
+    search_key_model_name:AppBusinessConstitution
+    {
+        "search_key_id": 2,
+        "search_key_field": "constitution_id",
+        "fields": [
+            "id", "stakeholder"
+        ]
+    }
+
+    - search_key_id (int): The ID of the record in the related (foreign key) model that you want to filter by. It represents a specific instance of that model.
+    - search_key_field (string): Defines which field in your model you will use to join with the foreign key model.
+
+    Returns:
+    - List[dict]: A list of dictionaries containing the filtered records from the primary model based on the provided foreign key criteria.
+
+    Raises:
+    - HTTPException: If the token is missing or if invalid model names are provided.
+    """
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Check if the model names exist in the mapping
+    model = TABLE_MODEL_MAPPING.get(model_name)
+    search_key_model = TABLE_MODEL_MAPPING.get(search_key_model_name)
+
+    if not model or not search_key_model:
+        raise HTTPException(status_code=400, detail="Invalid model names provided.")
+
+    # Call the common function with the mapped models
+    records = fetch_related_records(
+        db=db,
+        model=model,
+        search_key_model=search_key_model,
+        search_key_id=request.search_key_id,
+        search_key_field=request.search_key_field,  # Use the field from the request
+        fields=request.fields
+    )
+
+    return records

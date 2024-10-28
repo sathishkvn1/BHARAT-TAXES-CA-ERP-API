@@ -1,10 +1,11 @@
 
 from typing import List, Union
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
-from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, StakeHolderMasterSchema
+from caerp_db.services.model import GstViewRange
+from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -173,46 +174,39 @@ def get_stakeholder_master(
 
 #-----------------Business Activity-----------------
 
-@router.get("/get_business_activities/{activity_type_id}")
-def get_business_activities(activity_type_id: int, 
-                            db: Session = Depends(get_db)):
-    # Build the query
-    stmt = (
-        select(
-            BusinessActivityType.business_activity_type,
-            BusinessActivityMaster.business_activity,
-            BusinessActivity.business_activity.label("activity")
-        )
-        .join(BusinessActivityMaster, BusinessActivityType.id == BusinessActivityMaster.business_activity_type_id)
-        .join(BusinessActivity, BusinessActivityMaster.id == BusinessActivity.activity_master_id)
-        .where(
-            BusinessActivityType.id == activity_type_id,
-            BusinessActivityType.is_deleted == 'no',
-            BusinessActivityMaster.is_deleted == 'no',
-            BusinessActivity.is_deleted == 'no'
-        )
-    )
+@router.get("/get_business_activities")
+def get_business_activities(
+    activity_type_id: Optional[int] = Query(None),
+    business_activity_master_id: Optional[int] = Query(None),
+    
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Get business activities based on the provided filters.
 
-    # Execute the query
-    result = db.execute(stmt).all()
+    - This endpoint retrieves business activities based on the given parameters. 
+    - You can filter the results by `activity_type_id` and/or `business_activity_master_id`.
 
-    # Check if any results were found
-    if not result:
-        return []
-
-    # Transform result into a list of dictionaries
-    activities = [
-        {
-            "business_activity_type": row[0],
-            "business_activity": row[1],
-            "activity": row[2],
-        }
-        for row in result
-    ]
-
-    return {"business_activities": activities}
-
-
+    Parameters:
+    - **activity_type_id** (Optional[int]): 
+       - The ID of the business activity type to filter results. 
+       - When provided, only business activities associated with this ID will be returned. 
+       - If no activities then return [].
+        
+    - **business_activity_master_id** (Optional[int]): 
+       - The ID of the business activity master to filter results. 
+       - When provided, this will return the specific business activity master data. 
+       - If not provided, and `activity_type_id` is given, a list of unique business activities will be returned.
+       - If no activities then return [].
+    
+    
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    return db_gst.fetch_business_activities(db, activity_type_id, business_activity_master_id,user_id)
 
 #--------Save Business Place--------------
 
@@ -340,7 +334,7 @@ def save_gst_state_specific_information(
     customer_id: int,
     data: CustomerGstStateSpecificInformationSchema,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     - Save or update GST state-specific information.
@@ -364,7 +358,7 @@ def save_gst_state_specific_information(
 def get_gst_state_specific_information(
     customer_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     - Retrieve GST state-specific information for a given customer ID.
@@ -381,3 +375,29 @@ def get_gst_state_specific_information(
         return []
 
     return gst_state_info
+
+
+
+#----jurisdiction
+@router.get("/range_details/{pin}/", response_model=List[RangeDetailsSchema])
+async def get_range_details(pin: str, 
+                            db: Session = Depends(get_db),
+                            token: str = Depends(oauth2.oauth2_scheme)
+                            ):
+    
+    """
+    - Get Range,Division,Commissionerate,Zone by Pincode
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  # Optionally track user info
+    details = db_gst.get_details_by_pin(db, pin,user_id)
+    if details:
+        return details  # Return the list directly
+    else:
+        return []
+
+
+
+

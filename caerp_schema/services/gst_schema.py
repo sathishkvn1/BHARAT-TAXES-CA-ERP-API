@@ -195,3 +195,25 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
     professional_tax_registration_certificate    :str
     state_excise_licence_number                  :str
     excise_licence_holder_name                   :str
+
+
+#-jurisdition
+
+
+class RangeDetailsSchema(BaseModel):
+    Range_id           : int
+    Range              : str
+    Division_id        : int
+    Division           : str
+    Commissionerate_id : int
+    Commissionerate    : str
+    Zone_id            : int
+    Zone               : str
+    State_id           : int
+    State              : str
+    District_id        : int
+    District           : str
+    Country_id         :int
+    Country            :str
+    class Config:
+        orm_mode = True
