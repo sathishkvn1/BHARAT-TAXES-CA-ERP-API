@@ -41,13 +41,62 @@ UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 #--------------------save_appointment_details-------------------------------------------------------
+# @router.post("/save_appointment_details/{id}")
+# def save_appointment_details(
+#     id: int,
+#     appointment_data: List[OffAppointmentDetails], 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         for appointment in appointment_data:
+#             result = db_office_master.save_appointment_visit_master(
+#                 db, id, appointment, user_id
+#             )
+
+#         return {
+#             "success": True,
+#             "message": "Saved successfully",
+#             "id": result["id"],
+#             "visit_master_id": result.get("visit_master_id", None),
+#             "consultant_id": result.get("consultant_id", None)
+#         }
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
+    action_type: RecordActionType,
     appointment_data: List[OffAppointmentDetails], 
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
+    """
+   - Save or create appointment details for a specific ID.
+    - **data**: Data for the visit master, provided as parameters of type OffAppointmentDetails.
+    - **id**: An optional integer parameter with a default value of 0, indicating the appointment_details's identifier.
+    - **action_type (RecordActionType)**: The action type to be performed, indicating whether to insert or update the appointment details.
+
+    - If appointment_master id is 0, it indicates the creation of a new appointment_details.
+    - Returns: The newly created appointment_details as the response.
+    - If appointment_master id is not 0, it indicates the update of an existing appointment_details.
+    - Returns: The updated appointment_details as the response.
+    - If action_type is INSERT_ONLY, the id parameter should be 0.
+    - If action_type is UPDATE_ONLY, the id parameter should be greater than 0.
+    - If action_type is UPDATE_and_insert, the id parameter should be greater than 0.
+    """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -57,7 +106,7 @@ def save_appointment_details(
     try:
         for appointment in appointment_data:
             result = db_office_master.save_appointment_visit_master(
-                db, id, appointment, user_id
+                db, id, appointment, user_id,action_type
             )
 
         return {
@@ -427,10 +476,6 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-
-
 #----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
@@ -497,8 +542,6 @@ def save_service_document_data_master(
 #---------------------------------------------------------------------------------------------------------------
 from datetime import datetime, timedelta
 
-
-
 # @router.get("/get_consultant_schedule")
 # def get_consultant_schedule(
 #     consultant_id: int,
@@ -537,8 +580,6 @@ from datetime import datetime, timedelta
 #         service_goods_master_id=service_goods_master_id,
 #         appointment_id=appointment_id
 #     )
-
-
 
 @router.get("/get_consultant_schedule")
 def get_consultant_schedule(
@@ -580,10 +621,6 @@ The endpoint returns a JSON object containing either available slots or messages
     )
 
 #---------------------------------------------------------------------------------------------------------------
-
-
-
-
 @router.get("/consultants_and_services/")
 def get_consultants_and_services(
     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),

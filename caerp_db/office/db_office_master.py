@@ -31,6 +31,9 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #------------------------------------------------------------------------------------------------------------
 
 
+
+
+
 # def save_appointment_visit_master(
 #     db: Session,
 #     appointment_master_id: int,
@@ -47,9 +50,8 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #         db.begin()
 
 #         if appointment_master_id == 0:
-            
 #             # Insert operation for new appointment
-#             appointment_number = generate_book_number('APPOINTMENT',financial_year_id,customer_id, db)
+#             appointment_number = generate_book_number('APPOINTMENT', financial_year_id, customer_id, db)
 #             appointment_master = OffAppointmentMaster(
 #                 created_by=user_id,
 #                 created_on=datetime.now(),
@@ -58,21 +60,21 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #             db.add(appointment_master)
 #             db.flush()  # Ensure changes are flushed to the database
 
-#             visit_master = OffAppointmentVisitMaster(
+#             new_visit_master = OffAppointmentVisitMaster(
 #                 appointment_master_id=appointment_master.id,
 #                 appointment_number=appointment_number,
 #                 created_by=user_id,
 #                 created_on=datetime.now(),
 #                 **appointment_data.visit_master.model_dump(exclude_unset=True)
 #             )
-#             db.add(visit_master)
+#             db.add(new_visit_master)
 #             db.flush()  # Flush to get the ID of the new visit master
 
 #             # Add new visit details
 #             for detail_data in appointment_data.visit_details:
 #                 visit_detail = OffAppointmentVisitDetails(
-#                     visit_master_id=visit_master.id,  # Use the new visit master ID
-#                     consultant_id=visit_master.consultant_id,
+#                     visit_master_id=new_visit_master.id,  # Use the new visit master ID
+#                     consultant_id=new_visit_master.consultant_id,
 #                     created_by=user_id,
 #                     created_on=datetime.now(),
 #                     **detail_data.model_dump(exclude_unset=True)
@@ -157,7 +159,7 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #                 # Create new visit master for a different date or consultant ID
 #                 new_visit_master = OffAppointmentVisitMaster(
 #                     appointment_master_id=appointment_master.id,
-#                     appointment_number=generate_book_number('APPOINTMENT',financial_year_id,customer_id, db),
+#                     appointment_number=generate_book_number('APPOINTMENT', financial_year_id, customer_id, db),
 #                     created_by=user_id,
 #                     created_on=datetime.now(),
 #                     **appointment_data.visit_master.model_dump(exclude_unset=True)
@@ -184,11 +186,10 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #         return {
 #             "appointment_master": appointment_master,
 #             "visit_master": existing_visit_master if existing_visit_master else new_visit_master,
-#             "visit_details": visit_details_list ,
+#             "visit_details": visit_details_list,
 #             "id": appointment_master.id,
-#             "visit_master_id": visit_master.id,
-#             "consultant_id": visit_master.consultant_id,
-#               # Return the list of visit details
+#             "visit_master_id": (existing_visit_master.id if existing_visit_master else new_visit_master.id),
+#             "consultant_id": (existing_visit_master.consultant_id if existing_visit_master else new_visit_master.consultant_id),
 #         }
 
 #     except IntegrityError as e:
@@ -201,27 +202,24 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=str(e))
 
-
-
-
-
 def save_appointment_visit_master(
     db: Session,
     appointment_master_id: int,
     appointment_data: OffAppointmentDetails,
-    user_id: int
+    user_id: int,
+    action_type: RecordActionType
 ):
-    visit_details_list = []  # Initialize visit_details_list at the start
-    new_visit_master = None  # Initialize new_visit_master
-    existing_visit_master = None  # Initialize existing_visit_master
+    visit_details_list = []
+    new_visit_master = None
+    existing_visit_master = None
     financial_year_id = 1
     customer_id = 1
+
     try:
-        # Manually begin the transaction
         db.begin()
 
-        if appointment_master_id == 0:
-            # Insert operation for new appointment
+        if appointment_master_id == 0 and action_type == RecordActionType.INSERT_ONLY:
+            # Case 1: Insert new appointment master and visit details
             appointment_number = generate_book_number('APPOINTMENT', financial_year_id, customer_id, db)
             appointment_master = OffAppointmentMaster(
                 created_by=user_id,
@@ -229,7 +227,7 @@ def save_appointment_visit_master(
                 **appointment_data.appointment_master.model_dump(exclude_unset=True)
             )
             db.add(appointment_master)
-            db.flush()  # Ensure changes are flushed to the database
+            db.flush()
 
             new_visit_master = OffAppointmentVisitMaster(
                 appointment_master_id=appointment_master.id,
@@ -239,12 +237,11 @@ def save_appointment_visit_master(
                 **appointment_data.visit_master.model_dump(exclude_unset=True)
             )
             db.add(new_visit_master)
-            db.flush()  # Flush to get the ID of the new visit master
+            db.flush()
 
-            # Add new visit details
             for detail_data in appointment_data.visit_details:
                 visit_detail = OffAppointmentVisitDetails(
-                    visit_master_id=new_visit_master.id,  # Use the new visit master ID
+                    visit_master_id=new_visit_master.id,
                     consultant_id=new_visit_master.consultant_id,
                     created_by=user_id,
                     created_on=datetime.now(),
@@ -253,20 +250,18 @@ def save_appointment_visit_master(
                 db.add(visit_detail)
                 visit_details_list.append(visit_detail)
 
-        elif appointment_master_id > 0:
-            # Update operation for existing appointment
+        elif appointment_master_id != 0 and action_type == RecordActionType.UPDATE_ONLY:
+            # Case 2: Update existing appointment master and visit details only
             appointment_master = db.query(OffAppointmentMaster).filter(
                 OffAppointmentMaster.id == appointment_master_id).first()
             if not appointment_master:
                 return {"detail": "Appointment master not found"}
 
-            # Update appointment master fields
             for field, value in appointment_data.appointment_master.model_dump(exclude_unset=True).items():
                 setattr(appointment_master, field, value)
             appointment_master.modified_by = user_id
             appointment_master.modified_on = datetime.now()
 
-            # Check existing visit master for the same date and consultant ID
             existing_visit_master = db.query(OffAppointmentVisitMaster).filter(
                 OffAppointmentVisitMaster.appointment_master_id == appointment_master_id,
                 OffAppointmentVisitMaster.appointment_date == appointment_data.visit_master.appointment_date,
@@ -274,32 +269,21 @@ def save_appointment_visit_master(
             ).first()
 
             if existing_visit_master:
-                # Update existing visit master
                 for field, value in appointment_data.visit_master.model_dump(exclude_unset=True).items():
                     if field == "remarks":
                         if existing_visit_master.remarks:
-                            # Append new remarks to existing remarks with separator
                             setattr(existing_visit_master, field, existing_visit_master.remarks + "**" + value)
                         else:
                             setattr(existing_visit_master, field, value)
                     else:
                         setattr(existing_visit_master, field, value)
-                
                 existing_visit_master.modified_by = user_id
                 existing_visit_master.modified_on = datetime.now()
 
-                # Handle visit details: update existing or add new
+                # Handle visit details update only
                 existing_details = db.query(OffAppointmentVisitDetails).filter(
                     OffAppointmentVisitDetails.visit_master_id == existing_visit_master.id).all()
-
                 existing_details_dict = {detail.service_id: detail for detail in existing_details}
-
-                for detail in existing_details:
-                    detail.is_deleted = "yes"
-                    detail.deleted_by = user_id
-                    detail.deleted_on = datetime.now()
-                    detail.modified_by = user_id
-                    detail.modified_on = datetime.now()
 
                 for detail_data in appointment_data.visit_details:
                     detail_data_dict = detail_data.model_dump(exclude_unset=True)
@@ -314,46 +298,55 @@ def save_appointment_visit_master(
                         existing_detail.deleted_on = None
                         existing_detail.modified_by = user_id
                         existing_detail.modified_on = datetime.now()
+                        visit_details_list.append(existing_detail)
                     else:
-                        # If service_id is not found, create a new visit detail
-                        visit_detail = OffAppointmentVisitDetails(
+                        # Insert new service visit detail
+                        new_visit_detail = OffAppointmentVisitDetails(
                             visit_master_id=existing_visit_master.id,
                             consultant_id=existing_visit_master.consultant_id,
                             created_by=user_id,
                             created_on=datetime.now(),
                             **detail_data_dict
                         )
-                        db.add(visit_detail)
-                        visit_details_list.append(visit_detail)
+                        db.add(new_visit_detail)
+                        visit_details_list.append(new_visit_detail)
 
-            else:
-                # Create new visit master for a different date or consultant ID
-                new_visit_master = OffAppointmentVisitMaster(
-                    appointment_master_id=appointment_master.id,
-                    appointment_number=generate_book_number('APPOINTMENT', financial_year_id, customer_id, db),
+        elif appointment_master_id != 0 and action_type == RecordActionType.UPDATE_AND_INSERT:
+            # Case 3: Update appointment master and insert new visit master and details
+            appointment_master = db.query(OffAppointmentMaster).filter(
+                OffAppointmentMaster.id == appointment_master_id).first()
+            if not appointment_master:
+                return {"detail": "Appointment master not found"}
+
+            for field, value in appointment_data.appointment_master.model_dump(exclude_unset=True).items():
+                setattr(appointment_master, field, value)
+            appointment_master.modified_by = user_id
+            appointment_master.modified_on = datetime.now()
+
+            # Insert a new visit master for the updated appointment
+            new_visit_master = OffAppointmentVisitMaster(
+                appointment_master_id=appointment_master.id,
+                appointment_number=generate_book_number('APPOINTMENT', financial_year_id, customer_id, db),
+                created_by=user_id,
+                created_on=datetime.now(),
+                **appointment_data.visit_master.model_dump(exclude_unset=True)
+            )
+            db.add(new_visit_master)
+            db.flush()
+
+            for detail_data in appointment_data.visit_details:
+                visit_detail = OffAppointmentVisitDetails(
+                    visit_master_id=new_visit_master.id,
+                    consultant_id=new_visit_master.consultant_id,
                     created_by=user_id,
                     created_on=datetime.now(),
-                    **appointment_data.visit_master.model_dump(exclude_unset=True)
+                    **detail_data.model_dump(exclude_unset=True)
                 )
-                db.add(new_visit_master)
-                db.flush()  # Flush to get the ID of the new visit master
+                db.add(visit_detail)
+                visit_details_list.append(visit_detail)
 
-                # Add new visit details with the new visit master ID
-                for detail_data in appointment_data.visit_details:
-                    visit_detail = OffAppointmentVisitDetails(
-                        visit_master_id=new_visit_master.id,  # Use the new visit master ID
-                        consultant_id=new_visit_master.consultant_id,
-                        created_by=user_id,
-                        created_on=datetime.now(),
-                        **detail_data.model_dump(exclude_unset=True)
-                    )
-                    db.add(visit_detail)
-                    visit_details_list.append(visit_detail)
-
-        # Commit the transaction
         db.commit()
 
-        # Return response outside of the transaction block
         return {
             "appointment_master": appointment_master,
             "visit_master": existing_visit_master if existing_visit_master else new_visit_master,
@@ -372,6 +365,7 @@ def save_appointment_visit_master(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #------------------------------------------------------------------------------------------------------------
 #///////////////////////////////////////////////////
