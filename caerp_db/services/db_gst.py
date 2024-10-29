@@ -8,7 +8,7 @@ from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActi
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import BusinessActivityData, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -1039,137 +1039,116 @@ def fetch_business_activities(
 
 
 def save_business_place(customer_id: int, 
-                       data: BusinessData, 
-                       db: Session,
-                       user_id: int,
-                       id: int  # New parameter to determine insert or update
-                       ):
+                        data: BusinessData, 
+                        db: Session,
+                        user_id: int,
+                        id: int):
     try:
-        if id == 0:
-            # Add new business data
-            for business_place in data.business_place:
-                # Create new business place model
-                business_place_model = CustomerBusinessPlace(
-                    **business_place.model_dump(exclude_unset=True),
-                    customer_id=customer_id  # Associate with customer_id
-                )
-                db.add(business_place_model)
-                db.flush()  # Flush to get the ID of the newly created business place
-                business_place_id = business_place_model.id
-
-                # Save Business Activities
-                for activity_data in data.business_activity:
-                    # Extract IDs from activity_data
-                    business_activity_type_id = activity_data.business_activity_type.business_activity_type_id
-                    business_activity_master_id = activity_data.business_activity_master.business_activity_master_id
-                    business_activity_id = activity_data.business_activity.business_activity_id
-
-                    # Save Business Activity Type
-                    activity_type_model = CustomerBusinessPlaceActivityType(
-                        customer_id=customer_id,
-                        business_place_id=business_place_id,  # Associate with the current business place
-                        business_activity_type_id=business_activity_type_id  # Using the provided type ID
+        # Start transaction
+        with db.begin():
+            # Check if we're creating a new business place or updating an existing one
+            if id == 0:
+                # Create new business place
+                for business_place in data.business_place:
+                    new_business_place = CustomerBusinessPlace(
+                        **business_place.model_dump(exclude_unset=True),
+                        customer_id=customer_id
                     )
-                    db.add(activity_type_model)
+                    db.add(new_business_place)
+                    db.flush()  # Get the generated ID after insert
+                    business_place_id = new_business_place.id
+            else:
+                # Update existing business place with id != 0
+                existing_business_place = db.query(CustomerBusinessPlace).filter_by(
+                    id=id, customer_id=customer_id
+                ).first()
 
-                    # Save Core Activity
-                    core_activity_model = CustomerBusinessPlaceCoreActivity(
-                        customer_id=customer_id,
-                        business_place_id=business_place_id,  # Associate with the current business place
-                        business_activity_master_id=business_activity_master_id  # Using the provided master ID
-                    )
-                    db.add(core_activity_model)
+                if existing_business_place:
+                    for business_place in data.business_place:
+                        # Update each attribute of the existing business place
+                        for key, value in business_place.model_dump(exclude_unset=True).items():
+                            setattr(existing_business_place, key, value)
+                    business_place_id = existing_business_place.id
+                else:
+                    raise HTTPException(status_code=404, detail="Business place not found for update.")
 
-                    # Save Business Activity
-                    activity_model = CustomerBusinessPlaceActivity(
-                        customer_id=customer_id,
-                        business_place_id=business_place_id,  # Associate with the current business place
-                        business_activity_id=business_activity_id  # Using the provided activity ID
-                    )
-                    db.add(activity_model)
-
-        else:
-            # Update existing business data
-            existing_business_place = db.query(CustomerBusinessPlace).filter_by(id=id, customer_id=customer_id).first()
-            if not existing_business_place:
-                return []
-
-            # Update business place details
-            for business_place in data.business_place:
-                existing_business_place.update(**business_place.model_dump(exclude_unset=True))
-
-                # Assuming that business activities can be updated or added as necessary
-                for activity_data in data.business_activity:
-                    business_activity_type_id = activity_data.business_activity_type.business_activity_type_id
-                    business_activity_master_id = activity_data.business_activity_master.business_activity_master_id
-                    business_activity_id = activity_data.business_activity.business_activity_id
-
-                    # Update or create Business Activity Type
-                    existing_activity_type = db.query(CustomerBusinessPlaceActivityType).filter_by(
-                        business_place_id=existing_business_place.id,
-                        business_activity_type_id=business_activity_type_id
-                    ).first()
-                    if existing_activity_type:
-                        existing_activity_type.update(customer_id=customer_id)
-                    else:
-                        new_activity_type = CustomerBusinessPlaceActivityType(
-                            customer_id=customer_id,
-                            business_place_id=existing_business_place.id,
-                            business_activity_type_id=business_activity_type_id
-                        )
-                        db.add(new_activity_type)
-
-                    # Update or create Core Activity
-                    existing_core_activity = db.query(CustomerBusinessPlaceCoreActivity).filter_by(
-                        business_place_id=existing_business_place.id,
-                        business_activity_master_id=business_activity_master_id
-                    ).first()
-                    if existing_core_activity:
-                        existing_core_activity.update(customer_id=customer_id)
-                    else:
-                        new_core_activity = CustomerBusinessPlaceCoreActivity(
-                            customer_id=customer_id,
-                            business_place_id=existing_business_place.id,
-                            business_activity_master_id=business_activity_master_id
-                        )
-                        db.add(new_core_activity)
-
-                    # Update or create Business Activity
+            # Process nature_of_business and activity types for the business place
+            for nature in data.nature_of_business:
+                if nature.id > 0:
                     existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
-                        business_place_id=existing_business_place.id,
-                        business_activity_id=business_activity_id
+                        id=nature.id,
+                        customer_id=customer_id,
+                        business_place_id=business_place_id
                     ).first()
+
                     if existing_activity:
-                        existing_activity.update(customer_id=customer_id)
-                    else:
-                        new_activity = CustomerBusinessPlaceActivity(
-                            customer_id=customer_id,
-                            business_place_id=existing_business_place.id,
-                            business_activity_id=business_activity_id
-                        )
-                        db.add(new_activity)
+                        existing_activity.business_activity_id = nature.business_activity_id
+                else:
+                    new_activity = CustomerBusinessPlaceActivity(
+                        customer_id=customer_id,
+                        business_place_id=business_place_id,
+                        business_activity_id=nature.business_activity_id
+                    )
+                    db.add(new_activity)
 
-        # Commit the transaction
-        db.commit()
-        
-        return {"message": "Business data saved successfully"}
+            # Handle business activity type
+            existing_activity_type = db.query(CustomerBusinessPlaceActivityType).filter_by(
+                customer_id=customer_id,
+                business_place_id=business_place_id
+            ).first()
 
+            if existing_activity_type:
+                # Update the existing record
+                existing_activity_type.business_activity_type_id = data.business_activity_type_id
+            else:
+                # Add a new record if none exists
+                new_activity_type = CustomerBusinessPlaceActivityType(
+                    customer_id=customer_id,
+                    business_place_id=business_place_id,
+                    business_activity_type_id=data.business_activity_type_id
+                )
+                db.add(new_activity_type)
+
+            # Handle business activity master
+            existing_core_activity = db.query(CustomerBusinessPlaceCoreActivity).filter_by(
+                customer_id=customer_id,
+                business_place_id=business_place_id
+            ).first()
+
+            if existing_core_activity:
+                # Update the existing record
+                existing_core_activity.business_activity_master_id = data.business_activity_master_id
+            else:
+                # Add a new record if none exists
+                new_core_activity = CustomerBusinessPlaceCoreActivity(
+                    customer_id=customer_id,
+                    business_place_id=business_place_id,
+                    business_activity_master_id=data.business_activity_master_id
+                )
+                db.add(new_core_activity)
+
+            # Commit the transaction after all operations
+            db.commit()
+
+        return {"message": "Data saved successfully"}
+
+    except AttributeError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Attribute Error: {str(e)}")
     except Exception as e:
-        db.rollback()  # Rollback in case of an error
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-#---get Business Place
-
+#-----get business_place----
 
 def get_business_place(customer_id: int, 
-                        type: str, 
-                        db: Session,
-                        user_id: int
-                        ):
+                       type: str, 
+                       db: Session,
+                       user_id: int
+                       ):
     """
     Fetch business data from the database.
     """
-    # Determine the value for is_principal_place based on the type
     is_principal_place = 'yes' if type == 'PRINCIPAL_PLACE_ADDRESS' else 'no'
 
     try:
@@ -1179,9 +1158,26 @@ def get_business_place(customer_id: int,
             CustomerBusinessPlace.is_principal_place == is_principal_place
         ).all()
 
+        # If no business places found, return an empty list
+        if not business_places:
+            return []
+
         # Prepare business places response
-        business_places_response = [
-            {
+        business_places_response = []
+        nature_of_business_response = []
+
+        # Iterate over business places
+        for bp in business_places:
+            # Fetch business activity type and master details
+            business_activity_type = db.query(CustomerBusinessPlaceActivityType).filter(
+                CustomerBusinessPlaceActivityType.business_place_id == bp.id
+            ).first()
+            business_activity_master = db.query(CustomerBusinessPlaceCoreActivity).filter(
+                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id
+            ).first()
+
+            # Prepare the business place data
+            business_place_data = {
                 "id": bp.id,
                 "pin_code": bp.pin_code,
                 "country_id": bp.country_id,
@@ -1213,78 +1209,55 @@ def get_business_place(customer_id: int,
                 "nature_of_possession_id": bp.nature_of_possession_id,
                 "nature_of_possession": db.query(OffNatureOfPossession.nature_of_possession).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
             }
-            for bp in business_places
-        ]
 
-        # Initialize response lists for activities, activity types, and core activities
-        business_activities_response = []
-        business_activity_types_response = []
-        business_core_activities_response = []
+            # Add activity type and master details to the business place data
+            if business_activity_type:
+                business_place_data.update({
+                    "business_activity_type_id": business_activity_type.business_activity_type_id,
+                    "business_activity_type_name": db.query(BusinessActivityType).filter(
+                        BusinessActivityType.id == business_activity_type.business_activity_type_id
+                    ).first().business_activity_type if business_activity_type.business_activity_type_id else None,
+                })
 
-        # Fetch related activities for each business place
-        for bp in business_places:
-            # Fetch business activities for the current business place
+            if business_activity_master:
+                business_place_data.update({
+                    "business_activity_master_id": business_activity_master.business_activity_master_id,
+                    "business_activity_master_name": db.query(BusinessActivityMaster).filter(
+                        BusinessActivityMaster.id == business_activity_master.business_activity_master_id
+                    ).first().business_activity if business_activity_master.business_activity_master_id else None,
+                })
+
+            # Append business place data to response
+            business_places_response.append(business_place_data)
+
+            # Get business activities
             business_activities = db.query(CustomerBusinessPlaceActivity).filter(
                 CustomerBusinessPlaceActivity.business_place_id == bp.id
             ).all()
-            
-            business_activities_response.extend([
-                {
+
+            # Compile each business activity
+            for ba in business_activities:
+                activity_data = {
                     "id": ba.id,
-                    "customer_id": ba.customer_id,
-                    "business_place_id": ba.business_place_id,
                     "business_activity_id": ba.business_activity_id,
-                    "business_activity_name": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().business_activity if ba.business_activity_id else None,
+                    "business_activity_name": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().business_activity if ba.business_activity_id else None
                 }
-                for ba in business_activities
-            ])
-
-            # Fetch business activity types for the current business place
-            business_activity_types = db.query(CustomerBusinessPlaceActivityType).filter(
-                CustomerBusinessPlaceActivityType.business_place_id == bp.id
-            ).all()
-
-            business_activity_types_response.extend([
-                {
-                    "id": bat.id,
-                    "customer_id": bat.customer_id,
-                    "business_place_id": bat.business_place_id,
-                    "business_activity_type_id": bat.business_activity_type_id,
-                    "business_activity_type_name": db.query(BusinessActivityType).filter(BusinessActivityType.id == bat.business_activity_type_id).first().business_activity_type if bat.business_activity_type_id else None,
-                }
-                for bat in business_activity_types
-            ])
-
-            # Fetch business core activities for the current business place
-            business_core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter(
-                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id
-            ).all()
-
-            business_core_activities_response.extend([
-                {
-                    "id": bca.id,
-                    "customer_id": bca.customer_id,
-                    "business_place_id": bca.business_place_id,
-                    "business_activity_master_id": bca.business_activity_master_id,
-                    "business_activity_master_name": db.query(BusinessActivityMaster).filter(BusinessActivityMaster.id == bca.business_activity_master_id).first().business_activity if bca.business_activity_master_id else None,
-                }
-                for bca in business_core_activities
-            ])
+                nature_of_business_response.append(activity_data)
 
         # Compile final response
         response = {
             "business_places": business_places_response,
-            "business_activities": business_activities_response,
-            "business_activity_types": business_activity_types_response,
-            "business_core_activities": business_core_activities_response
+            "business_activity_type_id": business_places_response[0].get("business_activity_type_id") if business_places_response else None,
+            "business_activity_type_name": business_places_response[0].get("business_activity_type_name") if business_places_response else None,
+            "business_activity_master_id": business_places_response[0].get("business_activity_master_id") if business_places_response else None,
+            "business_activity_master_name": business_places_response[0].get("business_activity_master_name") if business_places_response else None,
+            "nature_of_business": nature_of_business_response
         }
 
         return response
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 #-------------Get hsn sac
 

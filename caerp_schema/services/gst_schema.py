@@ -80,15 +80,17 @@ class CustomerRequestSchema(BaseModel):
 
 
 class PersonalInformationSchema(BaseModel):
-    id                : Optional[int]
-    first_name        : str
-    middle_name       : Optional[str]
-    last_name         : Optional[str]
-    fathers_first_name: Optional[str]
-    marital_status_id : Optional[int]
-    date_of_birth     : Optional[date]
-    gender_id         : int
-    din_number        : Optional[str]
+    id                  : Optional[int]
+    first_name          : str
+    middle_name         : Optional[str]
+    last_name           : Optional[str]
+    fathers_first_name  : Optional[str]
+    fathers_middle_name :Optional[str]
+    fathers_last_name   :Optional[str]
+    marital_status_id   : Optional[int]
+    date_of_birth       : Optional[date]
+    gender_id           : int
+    din_number          : Optional[str]
     is_citizen_of_india: Optional[str]
     pan_number         : Optional[str]
     passport_number    : Optional[str]
@@ -160,28 +162,19 @@ class BusinessPlace(BaseModel):
     nature_of_possession_id   : Optional[int]
 
 
-class BusinessActivityType(BaseModel):
-    
-    business_activity_type_id : Optional[int]
-
-
-class BusinessActivityMaster(BaseModel):
-    business_activity_master_id: Optional[int]
-
-
-class BusinessActivity(BaseModel):
-    business_activity_id       : Optional[int]
-
-
-class BusinessActivityData(BaseModel):
-    business_activity_type      : Optional[BusinessActivityType]
-    business_activity_master     : Optional[BusinessActivityMaster]
-    business_activity           : Optional[BusinessActivity]
-
+class NatureOfBusiness(BaseModel):
+    id: Optional[int]
+    business_activity_id: Optional[int]
 
 class BusinessData(BaseModel):
-    business_place             : List[BusinessPlace]
-    business_activity          : List[BusinessActivityData]
+    business_place: List[BusinessPlace]
+    business_activity_type_id: int
+    business_activity_master_id: int
+    nature_of_business: List[NatureOfBusiness]
+
+
+
+
 
 
 class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
