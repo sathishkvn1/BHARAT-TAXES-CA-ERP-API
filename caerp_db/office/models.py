@@ -70,6 +70,10 @@ class OffAppointmentVisitMaster(caerp_base):
     is_deleted                 = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                 = Column(Integer, nullable=True)
     deleted_on                 = Column(Date, nullable=True)
+    is_locked        = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on        = Column(Date, nullable=True)
+    locked_by        = Column(Integer, nullable=True)
+
 
 
 
@@ -750,6 +754,11 @@ class OffEnquiryDetails(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by = Column(Integer, nullable=True)
     deleted_on = Column(Date, nullable=True)
+    is_locked               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    locked_on               = Column(Date, nullable=True)
+    locked_by               = Column(Integer, nullable=True)
+
+
 #view
 class OffViewEnquiryMaster(caerp_base): 
     __tablename__ = 'off_view_enquiry_master'
