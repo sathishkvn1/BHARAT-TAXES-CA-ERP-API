@@ -161,10 +161,12 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     cgst_amount                : Optional[float]
     bill_amount                : Optional[float]
     remarks                    : Optional[str]
+    is_editable                :Optional[bool]=False
     
     class Config:
         orm_mode = True
         from_attributes = True
+
 
 
 
@@ -179,12 +181,14 @@ class OffAppointmentVisitDetailsViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master      : OffAppointmentVisitMasterViewSchema
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
-    is_editable       : Optional[bool] = False
+    # is_editable       : Optional[bool] = False
 
+ 
 
  
 
@@ -724,7 +728,6 @@ class OffViewEnquiryMasterSchema(BaseModel):
     locked_on                : Optional[date]
     locked_by                : Optional[int]
     
-    
 class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_details_id      : int
     enquiry_master_id        : int
@@ -740,19 +743,19 @@ class OffViewEnquiryDetailsSchema(BaseModel):
     person_type             : Optional[str]
     company_or_business_name: Optional[str]
     remarks                 : Optional[str]
+    is_editable             : Optional[bool] =  False
 
 
 
 class OffViewEnquiryResponseSchema(BaseModel):
     enquiry_master  : OffViewEnquiryMasterSchema
     enquiry_details : List[OffViewEnquiryDetailsSchema]
-    is_editable     : Optional[bool] = False
+   # is_editable     : Optional[bool] = False
 
     class Config:
         orm_mode        = True
         from_attributes = True
 
-        
         
 class ConsultationToolSchema(BaseModel):
     id                 : int

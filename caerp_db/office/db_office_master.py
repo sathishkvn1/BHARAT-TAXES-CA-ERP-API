@@ -1,7 +1,7 @@
 import logging
 import os
 import shutil
-from fastapi import HTTPException, UploadFile,status,Depends
+from fastapi import HTTPException, UploadFile, WebSocket,status,Depends
 from sqlalchemy.orm import Session
 from caerp_constants.caerp_constants import  ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType, Status
 from sqlalchemy.exc import SQLAlchemyError
@@ -766,8 +766,6 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
-
-
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -805,17 +803,16 @@ def get_appointments(
                 )
 
         # Main query to fetch visit details along with their associated appointment masters
+        search_conditions.append(OffAppointmentVisitDetailsView.is_deleted == "no")
         main_service_query = db.query(
             OffAppointmentVisitMasterView,
             OffAppointmentVisitDetailsView
         ).join(
             OffAppointmentVisitDetailsView,
             OffAppointmentVisitDetailsView.visit_master_id == OffAppointmentVisitMasterView.visit_master_id
-        ).filter(
-            *search_conditions,
-            OffAppointmentVisitDetailsView.is_deleted == "no"
-        )
+        ).filter(*search_conditions)
 
+        # Additional service_id filter
         if service_id != "ALL":
             main_service_query = main_service_query.filter(OffAppointmentVisitDetailsView.service_id == service_id)
 
@@ -830,7 +827,7 @@ def get_appointments(
 
         # Organize appointments
         appointments = {}
-        
+
         for appointment_master, visit_details in main_service_results:
             # Extract data from appointment master
             appointment_master_data = {
@@ -839,22 +836,24 @@ def get_appointments(
             }
             appointment_master_schema = OffAppointmentMasterViewSchema(**appointment_master_data)
 
-            # Create the visit master schema from visit details
+            # Create visit master schema and determine if appointment is editable based on status
             visit_master_data = {
                 column.name: getattr(visit_details, column.name)
                 for column in visit_details.__table__.columns
             }
             visit_master_schema = OffAppointmentVisitMasterViewSchema(**visit_master_data)
-            is_editable = False
-            if visit_master_schema.appointment_status_id ==1 : 
-                is_editable = True
+            is_editable = visit_master_schema.appointment_status_id == 1
+
+            # Add `is_editable` to `visit_master_schema`
+            visit_master_schema.is_editable = is_editable
+
             # Create visit detail schema using the OffAppointmentVisitDetailsViewSchema
             visit_detail_schema = OffAppointmentVisitDetailsViewSchema(
                 visit_master_id=visit_details.visit_master_id, 
                 visit_details_id=visit_details.visit_details_id,
                 service_id=visit_details.service_id,
                 service_goods_name=visit_details.service_goods_name,
-                is_main_service=visit_details.is_main_service  # Ensure is_main_service is provided
+                is_main_service=visit_details.is_main_service
             )
 
             # Group by visit master ID
@@ -862,8 +861,7 @@ def get_appointments(
                 appointments[visit_master_schema.visit_master_id] = ResponseSchema(
                     appointment_master=appointment_master_schema,
                     visit_master=visit_master_schema,
-                    visit_details=[visit_detail_schema] , # Initialize visit details list
-                    is_editable = is_editable
+                    visit_details=[visit_detail_schema]
                 )
             else:
                 appointments[visit_master_schema.visit_master_id].visit_details.append(visit_detail_schema)
@@ -874,7 +872,6 @@ def get_appointments(
         raise http_error
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #---service-goods-master  swathy---------------------------
 
@@ -3441,7 +3438,6 @@ def save_enquiry_master(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------------------------------------------------------------------------------------------------------------
-
 def get_enquiries(
     db: Session,
     search_value: Union[str, int] = "ALL",
@@ -3451,95 +3447,86 @@ def get_enquiries(
     mobile_number: Optional[str] = None,
     email_id: Optional[str] = None
 ) -> List[OffViewEnquiryResponseSchema]:
-    try:
-        # Initialize search conditions
-        search_conditions = [OffViewEnquiryDetails.is_deleted == "no"]
-        
-        # Add conditions for enquiry date range if provided
-        if from_date and to_date:
-            search_conditions.append(OffViewEnquiryDetails.enquiry_date.between(from_date, to_date))
-        elif from_date:
-            search_conditions.append(OffViewEnquiryDetails.enquiry_date >= from_date)
-        elif to_date:
-            search_conditions.append(OffViewEnquiryDetails.enquiry_date <= to_date)
+    # Initialize search conditions
+    search_conditions = [OffViewEnquiryDetails.is_deleted == "no"]
+    
+    # Add conditions for enquiry date range if provided
+    if from_date and to_date:
+        search_conditions.append(OffViewEnquiryDetails.enquiry_date.between(from_date, to_date))
+    elif from_date:
+        search_conditions.append(OffViewEnquiryDetails.enquiry_date >= from_date)
+    elif to_date:
+        search_conditions.append(OffViewEnquiryDetails.enquiry_date <= to_date)
 
-        # Add condition for status ID if provided
-        if status_id != "ALL":
-            search_conditions.append(OffViewEnquiryDetails.enquiry_status_id == status_id)
+    # Add condition for status ID if provided
+    if status_id != "ALL":
+        search_conditions.append(OffViewEnquiryDetails.enquiry_status_id == status_id)
 
-        # Add condition for search value if it's not 'ALL'
-        if search_value != "ALL":
-            search_conditions.append(
-                or_(
-                    OffViewEnquiryMaster.mobile_number.like(f"%{search_value}%"),
-                    OffViewEnquiryMaster.email_id.like(f"%{search_value}%")
-                )
+    # Add condition for search value if it's not 'ALL'
+    if search_value != "ALL":
+        search_conditions.append(
+            or_(
+                OffViewEnquiryMaster.mobile_number.like(f"%{search_value}%"),
+                OffViewEnquiryMaster.email_id.like(f"%{search_value}%")
             )
+        )
 
-        # Add condition for mobile number if provided
-        if mobile_number:
-            search_conditions.append(OffViewEnquiryMaster.mobile_number == mobile_number)
-        if email_id:
-            search_conditions.append(OffViewEnquiryMaster.email_id == email_id)
+    # Add condition for mobile number if provided
+    if mobile_number:
+        search_conditions.append(OffViewEnquiryMaster.mobile_number == mobile_number)
+    if email_id:
+        search_conditions.append(OffViewEnquiryMaster.email_id == email_id)
 
-        # Execute the query
-        # query_result = db.query(OffViewEnquiryDetails).join(
-        #     OffViewEnquiryMaster,
-        #     OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
-        # ).filter(and_(*search_conditions)).all()
-        query_result = db.query(OffViewEnquiryDetails).join(
-            OffViewEnquiryMaster,
-            OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
-        ).filter(and_(*search_conditions)).order_by(
-            OffViewEnquiryDetails.enquiry_date.desc(),  # Order by enquiry_date descending
-            OffViewEnquiryMaster.first_name.asc()        # Order by full_name ascending
-        ).all()
-        if not query_result:
-            return []
+    # Execute the query with ordering
+    query_result = db.query(OffViewEnquiryDetails).join(
+        OffViewEnquiryMaster,
+        OffViewEnquiryDetails.enquiry_master_id == OffViewEnquiryMaster.enquiry_master_id
+    ).filter(and_(*search_conditions)).order_by(
+        OffViewEnquiryDetails.enquiry_date.desc(),
+        OffViewEnquiryMaster.first_name.asc()
+    ).all()
+    
+    if not query_result:
+        return []
 
-        # Dictionary to store enquiries by ID
-        enquiry_dict = {}
+    # Dictionary to store enquiries by ID
+    enquiry_dict = {}
 
-        # Iterate over query result
-        for enquiry_details_data in query_result:
-            enquiry_id = enquiry_details_data.enquiry_master_id
-            is_editable = False
-            if enquiry_details_data.enquiry_status_id ==1:
-                is_editable = True
-            # Get the enquiry master corresponding to the enquiry details
-            enquiry_master_data = db.query(OffViewEnquiryMaster).filter_by(
-                enquiry_master_id=enquiry_id
-            ).first()
+    # Iterate over query result
+    for enquiry_details_data in query_result:
+        enquiry_id = enquiry_details_data.enquiry_master_id
+        is_editable = enquiry_details_data.enquiry_status_id == 1
 
-            if enquiry_master_data:
-                # Convert enquiry_master_data to schema
-                enquiry_master_schema = OffViewEnquiryMasterSchema(
-                    **enquiry_master_data.__dict__
-                )
+        # Fetch the enquiry master data from the database for the current enquiry ID
+        enquiry_master_data = db.query(OffViewEnquiryMaster).filter_by(
+            enquiry_master_id=enquiry_id
+        ).first()
 
-                # Convert enquiry_details_data to schema
-                enquiry_details_schema = OffViewEnquiryDetailsSchema(**enquiry_details_data.__dict__)
-                
-                if enquiry_id not in enquiry_dict:
-                    # Create new enquiry entry in dictionary
-                    enquiry_dict[enquiry_id] = {
-                        "enquiry_master": enquiry_master_schema,
-                        "enquiry_details": [enquiry_details_schema],
-                        "is_editable" : is_editable
-                    }
-                else:
-                    # Append enquiry details to existing entry
-                    enquiry_dict[enquiry_id]["enquiry_details"].append(enquiry_details_schema)
+        if enquiry_master_data:
+            # Convert enquiry_master_data to a dictionary
+            enquiry_master_dict = enquiry_master_data.__dict__
 
-        # Convert dictionary values to list of OffViewEnquiryResponseSchema objects
-        enquiries = [OffViewEnquiryResponseSchema(**enquiry_data) for enquiry_data in enquiry_dict.values()]
+            # Convert enquiry_details_data to a dictionary
+            enquiry_details_dict = enquiry_details_data.__dict__.copy()
+            enquiry_details_dict["is_editable"] = is_editable
 
-        return enquiries
+            # If this enquiry ID hasn't been added yet, initialize it in enquiry_dict
+            if enquiry_id not in enquiry_dict:
+                enquiry_dict[enquiry_id] = {
+                    "enquiry_master": enquiry_master_dict,
+                    "enquiry_details": [enquiry_details_dict],
+                    # "is_editable": is_editable  # Start with the current detail's is_editable status
+                }
+            else:
+                # Append the current enquiry details to the list for this enquiry ID
+                enquiry_dict[enquiry_id]["enquiry_details"].append(enquiry_details_dict)
+                # Update is_editable to ensure it reflects all details' status
+                # enquiry_dict[enquiry_id]["is_editable"] |= is_editable
 
-    except HTTPException as http_error:
-        raise http_error
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Convert dictionary values to list of OffViewEnquiryResponseSchema objects
+    enquiries = [OffViewEnquiryResponseSchema(**enquiry_data) for enquiry_data in enquiry_dict.values()]
+
+    return enquiries
 
 
 #------------------------------------------------------------------------------------------------
@@ -5151,4 +5138,4 @@ def get_all_hsn_sac_master_details(
     # Return all matching records
     return query.all()
 
- 
+ #-----------------------------------------------------------------------------------

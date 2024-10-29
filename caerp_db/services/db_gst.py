@@ -501,167 +501,6 @@ def get_customer_details(db: Session,
 #------Save stakeholder
 
 
-# def save_stakeholder_details(request: StakeHolderMasterSchema, 
-#                              user_id: int,
-#                              db: Session, 
-#                              customer_id: int,
-#                              stake_holder_type: str):  # Added `stake_holder_type` as a parameter
-#     try:
-#         # 1. Handle StakeHolderMaster
-#         personal_info = request.personal_information
-#         if personal_info.id == 0:
-#             # Create new StakeHolderMaster
-#             stake_holder_master = StakeHolderMaster(
-#                 first_name=personal_info.first_name,
-#                 middle_name=personal_info.middle_name,
-#                 last_name=personal_info.last_name,
-#                 fathers_first_name=personal_info.fathers_first_name,
-#                 marital_status_id=personal_info.marital_status_id,
-#                 date_of_birth=personal_info.date_of_birth,
-#                 gender_id=personal_info.gender_id,
-#                 din_number=personal_info.din_number,
-#                 is_citizen_of_india=personal_info.is_citizen_of_india,
-#                 pan_number=personal_info.pan_number,
-#                 passport_number=personal_info.passport_number,
-#                 aadhaar_number=personal_info.aadhaar_number,
-#                 created_by=user_id,  # Set created_by field
-#                 created_on=datetime.now()
-#             )
-#             db.add(stake_holder_master)
-#         else:
-#             # Update existing StakeHolderMaster
-#             stake_holder_master = db.query(StakeHolderMaster).filter_by(id=personal_info.id).first()
-#             if stake_holder_master:
-#                 stake_holder_master.first_name = personal_info.first_name
-#                 stake_holder_master.middle_name = personal_info.middle_name
-#                 stake_holder_master.last_name = personal_info.last_name
-#                 stake_holder_master.fathers_first_name = personal_info.fathers_first_name
-#                 stake_holder_master.marital_status_id = personal_info.marital_status_id
-#                 stake_holder_master.date_of_birth = personal_info.date_of_birth
-#                 stake_holder_master.gender_id = personal_info.gender_id
-#                 stake_holder_master.din_number = personal_info.din_number
-#                 stake_holder_master.is_citizen_of_india = personal_info.is_citizen_of_india
-#                 stake_holder_master.pan_number = personal_info.pan_number
-#                 stake_holder_master.passport_number = personal_info.passport_number
-#                 stake_holder_master.aadhaar_number = personal_info.aadhaar_number
-#                 stake_holder_master.modified_by = user_id  # Set modified_by field
-#                 stake_holder_master.modified_on = datetime.now()
-#             else:
-#                 return {"detail": "stake_holder_master not found"}
-
-#         db.flush()  # Flush to get `stake_holder_master.id`
-
-#         # 2. Handle StakeHolderContactDetails
-#         for contact_details in request.contact_details:
-#             if contact_details.id == 0:
-#             # Create new contact details
-#                 contact_detail_entry = StakeHolderContactDetails(
-#                     stake_holder_id=stake_holder_master.id,
-#                     mobile_number=contact_details.mobile_number,
-#                     email_address=contact_details.email_address,
-#                     telephone_number_with_std_code=contact_details.telephone_number_with_std_code,
-#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                     effective_to_date=None,
-#                     created_by=user_id,  # Set created_by field
-#                     created_on=datetime.now()
-#             )
-#                 db.add(contact_detail_entry)
-#             else:
-#             # Update existing contact details
-#                 contact_detail_entry = db.query(StakeHolderContactDetails).filter_by(id=contact_details.id).first()
-#                 if contact_detail_entry:
-#                     contact_detail_entry.mobile_number = contact_details.mobile_number
-#                     contact_detail_entry.email_address = contact_details.email_address
-#                     contact_detail_entry.telephone_number_with_std_code = contact_details.telephone_number_with_std_code
-#                     contact_detail_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                     contact_detail_entry.effective_to_date=None
-#                     contact_detail_entry.modified_by = user_id  # Set modified_by field
-#                     contact_detail_entry.modified_on = datetime.now()
-#                 else:
-#                     return {"detail": "contact_detail not found"}
-
-#             db.flush()  # Flush to get `contact_detail_entry.id`
-
-#         # 3. Handle StakeHolderAddress
-#         for addr in request.address:
-#             if addr.address_type in ['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']:
-#                 if addr.id == 0:
-#                     # Create new address
-#                     address_entry = StakeHolderAddress(
-#                         stake_holder_id=stake_holder_master.id,
-#                         pin_code=addr.pin_code,
-#                         address_type=addr.address_type,
-#                         country_id=addr.country_id,
-#                         state_id=addr.state_id,
-#                         district_id=addr.district_id,
-#                         city_id=addr.city_id,
-#                         village_id=addr.village_id,
-#                         post_office_id=addr.post_office_id,
-#                         lsg_type_id=addr.lsg_type_id,
-#                         lsg_id=addr.lsg_id,
-#                         locality=addr.locality,
-#                         road_street_name=addr.road_street_name,
-#                         premises_building_name=addr.premises_building_name,
-#                         building_flat_number=addr.building_flat_number,
-#                         floor_number=addr.floor_number,
-#                         landmark=addr.landmark,
-#                         effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                         effective_to_date=None,
-#                         created_by=user_id,  # Set created_by field
-#                         created_on=datetime.now()
-#                     )
-#                     db.add(address_entry)
-#                 else:
-#                     # Update existing address
-#                     address_entry = db.query(StakeHolderAddress).filter_by(id=addr.id, address_type=addr.address_type).first()
-#                     if address_entry:
-#                         address_entry.pin_code = addr.pin_code
-#                         address_entry.country_id = addr.country_id
-#                         address_entry.state_id = addr.state_id
-#                         address_entry.district_id = addr.district_id
-#                         address_entry.city_id = addr.city_id
-#                         address_entry.village_id = addr.village_id
-#                         address_entry.post_office_id = addr.post_office_id
-#                         address_entry.lsg_type_id = addr.lsg_type_id
-#                         address_entry.lsg_id = addr.lsg_id
-#                         address_entry.locality = addr.locality
-#                         address_entry.road_street_name = addr.road_street_name
-#                         address_entry.premises_building_name = addr.premises_building_name
-#                         address_entry.building_flat_number = addr.building_flat_number
-#                         address_entry.floor_number = addr.floor_number
-#                         address_entry.landmark = addr.landmark
-#                         address_entry.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                         address_entry.effective_to_date=None
-#                         address_entry.modified_by = user_id  # Set modified_by field
-#                         address_entry.modified_on = datetime.now()
-#                     else:
-#                         return {"detail": "address_detail not found"}
-
-#                 db.flush()  # Flush to get `address_entry.id`
-
-#         # 4. Insert into the `customer_stakeholder` table
-#         customer_stakeholder_entry = CustomerStakeHolder(
-#             customer_id=customer_id,
-#             stake_holder_master_id=stake_holder_master.id,
-#             designation_id=request.identity_information[0].designation_id,  # Assuming identity_information[0] is valid
-#             contact_details_id=contact_detail_entry.id,
-#             residential_address_id=address_entry.id,
-#             stake_holder_type=stake_holder_type, 
-#             effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#             effective_to_date=None, # Save the stake_holder_type field
-#             created_by=user_id,  # Set created_by field
-#             created_on=datetime.now()
-#         )
-#         db.add(customer_stakeholder_entry)
-
-#         # Commit the transaction
-#         db.commit()
-
-#         return {"message": "saved successfully"}
-
-#     except Exception as e:
-#         db.rollback()  # Roll back the transaction in case of error
-#         raise HTTPException(status_code=500, detail=str(e))
 
 
 def save_stakeholder_details(request: StakeHolderMasterSchema, 
@@ -679,6 +518,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 middle_name=personal_info.middle_name,
                 last_name=personal_info.last_name,
                 fathers_first_name=personal_info.fathers_first_name,
+                fathers_middle_name=personal_info.fathers_middle_name,
+                fathers_last_name=personal_info.fathers_last_name,
                 marital_status_id=personal_info.marital_status_id,
                 date_of_birth=personal_info.date_of_birth,
                 gender_id=personal_info.gender_id,
@@ -699,6 +540,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 stake_holder_master.middle_name = personal_info.middle_name
                 stake_holder_master.last_name = personal_info.last_name
                 stake_holder_master.fathers_first_name = personal_info.fathers_first_name
+                stake_holder_master.fathers_middle_name = personal_info.fathers_middle_name
+                stake_holder_master.fathers_last_name = personal_info.fathers_last_name
                 stake_holder_master.marital_status_id = personal_info.marital_status_id
                 stake_holder_master.date_of_birth = personal_info.date_of_birth
                 stake_holder_master.gender_id = personal_info.gender_id
@@ -760,6 +603,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         city_id=addr.city_id,
                         village_id=addr.village_id,
                         post_office_id=addr.post_office_id,
+                        taluk_id=addr.taluk_id,
                         lsg_type_id=addr.lsg_type_id,
                         lsg_id=addr.lsg_id,
                         locality=addr.locality,
@@ -785,6 +629,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         address_entry.city_id = addr.city_id
                         address_entry.village_id = addr.village_id
                         address_entry.post_office_id = addr.post_office_id
+                        address_entry.taluk_id = addr.taluk_id
+                    
                         address_entry.lsg_type_id = addr.lsg_type_id
                         address_entry.lsg_id = addr.lsg_id
                         address_entry.locality = addr.locality
@@ -841,6 +687,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
     except Exception as e:
         db.rollback()  # Roll back the transaction in case of error
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #--Get Stakeholder Details
 
@@ -921,6 +768,8 @@ def get_stakeholder_details(db: Session,
                         "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=address.village_id).scalar() if address and address.village_id else None,
                         "post_office_id": address.post_office_id if address else None,
                         "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=address.post_office_id).scalar() if address and address.post_office_id else None,
+                        "taluk_id": address.taluk_id,  
+                        "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address.taluk_id else None,
                         "lsg_type_id": address.lsg_type_id,
                         "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
                         "lsg_id": address.lsg_id,
