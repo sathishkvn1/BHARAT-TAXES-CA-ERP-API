@@ -765,7 +765,6 @@ def get_appointment_info(db: Session, type: str) -> List[dict]:
 #         raise http_error
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
-
 def get_appointments(
     db: Session,
     search_value: Union[str, int] = "ALL",

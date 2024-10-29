@@ -128,7 +128,6 @@ class OffAppointmentMasterViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     visit_master_id           : Optional[int]
     appointment_master_id     : int
@@ -170,6 +169,7 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
 
 
 
+
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
     visit_master_id   : Optional[int]
     visit_details_id  : int
@@ -188,7 +188,6 @@ class ResponseSchema(BaseModel):
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
     # is_editable       : Optional[bool] = False
 
- 
 
  
 
