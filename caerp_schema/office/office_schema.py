@@ -745,8 +745,6 @@ class OffViewEnquiryDetailsSchema(BaseModel):
     remarks                 : Optional[str]
     is_editable             : Optional[bool] =  False
 
-
-
 class OffViewEnquiryResponseSchema(BaseModel):
     enquiry_master  : OffViewEnquiryMasterSchema
     enquiry_details : List[OffViewEnquiryDetailsSchema]
@@ -1494,6 +1492,9 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     work_order_number              : Optional[str] 
     work_order_date                : Optional[date] 
     work_order_details_id          : Optional[int] = None
+    constitution_id                : int
+    trade_name                      : Optional[str] = None     
+    leagal_name                     : Optional[str] = None 
     service_goods_master_id        : int  
     service_goods_name             : str   
     group_id                       : int   

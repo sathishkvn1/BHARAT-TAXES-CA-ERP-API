@@ -1,8 +1,8 @@
 import io
 import os
 from shutil import Error
-from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File, WebSocket, WebSocketDisconnect,status,Query,Response
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 import pandas as pd
 import sqlalchemy
 from sqlalchemy.orm import Session
@@ -13,7 +13,7 @@ from caerp_db.database import  get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
@@ -30,8 +30,10 @@ from pathlib import Path
 from io import BytesIO
 from sqlalchemy import select, func, and_
 from collections import defaultdict
-from settings import BASE_URL
+import asyncio
 
+from settings import BASE_URL
+from fastapi.openapi.utils import get_openapi
 
 router = APIRouter(
     tags=['Office Master']
@@ -40,10 +42,132 @@ router = APIRouter(
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
-#--------------------save_appointment_details-------------------------------------------------------
+
+
+# connected_clients: List[WebSocket] = []
+
+
+
+
+# @router.websocket("/ws/notifications")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     print("WebSocket connection accepted.")
+#     connected_clients.append(websocket)
+#     try:
+#         while True:
+#             await websocket.receive_text()  
+#     except WebSocketDisconnect:
+#         connected_clients.remove(websocket)
+#         print("WebSocket connection closed.")
+#     except Exception as e:
+#         print(f"An error occurred: {str(e)}")
+
+# @router.websocket("/ws/notifications")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     print("WebSocket connection accepted.")
+    
+#     connected_clients.append(websocket)
+    
+#     try:
+#         while True:
+#             print("Waiting for messages...")
+#             await websocket.receive_text()  # This keeps the connection alive
+#     except WebSocketDisconnect:
+#         connected_clients.remove(websocket)
+#         print("WebSocket connection closed.")
+#     except Exception as e:
+#         print(f"An error occurred in WebSocket: {str(e)}")
+
+
+
+
+# @router.on_event("startup")
+# async def startup_event(db: Session = Depends(get_db)):
+#     print("Starting notify_on_new_appointment...") 
+#     asyncio.create_task(notify_on_new_appointment(db))
+
+
+
+# async def notify_on_new_appointment(db_session: Session):
+#     last_seen_id = None  # Track the last checked appointment ID
+#     print("Starting appointment notification service...")
+    
+#     while True:
+#         print("Checking for new appointments...")
+        
+#         try:
+#             # Query the latest appointment from the database
+#             latest_appointment = db_session.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
+
+#             if latest_appointment:
+#                 print(f"Latest appointment found: ID {latest_appointment.id}")
+
+#                 if latest_appointment.id != last_seen_id:
+#                     print(f"New appointment detected: ID {latest_appointment.id}")
+                    
+#                     # New appointment detected, notify all clients
+#                     last_seen_id = latest_appointment.id
+#                     for client in connected_clients:
+#                         await client.send_text("New appointment added!")
+#                         print(f"Notification sent to client: {client}")
+
+#                 else:
+#                     print("No new appointments since last check.")
+#             else:
+#                 print("No appointments found in the database.")
+
+#         except Exception as e:
+#             print(f"Error querying appointments or sending notifications: {e}")
+
+#         await asyncio.sleep(5)  # Poll every 5 seconds (adjust as needed)
+#         print("Sleeping for 5 seconds...")
+
+
+
+
+# async def notify_clients(message: str):
+#     for client in connected_clients:
+#         try:
+#             await client.send_text(message)
+#         except Exception:
+#             connected_clients.remove(client)
+
+# @router.get("/docs/websocket", response_class=HTMLResponse)
+# async def websocket_docs():
+#     return """
+#     <h2>WebSocket Endpoint Documentation</h2>
+#     <p>To connect to the WebSocket, open a WebSocket connection to <code>ws://localhost:5000/ws/notifications</code>.</p>
+#     <p>Once connected, you will receive real-time notifications when an appointment is created or updated.</p>
+#     <p>Example JavaScript code to connect:</p>
+#     <pre>
+#     const websocket = new WebSocket("ws://localhost:5000/office/ws/notifications");
+    
+#     websocket.onmessage = (event) => {
+#         console.log("Received:", event.data);
+#     };
+#     </pre>
+#     """
+
+# def custom_openapi():
+#     if router.openapi_schema:
+#         return router.openapi_schema
+#     openapi_schema = get_openapi(
+#         title="Your API with WebSocket",
+#         version="1.0.0",
+#         description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
+#         routes=router.routes,
+#     )
+#     router.openapi_schema = openapi_schema
+#     return router.openapi_schema
+
+# router.openapi = custom_openapi
+
 # @router.post("/save_appointment_details/{id}")
-# def save_appointment_details(
+# async def save_appointment_details(
 #     id: int,
+#     action_type: RecordActionType,
 #     appointment_data: List[OffAppointmentDetails], 
 #     db: Session = Depends(get_db),
 #     token: str = Depends(oauth2.oauth2_scheme)
@@ -57,12 +181,15 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #     try:
 #         for appointment in appointment_data:
 #             result = db_office_master.save_appointment_visit_master(
-#                 db, id, appointment, user_id
+#                 db, id, appointment, user_id, action_type
 #             )
+        
+#         # Notify WebSocket clients
+#         await notify_clients("An appointment has been saved or updated.")
 
 #         return {
 #             "success": True,
-#             "message": "Saved successfully",
+#             "message": "Saved successfully and clients notified",
 #             "id": result["id"],
 #             "visit_master_id": result.get("visit_master_id", None),
 #             "consultant_id": result.get("consultant_id", None)
@@ -73,6 +200,8 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #     except Exception as e:
 #         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
+#--------------------save_appointment_details-------------------------------------------------------
 
 
 @router.post("/save_appointment_details/{id}")
@@ -1039,6 +1168,7 @@ def get_service_documents_list_by_group_category(
     - A list of filtered service documents that match the provided criteria.
     - If no matching documents are found, returns a 404 status code with a message "No data found".
     - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
+    
     """
     try:
         results = db_office_master.get_service_documents_list_by_group_category(
@@ -4129,3 +4259,157 @@ def upload_hsn_sac_master_details(
         db.rollback()  # Rollback in case of error
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
+#-------------------------------------------------------------------------------------------------------
+
+
+@router.post('/services/upload_document_data_master')
+def upload_document_data_master(
+    db: Session = Depends(get_db),
+    select_file: UploadFile = File(...),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        # Read the uploaded CSV file into a DataFrame
+        file_content = BytesIO(select_file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+        rows_processed = 0
+        duplicate_entries = 0
+
+        for _, row in df.iterrows():
+            document_data_name = row['NAME']
+            document_data_type = row['TYPE']
+            has_expiry = row['HAS EXPIRY'] 
+            
+            # Assign document_data_type_id based on document_data_type
+            if document_data_type == "DOCUMENT":
+                document_data_type_id = 1
+            else:
+                document_data_type_id = 2
+
+            # Check if document data already exists in OffDocumentDataMaster
+            doc_data_entry = db.query(OffDocumentDataMaster).filter(
+                OffDocumentDataMaster.document_data_name == document_data_name,
+                OffDocumentDataMaster.document_data_type_id == document_data_type_id,
+                OffDocumentDataMaster.is_deleted == 'no'
+            ).first()
+
+            if doc_data_entry:
+                duplicate_entries += 1  # Track the number of rows duplicated
+            else:
+                # Insert a new record if it doesn't exist
+                doc_data_entry = OffDocumentDataMaster(
+                    document_data_name=document_data_name,
+                    document_data_type_id=document_data_type_id,  # Correctly use document_data_type_id here
+                    has_expiry=has_expiry,
+                    is_deleted='no'
+                )
+                db.add(doc_data_entry)
+                rows_processed += 1  # Track the number of rows processed
+
+        db.commit()  
+        
+        return {
+            "success"  : True,
+            "message": f"Successfully processed {rows_processed} records and {duplicate_entries} duplicate entries."
+        }
+ 
+    except Exception as e:
+        db.rollback()  
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+#-----------------------------------------------------------------------------------------
+
+
+@router.post('/services/upload_hsn_sac_master_details')
+def upload_hsn_sac_master_details(
+    db: Session = Depends(get_db),
+    item_category: int = Query(..., description="Specify 1 for GOODS or 2 for SERVICES"),
+    effective_date: date = Query(...),
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        # Read the uploaded CSV file into a DataFrame
+        file_content = BytesIO(file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+        hsn_sac_master_rows_processed = 0
+        hsn_sac_tax_master_rows_processed = 0
+
+        for _, row in df.iterrows():
+            hsn_sac_code = row['HSN/SAC CODE']
+            description = row['DESCRIPTION']
+            gst_rate = float(row['GST RATE']) if 'GST RATE' in row and pd.notnull(row['GST RATE']) else 0.0
+            cess_rate = float(row['CESS RATE']) if 'CESS RATE' in row and pd.notnull(row['CESS RATE']) else 0.0
+            additional_cess_rate = 0.0
+            
+            # Check if the HSN/SAC code already exists 
+            hsn_sac_master_entry = db.query(AppHsnSacMaster).filter(
+                AppHsnSacMaster.hsn_sac_code == hsn_sac_code,
+                AppHsnSacMaster.hsn_sac_class_id == item_category,
+                AppHsnSacMaster.is_deleted == 'no'
+            ).first()
+
+            if not hsn_sac_master_entry:
+                # Insert into the master table if it doesn't exist
+                hsn_sac_master_entry = AppHsnSacMaster(
+                    hsn_sac_code=hsn_sac_code,
+                    hsn_sac_description=description,
+                    hsn_sac_class_id=item_category
+                )
+                db.add(hsn_sac_master_entry)
+                db.flush()  # Flush to get the master_entry.id
+                hsn_sac_master_rows_processed += 1
+
+            # Update `effective_to_date` for all entries with the same `hsn_sac_id`, `None` for `effective_to_date`, and `effective_from_date` < `effective_date`
+            previous_active_hsn_sac_tax_entries = db.query(AppHsnSacTaxMaster).filter(
+                AppHsnSacTaxMaster.hsn_sac_id == hsn_sac_master_entry.id,
+                AppHsnSacTaxMaster.effective_from_date < effective_date,
+                AppHsnSacTaxMaster.effective_to_date == None,
+                AppHsnSacTaxMaster.is_deleted == 'no'
+            ).all()
+
+            for entry in previous_active_hsn_sac_tax_entries:
+                entry.effective_to_date = effective_date - timedelta(days=1)
+                db.add(entry)
+
+            # Check if the tax entry for the same effective date already exists
+            existing_tax_entry = db.query(AppHsnSacTaxMaster).filter(
+                AppHsnSacTaxMaster.hsn_sac_id == hsn_sac_master_entry.id,
+                AppHsnSacTaxMaster.effective_from_date == effective_date,
+                AppHsnSacTaxMaster.is_deleted == 'no'
+            ).first()
+
+            # If a tax rate entry for the effective date already exists, update it
+            if existing_tax_entry:
+                existing_tax_entry.gst_rate = gst_rate
+                existing_tax_entry.cess_rate = cess_rate
+                db.add(existing_tax_entry)
+            else:
+                # Insert new tax rate data if no entry exists for the effective date
+                tax_entry = AppHsnSacTaxMaster(
+                    hsn_sac_id=hsn_sac_master_entry.id,
+                    gst_rate=gst_rate,
+                    cess_rate=cess_rate,
+                    additional_cess_rate=additional_cess_rate,
+                    effective_from_date=effective_date
+                )
+                db.add(tax_entry)
+                hsn_sac_tax_master_rows_processed += 1
+
+        # Commit after processing all rows
+        if hsn_sac_master_rows_processed > 0 or hsn_sac_tax_master_rows_processed > 0:
+            db.commit()
+            return {
+                "success": True,
+                "message": f"Processed {hsn_sac_master_rows_processed} master records and {hsn_sac_tax_master_rows_processed} tax records."
+            }
+        else:
+            return {"message": "No new data was processed."}
+
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

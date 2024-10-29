@@ -3527,8 +3527,6 @@ def get_enquiries(
     enquiries = [OffViewEnquiryResponseSchema(**enquiry_data) for enquiry_data in enquiry_dict.values()]
 
     return enquiries
-
-
 #------------------------------------------------------------------------------------------------
     # WORK ORDER
 #------------------------------------------------------------------------------------------------
