@@ -27,18 +27,18 @@ load_dotenv()
 
 caerp_base.metadata.create_all(bind=caerp_engine)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # logger.info("Lifespan startup called")
-    task = asyncio.create_task(office_master.notify_on_new_appointment())
-    yield
-    # logger.info("Lifespan shutdown called")
-    task.cancel()
-    await task
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     # logger.info("Lifespan startup called")
+#     task = asyncio.create_task(office_master.notify_on_new_appointment())
+#     yield
+#     # logger.info("Lifespan shutdown called")
+#     task.cancel()
+#     await task
 
 
 app = FastAPI(
-    lifespan=lifespan, 
+    # lifespan=lifespan, 
     debug=True,
     title="Main Application API",
     description="""
