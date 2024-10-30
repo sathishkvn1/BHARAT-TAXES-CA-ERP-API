@@ -4024,7 +4024,7 @@ def get_all_hsn_sac_master_details(
 
 ########-UPLOAD HSN SAC MASTER DETAILS#########
 
-@router.post('/services/upload_hsn_sac_master_details')
+@router.post('/upload_hsn_sac_master_details')
 def upload_hsn_sac_master_details(
     db: Session = Depends(get_db),
     item_category: int = Query(..., description="Specify 1 for GOODS or 2 for SERVICES"),
@@ -4117,7 +4117,7 @@ def upload_hsn_sac_master_details(
 
 #-------------------------------------------------------------------------------------------------------
 
-@router.post('/services/upload_document_data_master')
+@router.post('/upload_document_data_master')
 def upload_document_data_master(
     db: Session = Depends(get_db),
     select_file: UploadFile = File(...),
