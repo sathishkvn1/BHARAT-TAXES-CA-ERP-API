@@ -51,95 +51,98 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
 
 # connected_clients: List[WebSocket] = []
 
-connected_clients = []
+# connected_clients = []
 
-@router.websocket("/ws/notifications")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    logger.info("WebSocket connection accepted.")
-    connected_clients.append(websocket)
-    try:
-        while True:
-            message = await websocket.receive_text()
-            if message == '{"type": "keepalive"}':
-                # logger.info("Received keepalive message")
-                continue  # Ignore keep-alive messages
-            # logger.info(f"Received message: {message}")
-    except WebSocketDisconnect as e:
-        # logger.info(f"WebSocket disconnect: {e.code}, {e.reason}")
-        connected_clients.remove(websocket)
-        # logger.info("WebSocket connection closed.")
-    except Exception as e:
-        logger.error(f"An error occurred in WebSocket: {str(e)}")
+# @router.websocket("/ws/notifications")
+# async def websocket_endpoint(websocket: WebSocket):
+#     await websocket.accept()
+#     # logger.info("WebSocket connection accepted.")
+#     connected_clients.append(websocket)
+#     try:
+#         while True:
+#             message = await websocket.receive_text()
+#             if message == '{"type": "keepalive"}':
+#                 # logger.info("Received keepalive message")
+#                 continue  # Ignore keep-alive messages
+#             # logger.info(f"Received message: {message}")
+#     except WebSocketDisconnect as e:
+#         # logger.info(f"WebSocket disconnect: {e.code}, {e.reason}")
+#         connected_clients.remove(websocket)
+#         # logger.info("WebSocket connection closed.")
+#     except Exception as e:
+#         logger.error(f"An error occurred in WebSocket: {str(e)}")
 
-async def notify_on_new_appointment():
-    last_seen_id = None
-    logger.info("notify_on_new_appointment function started...")
-    while True:
-        try:
-            with SessionLocal() as db:
-                # logger.info("Database session opened.")
-                latest_appointment = db.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
-                if latest_appointment:
-                    # logger.info(f"Latest appointment ID: {latest_appointment.id}")
-                    if latest_appointment.id != last_seen_id:
-                        last_seen_id = latest_appointment.id
-                        for client in connected_clients:
-                            await client.send_text("New appointment added!")
-                            # logger.info("Sent notification to client")
-                    else:
-                        logger.info("No new appointments")
-                else:
-                    logger.info("No appointments found")
-        except Exception as e:
-            logger.error(f"Error querying appointments or sending notifications: {e}")
-        await asyncio.sleep(5)
-        logger.info("Sleeping for 5 seconds...")
+# async def notify_on_new_appointment():
+#     last_seen_id = None
+#     # logger.info("notify_on_new_appointment function started...")
+#     while True:
+#         try:
+#             with SessionLocal() as db:
+#                 # logger.info("Database session opened.")
+#                 latest_appointment = db.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
+#                 if latest_appointment:
+#                     # logger.info(f"Latest appointment ID: {latest_appointment.id}")
+#                     if latest_appointment.id != last_seen_id:
+#                         last_seen_id = latest_appointment.id
+#                         for client in connected_clients:
+#                             await client.send_text("New appointment added!")
+#                             # logger.info("Sent notification to client")
+#                     else:
+#                         logger.info("No new appointments")
+#                 else:
+#                     logger.info("No appointments found")
+#         except Exception as e:
+#             logger.error(f"Error querying appointments or sending notifications: {e}")
+#         await asyncio.sleep(5)
+#         # logger.info("Sleeping for 5 seconds...")
         
 
-def custom_openapi():
-    if router.openapi_schema:
-        return router.openapi_schema
-    openapi_schema = get_openapi(
-        title="Your API with WebSocket",
-        version="1.0.0",
-        description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
-        routes=router.routes,
-    )
-    router.openapi_schema = openapi_schema
-    return router.openapi_schema
 
-router.openapi = custom_openapi
+# def custom_openapi():
+#     if router.openapi_schema:
+#         return router.openapi_schema
+#     openapi_schema = get_openapi(
+#         title="Your API with WebSocket",
+#         version="1.0.0",
+#         description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
+#         routes=router.routes,
+#     )
+#     router.openapi_schema = openapi_schema
+#     return router.openapi_schema
+
+# router.openapi = custom_openapi
 
 
-# async def notify_clients(message: str):
-#     for client in connected_clients:
-#         try:
-#             await client.send_text(message)
-#         except Exception:
-#             connected_clients.remove(client)
 
-@router.get("/docs/websocket", response_class=HTMLResponse)
-async def websocket_docs():
-    return """
-    <h2>WebSocket Endpoint Documentation</h2>
-    <p>To connect to the WebSocket, open a WebSocket connection to <code>ws://localhost:5000/ws/notifications</code>.</p>
-    <p>Once connected, you will receive real-time notifications when an appointment is created or updated.</p>
-    <p>Example JavaScript code to connect:</p>
-    <pre>
-    const websocket = new WebSocket("ws://localhost:5000/office/ws/notifications");
+
+# # async def notify_clients(message: str):
+# #     for client in connected_clients:
+# #         try:
+# #             await client.send_text(message)
+# #         except Exception:
+# #             connected_clients.remove(client)
+
+# @router.get("/docs/websocket", response_class=HTMLResponse)
+# async def websocket_docs():
+#     return """
+#     <h2>WebSocket Endpoint Documentation</h2>
+#     <p>To connect to the WebSocket, open a WebSocket connection to <code>ws://localhost:5000/ws/notifications</code>.</p>
+#     <p>Once connected, you will receive real-time notifications when an appointment is created or updated.</p>
+#     <p>Example JavaScript code to connect:</p>
+#     <pre>
+#     const websocket = new WebSocket("ws://localhost:5000/office/ws/notifications");
     
-    websocket.onmessage = (event) => {
-        console.log("Received:", event.data);
-    };
-    </pre>
-    """
+#     websocket.onmessage = (event) => {
+#         console.log("Received:", event.data);
+#     };
+#     </pre>
+#     """
 
 
 
