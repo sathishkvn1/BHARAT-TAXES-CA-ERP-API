@@ -51,32 +51,32 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 
 
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-# connected_clients: List[WebSocket] = []
+connected_clients: List[WebSocket] = []
 
-# connected_clients = []
+connected_clients = []
 
-# @router.websocket("/ws/notifications")
-# async def websocket_endpoint(websocket: WebSocket):
-#     await websocket.accept()
-#     # logger.info("WebSocket connection accepted.")
-#     connected_clients.append(websocket)
-#     try:
-#         while True:
-#             message = await websocket.receive_text()
-#             if message == '{"type": "keepalive"}':
-#                 # logger.info("Received keepalive message")
-#                 continue  # Ignore keep-alive messages
-#             # logger.info(f"Received message: {message}")
-#     except WebSocketDisconnect as e:
-#         # logger.info(f"WebSocket disconnect: {e.code}, {e.reason}")
-#         connected_clients.remove(websocket)
-#         # logger.info("WebSocket connection closed.")
-#     except Exception as e:
-#         logger.error(f"An error occurred in WebSocket: {str(e)}")
+@router.websocket("/ws/notifications")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    # logger.info("WebSocket connection accepted.")
+    connected_clients.append(websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message == '{"type": "keepalive"}':
+                # logger.info("Received keepalive message")
+                continue  # Ignore keep-alive messages
+            # logger.info(f"Received message: {message}")
+    except WebSocketDisconnect as e:
+        # logger.info(f"WebSocket disconnect: {e.code}, {e.reason}")
+        connected_clients.remove(websocket)
+        # logger.info("WebSocket connection closed.")
+    except Exception as e:
+        logger.error(f"An error occurred in WebSocket: {str(e)}")
 
 # async def notify_on_new_appointment():
 #     last_seen_id = None
@@ -102,21 +102,45 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 #         await asyncio.sleep(5)
 #         # logger.info("Sleeping for 5 seconds...")
         
+async def notify_on_new_appointment():
+    last_seen_id = None
+    # logger.info("notify_on_new_appointment function started...")
+    while True:
+        try:
+            with SessionLocal() as db:
+                # logger.info("Database session opened.")
+                latest_appointment = db.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
+                
+                if latest_appointment:
+                    # logger.info(f"Latest appointment ID: {latest_appointment.id}")
+                    if latest_appointment.id != last_seen_id:
+                        last_seen_id = latest_appointment.id
+                        for client in connected_clients:
+                            await client.send_text("New appointment added!")
+                            # logger.info("Sent notification to client")
+                # Removed the else block here
+
+        except Exception as e:
+            # Log the error for later investigation
+            logger.error(f"Error querying appointments or sending notifications: {e}")
+
+        await asyncio.sleep(5)
+        # logger.info("Sleeping for 5 seconds...")
 
 
-# def custom_openapi():
-#     if router.openapi_schema:
-#         return router.openapi_schema
-#     openapi_schema = get_openapi(
-#         title="Your API with WebSocket",
-#         version="1.0.0",
-#         description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
-#         routes=router.routes,
-#     )
-#     router.openapi_schema = openapi_schema
-#     return router.openapi_schema
+def custom_openapi():
+    if router.openapi_schema:
+        return router.openapi_schema
+    openapi_schema = get_openapi(
+        title="Your API with WebSocket",
+        version="1.0.0",
+        description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
+        routes=router.routes,
+    )
+    router.openapi_schema = openapi_schema
+    return router.openapi_schema
 
-# router.openapi = custom_openapi
+router.openapi = custom_openapi
 
 
 
