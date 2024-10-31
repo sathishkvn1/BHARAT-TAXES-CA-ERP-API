@@ -367,7 +367,7 @@ def get_gst_state_specific_information(
         raise HTTPException(status_code=401, detail="Token is missing")
 
     auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")  # Optionally track user info
+    user_id = auth_info.get("user_id")  
 
     gst_state_info = db_gst.get_gst_state_specific_information_by_customer_id(customer_id, db,user_id)
 
@@ -391,7 +391,7 @@ async def get_range_details(pin: str,
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
     auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")  # Optionally track user info
+    user_id = auth_info.get("user_id") 
     details = db_gst.get_details_by_pin(db, pin,user_id)
     if details:
         return details  # Return the list directly

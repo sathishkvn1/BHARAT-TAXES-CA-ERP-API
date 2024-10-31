@@ -31,9 +31,9 @@ def save_business_details(
             customer_master = CustomerMaster(
                 **business_details_data.model_dump(exclude_unset=True),
                 customer_number=customer_number,
-                created_by=user_id,  # Set created_by field
-                created_on=datetime.now(),  # Set created_on to current datetime
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                created_by=user_id,  
+                created_on=datetime.now(),  
+                effective_from_date=datetime.now(), 
                 effective_to_date=None,
                 is_mother_customer=is_mother_customer_value
             )
@@ -55,8 +55,8 @@ def save_business_details(
             for key, value in business_details_data.model_dump(exclude_unset=True).items():
                 setattr(customer_master, key, value)
 
-            customer_master.modified_by = user_id  # Set modified_by field
-            customer_master.modified_on = datetime.now()  # Set modified_on field
+            customer_master.modified_by = user_id  
+            customer_master.modified_on = datetime.now()  
             customer_master.is_mother_customer = is_mother_customer_value
             # Update `is_mother_customer` if provided
             
@@ -528,7 +528,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 pan_number=personal_info.pan_number,
                 passport_number=personal_info.passport_number,
                 aadhaar_number=personal_info.aadhaar_number,
-                created_by=user_id,  # Set created_by field
+                created_by=user_id, 
                 created_on=datetime.now()
             )
             db.add(stake_holder_master)
@@ -550,7 +550,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 stake_holder_master.pan_number = personal_info.pan_number
                 stake_holder_master.passport_number = personal_info.passport_number
                 stake_holder_master.aadhaar_number = personal_info.aadhaar_number
-                stake_holder_master.modified_by = user_id  # Set modified_by field
+                stake_holder_master.modified_by = user_id 
                 stake_holder_master.modified_on = datetime.now()
             else:
                 return {"detail": "stake_holder_master not found"}
@@ -566,9 +566,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                     mobile_number=contact_details.mobile_number,
                     email_address=contact_details.email_address,
                     telephone_number_with_std_code=contact_details.telephone_number_with_std_code,
-                    effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                    effective_from_date=datetime.now(),  
                     effective_to_date=None,
-                    created_by=user_id,  # Set created_by field
+                    created_by=user_id,  
                     created_on=datetime.now()
                 )
                 db.add(contact_detail_entry)
@@ -579,9 +579,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                     contact_detail_entry.mobile_number = contact_details.mobile_number
                     contact_detail_entry.email_address = contact_details.email_address
                     contact_detail_entry.telephone_number_with_std_code = contact_details.telephone_number_with_std_code
-                    contact_detail_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
+                    contact_detail_entry.effective_from_date = datetime.now()  
                     contact_detail_entry.effective_to_date = None
-                    contact_detail_entry.modified_by = user_id  # Set modified_by field
+                    contact_detail_entry.modified_by = user_id  
                     contact_detail_entry.modified_on = datetime.now()
                 else:
                     return {"detail": "contact_detail not found"}
@@ -612,9 +612,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         building_flat_number=addr.building_flat_number,
                         floor_number=addr.floor_number,
                         landmark=addr.landmark,
-                        effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                        effective_from_date=datetime.now(),  
                         effective_to_date=None,
-                        created_by=user_id,  # Set created_by field
+                        created_by=user_id, 
                         created_on=datetime.now()
                     )
                     db.add(address_entry)
@@ -639,9 +639,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                         address_entry.building_flat_number = addr.building_flat_number
                         address_entry.floor_number = addr.floor_number
                         address_entry.landmark = addr.landmark
-                        address_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
+                        address_entry.effective_from_date = datetime.now() 
                         address_entry.effective_to_date = None
-                        address_entry.modified_by = user_id  # Set modified_by field
+                        address_entry.modified_by = user_id  
                         address_entry.modified_on = datetime.now()
                     else:
                         return {"detail": "address_detail not found"}
@@ -660,8 +660,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
             customer_stakeholder_entry.contact_details_id = contact_detail_entry.id
             customer_stakeholder_entry.residential_address_id = address_entry.id
             customer_stakeholder_entry.stake_holder_type = stake_holder_type
-            customer_stakeholder_entry.effective_from_date = datetime.now()  # Set effective_from_date to current date
-            customer_stakeholder_entry.modified_by = user_id  # Set modified_by field
+            customer_stakeholder_entry.effective_from_date = datetime.now() 
+            customer_stakeholder_entry.modified_by = user_id  
             customer_stakeholder_entry.modified_on = datetime.now()
         else:
             # Insert new CustomerStakeHolder
@@ -672,9 +672,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 contact_details_id=contact_detail_entry.id,
                 residential_address_id=address_entry.id,
                 stake_holder_type=stake_holder_type, 
-                effective_from_date=datetime.now(),  # Set effective_from_date to current date
-                effective_to_date=None,  # Save the stake_holder_type field
-                created_by=user_id,  # Set created_by field
+                effective_from_date=datetime.now(),  
+                effective_to_date=None,  
+                created_by=user_id,  
                 created_on=datetime.now()
             )
             db.add(customer_stakeholder_entry)
@@ -887,6 +887,7 @@ def fetch_business_activities(
 #----------------Save Business Place----------
 
 
+
 def save_business_place(customer_id: int, 
                         data: BusinessData, 
                         db: Session,
@@ -895,13 +896,17 @@ def save_business_place(customer_id: int,
     try:
         # Start transaction
         with db.begin():
-            # Check if we're creating a new business place or updating an existing one
+            # Check if creating a new business place or updating an existing one
             if id == 0:
                 # Create new business place
                 for business_place in data.business_place:
                     new_business_place = CustomerBusinessPlace(
                         **business_place.model_dump(exclude_unset=True),
-                        customer_id=customer_id
+                        customer_id=customer_id,
+                        effective_from_date=datetime.now(),  
+                        effective_to_date=None,
+                        created_by=user_id,              
+                        created_on=datetime.now()           
                     )
                     db.add(new_business_place)
                     db.flush()  # Get the generated ID after insert
@@ -917,13 +922,16 @@ def save_business_place(customer_id: int,
                         # Update each attribute of the existing business place
                         for key, value in business_place.model_dump(exclude_unset=True).items():
                             setattr(existing_business_place, key, value)
+                    existing_business_place.effective_from_date = datetime.now() 
+                    existing_business_place.effective_to_date = None
+                    existing_business_place.modified_by = user_id                
+                    existing_business_place.modified_on = datetime.now()        
                     business_place_id = existing_business_place.id
                 else:
-                    raise HTTPException(status_code=404, detail="Business place not found for update.")
-
+                    return {"message": "Business place not found for update."} 
             # Process nature_of_business and activity types for the business place
             for nature in data.nature_of_business:
-                if nature.id > 0:
+                if nature.id != 0:
                     existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
                         id=nature.id,
                         customer_id=customer_id,
@@ -932,9 +940,17 @@ def save_business_place(customer_id: int,
 
                     if existing_activity:
                         existing_activity.business_activity_id = nature.business_activity_id
+                        existing_activity.effective_from_date = datetime.now() 
+                        existing_activity.effective_to_date = None
+                        existing_activity.modified_by = user_id                   
+                        existing_activity.modified_on = datetime.now()            
                 else:
                     new_activity = CustomerBusinessPlaceActivity(
                         customer_id=customer_id,
+                        effective_from_date=datetime.now(),                       
+                        effective_to_date=None,
+                        created_by=user_id,                                      
+                        created_on=datetime.now(),                               
                         business_place_id=business_place_id,
                         business_activity_id=nature.business_activity_id
                     )
@@ -949,10 +965,18 @@ def save_business_place(customer_id: int,
             if existing_activity_type:
                 # Update the existing record
                 existing_activity_type.business_activity_type_id = data.business_activity_type_id
+                existing_activity_type.effective_from_date = datetime.now() 
+                existing_activity_type.effective_to_date = None
+                existing_activity_type.modified_by = user_id                   
+                existing_activity_type.modified_on = datetime.now()             
             else:
                 # Add a new record if none exists
                 new_activity_type = CustomerBusinessPlaceActivityType(
                     customer_id=customer_id,
+                    effective_from_date=datetime.now(),                          
+                    effective_to_date=None,
+                    created_by=user_id,                                      
+                    created_on=datetime.now(),                                  
                     business_place_id=business_place_id,
                     business_activity_type_id=data.business_activity_type_id
                 )
@@ -967,10 +991,18 @@ def save_business_place(customer_id: int,
             if existing_core_activity:
                 # Update the existing record
                 existing_core_activity.business_activity_master_id = data.business_activity_master_id
+                existing_core_activity.effective_from_date = datetime.now() 
+                existing_core_activity.effective_to_date = None
+                existing_core_activity.modified_by = user_id                   
+                existing_core_activity.modified_on = datetime.now()      
             else:
                 # Add a new record if none exists
                 new_core_activity = CustomerBusinessPlaceCoreActivity(
                     customer_id=customer_id,
+                    effective_from_date=datetime.now(),                         
+                    effective_to_date=None,
+                    created_by=user_id,                                     
+                    created_on=datetime.now(),                                 
                     business_place_id=business_place_id,
                     business_activity_master_id=data.business_activity_master_id
                 )
@@ -981,12 +1013,10 @@ def save_business_place(customer_id: int,
 
         return {"message": "Data saved successfully"}
 
-    except AttributeError as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Attribute Error: {str(e)}")
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #-----get business_place----
 
@@ -1275,7 +1305,9 @@ def save_customer_gst_state_specific_information(
                 customer_id=customer_id,
                 **detail_data,
                 created_by=user_id,
-                created_on=datetime.now()  # Set created_on to current datetime
+                created_on=datetime.now(),
+                effective_from_date=datetime.now(),  # Set effective_from_date to current date
+                effective_to_date=None # Set created_on to current datetime
             )
             db.add(new_entry)
             db.commit()  # Commit to save the new entry
@@ -1293,6 +1325,7 @@ def save_customer_gst_state_specific_information(
             # Update the existing record fields
             for key, value in detail_data.items():
                 setattr(existing_entry, key, value)
+
             existing_entry.modified_on = datetime.now()  
             existing_entry.modified_by = user_id  
 
@@ -1349,6 +1382,9 @@ def get_details_by_pin(db: Session, pin: str,user_id:int) -> List[RangeDetailsSc
             # Manually create RangeDetailsSchema instances from SQLAlchemy model attributes
             range_info_list = [
                 RangeDetailsSchema(
+
+                    address=range_detail.address,
+                    phone=range_detail.phone,
                     Range_id=range_detail.range_id,
                     Range=range_detail.range_name,
                     Division_id=range_detail.division_id,

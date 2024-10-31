@@ -195,6 +195,8 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
 
 
 class RangeDetailsSchema(BaseModel):
+    address            : str
+    phone              : str
     Range_id           : int
     Range              : str
     Division_id        : int
