@@ -776,7 +776,9 @@ def get_stakeholder_details(db: Session,
                         "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
                         "locality": address.locality if address else None,
                         "road_street_name": address.road_street_name if address else None,
+                        "premises_building_name":address.premises_building_name if address else None,
                         "building_flat_number": address.building_flat_number if address else None,
+                        "floor_number":address.floor_number if address else None,
                         "landmark": address.landmark if address else None
                     } if address else None
                 }
@@ -1196,15 +1198,14 @@ def save_goods_commodities_details(
     user_id: int  # Optionally track the user making the changes
 ):
     try:
-        # Use model_dump to get the details as a dictionary
-        detail_data = details.model_dump(exclude_unset=True)  # Only include set fields
+        
 
         if id == 0:
             # Create a new entry if ID is 0
             new_entry = CustomerGoodsCommoditiesSupplyDetails(
                 customer_id=customer_id,
-                hsn_sac_class_id=detail_data['hsn_sac_class_id'],
-                hsn_sac_code_id=detail_data['hsn_sac_code_id'],
+                hsn_sac_class_id=details.hsn_sac_class_id,
+                hsn_sac_code_id=details.hsn_sac_code_id,
                 effective_from_date=date.today(),  # Set effective_from_date to current date
                 effective_to_date=None,              # Set effective_to_date as None
                 created_by=user_id,               
@@ -1224,8 +1225,10 @@ def save_goods_commodities_details(
                 return []
 
             # Update the existing record fields
-            existing_entry.hsn_sac_class_id = detail_data['hsn_sac_class_id']
-            existing_entry.hsn_sac_code_id = detail_data['hsn_sac_code_id']
+            existing_entry.hsn_sac_class_id = details.hsn_sac_class_id
+            existing_entry.hsn_sac_code_id = details.hsn_sac_code_id
+            existing_entry.effective_from_date=date.today() 
+            existing_entry.effective_to_date=None  
             existing_entry.modified_on = datetime.now() 
             existing_entry.modified_by = user_id  
 
@@ -1313,7 +1316,7 @@ def save_customer_gst_state_specific_information(
             db.commit()  # Commit to save the new entry
             db.refresh(new_entry)  # Refresh to get the updated instance with id
 
-            return {"success": True, "message": "New GST state-specific information saved successfully"}
+            return {"success": True, "message": "Data saved successfully"}
 
         else:
             # Fetch the existing record by ID for updating
@@ -1331,7 +1334,7 @@ def save_customer_gst_state_specific_information(
 
             db.commit()  # Commit the changes to the database
 
-            return {"success": True, "message": "GST state-specific information updated successfully"}
+            return {"success": True, "message": "Data updated successfully"}
 
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
