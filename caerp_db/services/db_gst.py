@@ -1424,9 +1424,7 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
 #-------jurisdicition
 
 
-
-
-def get_details_by_pin(db: Session, pin: str,user_id:int) -> List[RangeDetailsSchema]:
+def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetailsSchema]:
     try:
         # Query the view where jurisdiction contains the PIN or pin matches the PIN
         range_details = db.query(GstViewRange).filter(
@@ -1434,40 +1432,41 @@ def get_details_by_pin(db: Session, pin: str,user_id:int) -> List[RangeDetailsSc
                 GstViewRange.jurisdiction.contains(pin),
                 GstViewRange.pin == pin
             )
-        ).all()  # Fetch all matching records
+        ).all()
 
-        if range_details:
-            # Manually create RangeDetailsSchema instances from SQLAlchemy model attributes
-            range_info_list = [
-                RangeDetailsSchema(
+        # Return an empty list if no matching records are found
+        if not range_details:
+            return []
 
-                    address=range_detail.address,
-                    phone=range_detail.phone,
-                    Range_id=range_detail.range_id,
-                    Range=range_detail.range_name,
-                    Division_id=range_detail.division_id,
-                    Division=range_detail.division_name,
-                    Commissionerate_id=range_detail.commissionerate_id,
-                    Commissionerate=range_detail.commissionerate_name,
-                    Zone_id=range_detail.zone_id,
-                    Zone=range_detail.zone_name,
-                    State_id=range_detail.state_id,
-                    State=range_detail.state_name,
-                    District_id=range_detail.district_id,
-                    District=range_detail.district_name,
-                    Country_id=range_detail.country_id,
-                    Country=range_detail.country_name_english
-                )
-                for range_detail in range_details
-            ]
-            return range_info_list  # Return list of matching range details
-        else:
-            return []  # Return an empty list if no results are found
-            
+        # Create a list of RangeDetailsSchema instances from the SQLAlchemy model instances
+        range_info_list = [
+            RangeDetailsSchema(
+                address=range_detail.address,
+                phone=range_detail.phone,
+                range_id=range_detail.range_id,
+                range=range_detail.range_name,
+                division_id=range_detail.division_id,
+                division=range_detail.division_name,
+                commissionerate_id=range_detail.commissionerate_id,
+                commissionerate=range_detail.commissionerate_name,
+                zone_id=range_detail.zone_id,
+                zone=range_detail.zone_name,
+                state_id=range_detail.state_id,
+                state=range_detail.state_name,
+                district_id=range_detail.district_id,
+                district=range_detail.district_name,
+                country_id=range_detail.country_id,
+                country=range_detail.country_name_english
+            )
+            for range_detail in range_details
+        ]
+
+        return range_info_list
+
     except Exception as e:
         # Properly handle exceptions and provide useful feedback
         raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")
-    
+   
 
 
 
