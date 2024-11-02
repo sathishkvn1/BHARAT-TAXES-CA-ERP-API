@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel,ConfigDict
 from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 from datetime import date, datetime,time
@@ -78,24 +78,22 @@ class CustomerRequestSchema(BaseModel):
 
 #----------stakeholder
 
-
 class PersonalInformationSchema(BaseModel):
     id                  : Optional[int]
     first_name          : str
     middle_name         : Optional[str]
     last_name           : Optional[str]
-    fathers_first_name  : Optional[str]
-    fathers_middle_name :Optional[str]
-    fathers_last_name   :Optional[str]
+    fathers_first_name  : Optional[str] =None
+    fathers_middle_name :Optional[str]  =None
+    fathers_last_name   :Optional[str]  =None
     marital_status_id   : Optional[int]
     date_of_birth       : Optional[date]
     gender_id           : int
-    din_number          : Optional[str]
-    is_citizen_of_india: Optional[str]
+    din_number          : Optional[str]=None
+    is_citizen_of_india: Optional[str] =None
     pan_number         : Optional[str]
-    passport_number    : Optional[str]
+    passport_number    : Optional[str] =None
     aadhaar_number     : Optional[str]
-
 
 class ContactDetailsSchema(BaseModel):
     id                               : Optional[int]
@@ -197,19 +195,126 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
 class RangeDetailsSchema(BaseModel):
     address            : str
     phone              : str
-    Range_id           : int
-    Range              : str
-    Division_id        : int
-    Division           : str
-    Commissionerate_id : int
-    Commissionerate    : str
-    Zone_id            : int
-    Zone               : str
-    State_id           : int
-    State              : str
-    District_id        : int
-    District           : str
-    Country_id         :int
-    Country            :str
+    range_id           : int
+    range              : str
+    division_id        : int
+    division           : str
+    commissionerate_id : int
+    commissionerate    : str
+    zone_id            : int
+    zone               : str
+    state_id           : int
+    state              : str
+    district_id        : int
+    district           : str
+    country_id         :int
+    country            :str
     class Config:
         orm_mode = True
+
+
+# class CustomerDuplicateSchema(BaseModel):
+   
+#     customer_number: Optional[str]
+#     legal_name: Optional[str]
+#     customer_name: Optional[str]
+#     pan_number: Optional[str]
+#     pan_creation_date: Optional[date]
+#     tan_number: Optional[str]
+#     passport_number: Optional[str]
+#     tin_number: Optional[str]
+#     authorized_signatory_name_as_in_pan: Optional[str]
+#     authorized_signatory_pan_number: Optional[str]
+#     email_address: Optional[str]
+#     mobile_number: Optional[str]
+#     constitution_id: Optional[int]
+#     state_id: Optional[int]
+#     district_id: Optional[int]
+#     is_mother_customer: str
+#     is_amendment: str
+#     amendment_date: Optional[date]
+#     amendment_reason: Optional[str]
+#     amendment_status: str
+#     amendment_history: Optional[str]
+#     effective_from_date: Optional[date]
+#     effective_to_date: Optional[date]
+#     has_authorized_signatory: str
+#     has_authorized_representative: str
+#     created_by: Optional[int]
+#     created_on: Optional[datetime]
+#     modified_by: Optional[int]
+#     modified_on: Optional[datetime]
+#     is_deleted: str
+#     deleted_by: Optional[int]
+#     deleted_on: Optional[datetime]
+    
+#     model_config = ConfigDict(from_attributes=True)
+
+class CustomerDuplicateSchema(BaseModel):
+    customer_number                         : Optional[str]
+    legal_name                              : Optional[str]
+    customer_name                           :Optional[str]
+    pan_number                              : Optional[str]
+    pan_creation_date                       : Optional[date]
+    tan_number                              : Optional[str]
+    passport_number                         : Optional[str]
+    tin_number                              : Optional[str]
+    authorized_signatory_name_as_in_pan     : Optional[str]
+    authorized_signatory_pan_number         : Optional[str]
+    email_address                           : Optional[str]
+    mobile_number                           : Optional[str]
+    constitution_id                         : Optional[int]
+    state_id                                : Optional[int]
+    district_id                             : Optional[int]
+    is_mother_customer                      : str
+    is_amendment                            : str
+    amendment_date                          : Optional[date]
+    amendment_reason                        : Optional[str]
+    amendment_status                        : str
+    amendment_history                       : Optional[str]
+    effective_from_date                     : Optional[date]
+    effective_to_date                       : Optional[date]
+    has_authorized_signatory                : str
+    has_authorized_representative           : str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CustomerDuplicateSchemaForGet(BaseModel):
+    id                                      :int
+    customer_id                             :int
+    customer_number                         : Optional[str]
+    legal_name                              : Optional[str]
+    customer_name                           : Optional[str]
+    pan_number                              : Optional[str]
+    pan_creation_date                       : Optional[date]
+    tan_number                              : Optional[str]
+    passport_number                         : Optional[str]
+    tin_number                              : Optional[str]
+    authorized_signatory_name_as_in_pan     : Optional[str]
+    authorized_signatory_pan_number         : Optional[str]
+    email_address                           : Optional[str]
+    mobile_number                           : Optional[str]
+    constitution_id                         : Optional[int]
+    state_id                                : Optional[int]
+    district_id                             : Optional[int]
+    is_mother_customer                      : str
+    is_amendment                            :str
+    amendment_date                          : Optional[date]
+    amendment_reason                        : Optional[str]
+    amendment_status                        : str
+    amendment_history                       : Optional[str]
+    effective_from_date                     : Optional[date]
+    effective_to_date                       : Optional[date]
+    has_authorized_signatory                : str
+    has_authorized_representative           : str
+    created_by                              : Optional[int]
+    created_on                              : Optional[datetime]
+    modified_by                             : Optional[int]
+    modified_on                             : Optional[datetime]
+    is_deleted                              : str
+    deleted_by                              : Optional[int]
+    deleted_on                              : Optional[datetime]
+    
+    model_config = ConfigDict(from_attributes=True)
+

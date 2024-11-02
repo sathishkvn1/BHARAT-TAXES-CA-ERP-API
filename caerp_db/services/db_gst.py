@@ -3,12 +3,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
-
+from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import  BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -223,6 +223,8 @@ def save_business_details(
 #     except Exception as e:
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=str(e))
+
+
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           user_id: int, 
@@ -398,10 +400,7 @@ def save_customer_details(customer_id: int,
         raise HTTPException(status_code=500, detail=str(e))
 
 #-get''
-def get_customer_details(db: Session, 
-                         customer_id: int,
-                         user_id: int, 
-                         ):
+def get_customer_details(db: Session, customer_id: int, user_id: int):
     try:
         # Query the main customer record
         customer = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
@@ -409,18 +408,54 @@ def get_customer_details(db: Session,
         if not customer:
             return []
 
-        # Query related details
-        additional_trade_names = db.query(CustomerAdditionalTradeName).filter_by(customer_id=customer_id).all()
-        casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(customer_id=customer_id).first()
-        composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(customer_id=customer_id).first()
-        gst_other_details = db.query(CustomerGSTOtherDetails).filter_by(customer_id=customer_id).first()
-        existing_registrations = db.query(CustomerExistingRegistrationDetails).filter_by(customer_id=customer_id).all()
+        # Query related details with effective date filters
+        additional_trade_names = (
+            db.query(CustomerAdditionalTradeName)
+            .filter_by(customer_id=customer_id)
+            .filter(CustomerAdditionalTradeName.effective_from_date <= datetime.now(),
+                    (CustomerAdditionalTradeName.effective_to_date.is_(None)) )
+            .all()
+        )
+        
+        casual_taxable_person = (
+            db.query(CustomerGSTCasualTaxablePersonDetails)
+            .filter_by(customer_id=customer_id)
+            .filter(CustomerGSTCasualTaxablePersonDetails.effective_from_date <= datetime.now(),
+                    (CustomerGSTCasualTaxablePersonDetails.effective_to_date.is_(None)) 
+            )
+            .first()
+        )
+        
+        composition_option = (
+            db.query(CustomerGSTCompositionOptedPersonDetails)
+            .filter_by(customer_id=customer_id)
+            .filter(CustomerGSTCompositionOptedPersonDetails.effective_from_date <= datetime.now(),
+                    (CustomerGSTCompositionOptedPersonDetails.effective_to_date.is_(None)) )
+            .first()
+        )
+        
+        gst_other_details = (
+            db.query(CustomerGSTOtherDetails)
+            .filter_by(customer_id=customer_id)
+            .filter(CustomerGSTOtherDetails.effective_from_date <= datetime.now(),
+                    (CustomerGSTOtherDetails.effective_to_date.is_(None)) )
+                    
+            .first()
+        )
+        
+        existing_registrations = (
+            db.query(CustomerExistingRegistrationDetails)
+            .filter_by(customer_id=customer_id)
+            .filter(CustomerExistingRegistrationDetails.effective_from_date <= datetime.now(),
+                    (CustomerExistingRegistrationDetails.effective_to_date.is_(None)) )
+            .all()
+        )
 
         # Assemble response data
         response = {
             "customer_business_details": {
                 "id": customer.customer_id,
-                "customer_number":customer.customer_number,
+                "customer_number": customer.customer_number,
                 "pan_number": customer.pan_number,
                 "pan_creation_date": customer.pan_creation_date,
                 "state_id": customer.state_id,
@@ -452,8 +487,8 @@ def get_customer_details(db: Session,
                 "casual_taxable_person": {
                     "id": casual_taxable_person.id if casual_taxable_person else None,
                     "is_applying_as_casual_taxable_person": casual_taxable_person.is_applying_as_casual_taxable_person if casual_taxable_person else None,
-                    "gst_registration_required_from_date":casual_taxable_person.gst_registration_required_from_date if casual_taxable_person else None,
-                    "gst_registration_required_to_date":casual_taxable_person.gst_registration_required_to_date if casual_taxable_person else None,
+                    "gst_registration_required_from_date": casual_taxable_person.gst_registration_required_from_date if casual_taxable_person else None,
+                    "gst_registration_required_to_date": casual_taxable_person.gst_registration_required_to_date if casual_taxable_person else None,
                     "estimated_igst_turnover": casual_taxable_person.estimated_igst_turnover if casual_taxable_person else None,
                     "estimated_net_igst_liability": casual_taxable_person.estimated_net_igst_liability if casual_taxable_person else None,
                     "estimated_cgst_turnover": casual_taxable_person.estimated_cgst_turnover if casual_taxable_person else None,
@@ -473,15 +508,15 @@ def get_customer_details(db: Session,
                 "reason_to_obtain_registration": {
                     "id": gst_other_details.id if gst_other_details else None,
                     "reason_to_obtain_gst_registration_id": gst_other_details.reason_to_obtain_gst_registration_id if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id is not None else None,
-                     "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason)
+                    "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason)
                                                 .filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id)
                                                 .scalar() if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id else None,
-    "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
-    "liability_to_register_arises_date": gst_other_details.liability_to_register_arises_date if gst_other_details else None
+                    "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
+                    "liability_to_register_arises_date": gst_other_details.liability_to_register_arises_date if gst_other_details else None
                 },
                 "existing_registrations": [
                     {
-                        "id": reg.id if existing_registrations else None,
+                        "id": reg.id,
                         "registration_type_id": reg.registration_type_id if reg.registration_type_id is not None else None, 
                         "registration_type": db.query(GstTypeOfRegistration.type_of_registration).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
                         "registration_number": reg.registration_number,
@@ -496,8 +531,6 @@ def get_customer_details(db: Session,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-
 #------Save stakeholder
 
 
@@ -694,8 +727,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 def get_stakeholder_details(db: Session, 
                             customer_id: int, 
                             stakeholder_type: str,
-                            user_id: int
-                            ):
+                            user_id: int):
     try:
         # Fetch records from CustomerStakeHolder based on customer_id
         customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id).all()
@@ -707,18 +739,41 @@ def get_stakeholder_details(db: Session,
         stakeholder_details = []
 
         for customer_stakeholder in customer_stakeholders:
-            # Only process the stakeholder if the type matches
-            if customer_stakeholder.stake_holder_type == stakeholder_type:
-                # Fetch StakeHolderMaster record based on stake_holder_master_id
-                stakeholder = db.query(StakeHolderMaster).filter_by(id=customer_stakeholder.stake_holder_master_id).first()
+            # Check if the stakeholder type matches and effective date conditions are satisfied
+            if (customer_stakeholder.stake_holder_type == stakeholder_type and 
+                customer_stakeholder.effective_from_date is not None and
+                customer_stakeholder.effective_from_date <= datetime.now().date() and
+                customer_stakeholder.effective_to_date is None):
                 
+                # Fetch StakeHolderMaster record
+                stakeholder = db.query(StakeHolderMaster).filter_by(id=customer_stakeholder.stake_holder_master_id).first()
                 if not stakeholder:
-                    continue  # Skip if no stakeholder found for the given ID
+                    return []
 
-                # Fetch other related details (designation, address, etc.)
-                designation = db.query(AppDesignation).filter_by(id=customer_stakeholder.designation_id).first() if customer_stakeholder.designation_id else None
-                address = db.query(StakeHolderAddress).filter_by(id=customer_stakeholder.residential_address_id).first() if customer_stakeholder.residential_address_id else None
-                contact_details = db.query(StakeHolderContactDetails).filter_by(id=customer_stakeholder.contact_details_id).first() if customer_stakeholder.contact_details_id else None
+                # Fetch StakeHolderAddress record based on residential_address_id
+                address = (
+                    db.query(StakeHolderAddress)
+                    .filter_by(id=customer_stakeholder.residential_address_id)
+                    .filter(StakeHolderAddress.effective_from_date <= datetime.now().date())
+                    .filter(StakeHolderAddress.effective_to_date.is_(None))
+                    .first() if customer_stakeholder.residential_address_id else None
+                )
+
+                # Fetch designation
+                designation = (
+                    db.query(AppDesignation)
+                    .filter_by(id=customer_stakeholder.designation_id)
+                    .first() if customer_stakeholder.designation_id else None
+                )
+
+                # Fetch StakeHolderContactDetails
+                contact_details = (
+                    db.query(StakeHolderContactDetails)
+                    .filter_by(id=customer_stakeholder.contact_details_id)
+                    .filter(StakeHolderContactDetails.effective_from_date <= datetime.now().date())
+                    .filter(StakeHolderContactDetails.effective_to_date.is_(None))
+                    .first() if customer_stakeholder.contact_details_id else None
+                )
 
                 # Assemble the response for the stakeholder
                 response = {
@@ -755,7 +810,7 @@ def get_stakeholder_details(db: Session,
                     "address": {
                         "id": address.id if address else None,
                         "pin_code": address.pin_code if address else None,
-                        "address_type":address.address_type if address else None,
+                        "address_type": address.address_type if address else None,
                         "country_id": address.country_id if address else None,
                         "country_name": db.query(CountryDB.country_name_english).filter_by(id=address.country_id).scalar() if address and address.country_id else None,
                         "state_id": address.state_id if address else None,
@@ -768,17 +823,17 @@ def get_stakeholder_details(db: Session,
                         "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=address.village_id).scalar() if address and address.village_id else None,
                         "post_office_id": address.post_office_id if address else None,
                         "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=address.post_office_id).scalar() if address and address.post_office_id else None,
-                        "taluk_id": address.taluk_id,  
-                        "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address.taluk_id else None,
+                        "taluk_id": address.taluk_id,
+                        "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address and address.taluk_id else None,
                         "lsg_type_id": address.lsg_type_id,
                         "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
                         "lsg_id": address.lsg_id,
                         "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
                         "locality": address.locality if address else None,
                         "road_street_name": address.road_street_name if address else None,
-                        "premises_building_name":address.premises_building_name if address else None,
+                        "premises_building_name": address.premises_building_name if address else None,
                         "building_flat_number": address.building_flat_number if address else None,
-                        "floor_number":address.floor_number if address else None,
+                        "floor_number": address.floor_number if address else None,
                         "landmark": address.landmark if address else None
                     } if address else None
                 }
@@ -1021,40 +1076,43 @@ def save_business_place(customer_id: int,
 
 
 #-----get business_place----
-
 def get_business_place(customer_id: int, 
                        type: str, 
                        db: Session,
-                       user_id: int
-                       ):
+                       user_id: int):
     """
     Fetch business data from the database.
     """
     is_principal_place = 'yes' if type == 'PRINCIPAL_PLACE_ADDRESS' else 'no'
 
     try:
-        # Fetch business places
+        # Fetch business places based on customer ID and address type
         business_places = db.query(CustomerBusinessPlace).filter(
             CustomerBusinessPlace.customer_id == customer_id,
-            CustomerBusinessPlace.is_principal_place == is_principal_place
+            CustomerBusinessPlace.is_principal_place == is_principal_place,
+            CustomerBusinessPlace.effective_from_date <= datetime.now(),
+            or_(CustomerBusinessPlace.effective_to_date.is_(None))
         ).all()
 
         # If no business places found, return an empty list
         if not business_places:
-            return []
+            return {"business_places": []}
 
-        # Prepare business places response
-        business_places_response = []
-        nature_of_business_response = []
+        # Prepare final response array
+        response = []
 
         # Iterate over business places
         for bp in business_places:
             # Fetch business activity type and master details
             business_activity_type = db.query(CustomerBusinessPlaceActivityType).filter(
-                CustomerBusinessPlaceActivityType.business_place_id == bp.id
+                CustomerBusinessPlaceActivityType.business_place_id == bp.id,
+                CustomerBusinessPlaceActivityType.effective_from_date <= datetime.now(),
+                or_(CustomerBusinessPlaceActivityType.effective_to_date.is_(None))
             ).first()
             business_activity_master = db.query(CustomerBusinessPlaceCoreActivity).filter(
-                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id
+                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id,
+                CustomerBusinessPlaceCoreActivity.effective_from_date <= datetime.now(),
+                or_(CustomerBusinessPlaceCoreActivity.effective_to_date.is_(None))
             ).first()
 
             # Prepare the business place data
@@ -1063,15 +1121,15 @@ def get_business_place(customer_id: int,
                 "pin_code": bp.pin_code,
                 "country_id": bp.country_id,
                 "country_name": db.query(CountryDB.country_name_english).filter_by(id=bp.country_id).scalar() if bp.country_id else None,
-                "state_id": bp.state_id,      
+                "state_id": bp.state_id,
                 "state_name": db.query(StateDB.state_name).filter_by(id=bp.state_id).scalar() if bp.state_id else None,
-                "district_id": bp.district_id,     
+                "district_id": bp.district_id,
                 "district_name": db.query(DistrictDB.district_name).filter_by(id=bp.district_id).scalar() if bp.district_id else None,
-                "taluk_id": bp.taluk_id,  
+                "taluk_id": bp.taluk_id,
                 "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=bp.taluk_id).scalar() if bp.taluk_id else None,
-                "city_id": bp.city_id,    
+                "city_id": bp.city_id,
                 "city_name": db.query(CityDB.city_name).filter_by(id=bp.city_id).scalar() if bp.city_id else None,
-                "village_id": bp.village_id,   
+                "village_id": bp.village_id,
                 "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=bp.village_id).scalar() if bp.village_id else None,
                 "lsg_type_id": bp.lsg_type_id,
                 "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=bp.lsg_type_id).first().lsg_type if bp.lsg_type_id else None,
@@ -1091,32 +1149,29 @@ def get_business_place(customer_id: int,
                 "nature_of_possession": db.query(OffNatureOfPossession.nature_of_possession).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
             }
 
-            # Add activity type and master details to the business place data
+            # Add business activity type and master details to the business place data
             if business_activity_type:
-                business_place_data.update({
-                    "business_activity_type_id": business_activity_type.business_activity_type_id,
-                    "business_activity_type_name": db.query(BusinessActivityType).filter(
-                        BusinessActivityType.id == business_activity_type.business_activity_type_id
-                    ).first().business_activity_type if business_activity_type.business_activity_type_id else None,
-                })
+                activity_type_data = db.query(BusinessActivityType).filter(
+                    BusinessActivityType.id == business_activity_type.business_activity_type_id
+                ).first()
+                business_place_data['business_activity_type_id'] = business_activity_type.business_activity_type_id
+                business_place_data['business_activity_type_name'] = activity_type_data.business_activity_type if activity_type_data else None
 
             if business_activity_master:
-                business_place_data.update({
-                    "business_activity_master_id": business_activity_master.business_activity_master_id,
-                    "business_activity_master_name": db.query(BusinessActivityMaster).filter(
-                        BusinessActivityMaster.id == business_activity_master.business_activity_master_id
-                    ).first().business_activity if business_activity_master.business_activity_master_id else None,
-                })
+                activity_master_data = db.query(BusinessActivityMaster).filter(
+                    BusinessActivityMaster.id == business_activity_master.business_activity_master_id
+                ).first()
+                business_place_data['business_activity_master_id'] = business_activity_master.business_activity_master_id
+                business_place_data['business_activity_master_name'] = activity_master_data.business_activity if activity_master_data else None
 
-            # Append business place data to response
-            business_places_response.append(business_place_data)
-
-            # Get business activities
+            # Get nature of business activities
+            nature_of_business_response = []
             business_activities = db.query(CustomerBusinessPlaceActivity).filter(
-                CustomerBusinessPlaceActivity.business_place_id == bp.id
+                CustomerBusinessPlaceActivity.business_place_id == bp.id,
+                CustomerBusinessPlaceActivity.effective_from_date <= datetime.now(),
+                or_(CustomerBusinessPlaceActivity.effective_to_date.is_(None))
             ).all()
 
-            # Compile each business activity
             for ba in business_activities:
                 activity_data = {
                     "id": ba.id,
@@ -1125,17 +1180,13 @@ def get_business_place(customer_id: int,
                 }
                 nature_of_business_response.append(activity_data)
 
-        # Compile final response
-        response = {
-            "business_places": business_places_response,
-            "business_activity_type_id": business_places_response[0].get("business_activity_type_id") if business_places_response else None,
-            "business_activity_type_name": business_places_response[0].get("business_activity_type_name") if business_places_response else None,
-            "business_activity_master_id": business_places_response[0].get("business_activity_master_id") if business_places_response else None,
-            "business_activity_master_name": business_places_response[0].get("business_activity_master_name") if business_places_response else None,
-            "nature_of_business": nature_of_business_response
-        }
+            # Add nature of business to the business place data
+            business_place_data['nature_of_business'] = nature_of_business_response
 
-        return response
+            # Append the complete business place data to the response
+            response.append(business_place_data)
+
+        return {"business_places": response}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1243,30 +1294,34 @@ def save_goods_commodities_details(
 
 
 #----------------get Hsn Commodities Supply Details
-def get_hsn_commodities_by_customer_id(customer_id: int,
-                                        user_id: int, 
-                                        db: Session):
+
+def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
     try:
         # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
         commodities = (
             db.query(CustomerGoodsCommoditiesSupplyDetails)
-            .filter(CustomerGoodsCommoditiesSupplyDetails.customer_id == customer_id)
-            .all()
+            .filter(
+                CustomerGoodsCommoditiesSupplyDetails.customer_id == customer_id,
+                CustomerGoodsCommoditiesSupplyDetails.effective_from_date <= datetime.now(),
+                or_(CustomerGoodsCommoditiesSupplyDetails.effective_to_date.is_(None))
+                    
+            )
+            .all()  # Use .all() to retrieve multiple commodities
         )
 
         if not commodities:
-            return []  # Return an empty list if no commodities found
+            return []  # Return an empty list if no commodities are found
 
         response = []
         for commodity in commodities:
-            # Fetching hsn_sac_class from AppHsnSacClasses based on hsn_sac_class_id
-            hsn_class_details = ( 
+            # Fetch hsn_sac_class from AppHsnSacClasses based on hsn_sac_class_id
+            hsn_class_details = (
                 db.query(AppHsnSacClasses)
                 .filter(AppHsnSacClasses.id == commodity.hsn_sac_class_id)
                 .first()
             )
 
-            # Fetching hsn_sac_code and hsn_sac_description from AppHsnSacMaster based on hsn_sac_code_id
+            # Fetch hsn_sac_code and hsn_sac_description from AppHsnSacMaster based on hsn_sac_code_id
             hsn_details = (
                 db.query(AppHsnSacMaster)
                 .filter(AppHsnSacMaster.id == commodity.hsn_sac_code_id)
@@ -1286,7 +1341,6 @@ def get_hsn_commodities_by_customer_id(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #----- save Customer Gst State Specific Information
 
@@ -1350,11 +1404,13 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
         # Query the CustomerGstStateSpecificInformation for the given customer_id
         gst_info_records = (
             db.query(CustomerGstStateSpecificInformation)
-            .filter(CustomerGstStateSpecificInformation.customer_id == customer_id, 
-                    CustomerGstStateSpecificInformation.is_deleted == 'no')  # Optionally filter out deleted records
-            .all()
+            .filter(CustomerGstStateSpecificInformation.customer_id == customer_id,
+                CustomerGstStateSpecificInformation.effective_from_date <= datetime.now(),
+                or_(CustomerGstStateSpecificInformation.effective_to_date.is_(None))
+                    
+            )
+            .all()  
         )
-
         if not gst_info_records:
             return []  # Return an empty list if no records found
 
@@ -1362,7 +1418,6 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 
@@ -1412,3 +1467,76 @@ def get_details_by_pin(db: Session, pin: str,user_id:int) -> List[RangeDetailsSc
     except Exception as e:
         # Properly handle exceptions and provide useful feedback
         raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")
+    
+
+
+
+def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
+    try:
+        # Fetch the existing customer data
+        original_customer = db.query(CustomerMaster).filter(CustomerMaster.customer_id == customer_id).first()
+        if not original_customer:
+            return {"success": False, "message": "Customer not found"}
+        # Use model_validate instead of from_orm
+        customer_data = CustomerDuplicateSchema.model_validate(original_customer)
+        # Create a new CustomerMaster instance from the schema data
+        new_customer = CustomerMaster(
+             customer_id=original_customer.customer_id,
+            **customer_data.model_dump(exclude_unset=True)
+        )
+
+        new_customer.is_amendment = 'yes'
+        new_customer.effective_from_date = None
+        new_customer.effective_to_date = None
+        new_customer.created_by = user_id  
+        new_customer.created_on = datetime.now()  
+
+        # Add and commit the new entry
+        db.add(new_customer)
+        db.commit()
+        db.refresh(new_customer)
+
+        return {"success": True, "message": "Saved successfully", "id": new_customer.id}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
+    
+
+#------------------Amendment---------------------------------------------------------------------
+# def duplicate_customer_data(db: Session, customer_id: int):
+#     try:
+#         # Fetch the existing customer data
+#         original_customer = db.query(CustomerMaster).filter(CustomerMaster.customer_id == customer_id).first()
+        
+#         if not original_customer:
+#             return {"success": False, "message": "Customer not found"}
+
+#         # Use model_validate instead of from_orm
+#         customer_data = CustomerDuplicateSchema.model_validate(original_customer)
+
+#         # Create a new CustomerMaster instance from the schema data
+#         new_customer = CustomerMaster(
+#             customer_id=original_customer.customer_id,  # Retain the same customer_id
+#             **customer_data.model_dump(exclude_unset=True)
+#         )
+
+#         new_customer.is_amendment = 'yes'
+#         new_customer.effective_from_date = None
+#         new_customer.effective_to_date = None
+
+
+#         # Add and commit the new entry
+#         db.add(new_customer)
+#         db.commit()
+#         db.refresh(new_customer)
+
+#         return {"success": True, "message": "Saved successfully", "id": new_customer.id}
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
+
+
+#-----------------------------------------------------------------------------------------------------------
+
