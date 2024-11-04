@@ -1,17 +1,18 @@
 
+
 from typing import List, Union
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from sqlalchemy import and_, or_, select
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
-from caerp_db.services.model import CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_db.services.model import CustomerAmendmentHistory, CustomerMaster, GstViewRange
+from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
-from datetime import date
+from datetime import date, datetime
 from caerp_db.database import  get_db
 from caerp_auth.authentication import authenticate_user
 
@@ -442,4 +443,49 @@ def get_customer(customer_id: int,
 #--------------------------------------------------------------------------------------------------------------
 
 
+@router.post("/amend_legal_name")
+def amend_legal_name(data: CustomerAmendmentSchema, 
+                   customer_id: int,
+                   db: Session = Depends(get_db),
+                   token: str = Depends(oauth2.oauth2_scheme)):
+    
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  
+  
+    customer = db.query(CustomerMaster).filter(
+        CustomerMaster.customer_id == customer_id,
+        CustomerMaster.is_amendment == 'yes'
+    ).first()
+    
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
+    
+ 
+    amendment_history = CustomerAmendmentHistory(
+        amendment_id=customer_id, 
+        field_name="Legal Name Amendment", 
+        old_value=data.old_value,
+        new_value=data.new_value,
+        amendment_request_date=data.amendment_request_date,
+        # amendment_effective_date=data.amendment_effective_date,
+        amendment_remarks=data.amendment_remarks,
+    )
+    db.add(amendment_history)
 
+
+
+    customer.amendment_status = "CREATED"
+    customer.modified_by=user_id
+    customer.modified_on=datetime.now()  
+
+    
+    db.commit()
+    db.refresh(customer)
+
+    return {"success": True, "message": "Saved successfully"}
+
+#-----------------------------------------------------------------------------------------------------

@@ -326,3 +326,15 @@ class CustomerGstStateSpecificInformationSchemaGet(BaseModel):
     professional_tax_registration_certificate    :str
     state_excise_licence_number                  :str
     excise_licence_holder_name                   :str
+
+
+class CustomerAmendmentSchema(BaseModel):
+   
+    old_value: str
+    new_value: str
+    amendment_remarks: str
+    amendment_request_date: date
+    # amendment_effective_date: Optional[date] = None
+
+    class Config:
+        orm_mode = True
