@@ -169,6 +169,15 @@ class CountryDB(caerp_base):
     isd_code                    = Column(String(10), nullable=True)
     states                      =relationship("StateDB",back_populates="country")
 
+# class StateDB(caerp_base):
+#     __tablename__ = "app_states"
+#     id                          = Column(Integer, primary_key=True, autoincrement=True)
+#     country_id                  = Column(Integer, ForeignKey('app_countries.id'), nullable=False)
+#     state_name                  = Column(String(50), nullable=False)
+#     country                     = relationship("CountryDB", back_populates="states")
+#     districts                   = relationship("DistrictDB",back_populates="states")
+#     is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
+#     # post_offices = relationship("PostOfficeView", back_populates="state_name")
 class StateDB(caerp_base):
     __tablename__ = "app_states"
     id                          = Column(Integer, primary_key=True, autoincrement=True)
@@ -176,8 +185,9 @@ class StateDB(caerp_base):
     state_name                  = Column(String(50), nullable=False)
     country                     = relationship("CountryDB", back_populates="states")
     districts                   = relationship("DistrictDB",back_populates="states")
-    is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
-    # post_offices = relationship("PostOfficeView", back_populates="state_name")
+    gst_registration_name       = Column(String(255), nullable=False)
+    state_code                  = Column(Integer, nullable=True)
+    is_deleted                  = Column(Enum('yes', 'no'), default='no', nullable=False)
 
 
 class DistrictDB(caerp_base):

@@ -523,8 +523,6 @@ class CustomerGstStateSpecificInformation(caerp_base):
 
 
 
-
-
 #---------------Jurisdiction
 class GstViewRange(caerp_base):
     __tablename__ = 'gst_view_range'
@@ -553,3 +551,16 @@ class GstViewRange(caerp_base):
     state_name           = Column(String)
     country_id           = Column(Integer)
     country_name_english = Column(String)
+
+
+class CustomerAmendmentHistory(caerp_base):
+    __tablename__ = "customer_amendment_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amendment_id = Column(Integer,  nullable=False)  
+    field_name = Column(String(100), nullable=False)
+    old_value = Column(String(100), nullable=False)
+    new_value = Column(String(100), nullable=False)
+    amendment_request_date = Column(Date, nullable=False)
+    amendment_effective_date = Column(Date, nullable=True, default=None)
+    amendment_remarks = Column(String(1000), nullable=False)

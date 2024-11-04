@@ -459,6 +459,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                 "pan_number": customer.pan_number,
                 "pan_creation_date": customer.pan_creation_date,
                 "state_id": customer.state_id,
+                "state_code":db.query(StateDB.state_code).filter_by(id=customer.state_id).scalar() if customer.state_id else None,
                 "state_name": db.query(StateDB.state_name).filter_by(id=customer.state_id).scalar() if customer.state_id else None,
                 "district_id": customer.district_id,
                 "district_name": db.query(DistrictDB.district_name).filter_by(id=customer.district_id).scalar() if customer.district_id else None,
@@ -472,6 +473,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                 "authorized_signatory_pan_number": customer.authorized_signatory_pan_number,
                 "constitution_id": customer.constitution_id,
                 "constitution_name": db.query(AppBusinessConstitution.business_constitution_name).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
+                "business_constitution_code": db.query(AppBusinessConstitution.business_constitution_code).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
                 "has_authorized_signatory": customer.has_authorized_signatory,
                 "has_authorized_representative": customer.has_authorized_representative,
                 "is_mother_customer": customer.is_mother_customer
@@ -531,6 +533,8 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 #------Save stakeholder
 
 
