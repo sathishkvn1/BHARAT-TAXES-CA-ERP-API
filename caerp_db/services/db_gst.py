@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
-from caerp_db.services.model import CustomerAdditionalTradeName, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.services.gst_schema import  BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
@@ -1539,3 +1539,46 @@ def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
 
 #-----------------------------------------------------------------------------------------------------------
 
+def amend_customer_data(
+    db: Session, 
+    customer_id: int, 
+    new_legal_name: str, 
+    amendment_reason: str,
+    amendment_remarks: str,
+    user_id: int
+):
+    try:
+        # Fetch the existing customer data
+        original_customer = db.query(CustomerMaster).filter(CustomerMaster.customer_id == customer_id).first()
+
+        if not original_customer:
+            return {"success": False, "message": "Customer not found"}
+        
+        # Prepare amendment data for customer_amendment_history
+        amendment_entry = CustomerAmendmentHistory(
+            amendment_id=original_customer.id,  # Foreign key to customer_master
+            field_name="Legal Name",
+            old_value=original_customer.legal_name,
+            new_value=new_legal_name,
+            amendment_request_date=date.today(),
+            amendment_effective_date=None,  # Set as needed
+            amendment_remarks=amendment_remarks
+        )
+
+        # Update the customer_master table with amendment details
+        original_customer.legal_name = new_legal_name
+        original_customer.amendment_date = datetime.now()
+        original_customer.amendment_reason = amendment_reason
+        original_customer.amendment_status = "Pending"  # Update based on your logic
+        original_customer.amendment_history = f"Amendment by user {user_id} on {datetime.now().strftime('%Y-%m-%d')}"
+
+        # Add amendment entry to history and update customer_master
+        db.add(amendment_entry)
+        db.commit()
+        db.refresh(original_customer)
+
+        return {"success": True, "message": "Customer amended successfully", "customer_id": original_customer.customer_id}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        return {"success": False, "message": f"Error amending customer: {str(e)}"}
