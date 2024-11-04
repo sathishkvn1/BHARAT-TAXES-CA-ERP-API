@@ -150,8 +150,8 @@ class BusinessPlace(BaseModel):
     locality                  : Optional[str]
     road_street_name          : Optional[str]
     premises_building_name    : Optional[str]
-    building_flat_number       : Optional[str]
-    floor_number               : Optional[str]
+    building_flat_number      : Optional[str]
+    floor_number              : Optional[str]
     landmark                  : Optional[str]
     latitude                  : Optional[str]
     longitude                 : Optional[str]
@@ -318,3 +318,11 @@ class CustomerDuplicateSchemaForGet(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+
+class CustomerGstStateSpecificInformationSchemaGet(BaseModel):
+    id                                           :int
+    professional_tax_employee_code               :str
+    professional_tax_registration_certificate    :str
+    state_excise_licence_number                  :str
+    excise_licence_holder_name                   :str

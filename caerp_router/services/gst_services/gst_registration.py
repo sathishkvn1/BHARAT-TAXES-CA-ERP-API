@@ -1,11 +1,11 @@
 
 from typing import List, Union
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
-from caerp_db.services.model import GstViewRange
-from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_db.services.model import CustomerMaster, GstViewRange
+from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -283,6 +283,7 @@ def get_hsn_sac_data(
 
 
 #---------Goods Commodities Supply Details-----------------
+
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
     id: int,  # New field to handle update or create
@@ -327,7 +328,6 @@ def get_hsn_commodities(customer_id: int,
     return commodities
 
 #-------------Gst State Specific Information---------------
-
 @router.post("/save_gst_state_specific_information/{id}")
 def save_gst_state_specific_information(
     id: int,
@@ -347,13 +347,9 @@ def save_gst_state_specific_information(
 
     return db_gst.save_customer_gst_state_specific_information(id, customer_id, data, db, user_id)
 
-
-
-
 #--------Gst State Specific Information
-
 @router.get("/get_gst_state_specific_information/{customer_id}", 
-            response_model=List[CustomerGstStateSpecificInformationSchema]
+            response_model=List[CustomerGstStateSpecificInformationSchemaGet]
             )
 def get_gst_state_specific_information(
     customer_id: int,
@@ -378,6 +374,7 @@ def get_gst_state_specific_information(
 
 
 
+
 #----jurisdiction
 @router.get("/range_details/{pin}/", response_model=List[RangeDetailsSchema])
 async def get_range_details(pin: str, 
@@ -397,7 +394,52 @@ async def get_range_details(pin: str,
         return details  # Return the list directly
     else:
         return []
+    
 
+#----------------------------Amendment-----------------------------------------------------------------------------
+@router.post("/duplicate_customer")
+def duplicate_customer(customer_id: int, 
+                       db: Session = Depends(get_db),
+                       token: str = Depends(oauth2.oauth2_scheme)):
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  
+
+    result = db_gst.duplicate_customer_data(db, customer_id,user_id)
+
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+    
+    return {"success": True, "message": "Saved successfully", "id": result["id"]}
+
+#------------------------------------------------------------------------------------------------------------
+@router.get("/get_mendment_customer_details/{customer_id}", response_model=CustomerDuplicateSchemaForGet)
+def get_customer(customer_id: int,
+                  db: Session = Depends(get_db),
+                  token: str = Depends(oauth2.oauth2_scheme)):
+  
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+    customer = db.query(CustomerMaster).filter(
+        and_(
+            CustomerMaster.customer_id == customer_id,
+            CustomerMaster.is_amendment == 'yes',
+            CustomerMaster.is_deleted == 'no'
+        )
+    ).first()
+    
+    if not customer:
+        return []
+        # raise HTTPException(status_code=404, detail="Customer not found or does not meet criteria")
+
+    
+    # Return the customer data
+    return customer
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 
