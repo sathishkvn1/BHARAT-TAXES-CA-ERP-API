@@ -417,7 +417,7 @@ def duplicate_customer(customer_id: int,
     return {"success": True, "message": "Saved successfully", "id": result["id"]}
 
 #------------------------------------------------------------------------------------------------------------
-@router.get("/get_mendment_customer_details/{customer_id}", response_model=CustomerDuplicateSchemaForGet)
+@router.get("/get_amended_customer_details/{customer_id}", response_model=CustomerDuplicateSchemaForGet)
 def get_customer(customer_id: int,
                   db: Session = Depends(get_db),
                   token: str = Depends(oauth2.oauth2_scheme)):
