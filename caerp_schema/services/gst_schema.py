@@ -11,6 +11,7 @@ class BusinessDetailsSchema(BaseModel):
     state_id                                   : Optional[int] 
     district_id                                : Optional[int] 
     legal_name                                 : Optional[str]
+    customer_name                              : Optional[str]
     email_address                              : Optional[str]
     mobile_number                              : Optional[str] 
     tan_number                                 : Optional[str] 
@@ -18,7 +19,7 @@ class BusinessDetailsSchema(BaseModel):
     tin_number                                 : Optional[str] 
     authorized_signatory_name_as_in_pan        : Optional[str] 
     authorized_signatory_pan_number            : Optional[str]
-   
+    
 #--------------
 
 class TradeNameSchema(BaseModel):

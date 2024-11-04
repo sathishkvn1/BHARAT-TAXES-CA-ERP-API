@@ -464,6 +464,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                 "district_id": customer.district_id,
                 "district_name": db.query(DistrictDB.district_name).filter_by(id=customer.district_id).scalar() if customer.district_id else None,
                 "legal_name": customer.legal_name,
+                "trade_name": customer.customer_name,
                 "email_address": customer.email_address,
                 "mobile_number": customer.mobile_number,
                 "tan_number": customer.tan_number,
@@ -533,6 +534,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 #------Save stakeholder
@@ -1507,39 +1509,6 @@ def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
     
 
 #------------------Amendment---------------------------------------------------------------------
-# def duplicate_customer_data(db: Session, customer_id: int):
-#     try:
-#         # Fetch the existing customer data
-#         original_customer = db.query(CustomerMaster).filter(CustomerMaster.customer_id == customer_id).first()
-        
-#         if not original_customer:
-#             return {"success": False, "message": "Customer not found"}
-
-#         # Use model_validate instead of from_orm
-#         customer_data = CustomerDuplicateSchema.model_validate(original_customer)
-
-#         # Create a new CustomerMaster instance from the schema data
-#         new_customer = CustomerMaster(
-#             customer_id=original_customer.customer_id,  # Retain the same customer_id
-#             **customer_data.model_dump(exclude_unset=True)
-#         )
-
-#         new_customer.is_amendment = 'yes'
-#         new_customer.effective_from_date = None
-#         new_customer.effective_to_date = None
-
-
-#         # Add and commit the new entry
-#         db.add(new_customer)
-#         db.commit()
-#         db.refresh(new_customer)
-
-#         return {"success": True, "message": "Saved successfully", "id": new_customer.id}
-
-#     except SQLAlchemyError as e:
-#         db.rollback()
-#         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
-
 
 #-----------------------------------------------------------------------------------------------------------
 
@@ -1586,3 +1555,7 @@ def amend_customer_data(
     except SQLAlchemyError as e:
         db.rollback()
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
+    
+
+#-----------------------------------------------------------------------------------------------------------------------
+
