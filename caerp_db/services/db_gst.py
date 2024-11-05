@@ -1198,38 +1198,37 @@ def get_business_place(customer_id: int,
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------------Get hsn sac
-
-
-def get_hsn_sac_data(hsn_sac_class_id: int,
-                       hsn_sac_code: str,
-                       db: Session,
-                       user_id: int
-                       ):
-    
+def get_hsn_sac_data(
+    hsn_sac_class_id: int,
+    hsn_sac_code: str,
+    db: Session,
+    user_id: int
+):
     try:
         # Base query
         query = db.query(AppHsnSacMaster, AppHsnSacClasses.hsn_sac_class).join(
             AppHsnSacClasses, AppHsnSacMaster.hsn_sac_class_id == AppHsnSacClasses.id
         )
 
-        # Filter based on hsn_sac_class_id and hsn_sac_code
+        # Filter based on hsn_sac_class_id
         if hsn_sac_class_id:
             query = query.filter(AppHsnSacMaster.hsn_sac_class_id == hsn_sac_class_id)
 
+        # Check if hsn_sac_code should be exact or use a starts-with match
         if hsn_sac_code:
-            query = query.filter(AppHsnSacMaster.hsn_sac_code == hsn_sac_code)
+            # Use starts-with filter by appending "%" to the end of the hsn_sac_code
+            query = query.filter(AppHsnSacMaster.hsn_sac_code.like(f"{hsn_sac_code}%"))
 
         # Execute the query
         results = query.all()
 
-        # If no records are found, raise an exception
+        # If no records are found, return an empty list
         if not results:
             return []
 
         # Format the results for the response
         response = [
             {
-               
                 "hsn_sac_class": result.hsn_sac_class,
                 "hsn_sac_code_id": result.AppHsnSacMaster.id,
                 "hsn_sac_code": result.AppHsnSacMaster.hsn_sac_code,
@@ -1242,7 +1241,6 @@ def get_hsn_sac_data(hsn_sac_class_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
 
 #-------------Goods Commodities Supply Details----------
@@ -1300,7 +1298,6 @@ def save_goods_commodities_details(
 
 
 #----------------get Hsn Commodities Supply Details
-
 def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
     try:
         # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
@@ -1336,6 +1333,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
 
             if hsn_class_details and hsn_details:
                 response.append({
+                    "id":commodity.id,
                     "hsn_sac_class_id": hsn_class_details.id,
                     "hsn_sac_class": hsn_class_details.hsn_sac_class,  
                     "hsn_sac_code_id": hsn_details.id,
@@ -1347,6 +1345,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #----- save Customer Gst State Specific Information
 
