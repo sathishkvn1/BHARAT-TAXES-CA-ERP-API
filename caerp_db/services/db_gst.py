@@ -1101,7 +1101,6 @@ def save_business_place(customer_id: int,
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 #-----get business_place----
-
 def get_business_place(customer_id: int, 
                        type: str, 
                        db: Session,
@@ -1173,6 +1172,12 @@ def get_business_place(customer_id: int,
                 "business_place_type": bp.business_place_type,
                 "nature_of_possession_id": bp.nature_of_possession_id,
                 "nature_of_possession": db.query(OffNatureOfPossession.nature_of_possession).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
+                "office_email_address": bp.office_email_address,     
+                "office_mobile_number": bp.office_mobile_number,      
+                "office_phone_std_code" : bp.office_phone_std_code,   
+                "office_phone_number" : bp.office_phone_number,     
+                "office_fax_std_code"  : bp.office_fax_std_code,    
+                "office_fax_number"  : bp.office_fax_number      
             }
 
             # Add business activity type and master details to the business place data

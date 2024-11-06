@@ -6,20 +6,21 @@ from datetime import date, datetime,time
 
 
 class BusinessDetailsSchema(BaseModel):
-    pan_number                                 : Optional[str]
-    pan_creation_date                          : Optional[date]
-    state_id                                   : Optional[int] 
-    district_id                                : Optional[int] 
-    legal_name                                 : Optional[str]
-    customer_name                              : Optional[str]
-    email_address                              : Optional[str]
-    mobile_number                              : Optional[str] 
-    tan_number                                 : Optional[str] 
-    passport_number                            : Optional[str]
-    tin_number                                 : Optional[str] 
-    authorized_signatory_name_as_in_pan        : Optional[str] 
-    authorized_signatory_pan_number            : Optional[str]
-    
+    pan_number                                 : Optional[str] =None
+    pan_creation_date                          : Optional[date]=None
+    state_id                                   : Optional[int] =None
+    district_id                                : Optional[int] =None
+    legal_name                                 : Optional[str] =None
+    customer_name                              : Optional[str] =None
+    email_address                              : Optional[str] =None
+    mobile_number                              : Optional[str] =None
+    tan_number                                 : Optional[str] =None
+    passport_number                            : Optional[str] =None
+    tin_number                                 : Optional[str] =None
+    authorized_signatory_name_as_in_pan        : Optional[str] =None
+    authorized_signatory_pan_number            : Optional[str] =None
+   
+  
 #--------------
 
 class TradeNameSchema(BaseModel):
@@ -159,6 +160,13 @@ class BusinessPlace(BaseModel):
     is_principal_place        : Optional[str]
     business_place_type       : Optional[str]
     nature_of_possession_id   : Optional[int]
+    office_email_address      : Optional[str]
+    office_mobile_number      : Optional[str]
+    office_phone_std_code     : Optional[str]
+    office_phone_number       : Optional[str]
+    office_fax_std_code       : Optional[str]
+    office_fax_number         : Optional[str]
+
 
 
 class NatureOfBusiness(BaseModel):
