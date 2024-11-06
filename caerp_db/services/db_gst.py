@@ -730,6 +730,9 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 
 #--Get Stakeholder Details
 
+#-----------------------------------------------------------------------------------------------------------------
+
+
 def get_stakeholder_details(db: Session, 
                             customer_id: int, 
                             stakeholder_type: str,
@@ -949,7 +952,7 @@ def fetch_business_activities(
 
 #----------------Save Business Place----------
 
-
+#-----------------------------------------------------------------------------------------------------------------
 
 def save_business_place(customer_id: int, 
                         data: BusinessData, 
@@ -992,28 +995,46 @@ def save_business_place(customer_id: int,
                     business_place_id = existing_business_place.id
                 else:
                     return {"message": "Business place not found for update."} 
-            # Process nature_of_business and activity types for the business place
-            for nature in data.nature_of_business:
-                if nature.id != 0:
-                    existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
-                        id=nature.id,
-                        customer_id=customer_id,
-                        business_place_id=business_place_id
-                    ).first()
+        
+            # Process nature_of_business activities for the business place
+            existing_activities = {activity.id: activity for activity in db.query(CustomerBusinessPlaceActivity)
+                                .filter_by(customer_id=customer_id, business_place_id=business_place_id).all()}
 
-                    if existing_activity:
-                        existing_activity.business_activity_id = nature.business_activity_id
-                        existing_activity.effective_from_date = datetime.now() 
-                        existing_activity.effective_to_date = None
-                        existing_activity.modified_by = user_id                   
-                        existing_activity.modified_on = datetime.now()            
+            # Collect incoming service IDs to check against existing ones for deletions
+            incoming_activity_ids = {nature.id for nature in data.nature_of_business if nature.id != 0}
+
+            # Mark activities as deleted if they are not in the incoming data
+            for activity_id, existing_activity in existing_activities.items():
+                if activity_id not in incoming_activity_ids:
+                    existing_activity.is_deleted = "yes"
+                    existing_activity.deleted_by = user_id
+                    existing_activity.deleted_on = datetime.now()
+                    existing_activity.modified_by = user_id
+                    existing_activity.modified_on = datetime.now()
+
+            # Process each incoming nature_of_business item
+            for nature in data.nature_of_business:
+                nature_data = nature.model_dump(exclude_unset=True)
+                activity_id = nature_data.get("id")
+
+                if activity_id in existing_activities:
+                    # Update existing activity
+                    existing_activity = existing_activities[activity_id]
+                    for key, value in nature_data.items():
+                        setattr(existing_activity, key, value)
+                    existing_activity.is_deleted = "no"
+                    existing_activity.deleted_by = None
+                    existing_activity.deleted_on = None
+                    existing_activity.modified_by = user_id
+                    existing_activity.modified_on = datetime.now()
                 else:
+                    # Insert new activity if it does not exist in existing_activities
                     new_activity = CustomerBusinessPlaceActivity(
                         customer_id=customer_id,
-                        effective_from_date=datetime.now(),                       
+                        effective_from_date=datetime.now(),
                         effective_to_date=None,
-                        created_by=user_id,                                      
-                        created_on=datetime.now(),                               
+                        created_by=user_id,
+                        created_on=datetime.now(),
                         business_place_id=business_place_id,
                         business_activity_id=nature.business_activity_id
                     )
@@ -1079,9 +1100,8 @@ def save_business_place(customer_id: int,
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
-
 #-----get business_place----
+
 def get_business_place(customer_id: int, 
                        type: str, 
                        db: Session,
@@ -1174,6 +1194,7 @@ def get_business_place(customer_id: int,
             nature_of_business_response = []
             business_activities = db.query(CustomerBusinessPlaceActivity).filter(
                 CustomerBusinessPlaceActivity.business_place_id == bp.id,
+                CustomerBusinessPlaceActivity.is_deleted == "no",
                 CustomerBusinessPlaceActivity.effective_from_date <= datetime.now(),
                 or_(CustomerBusinessPlaceActivity.effective_to_date.is_(None))
             ).all()
@@ -1197,7 +1218,11 @@ def get_business_place(customer_id: int,
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-------------Get hsn sac
+#-----------------------------------------------------------------------------------------------------------------
+
+
 def get_hsn_sac_data(
     hsn_sac_class_id: int,
     hsn_sac_code: str,
@@ -1244,6 +1269,10 @@ def get_hsn_sac_data(
 
 
 #-------------Goods Commodities Supply Details----------
+
+#-----------------------------------------------------------------------------------------------------------------
+
+
 
 def save_goods_commodities_details(
     id: int,  # 0 for insert, non-zero for update
@@ -1298,6 +1327,9 @@ def save_goods_commodities_details(
 
 
 #----------------get Hsn Commodities Supply Details
+#-----------------------------------------------------------------------------------------------------------------
+
+
 def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
     try:
         # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
@@ -1349,6 +1381,10 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
 
 #----- save Customer Gst State Specific Information
 
+#-----------------------------------------------------------------------------------------------------------------
+
+
+    
 
 def save_customer_gst_state_specific_information(
     id: int,  # 0 for insert, non-zero for update
@@ -1398,7 +1434,6 @@ def save_customer_gst_state_specific_information(
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
         raise HTTPException(status_code=500, detail=str(e))
-    
 
 #----------get Customer Gst State Specific Information
 
@@ -1426,7 +1461,7 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
 
 
 
-#-------jurisdicition
+#-----------------------------------------------------------------------------------------------------------------
 
 
 def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetailsSchema]:
@@ -1474,6 +1509,9 @@ def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetails
    
 
 
+#-----------------------------------------------------------------------------------------------------------------
+
+
 
 def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
     try:
@@ -1508,8 +1546,6 @@ def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
     
 
 #------------------Amendment---------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------------------------------------
 
 def amend_customer_data(
     db: Session, 
@@ -1554,7 +1590,5 @@ def amend_customer_data(
     except SQLAlchemyError as e:
         db.rollback()
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
-    
-
 #-----------------------------------------------------------------------------------------------------------------------
 
