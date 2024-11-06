@@ -49,7 +49,9 @@ router = APIRouter(
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
-SOURCE_DIRECTORY = r"C:\BHARAT-TAXES-CA-ERP-API\downloads\excel_templates"
+# SOURCE_DIRECTORY = r"C:\BHARAT-TAXES-CA-ERP-API\downloads\excel_templates"
+
+SOURCE_DIRECTORY  = "C:/BHARAT-TAXES-CA-ERP-API/downloads/excel_templates"
 DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser("~"), "Downloads")  
 
 
@@ -4179,12 +4181,11 @@ def upload_document_data_master(
         db.rollback()  
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 #-----------------------------------------------------------------------------------------
-
-
 @router.get('/download_csv_templates')
 def download_csv_templates(file_name: str = Query(...)):
     # Construct the file path in the source directory
     source_file_path = os.path.join(SOURCE_DIRECTORY, f"{file_name}.csv")
+    print("source_file_path",source_file_path)
     
     # Check if the file exists
     if not os.path.isfile(source_file_path):
@@ -4192,6 +4193,7 @@ def download_csv_templates(file_name: str = Query(...)):
     
     # Define the destination path in the Downloads folder
     destination_file_path = os.path.join(DOWNLOADS_DIRECTORY, f"{file_name}.csv")
+    print("destination_file_path",destination_file_path)
 
     # Copy the file to the Downloads folder
     try:
@@ -4200,3 +4202,5 @@ def download_csv_templates(file_name: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"Failed to copy file: {e}")
 
     return {"message": f"File '{file_name}.csv' has been successfully downloaded."}
+
+#333-----------------------------------------------------------------------------------------------------
