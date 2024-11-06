@@ -34,7 +34,7 @@ from io import BytesIO
 from sqlalchemy import select, func, and_
 from collections import defaultdict
 import asyncio
-
+import shutil
 from settings import BASE_URL
 
 from fastapi.openapi.utils import get_openapi
@@ -48,6 +48,10 @@ router = APIRouter(
 
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
+
+SOURCE_DIRECTORY = r"C:\BHARAT-TAXES-CA-ERP-API\downloads\excel_templates"
+DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser("~"), "Downloads")  
+
 
 
 
@@ -78,6 +82,8 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"An error occurred in WebSocket: {str(e)}")
 
+
+
 # async def notify_on_new_appointment():
 #     last_seen_id = None
 #     # logger.info("notify_on_new_appointment function started...")
@@ -101,7 +107,9 @@ async def websocket_endpoint(websocket: WebSocket):
 #             logger.error(f"Error querying appointments or sending notifications: {e}")
 #         await asyncio.sleep(5)
 #         # logger.info("Sleeping for 5 seconds...")
-        
+
+
+
 async def notify_on_new_appointment():
     last_seen_id = None
     # logger.info("notify_on_new_appointment function started...")
@@ -335,6 +343,7 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     return {"info": info}
 
 #-------------get all-------------------------------------------------------------------------
+
 @router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
 def get_and_search_appointments(
     consultant_id: Optional[str] = "ALL",
@@ -422,9 +431,6 @@ def get_all_service_goods_master(
 
 
 #------------------------------------------------------------------------------------------------------------
-
-
-
 @router.get('/services/get_all_service_goods_master_test', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master_test(
     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
@@ -3198,10 +3204,6 @@ def get_service_task_history(
     return result
 
 
-
-
-
-
 #------------------------------------------------------------------------------------------------------
 
 @router.get('/teams/get_by_department/{department_id}')
@@ -4176,6 +4178,25 @@ def upload_document_data_master(
     except Exception as e:
         db.rollback()  
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 #-----------------------------------------------------------------------------------------
 
+
+@router.get('/download_csv_templates')
+def download_csv_templates(file_name: str = Query(...)):
+    # Construct the file path in the source directory
+    source_file_path = os.path.join(SOURCE_DIRECTORY, f"{file_name}.csv")
+    
+    # Check if the file exists
+    if not os.path.isfile(source_file_path):
+        raise HTTPException(status_code=404, detail=f"File '{file_name}.csv' not found in source directory.")
+    
+    # Define the destination path in the Downloads folder
+    destination_file_path = os.path.join(DOWNLOADS_DIRECTORY, f"{file_name}.csv")
+
+    # Copy the file to the Downloads folder
+    try:
+        shutil.copy(source_file_path, destination_file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to copy file: {e}")
+
+    return {"message": f"File '{file_name}.csv' has been successfully downloaded."}
