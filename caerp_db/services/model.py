@@ -362,7 +362,6 @@ class CustomerStakeHolder(caerp_base):
     deleted_on                 = Column(DateTime, nullable=True)
 
 
-
 class CustomerBusinessPlace(caerp_base):
     __tablename__ = 'customer_business_place'
 
@@ -390,8 +389,10 @@ class CustomerBusinessPlace(caerp_base):
     nature_of_possession_id         = Column(Integer, nullable=True)
     office_email_address            = Column(String(100), nullable=True)
     office_mobile_number            = Column(String(100), nullable=True)
-    office_phone_number_with_std_code = Column(String(100), nullable=True)
-    office_fax_with_std_code        = Column(String(100), nullable=True)
+    office_phone_std_code           = Column(String(100), nullable=True)
+    office_phone_number             = Column(String(100), nullable=True)
+    office_fax_std_code             = Column(String(100), nullable=True)
+    office_fax_number               = Column(String(100), nullable=True)
     is_amendment                    = Column(Enum('yes', 'no'), nullable=False, default='no')
     amendment_date                  = Column(Date, nullable=True)
     amendment_reason                = Column(String(100), nullable=True)
