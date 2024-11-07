@@ -1278,58 +1278,52 @@ def get_hsn_sac_data(
 #-----------------------------------------------------------------------------------------------------------------
 
 
-
 def save_goods_commodities_details(
-    id: int,  # 0 for insert, non-zero for update
+    id: int,  # ID 0 for insert; non-zero for update
     customer_id: int,
-    details: CustomerGoodsCommoditiesSupplyDetailsSchema,
+    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  # List to handle multiple entries
     db: Session,
-    user_id: int  # Optionally track the user making the changes
+    user_id: int  # Track the user making the changes
 ):
     try:
-        
+        for item in details:
+            if id == 0:
+                # Create a new entry if ID is 0
+                new_entry = CustomerGoodsCommoditiesSupplyDetails(
+                    customer_id=customer_id,
+                    hsn_sac_class_id=item.hsn_sac_class_id,
+                    hsn_sac_code_id=item.hsn_sac_code_id,
+                    effective_from_date=date.today(),  # Set effective_from_date to current date
+                    effective_to_date=None,              # Set effective_to_date as None
+                    created_by=user_id,               
+                    created_on=datetime.now()            
+                )
+                db.add(new_entry)
+                db.commit()  # Commit to save the new entry
+                db.refresh(new_entry)  # Refresh to get the updated instance with id
 
-        if id == 0:
-            # Create a new entry if ID is 0
-            new_entry = CustomerGoodsCommoditiesSupplyDetails(
-                customer_id=customer_id,
-                hsn_sac_class_id=details.hsn_sac_class_id,
-                hsn_sac_code_id=details.hsn_sac_code_id,
-                effective_from_date=date.today(),  # Set effective_from_date to current date
-                effective_to_date=None,              # Set effective_to_date as None
-                created_by=user_id,               
-                created_on=datetime.now()            
-            )
-            db.add(new_entry)
-            db.commit()  # Commit to save the new entry
-            db.refresh(new_entry)  # Refresh to get the updated instance with id
+            else:
+                # Fetch the existing record by ID for updating
+                existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=id).first()
 
-            return {"success": True, "message": "Data saved successfully"}
+                if not existing_entry:
+                    continue  # Skip this entry if it does not exist
 
-        else:
-            # Fetch the existing record by ID for updating
-            existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=id).first()
+                # Update the existing record fields
+                existing_entry.hsn_sac_class_id = item.hsn_sac_class_id
+                existing_entry.hsn_sac_code_id = item.hsn_sac_code_id
+                existing_entry.effective_from_date = date.today() 
+                existing_entry.effective_to_date = None  
+                existing_entry.modified_on = datetime.now() 
+                existing_entry.modified_by = user_id  
 
-            if not existing_entry:
-                return []
+                db.commit()  # Commit the changes to the database
 
-            # Update the existing record fields
-            existing_entry.hsn_sac_class_id = details.hsn_sac_class_id
-            existing_entry.hsn_sac_code_id = details.hsn_sac_code_id
-            existing_entry.effective_from_date=date.today() 
-            existing_entry.effective_to_date=None  
-            existing_entry.modified_on = datetime.now() 
-            existing_entry.modified_by = user_id  
-
-            db.commit()  # Commit the changes to the database
-
-            return {"success": True, "message": "Data updated successfully"}
+        return {"success": True, "message": "Data processed successfully"}
 
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
         raise HTTPException(status_code=500, detail=str(e))
-    
-
 
 #----------------get Hsn Commodities Supply Details
 #-----------------------------------------------------------------------------------------------------------------
@@ -1468,7 +1462,6 @@ def get_gst_state_specific_information_by_customer_id(customer_id: int,
 
 #-----------------------------------------------------------------------------------------------------------------
 
-
 def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetailsSchema]:
     try:
         # Query the view where jurisdiction contains the PIN or pin matches the PIN
@@ -1483,26 +1476,9 @@ def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetails
         if not range_details:
             return []
 
-        # Create a list of RangeDetailsSchema instances from the SQLAlchemy model instances
+        # Create a list of RangeDetailsSchema instances using ** unpacking
         range_info_list = [
-            RangeDetailsSchema(
-                address=range_detail.address,
-                phone=range_detail.phone,
-                range_id=range_detail.range_id,
-                range=range_detail.range_name,
-                division_id=range_detail.division_id,
-                division=range_detail.division_name,
-                commissionerate_id=range_detail.commissionerate_id,
-                commissionerate=range_detail.commissionerate_name,
-                zone_id=range_detail.zone_id,
-                zone=range_detail.zone_name,
-                state_id=range_detail.state_id,
-                state=range_detail.state_name,
-                district_id=range_detail.district_id,
-                district=range_detail.district_name,
-                country_id=range_detail.country_id,
-                country=range_detail.country_name_english
-            )
+            RangeDetailsSchema(**{key: getattr(range_detail, key) for key in RangeDetailsSchema.__annotations__.keys()})
             for range_detail in range_details
         ]
 
@@ -1511,8 +1487,6 @@ def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetails
     except Exception as e:
         # Properly handle exceptions and provide useful feedback
         raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")
-   
-
 
 #-----------------------------------------------------------------------------------------------------------------
 
@@ -1597,3 +1571,84 @@ def amend_customer_data(
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
 #-----------------------------------------------------------------------------------------------------------------------
 
+
+# def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
+#     # Map model names to actual model classes
+#     model_mapping = {
+#         "CustomerMaster": CustomerMaster,
+      
+#     }
+
+#     # Get the model class based on model_name
+#     model_class = model_mapping.get(model_name)
+#     if not model_class:
+#         raise HTTPException(status_code=400, detail=f"Model {model_name} not found.")
+
+#     # Step 1: Get the current data from the master table for the specified field
+#     record = db.query(model_class).filter_by(id=id).first()
+#     if not record:
+#         raise HTTPException(status_code=404, detail="Record not found.")
+
+#     # Use reflection to get the current value of the specified field
+#     current_value = getattr(record, field_name, None)
+#     if current_value is None:
+#         raise HTTPException(status_code=400, detail=f"Field {field_name} not found in {model_name}.")
+
+
+#     history_entry = CustomerAmendmentHistory(
+#         amendment_id=id,
+#         old_value=current_value,
+#         new_value=new_value,
+#         amendment_request_date=date,
+#         amendment_remarks=remarks
+#     )
+#     db.add(history_entry)
+    
+#     # Step 3: Update the master table for the specified field
+#     setattr(record, field_name, new_value)
+#     db.commit()
+
+#     return {"success": True, "message": "Amendment saved successfully", "id": id}
+
+
+
+def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
+  
+    model_mapping = {
+        "CustomerMaster": CustomerMaster,
+    }
+
+    model_class = model_mapping.get(model_name)
+    if not model_class:
+        raise HTTPException(status_code=400, detail=f"Model {model_name} not found.")
+
+ 
+    record = db.query(model_class).filter_by(id=id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found.")
+
+    # Check that field_name exists in the model
+    if not hasattr(record, field_name):
+        raise HTTPException(status_code=400, detail=f"Field {field_name} not found in {model_name}.")
+
+    # Use reflection to get the current value of the specified field
+    current_value = getattr(record, field_name, None)
+
+  
+    history_entry = CustomerAmendmentHistory(
+        amendment_id=id,
+        field_name=field_name, 
+        old_value=current_value,
+        new_value=new_value,
+        amendment_request_date=date,
+        amendment_remarks=remarks
+    )
+    db.add(history_entry)
+    
+    # Step 3: Update the master table for the specified field
+    setattr(record, field_name, new_value)
+    db.commit()
+
+    return {"success": True, "message": "Amendment saved successfully", "id": id}
+
+#----------------------------------------------------------------------------------------------------------------

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile,
 from sqlalchemy import and_, or_, select
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
-from caerp_db.services.model import CustomerAmendmentHistory, CustomerMaster, GstViewRange
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
 from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
@@ -284,18 +284,16 @@ def get_hsn_sac_data(
 
 
 #---------Goods Commodities Supply Details-----------------
-
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
     id: int,  # New field to handle update or create
     customer_id: int,
-    details: CustomerGoodsCommoditiesSupplyDetailsSchema,  # Expecting the schema for details
+    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  # Expecting a list of schema items
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     - Save Goods Commodities
-    
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -306,7 +304,6 @@ def save_goods_commodities(
         return db_gst.save_goods_commodities_details(id, customer_id, details, db, user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 #-------------- Hsn Commodities----------------
 
@@ -442,50 +439,197 @@ def get_customer(customer_id: int,
 
 #--------------------------------------------------------------------------------------------------------------
 
+# @router.post("/amend_legal_name")
+# def amend_legal_name(data: CustomerAmendmentSchema, 
+#                      customer_id: int,
+#                      db: Session = Depends(get_db),
+#                      token: str = Depends(oauth2.oauth2_scheme)):
+    
+#     # Validate token
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")  
 
-@router.post("/amend_legal_name")
-def amend_legal_name(data: CustomerAmendmentSchema, 
-                   customer_id: int,
-                   db: Session = Depends(get_db),
-                   token: str = Depends(oauth2.oauth2_scheme)):
+#     # Fetch the original customer data
+#     customer = db.query(CustomerMaster).filter(
+#         CustomerMaster.customer_id == customer_id,
+#         CustomerMaster.is_amendment == 'yes'
+#     ).first()
     
+#     if not customer:
+#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
     
-    if not token:
-        raise HTTPException(status_code=401, detail="Token is missing")
+#     # Save the amendment history
+#     amendment_history = CustomerAmendmentHistory(
+#         amendment_id=customer.id, 
+#         field_name="Legal Name Amendment", 
+#         old_value=data.old_value,
+#         new_value=data.new_value,
+#         amendment_request_date=data.amendment_request_date,
+#         amendment_remarks=data.amendment_remarks,
+#     )
+#     db.add(amendment_history)
+
+#     # Update specific fields in CustomerMaster
+#     customer.legal_name = data.new_value  
+#     customer.amendment_status = "CREATED"
+#     # customer.modified_by = user_id
+#     # customer.modified_on = datetime.utcnow()
+
+#     # Commit changes
+#     db.commit()
+#     db.refresh(customer)
+
+#     return {"success": True, "message": "Legal name amendment saved successfully"}
+
+#---------------------------------------------------------------------------------------------------------------
+
+# @router.post("/amend_district")
+# def amend_district(data: CustomerAmendmentSchema, 
+#                    customer_id: int,
+#                    db: Session = Depends(get_db),
+#                    token: str = Depends(oauth2.oauth2_scheme)):
     
-    auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")  
+#     # Validate token
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")  
+
+#     # Fetch the original customer data to check if it exists and is amendable
+#     customer = db.query(CustomerMaster).filter(
+#         CustomerMaster.customer_id == customer_id,
+#         CustomerMaster.is_amendment == 'yes'
+#     ).first()
+    
+#     if not customer:
+#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
+    
+#     # Save the amendment history with the "District Amendment" field name
+#     amendment_history = CustomerAmendmentHistory(
+#         amendment_id=customer.id, 
+#         field_name="District Amendment", 
+#         old_value=data.old_value,
+#         new_value=data.new_value,
+#         amendment_request_date=data.amendment_request_date,
+#         # amendment_effective_date=data.amendment_effective_date,
+#         amendment_remarks=data.amendment_remarks,
+#     )
+#     db.add(amendment_history)
+
   
-    customer = db.query(CustomerMaster).filter(
-        CustomerMaster.customer_id == customer_id,
-        CustomerMaster.is_amendment == 'yes'
-    ).first()
+#     customer.district_id = int(data.new_value) 
+#     customer.amendment_status = "CREATED"
+#     # customer.modified_by = user_id
+#     # customer.modified_on = datetime.utcnow()  
+
+#     # Commit changes to both tables
+#     db.commit()
+#     db.refresh(customer)
+
+#     return {"success": True, "message": "District amendment saved successfully"}
+
+#---------------------------------------------------------------------------------------------------------
+# @router.post("/amend_trade_name")
+# def amend_trade_name(data: CustomerAmendmentSchema, 
+#                      customer_id: int,
+#                      db: Session = Depends(get_db),
+#                      token: str = Depends(oauth2.oauth2_scheme)):
+
+#     # Validate token
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+
+#     customer = db.query(CustomerMaster).filter(
+#         CustomerMaster.customer_id == customer_id,
+#         CustomerMaster.is_amendment == 'yes',
+#         CustomerMaster.effective_to_date == None
+#     ).first()
+
+#     if not customer:
+#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
+
+#     # Record the amendment history for customer_name (trade_name)
+#     amendment_history = CustomerAmendmentHistory(
+#         customer_id=customer_id,
+#         field_name="Trade Name Amndement",  
+#         old_value=customer.customer_name,
+#         new_value=data.new_value,
+#         modified_by=user_id,
+#         modified_on=datetime.utcnow()
+#     )
+#     db.add(amendment_history)
+
+   
+#     customer.customer_name = data.new_value  
+
+
+#     db.commit()
+
+#     return {"success": True, "message": "Updated successfully"}
+
+#-------------------------------------------------------------------------------------------------------------
+
+@router.post("/save_amended_data")
+def save_amendment(
+    id: int,
+    model_name: str,
+    field_name: str,
+    new_value,
+    date: datetime = datetime.now(),
+    remarks: str = "",
+    db: Session = Depends(get_db)
+):
     
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
+    if not field_name:
+        raise HTTPException(status_code=400, detail="field_name cannot be null or empty.")
     
- 
-    amendment_history = CustomerAmendmentHistory(
-        amendment_id=customer_id, 
-        field_name="Legal Name Amendment", 
-        old_value=data.old_value,
-        new_value=data.new_value,
-        amendment_request_date=data.amendment_request_date,
-        # amendment_effective_date=data.amendment_effective_date,
-        amendment_remarks=data.amendment_remarks,
-    )
-    db.add(amendment_history)
+    response = db_gst.save_amended_data(db, id, model_name, field_name, new_value, date, remarks)
+    return response
 
+#-------------------------------------------------------------------------------------------------------------
+# @router.get("/get_active_trade_names")
+# def get_active_trade_names(customer_id: int, db: Session = Depends(get_db)):
+#     active_trade_names = db.execute("""
+#         SELECT *
+#         FROM CustomerAdditionalTradeName AS catn
+#         WHERE customer_id = :customer_id
+#         AND is_deleted = 'no'
+#         AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
+#             SELECT amended_parent_id
+#             FROM CustomerAdditionalTradeName
+#             WHERE is_amendment = 'yes'
+#         ))
+#         ORDER BY id;
+#     """, {'customer_id': customer_id}).fetchall()
 
+#     if not active_trade_names:
+#         raise HTTPException(status_code=404, detail="No active trade names found for the specified customer")
 
-    customer.amendment_status = "CREATED"
-    customer.modified_by=user_id
-    customer.modified_on=datetime.now()  
-
-    
-    db.commit()
-    db.refresh(customer)
-
-    return {"success": True, "message": "Saved successfully"}
-
-#-----------------------------------------------------------------------------------------------------
+#     return {
+#         "success": True,
+#         "active_trade_names": [
+#             {
+#                 "id": trade_name.id,
+#                 "amended_parent_id": trade_name.amended_parent_id,
+#                 "additional_trade_name": trade_name.additional_trade_name,
+#                 "is_amendment": trade_name.is_amendment,
+#                 "amendment_date": trade_name.amendment_date,
+#                 "amendment_reason": trade_name.amendment_reason,
+#                 "amendment_status": trade_name.amendment_status,
+#                 "effective_from_date": trade_name.effective_from_date,
+#                 "effective_to_date": trade_name.effective_to_date,
+#                 "created_by": trade_name.created_by,
+#                 "created_on": trade_name.created_on,
+#                 "modified_by": trade_name.modified_by,
+#                 "modified_on": trade_name.modified_on
+#             } for trade_name in active_trade_names
+#         ]
+#     }

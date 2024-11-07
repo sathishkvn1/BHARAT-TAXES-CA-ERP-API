@@ -52,7 +52,8 @@ class CustomerAdditionalTradeName(caerp_base):
 
 
     id                                = Column(Integer, primary_key=True, autoincrement=True)
-    customer_id                       = Column(Integer, nullable=True)
+    amended_parent_id                 = Column(Integer, nullable=True)
+    customer_id                       = Column(Integer, nullable=False)
     additional_trade_name             = Column(String(100), nullable=True)
     is_amendment                      = Column(Enum('yes', 'no'), nullable=False, default='no')
     amendment_date                    = Column(Date, nullable=True)
@@ -68,6 +69,8 @@ class CustomerAdditionalTradeName(caerp_base):
     is_deleted                        = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                        = Column(Integer, nullable=True)
     deleted_on                        = Column(DateTime, nullable=True)
+
+
 
 class CustomerGSTLoginCredentials(caerp_base):
     __tablename__ = 'customer_gst_login_credentials'

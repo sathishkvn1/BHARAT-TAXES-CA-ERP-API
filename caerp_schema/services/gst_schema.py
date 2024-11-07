@@ -201,27 +201,31 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
 #-jurisdition
 
 
+
 class RangeDetailsSchema(BaseModel):
-    address            : str
-    phone              : str
-    range_id           : int
-    range              : str
-    division_id        : int
-    division           : str
-    commissionerate_id : int
-    commissionerate    : str
-    zone_id            : int
-    zone               : str
-    state_id           : int
-    state              : str
-    district_id        : int
-    district           : str
-    country_id         :int
-    country            :str
+    address              : str
+    phone                : str
+    range_id             : int
+    range_name           : str
+    range_code           : str
+    division_id          : int
+    division_name        : str
+    division_code        : str
+    commissionerate_id   : int
+    commissionerate_name : str
+    commissionerate_code : str
+    zone_id              : int
+    zone_name            : str
+    zone_code            : str
+    state_id             : int
+    state_name           : str
+    district_id          : int
+    district_name        : str
+    country_id           :int
+    country_name_english :str
     class Config:
         orm_mode = True
-
-
+        
 # class CustomerDuplicateSchema(BaseModel):
    
 #     customer_number: Optional[str]
@@ -347,3 +351,35 @@ class CustomerAmendmentSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+# class AmendmentSchema(BaseModel):
+#     field_name: str
+#     new_value: str
+#     amendment_date: datetime
+#     remarks: str
+
+# class MultipleAmendmentsSchema(BaseModel):
+#     id: int
+#     model_name: str
+#     amendments: List[AmendmentSchema]
+
+
+
+class AmendmentHistorySchema(BaseModel):
+    field_name: str
+    old_value: str
+    new_value: str
+    amendment_request_date: datetime
+    amendment_effective_date: datetime = None
+    amendment_remarks: str
+
+class TradeNameAmendmentSchema(BaseModel):
+    additional_trade_name: str
+    is_amendment: str
+    amendment_date: datetime
+    amendment_status: str
+    amendment_reason: str = None
+    effective_from_date: datetime = None
+    effective_to_date: datetime = None
+    history: List[AmendmentHistorySchema] = []
