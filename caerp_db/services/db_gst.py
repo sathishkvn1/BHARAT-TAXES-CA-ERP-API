@@ -1263,7 +1263,6 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
 #----------------get Hsn Commodities Supply Details
 #-----------------------------------------------------------------------------------------------------------------
 
-
 def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
     try:
         # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
@@ -1271,6 +1270,7 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
             db.query(CustomerGoodsCommoditiesSupplyDetails)
             .filter(
                 CustomerGoodsCommoditiesSupplyDetails.customer_id == customer_id,
+                CustomerGoodsCommoditiesSupplyDetails.is_deleted == "no",
                 CustomerGoodsCommoditiesSupplyDetails.effective_from_date <= datetime.now(),
                 or_(CustomerGoodsCommoditiesSupplyDetails.effective_to_date.is_(None))
                     
