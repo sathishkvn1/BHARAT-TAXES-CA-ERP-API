@@ -29,7 +29,7 @@ from caerp_auth.authentication import authenticate_user
 from typing import List
 
 
-from caerp_db.services.model import GstReasonToObtainRegistration, GstTypeOfRegistration
+from caerp_db.services.model import GstOtherAuthorizedRepresentativeResignation, GstReasonToObtainRegistration, GstTypeOfRegistration
 
 router = APIRouter(
     tags=['LIBRARY FUNCTIONS']
@@ -120,6 +120,7 @@ TABLE_MODEL_MAPPING = {
     "OffAppointmentVisitMaster":OffAppointmentVisitMaster,
     "BusinessActivity":BusinessActivity,
     "BusinessActivityMaster":BusinessActivityMaster,
+    "GstOtherAuthorizedRepresentativeResignation":GstOtherAuthorizedRepresentativeResignation
 
     
     

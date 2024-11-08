@@ -582,22 +582,43 @@ class EmployeeEmploymentDetails(caerp_base):
 
 
 
+# class EmployeeExperience(caerp_base):
+#     __tablename__ = "employee_experience"
+
+#     id              = Column(Integer, primary_key=True, autoincrement=True)
+#     employee_id     = Column(Integer, nullable=False) 
+#     position_held   = Column(String(100), nullable=False)
+#     company_name    = Column(String(100), nullable=False)
+#     responsibilty   = Column(String(2000), nullable=False)  
+#     start_date      = Column(Date, nullable=False)
+#     end_date        = Column(Date, nullable=False)    
+#     created_by      = Column(Integer, nullable=False, default=0)
+#     created_on      = Column(DateTime, nullable=False, default=func.now())
+#     is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by      = Column(Integer, default=None)
+#     deleted_on      = Column(DateTime, default=None)
+
 class EmployeeExperience(caerp_base):
     __tablename__ = "employee_experience"
 
-    id              = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id     = Column(Integer, nullable=False) 
-    position_held   = Column(String(100), nullable=False)
-    company_name    = Column(String(100), nullable=False)
-    responsibilty   = Column(String(2000), nullable=False)  
-    start_date      = Column(Date, nullable=False)
-    end_date        = Column(Date, nullable=False)    
-    created_by      = Column(Integer, nullable=False, default=0)
-    created_on      = Column(DateTime, nullable=False, default=func.now())
-    is_deleted      = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by      = Column(Integer, default=None)
-    deleted_on      = Column(DateTime, default=None)
-
+    id                     = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id            = Column(Integer, nullable=False)
+    company_name           = Column(String(100), nullable=False)
+    company_address        = Column(String(100), nullable=False)
+    company_contact_number = Column(String(100), nullable=False)
+    company_email          = Column(String(100), default=None)
+    position_held          = Column(String(100), nullable=False)
+    responsibility         = Column(String(2000), nullable=False)  # Typo fixed: 'responsibilty' -> 'responsibility'
+    start_date             = Column(Date, nullable=False)
+    end_date               = Column(Date, default=None)  # End date is nullable
+    remarks                = Column(String(500), default=None)
+    created_by             = Column(Integer, nullable=False, default=0)
+    created_on             = Column(DateTime, nullable=False, default=func.now())
+    is_deleted             = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by             = Column(Integer, default=None)
+    deleted_on             = Column(DateTime, default=None)
+    modified_by            = Column(Integer, default=None)
+    modified_on            = Column(DateTime, default=None)
 
 
 class EmployeeDocuments(caerp_base):
@@ -653,33 +674,78 @@ class EmployeeDependentsDetails(caerp_base):
     deleted_by           = Column(Integer, default=None)
     deleted_on           = Column(DateTime, default=None)
 
+# class EmployeeProfessionalQualification(caerp_base):
+#     __tablename__ = "employee_professional_qualifications"
+
+#     id                   = Column(Integer, primary_key=True, autoincrement=True)
+#     employee_id          = Column(Integer,nullable=False)
+#     qualification_id     = Column(Integer,nullable=False)
+#     membership_number    = Column(String(50), default=None)
+#     enrollment_date      = Column(Date, nullable=False)
+#     created_by           = Column(Integer, nullable=False, default=0)
+#     created_on           = Column(DateTime, nullable=False, default=func.now())
+#     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
 class EmployeeProfessionalQualification(caerp_base):
     __tablename__ = "employee_professional_qualifications"
 
-    id                   = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id          = Column(Integer,nullable=False)
-    qualification_id     = Column(Integer,nullable=False)
-    membership_number    = Column(String(50), default=None)
-    enrollment_date      = Column(Date, nullable=False)
-    created_by           = Column(Integer, nullable=False, default=0)
-    created_on           = Column(DateTime, nullable=False, default=func.now())
-    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+    id                        = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id               = Column(Integer,  nullable=False)
+    qualification_id          = Column(Integer,  nullable=False)
+    institution               = Column(String(100), default=None)
+    membership_number         = Column(String(100), default=None)
+    enrollment_date           = Column(Date, nullable=False)
+    percentage_or_grade       = Column(String(100), default=None)
+    month_and_year_of_completion = Column(String(50), default=None)
+    status                    = Column(String(50), default=None)
+    remarks                   = Column(String(500), default=None)
+    created_by                = Column(Integer, nullable=False)
+    created_on                = Column(DateTime, nullable=False, default=func.now())
+    is_deleted                = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                = Column(Integer, default=None)
+    deleted_on                = Column(DateTime, default=None)
+    modified_by               = Column(Integer,  default=None)
+    modified_on               = Column(DateTime, default=None)
+
+  
+
     
-    
+# class EmployeeEducationalQualification(caerp_base):
+#     __tablename__ = "employee_educational_qualification"    
+
+#     id                          = Column(Integer, primary_key=True, autoincrement=True)
+#     employee_id                 = Column(Integer,nullable=False)
+#     qualification_name          = Column(String(100), default=None)
+#     institution                 = Column(String(100), default=None)
+#     percentage_or_grade         = Column(String(100), default=None)
+#     month_and_year_of_completion = Column(String(50), default=None)
+#     created_by                  = Column(Integer, nullable=False)
+#     created_on                  = Column(DateTime, nullable=False, default=func.now())
+#     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by                  = Column(Integer, default=None)
+#     deleted_on                  = Column(DateTime, default=None)
+
 class EmployeeEducationalQualification(caerp_base):
     __tablename__ = "employee_educational_qualification"    
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id                 = Column(Integer,nullable=False)
+    employee_id                 = Column(Integer, nullable=False)
     qualification_name          = Column(String(100), default=None)
+    course_name                 = Column(String(100), default=None)
     institution                 = Column(String(100), default=None)
     percentage_or_grade         = Column(String(100), default=None)
     month_and_year_of_completion = Column(String(50), default=None)
+    status                      = Column(String(50), default=None)
+    remarks                     = Column(String(500), default=None)
     created_by                  = Column(Integer, nullable=False)
     created_on                  = Column(DateTime, nullable=False, default=func.now())
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                  = Column(Integer, default=None)
     deleted_on                  = Column(DateTime, default=None)
+    modified_by                 = Column(Integer, default=None)
+    modified_on                 = Column(DateTime, default=None)
+
     
 class AppViewVillages(caerp_base):
     __tablename__ = "app_view_villages"

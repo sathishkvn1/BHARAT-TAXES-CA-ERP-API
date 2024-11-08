@@ -569,3 +569,13 @@ class CustomerAmendmentHistory(caerp_base):
     amendment_request_date = Column(Date, nullable=False)
     amendment_effective_date = Column(Date, nullable=True, default=None)
     amendment_remarks = Column(String(1000), nullable=False)
+
+
+class GstOtherAuthorizedRepresentativeResignation(caerp_base):
+    __tablename__ = 'gst_other_authorized_representative_designation'
+
+    id                        = Column(Integer, primary_key=True, autoincrement=True)
+    designation_code          = Column(String(20), nullable=False)
+    designation               = Column(String(200), nullable=False)
+    is_deleted                = Column(Enum('yes', 'no'), nullable=False, default='no')
+
