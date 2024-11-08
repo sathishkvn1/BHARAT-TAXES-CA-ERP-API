@@ -123,3 +123,11 @@ class BookType(str, Enum):
     JOURNAL_VOUCHER     = 'JOURNAJOURNAL_VOUCHERL'
     FILE                = 'FILE'
     
+
+
+
+
+class AmendmentAction(str, Enum):
+    ADDED = "ADDED"
+    EDITED = "EDITED"
+    DELETED = "DELETED"
