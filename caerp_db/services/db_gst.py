@@ -4,11 +4,12 @@ from fastapi import HTTPException, UploadFile,status,Depends
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
+from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import  BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -84,164 +85,33 @@ def save_business_details(
 #-------CUSTOMER / BUSINESS DETAILS
 
 
-# def save_customer_details(customer_id: int, 
-#                           customer_data: CustomerRequestSchema, 
-#                           user_id: int, 
-#                           db: Session):
-#     try:
-#         # Handle Additional Trade Names
-#         for additional_trade_name in customer_data.additional_trade_name:
-#             if additional_trade_name.id == 0:
-#                 new_trade_name = CustomerAdditionalTradeName(
-#                     customer_id=customer_id,
-#                     **additional_trade_name.model_dump(exclude_unset=True),  # Use model_dump to pass fields dynamically
-#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                     effective_to_date=None,
-#                     created_by=user_id,
-#                     created_on=datetime.now()
-#                 )
-#                 db.add(new_trade_name)
-#             else:
-#                 existing_trade_name = db.query(CustomerAdditionalTradeName).filter_by(id=additional_trade_name.id).first()
-#                 if existing_trade_name:
-#                     for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
-#                         setattr(existing_trade_name, key, value)
-#                     existing_trade_name.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                     existing_trade_name.effective_to_date=None
-#                     existing_trade_name.modified_by = user_id
-#                     existing_trade_name.modified_on = datetime.now()
-
-#         # Handle Casual Taxable Person Details
-#         if customer_data.casual_taxable_person.id == 0:
-#             casual_taxable_person = CustomerGSTCasualTaxablePersonDetails(
-#                 customer_id=customer_id,
-#                 **customer_data.casual_taxable_person.model_dump(exclude_unset=True),
-#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                 effective_to_date=None,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(casual_taxable_person)
-#         else:
-#             existing_casual_taxable_person = db.query(CustomerGSTCasualTaxablePersonDetails).filter_by(id=customer_data.casual_taxable_person.id).first()
-#             if existing_casual_taxable_person:
-#                 for key, value in customer_data.casual_taxable_person.model_dump(exclude_unset=True).items():
-#                     setattr(existing_casual_taxable_person, key, value)
-#                 existing_casual_taxable_person.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                 existing_casual_taxable_person.effective_to_date=None
-#                 existing_casual_taxable_person.modified_by = user_id
-#                 existing_casual_taxable_person.modified_on = datetime.now()
-
-#         # Handle Composition Option
-#         if customer_data.option_for_composition.id == 0:
-#             composition_option = CustomerGSTCompositionOptedPersonDetails(
-#                 customer_id=customer_id,
-#                 **customer_data.option_for_composition.model_dump(exclude_unset=True),
-#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                 effective_to_date=None,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(composition_option)
-#         else:
-#             existing_composition_option = db.query(CustomerGSTCompositionOptedPersonDetails).filter_by(id=customer_data.option_for_composition.id).first()
-#             if existing_composition_option:
-#                 for key, value in customer_data.option_for_composition.model_dump(exclude_unset=True).items():
-#                     setattr(existing_composition_option, key, value)
-#                 existing_composition_option.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                 existing_composition_option.effective_to_date=None
-#                 existing_composition_option.modified_by = user_id
-#                 existing_composition_option.modified_on = datetime.now()
-
-#         # Handle Other GST Details
-#         if customer_data.reason_to_obtain_registration.id == 0:
-#             gst_other_details = CustomerGSTOtherDetails(
-#                 customer_id=customer_id,
-#                 **customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True),
-#                 effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                 effective_to_date=None,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(gst_other_details)
-#         else:
-#             existing_gst_other_details = db.query(CustomerGSTOtherDetails).filter_by(id=customer_data.reason_to_obtain_registration.id).first()
-#             if existing_gst_other_details:
-#                 for key, value in customer_data.reason_to_obtain_registration.model_dump(exclude_unset=True).items():
-#                     setattr(existing_gst_other_details, key, value)
-#                 existing_gst_other_details.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                 existing_gst_other_details.effective_to_date=None
-#                 existing_gst_other_details.modified_by = user_id
-#                 existing_gst_other_details.modified_on = datetime.now()
-
-#         # Handle Existing Registrations
-#         for registration in customer_data.existing_registrations:
-#             if registration.id == 0:
-#                 new_registration = CustomerExistingRegistrationDetails(
-#                     customer_id=customer_id,
-#                     **registration.model_dump(exclude_unset=True),
-#                     effective_from_date=datetime.now(),  # Set effective_from_date to current date
-#                     effective_to_date=None,
-#                     created_by=user_id,
-#                     created_on=datetime.now()
-#                 )
-#                 db.add(new_registration)
-#             else:
-#                 existing_registration = db.query(CustomerExistingRegistrationDetails).filter_by(id=registration.id).first()
-#                 if existing_registration:
-#                     for key, value in registration.model_dump(exclude_unset=True).items():
-#                         setattr(existing_registration, key, value)
-#                     existing_registration.effective_from_date=datetime.now()  # Set effective_from_date to current date
-#                     existing_registration.effective_to_date=None
-#                     existing_registration.modified_by = user_id
-#                     existing_registration.modified_on = datetime.now()
-
-#         # Handle Authorization
-#         if customer_id >= 0:  # Check if it's an existing customer or a new customer
-#             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
-
-#             if existing_authorization:  # Update the existing authorization
-#                 for key, value in customer_data.authorization.model_dump(exclude_unset=True).items():
-#                     setattr(existing_authorization, key, value)
-#                 existing_authorization.effective_from_date = datetime.now()  
-#                 existing_authorization.effective_to_date = None 
-#                 existing_authorization.modified_by = user_id  
-#                 existing_authorization.modified_on = datetime.now()  
-#             else:  
-#                 new_authorization = CustomerMaster(
-#                     customer_id=customer_id,
-#                     **customer_data.authorization.model_dump(exclude_unset=True),
-#                     effective_from_date=datetime.now(),  
-#                     effective_to_date=None,  
-#                     created_by=user_id,  
-#                     created_on=datetime.now()  
-#                 )
-#                 db.add(new_authorization)
-#         # Commit transaction
-#         db.commit()
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           user_id: int, 
                           db: Session):
     try:
-        # Handle Additional Trade Names
         for additional_trade_name in customer_data.additional_trade_name:
             if additional_trade_name.id == 0:
+                # Create a new trade name record
                 new_trade_name = CustomerAdditionalTradeName(
                     customer_id=customer_id,
-                    **additional_trade_name.model_dump(exclude_unset=True),
+                    additional_trade_name=additional_trade_name.additional_trade_name,
+                    
                     effective_from_date=datetime.now(),
                     effective_to_date=None,
                     created_by=user_id,
                     created_on=datetime.now()
                 )
+                
                 db.add(new_trade_name)
+                db.flush()  # Flush to get the generated ID without committing
+
+                # Get the generated ID for the newly inserted record
+                new_record_id = new_trade_name.id
+                
+                # If the trade name is an amendment, update the amended_parent_id
+            
+                new_trade_name.amended_parent_id = new_record_id  
             else:
                 existing_trade_name = db.query(CustomerAdditionalTradeName).filter_by(id=additional_trade_name.id).first()
                 if existing_trade_name:
@@ -1277,9 +1147,7 @@ def get_hsn_sac_data(
 
 #-----------------------------------------------------------------------------------------------------------------
 
-
 def save_goods_commodities_details(
-    id: int,  # ID 0 for insert; non-zero for update
     customer_id: int,
     details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  # List to handle multiple entries
     db: Session,
@@ -1287,14 +1155,14 @@ def save_goods_commodities_details(
 ):
     try:
         for item in details:
-            if id == 0:
+            if item.id == 0:  # Check the ID of each item, not the list
                 # Create a new entry if ID is 0
                 new_entry = CustomerGoodsCommoditiesSupplyDetails(
                     customer_id=customer_id,
                     hsn_sac_class_id=item.hsn_sac_class_id,
                     hsn_sac_code_id=item.hsn_sac_code_id,
-                    effective_from_date=date.today(),  # Set effective_from_date to current date
-                    effective_to_date=None,              # Set effective_to_date as None
+                    effective_from_date=date.today(),  
+                    effective_to_date=None,              
                     created_by=user_id,               
                     created_on=datetime.now()            
                 )
@@ -1304,7 +1172,7 @@ def save_goods_commodities_details(
 
             else:
                 # Fetch the existing record by ID for updating
-                existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=id).first()
+                existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=item.id).first()
 
                 if not existing_entry:
                     continue  # Skip this entry if it does not exist
@@ -1319,11 +1187,12 @@ def save_goods_commodities_details(
 
                 db.commit()  # Commit the changes to the database
 
-        return {"success": True, "message": "Data processed successfully"}
+        return {"success": True, "message": "Data saved successfully"}
 
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #----------------get Hsn Commodities Supply Details
 #-----------------------------------------------------------------------------------------------------------------
@@ -1652,3 +1521,95 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
     return {"success": True, "message": "Amendment saved successfully", "id": id}
 
 #----------------------------------------------------------------------------------------------------------------
+
+# def edit_trade_names(db: Session, original_id: int, amendments: List[AdditionalTradeNameAmendment], user_id: int):
+#     # Retrieve the original record
+#     original_record = db.query(CustomerAdditionalTradeName).filter_by(id=original_id).first()
+#     if not original_record:
+#         raise HTTPException(status_code=404, detail=f"Original record with id {original_id} not found")
+
+#     for amendment in amendments:
+#         # Capture the existing value
+#         old_value = original_record.additional_trade_name
+
+#         # Log the amendment in CustomerAmendmentHistory
+#         history_entry = CustomerAmendmentHistory(
+#             amendment_id=original_id,
+#             field_name="additional_trade_name",
+#             old_value=old_value,
+#             new_value=amendment.new_trade_name,
+#             amendment_request_date=amendment.request_date,
+#             amendment_remarks=amendment.remarks
+#         )
+#         db.add(history_entry)
+
+#         # Add a new row in CustomerAdditionalTradeName for the amendment
+#         trade_name_entry = CustomerAdditionalTradeName(
+#             customer_id=original_record.customer_id,
+#             additional_trade_name=amendment.new_trade_name,
+#             is_amendment='yes',
+#             amendment_date=amendment.request_date,
+#             amendment_reason=amendment.remarks,
+#             amendment_status='PENDING',
+#             amended_parent_id=original_id,
+#             created_by=user_id,
+#             created_on=datetime.now()
+#         )
+#         db.add(trade_name_entry)
+
+#     db.commit()
+#     return {"success": True, "message": "Trade name amendments requested successfully"}
+
+#--------------------------------------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------------------------
+
+
+
+def amend_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
+    if action == AmendmentAction.ADDED:
+        for amendment in amendments:
+            # Insert the new trade name
+            trade_name_entry = CustomerAdditionalTradeName(
+                customer_id=customer_id,
+                additional_trade_name=amendment.new_trade_name,
+                is_amendment='no',
+                amendment_date=amendment.request_date,
+                amendment_reason=amendment.remarks,
+                amendment_status='APPROVED',
+                amended_parent_id=None,
+                amendment_action=action.value,
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(trade_name_entry)
+            db.commit()  # Commit to get the ID of the new entry
+            
+            # Update the amended_parent_id to be the same as id
+            trade_name_entry.amended_parent_id = trade_name_entry.id
+            db.commit()  # Commit the updated value
+    else:
+        # Retrieve the original record for context, if required
+        original_record = db.query(CustomerAdditionalTradeName).filter_by(id=customer_id).first()
+        if not original_record:
+            raise HTTPException(status_code=404, detail=f"Original record with id {customer_id} not found")
+
+        for amendment in amendments:
+            # Add a new row in CustomerAdditionalTradeName for the amendment
+            trade_name_entry = CustomerAdditionalTradeName(
+                customer_id=original_record.customer_id,
+                additional_trade_name=amendment.new_trade_name,
+                is_amendment='yes',
+                amendment_date=amendment.request_date,
+                amendment_reason=amendment.remarks,
+                amendment_status='PENDING',
+                amended_parent_id=customer_id,
+                amendment_action=action.value,
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(trade_name_entry)
+
+    db.commit()
+    return {"success": True, "message": f"Trade name amendments processed successfully with action: {action.value}"}

@@ -185,7 +185,7 @@ class BusinessData(BaseModel):
 
 
 class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
-
+    id                 :int
     hsn_sac_class_id   :int
     hsn_sac_code_id    :int
 
@@ -225,7 +225,7 @@ class RangeDetailsSchema(BaseModel):
     country_name_english :str
     class Config:
         orm_mode = True
-        
+
 # class CustomerDuplicateSchema(BaseModel):
    
 #     customer_number: Optional[str]
@@ -353,33 +353,8 @@ class CustomerAmendmentSchema(BaseModel):
         orm_mode = True
 
 
-# class AmendmentSchema(BaseModel):
-#     field_name: str
-#     new_value: str
-#     amendment_date: datetime
-#     remarks: str
-
-# class MultipleAmendmentsSchema(BaseModel):
-#     id: int
-#     model_name: str
-#     amendments: List[AmendmentSchema]
-
-
-
-class AmendmentHistorySchema(BaseModel):
-    field_name: str
-    old_value: str
-    new_value: str
-    amendment_request_date: datetime
-    amendment_effective_date: datetime = None
-    amendment_remarks: str
-
-class TradeNameAmendmentSchema(BaseModel):
-    additional_trade_name: str
-    is_amendment: str
-    amendment_date: datetime
-    amendment_status: str
-    amendment_reason: str = None
-    effective_from_date: datetime = None
-    effective_to_date: datetime = None
-    history: List[AmendmentHistorySchema] = []
+class AdditionalTradeNameAmendment(BaseModel):
+    
+    new_trade_name: str
+    request_date: datetime
+    remarks: str

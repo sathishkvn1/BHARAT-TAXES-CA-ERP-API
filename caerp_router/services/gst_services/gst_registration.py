@@ -2,11 +2,12 @@
 
 from typing import List, Union
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, text
+from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -284,11 +285,12 @@ def get_hsn_sac_data(
 
 
 #---------Goods Commodities Supply Details-----------------
+
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
-    id: int,  # New field to handle update or create
+    
     customer_id: int,
-    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  # Expecting a list of schema items
+    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -301,9 +303,10 @@ def save_goods_commodities(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        return db_gst.save_goods_commodities_details(id, customer_id, details, db, user_id)
+        return db_gst.save_goods_commodities_details(customer_id, details, db, user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #-------------- Hsn Commodities----------------
 
@@ -595,41 +598,70 @@ def save_amendment(
     return response
 
 #-------------------------------------------------------------------------------------------------------------
-# @router.get("/get_active_trade_names")
-# def get_active_trade_names(customer_id: int, db: Session = Depends(get_db)):
-#     active_trade_names = db.execute("""
-#         SELECT *
-#         FROM CustomerAdditionalTradeName AS catn
-#         WHERE customer_id = :customer_id
-#         AND is_deleted = 'no'
-#         AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
-#             SELECT amended_parent_id
-#             FROM CustomerAdditionalTradeName
-#             WHERE is_amendment = 'yes'
-#         ))
-#         ORDER BY id;
-#     """, {'customer_id': customer_id}).fetchall()
 
-#     if not active_trade_names:
-#         raise HTTPException(status_code=404, detail="No active trade names found for the specified customer")
 
-#     return {
-#         "success": True,
-#         "active_trade_names": [
-#             {
-#                 "id": trade_name.id,
-#                 "amended_parent_id": trade_name.amended_parent_id,
-#                 "additional_trade_name": trade_name.additional_trade_name,
-#                 "is_amendment": trade_name.is_amendment,
-#                 "amendment_date": trade_name.amendment_date,
-#                 "amendment_reason": trade_name.amendment_reason,
-#                 "amendment_status": trade_name.amendment_status,
-#                 "effective_from_date": trade_name.effective_from_date,
-#                 "effective_to_date": trade_name.effective_to_date,
-#                 "created_by": trade_name.created_by,
-#                 "created_on": trade_name.created_on,
-#                 "modified_by": trade_name.modified_by,
-#                 "modified_on": trade_name.modified_on
-#             } for trade_name in active_trade_names
-#         ]
-#     }
+@router.get("/get_active_trade_names")
+def get_active_trade_names(customer_id: int, 
+                           db: Session = Depends(get_db),
+                           token: str = Depends(oauth2.oauth2_scheme)):
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    active_trade_names = db.execute(text("""
+        SELECT *
+        FROM customer_additional_trade_name 
+        WHERE customer_id = :customer_id
+        AND is_deleted = 'no'
+        AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
+            SELECT amended_parent_id
+            FROM customer_additional_trade_name
+            WHERE is_amendment = 'yes'
+        ))
+        ORDER BY id;
+    """), {'customer_id': customer_id}).fetchall()
+
+    if not active_trade_names:
+        raise HTTPException(status_code=404, detail="No active trade names found for the specified customer")
+
+    return {
+        "success": True,
+        "active_trade_names": [
+            {
+                "id": trade_name.id,
+                "amended_parent_id": trade_name.amended_parent_id,
+                "additional_trade_name": trade_name.additional_trade_name,
+                "is_amendment": trade_name.is_amendment,
+                "amendment_date": trade_name.amendment_date,
+                "amendment_reason": trade_name.amendment_reason,
+                "amendment_status": trade_name.amendment_status,
+                "effective_from_date": trade_name.effective_from_date,
+                "effective_to_date": trade_name.effective_to_date,
+                "created_by": trade_name.created_by,
+                "created_on": trade_name.created_on,
+                "modified_by": trade_name.modified_by,
+                "modified_on": trade_name.modified_on
+            } for trade_name in active_trade_names
+        ]
+    }
+
+#-------------------------------------------------------------------------------------------------------------
+
+
+
+@router.post("/amend_trade_names")
+def amend_trade_names(
+    id: int,
+    amendments: List[AdditionalTradeNameAmendment],
+    action: AmendmentAction,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    response = db_gst.amend_trade_names(db, id, amendments, action, user_id)
+    return response
