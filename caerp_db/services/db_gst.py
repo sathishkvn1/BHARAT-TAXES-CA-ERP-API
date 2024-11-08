@@ -84,7 +84,6 @@ def save_business_details(
 
 #-------CUSTOMER / BUSINESS DETAILS
 
-
 def save_customer_details(customer_id: int, 
                           customer_data: CustomerRequestSchema, 
                           user_id: int, 
@@ -113,15 +112,32 @@ def save_customer_details(customer_id: int,
             
                 new_trade_name.amended_parent_id = new_record_id  
             else:
-                existing_trade_name = db.query(CustomerAdditionalTradeName).filter_by(id=additional_trade_name.id).first()
-                if existing_trade_name:
-                    for key, value in additional_trade_name.model_dump(exclude_unset=True).items():
-                        setattr(existing_trade_name, key, value)
-                    existing_trade_name.effective_from_date = datetime.now()
-                    existing_trade_name.effective_to_date = None
-                    existing_trade_name.modified_by = user_id
-                    existing_trade_name.modified_on = datetime.now()
+                trade_entries = {entry.id: entry for entry in db.query(CustomerAdditionalTradeName)
+                         .filter_by(customer_id=customer_id).all()}
 
+                incoming_trade_ids = {trade_name.id for trade_name in customer_data.additional_trade_name if trade_name.id != 0}
+
+                for entry_id, existing_trade in trade_entries.items():
+                    if entry_id not in incoming_trade_ids:
+                        existing_trade.is_deleted = "yes"
+                        existing_trade.deleted_by = user_id
+                        existing_trade.deleted_on = datetime.now()
+                        existing_trade.modified_by = user_id
+                        existing_trade.modified_on = datetime.now()
+
+                for additional_trade_name in customer_data.additional_trade_name:
+                    trade_data = additional_trade_name.model_dump(exclude_unset=True)
+                    entry_id = trade_data.get("id")
+
+                    if entry_id in trade_entries:
+                        existing_trade = trade_entries[entry_id]
+                        for key, value in trade_data.items():
+                            setattr(existing_trade, key, value)
+                        existing_trade.is_deleted = "no"
+                        existing_trade.deleted_by = None
+                        existing_trade.deleted_on = None
+                        existing_trade.modified_by = user_id
+                        existing_trade.modified_on = datetime.now()
         # Handle Casual Taxable Person Details
         if customer_data.casual_taxable_person.is_applying_as_casual_taxable_person == "no":
             # When is_applying_as_casual_taxable_person is "no", set other fields to None
@@ -231,15 +247,32 @@ def save_customer_details(customer_id: int,
                 )
                 db.add(new_registration)
             else:
-                existing_registration = db.query(CustomerExistingRegistrationDetails).filter_by(id=registration.id).first()
-                if existing_registration:
-                    for key, value in registration.model_dump(exclude_unset=True).items():
-                        setattr(existing_registration, key, value)
-                    existing_registration.effective_from_date = datetime.now()
-                    existing_registration.effective_to_date = None
-                    existing_registration.modified_by = user_id
-                    existing_registration.modified_on = datetime.now()
+                registration_entries = {entry.id: entry for entry in db.query(CustomerExistingRegistrationDetails)
+                                .filter_by(customer_id=customer_id).all()}
 
+                incoming_registration_ids = {registration.id for registration in customer_data.existing_registrations if registration.id != 0}
+
+                for entry_id, existing_registration in registration_entries.items():
+                    if entry_id not in incoming_registration_ids:
+                        existing_registration.is_deleted = "yes"
+                        existing_registration.deleted_by = user_id
+                        existing_registration.deleted_on = datetime.now()
+                        existing_registration.modified_by = user_id
+                        existing_registration.modified_on = datetime.now()
+
+                for registration in customer_data.existing_registrations:
+                    registration_data = registration.model_dump(exclude_unset=True)
+                    entry_id = registration_data.get("id")
+
+                    if entry_id in registration_entries:
+                        existing_registration = registration_entries[entry_id]
+                        for key, value in registration_data.items():
+                            setattr(existing_registration, key, value)
+                        existing_registration.is_deleted = "no"
+                        existing_registration.deleted_by = None
+                        existing_registration.deleted_on = None
+                        existing_registration.modified_by = user_id
+                        existing_registration.modified_on = datetime.now()
         # Handle Authorization
         if customer_id >= 0:
             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
@@ -269,6 +302,7 @@ def save_customer_details(customer_id: int,
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-get''
 def get_customer_details(db: Session, customer_id: int, user_id: int):
     try:
@@ -282,6 +316,9 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
         additional_trade_names = (
             db.query(CustomerAdditionalTradeName)
             .filter_by(customer_id=customer_id)
+            .filter(CustomerAdditionalTradeName.is_deleted=="no")
+            
+
             .filter(CustomerAdditionalTradeName.effective_from_date <= datetime.now(),
                     (CustomerAdditionalTradeName.effective_to_date.is_(None)) )
             .all()
@@ -316,6 +353,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
         existing_registrations = (
             db.query(CustomerExistingRegistrationDetails)
             .filter_by(customer_id=customer_id)
+            .filter(CustomerExistingRegistrationDetails.is_deleted=="no")
             .filter(CustomerExistingRegistrationDetails.effective_from_date <= datetime.now(),
                     (CustomerExistingRegistrationDetails.effective_to_date.is_(None)) )
             .all()
@@ -404,8 +442,6 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 #------Save stakeholder
 
@@ -1317,9 +1353,6 @@ def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Sessi
 
 #-----------------------------------------------------------------------------------------------------------------
 
-
-    
-
 def save_customer_gst_state_specific_information(
     id: int,  # 0 for insert, non-zero for update
     customer_id: int,
@@ -1630,9 +1663,6 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 
 
 #------------------------------------------------------------------------------------------------
-
-
-
 def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
     if action == AmendmentAction.ADDED:
         for amendment in amendments:
