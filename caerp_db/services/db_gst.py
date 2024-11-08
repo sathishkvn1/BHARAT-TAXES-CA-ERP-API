@@ -1149,48 +1149,114 @@ def get_hsn_sac_data(
 
 def save_goods_commodities_details(
     customer_id: int,
-    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  # List to handle multiple entries
+    details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],
     db: Session,
-    user_id: int  # Track the user making the changes
+    user_id: int
 ):
     try:
+        # Fetch existing records for the customer
+        existing_entries = {entry.id: entry for entry in db.query(CustomerGoodsCommoditiesSupplyDetails)
+                            .filter_by(customer_id=customer_id).all()}
+
+        # Collect IDs of incoming records to identify which records to keep as active
+        incoming_ids = {item.id for item in details if item.id != 0}
+
+        # Mark existing records as deleted if they are not in the incoming data
+        for entry_id, existing_entry in existing_entries.items():
+            if entry_id not in incoming_ids:
+                existing_entry.is_deleted = "yes"
+                existing_entry.deleted_by = user_id
+                existing_entry.deleted_on = datetime.now()
+                existing_entry.modified_by = user_id
+                existing_entry.modified_on = datetime.now()
+
+        # Process each item in the incoming details list
         for item in details:
-            if item.id == 0:  # Check the ID of each item, not the list
-                # Create a new entry if ID is 0
+            item_data = item.dict(exclude_unset=True)
+            entry_id = item_data.get("id")
+
+            if entry_id in existing_entries:
+                # Update existing entry
+                existing_entry = existing_entries[entry_id]
+                for key, value in item_data.items():
+                    setattr(existing_entry, key, value)
+                existing_entry.is_deleted = "no"
+                existing_entry.deleted_by = None
+                existing_entry.deleted_on = None
+                existing_entry.modified_by = user_id
+                existing_entry.modified_on = datetime.now()
+
+            else:
+                # Create a new entry if ID is 0 or not found in existing entries
                 new_entry = CustomerGoodsCommoditiesSupplyDetails(
                     customer_id=customer_id,
                     hsn_sac_class_id=item.hsn_sac_class_id,
                     hsn_sac_code_id=item.hsn_sac_code_id,
-                    effective_from_date=date.today(),  
-                    effective_to_date=None,              
-                    created_by=user_id,               
-                    created_on=datetime.now()            
+                    effective_from_date=date.today(),
+                    effective_to_date=None,
+                    
+                    created_by=user_id,
+                    created_on=datetime.now()
                 )
                 db.add(new_entry)
                 db.commit()  # Commit to save the new entry
                 db.refresh(new_entry)  # Refresh to get the updated instance with id
 
-            else:
-                # Fetch the existing record by ID for updating
-                existing_entry = db.query(CustomerGoodsCommoditiesSupplyDetails).filter_by(id=item.id).first()
-
-                if not existing_entry:
-                    continue  # Skip this entry if it does not exist
-
-                # Update the existing record fields
-                existing_entry.hsn_sac_class_id = item.hsn_sac_class_id
-                existing_entry.hsn_sac_code_id = item.hsn_sac_code_id
-                existing_entry.effective_from_date = date.today() 
-                existing_entry.effective_to_date = None  
-                existing_entry.modified_on = datetime.now() 
-                existing_entry.modified_by = user_id  
-
-                db.commit()  # Commit the changes to the database
+        db.commit()  # Final commit after processing all records
 
         return {"success": True, "message": "Data saved successfully"}
 
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
+        raise HTTPException(status_code=500, detail=str(e))
+#------
+def get_hsn_commodities_by_customer_id(customer_id: int, user_id: int, db: Session):
+    try:
+        # Query the CustomerGoodsCommoditiesSupplyDetails for the given customer_id
+        commodities = (
+            db.query(CustomerGoodsCommoditiesSupplyDetails)
+            .filter(
+                CustomerGoodsCommoditiesSupplyDetails.customer_id == customer_id,
+                CustomerGoodsCommoditiesSupplyDetails.is_deleted == "no",
+                CustomerGoodsCommoditiesSupplyDetails.effective_from_date <= datetime.now(),
+                or_(CustomerGoodsCommoditiesSupplyDetails.effective_to_date.is_(None))
+                    
+            )
+            .all()  # Use .all() to retrieve multiple commodities
+        )
+
+        if not commodities:
+            return []  # Return an empty list if no commodities are found
+
+        response = []
+        for commodity in commodities:
+            # Fetch hsn_sac_class from AppHsnSacClasses based on hsn_sac_class_id
+            hsn_class_details = (
+                db.query(AppHsnSacClasses)
+                .filter(AppHsnSacClasses.id == commodity.hsn_sac_class_id)
+                .first()
+            )
+
+            # Fetch hsn_sac_code and hsn_sac_description from AppHsnSacMaster based on hsn_sac_code_id
+            hsn_details = (
+                db.query(AppHsnSacMaster)
+                .filter(AppHsnSacMaster.id == commodity.hsn_sac_code_id)
+                .first()
+            )
+
+            if hsn_class_details and hsn_details:
+                response.append({
+                    "id":commodity.id,
+                    "hsn_sac_class_id": hsn_class_details.id,
+                    "hsn_sac_class": hsn_class_details.hsn_sac_class,  
+                    "hsn_sac_code_id": hsn_details.id,
+                    "hsn_sac_code": hsn_details.hsn_sac_code,
+                    "hsn_sac_description": hsn_details.hsn_sac_description,
+                })
+
+        return response
+
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1567,7 +1633,7 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 
 
 
-def amend_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
+def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
     if action == AmendmentAction.ADDED:
         for amendment in amendments:
             # Insert the new trade name
