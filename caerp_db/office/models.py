@@ -296,7 +296,10 @@ class OffServiceGoodsCategory(caerp_base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     sub_group_id = Column(Integer, nullable=False)
     category_name = Column(String(200), nullable=True)
+    gst_category_code = Column(String(20), nullable=True) 
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
 
 
 class OffServiceGoodsSubCategory(caerp_base):

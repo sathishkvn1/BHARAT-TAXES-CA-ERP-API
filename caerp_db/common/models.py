@@ -195,6 +195,7 @@ class DistrictDB(caerp_base):
     id              = Column(Integer, primary_key=True, autoincrement=True)
     state_id        = Column(Integer, ForeignKey('app_states.id'), nullable=False)
     district_name   = Column(String(50), nullable=False)
+    gst_district_code = Column(String(50), nullable=False, default='*')  
     states          = relationship("StateDB", back_populates="districts")
     # post_offices = relationship("PostOfficeView", back_populates="district_name")
 
