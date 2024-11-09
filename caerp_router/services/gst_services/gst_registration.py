@@ -417,29 +417,53 @@ def duplicate_customer(customer_id: int,
     return {"success": True, "message": "Saved successfully", "id": result["id"]}
 
 #------------------------------------------------------------------------------------------------------------
-@router.get("/get_amended_customer_details/{customer_id}", response_model=CustomerDuplicateSchemaForGet)
-def get_customer(customer_id: int,
-                  db: Session = Depends(get_db),
-                  token: str = Depends(oauth2.oauth2_scheme)):
+# @router.get("/get_amended_customer_details/{id}", response_model=CustomerDuplicateSchemaForGet)
+# def get_customer(id: int,
+#                   db: Session = Depends(get_db),
+#                   token: str = Depends(oauth2.oauth2_scheme)):
   
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+#     customer = db.query(CustomerMaster).filter(
+#         and_(
+#             CustomerMaster.id == id,
+#             CustomerMaster.is_amendment == 'yes',
+#             CustomerMaster.is_deleted == 'no'
+#         )
+#     ).first()
+    
+#     if not customer:
+#         return []
+#         # raise HTTPException(status_code=404, detail="Customer not found or does not meet criteria")
+
+    
+#     # Return the customer data
+#     return customer
+
+
+
+@router.get("/get_amended_customer_details/{id}", response_model=CustomerDuplicateSchemaForGet)
+def get_customer(id: int,
+                 db: Session = Depends(get_db),
+                 token: str = Depends(oauth2.oauth2_scheme)):
+
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
+
     customer = db.query(CustomerMaster).filter(
         and_(
-            CustomerMaster.customer_id == customer_id,
+            CustomerMaster.id == id,
             CustomerMaster.is_amendment == 'yes',
             CustomerMaster.is_deleted == 'no'
         )
     ).first()
-    
-    if not customer:
-        return []
-        # raise HTTPException(status_code=404, detail="Customer not found or does not meet criteria")
 
-    
+    if not customer:
+        # Returning None when no customer is found
+        raise HTTPException(status_code=404, detail="Id not found")
+
     # Return the customer data
     return customer
-
 #--------------------------------------------------------------------------------------------------------------
 
 # @router.post("/amend_legal_name")
