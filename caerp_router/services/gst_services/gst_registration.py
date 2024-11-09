@@ -417,13 +417,16 @@ def duplicate_customer(customer_id: int,
     return {"success": True, "message": "Saved successfully", "id": result["id"]}
 
 #------------------------------------------------------------------------------------------------------------
+
+
 # @router.get("/get_amended_customer_details/{id}", response_model=CustomerDuplicateSchemaForGet)
 # def get_customer(id: int,
-#                   db: Session = Depends(get_db),
-#                   token: str = Depends(oauth2.oauth2_scheme)):
-  
+#                  db: Session = Depends(get_db),
+#                  token: str = Depends(oauth2.oauth2_scheme)):
+
 #     if not token:
 #         raise HTTPException(status_code=401, detail="Token is missing")
+
 #     customer = db.query(CustomerMaster).filter(
 #         and_(
 #             CustomerMaster.id == id,
@@ -431,18 +434,18 @@ def duplicate_customer(customer_id: int,
 #             CustomerMaster.is_deleted == 'no'
 #         )
 #     ).first()
-    
-#     if not customer:
-#         return []
-#         # raise HTTPException(status_code=404, detail="Customer not found or does not meet criteria")
 
-    
+#     if not customer:
+#         # Returning None when no customer is found
+#         # raise HTTPException(status_code=404, detail="Id not found")
+#         return None
+
 #     # Return the customer data
 #     return customer
 
+from typing import Optional
 
-
-@router.get("/get_amended_customer_details/{id}", response_model=CustomerDuplicateSchemaForGet)
+@router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
 def get_customer(id: int,
                  db: Session = Depends(get_db),
                  token: str = Depends(oauth2.oauth2_scheme)):
@@ -459,11 +462,13 @@ def get_customer(id: int,
     ).first()
 
     if not customer:
-        # Returning None when no customer is found
-        raise HTTPException(status_code=404, detail="Id not found")
+        return None  # This will return a 200 response with `null` as the body in JSON format
 
     # Return the customer data
     return customer
+
+
+
 #--------------------------------------------------------------------------------------------------------------
 
 # @router.post("/amend_legal_name")

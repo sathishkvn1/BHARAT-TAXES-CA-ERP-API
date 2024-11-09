@@ -227,7 +227,6 @@ class EmployeeEducationalQualficationGet(BaseModel):
     class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
-
 class EmployeeSalarySchema(BaseModel):
        
    component_id              : int
@@ -235,7 +234,7 @@ class EmployeeSalarySchema(BaseModel):
    calculation_method_id     : int
    amount                    : float
    percentage_of_component_id: Optional[int] = None
-   percentage                : Optional[float] = None
+   percentage                : float
    effective_from_date       : date
    effective_to_date         : Optional[date] = None
    next_increment_date       : Optional[date] = None
@@ -501,12 +500,7 @@ class EmployeeDocumentResponse(BaseModel):
     class Config:
         from_attributes = True 
 
-
-
-
 #------------------------------EmployeeTeam--------------------------------------------------------------------
-
-
 class EmployeeTeamMasterSchema(BaseModel):
     id: Optional[int] = None
     department_id        : int
@@ -516,7 +510,6 @@ class EmployeeTeamMasterSchema(BaseModel):
    
     class Config:
         orm_mode = True
-
 
 class EmployeeTeamMembersSchema(BaseModel):
     id                  : int
@@ -528,14 +521,9 @@ class EmployeeTeamMembersSchema(BaseModel):
     class Config:
         orm_mode = True
 
-
-
 class SaveEmployeeTeamMaster(BaseModel):
     master  : EmployeeTeamMasterSchema
     details : List[EmployeeTeamMembersSchema]
-
-
-
 
 class HrViewEmployeeTeamMemberSchema(BaseModel):
     team_member_id: int
