@@ -396,6 +396,27 @@ async def get_range_details(pin: str,
     else:
         return []
     
+#----------------------------------------------------------------------------------------------------------
+@router.delete("/delete_gst_registration_record")
+def delete_gst_registration_record(
+    customer_id:int,
+    stakeholder_id: int = None,
+    business_place_id: int = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    - Deletes a stakeholder or business place based on the provided ID.
+    - Either `stakeholder_id` or `business_place_id` must be provided.
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    try:
+        return db_gst.delete_gst_registration_record(db,user_id,customer_id,stakeholder_id, business_place_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #----------------------------Amendment-----------------------------------------------------------------------------
 @router.post("/duplicate_customer")

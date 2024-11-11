@@ -7,13 +7,13 @@ from sqlalchemy import Column ,DateTime
 
 
 
-
 class CustomerMaster(caerp_base):
     __tablename__                = 'customer_master'
 
     id                                      = Column(Integer, primary_key=True, autoincrement=True)
     customer_id                             = Column(Integer, nullable=False)
     customer_number                         = Column(String(100), nullable=True)
+    service_task_id                         = Column(Integer, nullable=True)
     legal_name                              = Column(String(100), nullable=True)
     customer_name                           = Column(String(100), nullable=True)
     pan_number                              = Column(String(20), nullable=True)
@@ -45,6 +45,7 @@ class CustomerMaster(caerp_base):
     is_deleted                              = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                              = Column(Integer, nullable=True)
     deleted_on                              = Column(DateTime, nullable=True)
+
 
 
 class CustomerAdditionalTradeName(caerp_base):
@@ -561,14 +562,14 @@ class GstViewRange(caerp_base):
 class CustomerAmendmentHistory(caerp_base):
     __tablename__ = "customer_amendment_history"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    amendment_id = Column(Integer,  nullable=False)  
-    field_name = Column(String(100), nullable=False)
-    old_value = Column(String(100), nullable=False)
-    new_value = Column(String(100), nullable=False)
-    amendment_request_date = Column(Date, nullable=False)
-    amendment_effective_date = Column(Date, nullable=True, default=None)
-    amendment_remarks = Column(String(1000), nullable=False)
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    amendment_id                = Column(Integer,  nullable=False)  
+    field_name                  = Column(String(100), nullable=False)
+    old_value                   = Column(String(100), nullable=False)
+    new_value                   = Column(String(100), nullable=False)
+    amendment_request_date      = Column(Date, nullable=False)
+    amendment_effective_date    = Column(Date, nullable=True, default=None)
+    amendment_remarks           = Column(String(1000), nullable=False)
 
 
 class GstOtherAuthorizedRepresentativeResignation(caerp_base):

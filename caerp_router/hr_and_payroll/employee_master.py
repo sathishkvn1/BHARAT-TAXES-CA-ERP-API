@@ -1071,10 +1071,44 @@ def save_employee_salary_details(
 
 #----------------------------------------------------------------------------------------------------------
 
-@router.get("/get_salary_component_by_compons_type")
+# @router.get("/get_salary_component_by_compons_type")
+# def get_salary_component_by_type(
+
+#     component_type: Optional[str] = Query("ALL"),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Get all salary component names by component_type.
+    
+#     """
+#     component_type = component_type.upper()
+    
+#     if component_type not in ['ALL', 'ALLOWANCE', 'DEDUCTION']:
+#         return {"message": "Invalid component type. Use 'ALL', 'ALLOWANCE', or 'DEDUCTION'."}
+    
+#     # If 'ALL' is selected, fetch both ALLOWANCE and DEDUCTION components
+#     if component_type == 'ALL':
+#         components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+#             PrlSalaryComponent.is_deleted == 'no'
+#         ).all()
+#     else:
+#         components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+#             PrlSalaryComponent.component_type == component_type,
+#             PrlSalaryComponent.is_deleted == 'no'
+#         ).all()
+    
+#     # Return components or message if none found
+#     if not components:
+#         return []
+    
+#     return [{"id": component.id,
+#              "component_type": component.component_type, 
+#              "component_name": component.component_name} for component in components]
+
+@router.get("/get_salary_component_by_type")
 def get_salary_component_by_type(
 
-    component_type: Optional[str] = Query("ALL"),
+    component_type: str = Query(..., enum=['ALL', 'ALLOWANCE', 'DEDUCTION'], description="Select 'ALL', 'ALLOWANCE', or 'DEDUCTION'"),
     db: Session = Depends(get_db)
 ):
     """
@@ -1082,9 +1116,6 @@ def get_salary_component_by_type(
     
     """
     component_type = component_type.upper()
-    
-    if component_type not in ['ALL', 'ALLOWANCE', 'DEDUCTION']:
-        return {"message": "Invalid component type. Use 'ALL', 'ALLOWANCE', or 'DEDUCTION'."}
     
     # If 'ALL' is selected, fetch both ALLOWANCE and DEDUCTION components
     if component_type == 'ALL':
@@ -1104,7 +1135,6 @@ def get_salary_component_by_type(
     return [{"id": component.id,
              "component_type": component.component_type, 
              "component_name": component.component_name} for component in components]
-
 
 
 

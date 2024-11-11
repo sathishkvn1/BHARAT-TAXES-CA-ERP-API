@@ -31,7 +31,8 @@ def save_business_details(
             customer_number = generate_book_number('CUSTOMER', financial_year_id, customer_id, db)
             customer_master = CustomerMaster(
                 **business_details_data.model_dump(exclude_unset=True),
-                customer_number=customer_number,
+                customer_number=customer_number,   
+                service_task_id=task_id,
                 created_by=user_id,  
                 created_on=datetime.now(),  
                 effective_from_date=datetime.now(), 
@@ -81,6 +82,7 @@ def save_business_details(
     except Exception as e:
         db.rollback()  # Rollback transaction in case of error
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #-------CUSTOMER / BUSINESS DETAILS
 
@@ -638,14 +640,14 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 
 #-----------------------------------------------------------------------------------------------------------------
 
-
 def get_stakeholder_details(db: Session, 
                             customer_id: int, 
                             stakeholder_type: str,
                             user_id: int):
     try:
         # Fetch records from CustomerStakeHolder based on customer_id
-        customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id).all()
+        customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id, is_deleted='no').all()
+
 
         if not customer_stakeholders:
             return []
@@ -661,7 +663,12 @@ def get_stakeholder_details(db: Session,
                 customer_stakeholder.effective_to_date is None):
                 
                 # Fetch StakeHolderMaster record
-                stakeholder = db.query(StakeHolderMaster).filter_by(id=customer_stakeholder.stake_holder_master_id).first()
+                stakeholder = (
+                    db.query(StakeHolderMaster)
+                    .filter_by(id=customer_stakeholder.stake_holder_master_id)
+                    .filter(StakeHolderMaster.is_deleted == 'no')  # Assuming is_deleted is a column
+                    .first()
+                )
                 if not stakeholder:
                     return []
 
@@ -671,6 +678,7 @@ def get_stakeholder_details(db: Session,
                     .filter_by(id=customer_stakeholder.residential_address_id)
                     .filter(StakeHolderAddress.effective_from_date <= datetime.now().date())
                     .filter(StakeHolderAddress.effective_to_date.is_(None))
+                     
                     .first() if customer_stakeholder.residential_address_id else None
                 )
 
@@ -678,8 +686,10 @@ def get_stakeholder_details(db: Session,
                 designation = (
                     db.query(AppDesignation)
                     .filter_by(id=customer_stakeholder.designation_id)
+                    .filter(AppDesignation.is_deleted == 'no')  # Assuming AppDesignation has an is_deleted column
                     .first() if customer_stakeholder.designation_id else None
                 )
+
 
                 # Fetch StakeHolderContactDetails
                 contact_details = (
@@ -687,6 +697,7 @@ def get_stakeholder_details(db: Session,
                     .filter_by(id=customer_stakeholder.contact_details_id)
                     .filter(StakeHolderContactDetails.effective_from_date <= datetime.now().date())
                     .filter(StakeHolderContactDetails.effective_to_date.is_(None))
+                    .filter(StakeHolderContactDetails.is_deleted == 'no')  # Filter by is_deleted
                     .first() if customer_stakeholder.contact_details_id else None
                 )
 
@@ -760,6 +771,8 @@ def get_stakeholder_details(db: Session,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
 
 #----get activity
 def fetch_business_activities(
@@ -1007,6 +1020,7 @@ def save_business_place(customer_id: int,
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 #-----get business_place----
+
 def get_business_place(customer_id: int, 
                        type: str, 
                        db: Session,
@@ -1020,6 +1034,7 @@ def get_business_place(customer_id: int,
         # Fetch business places based on customer ID and address type
         business_places = db.query(CustomerBusinessPlace).filter(
             CustomerBusinessPlace.customer_id == customer_id,
+            CustomerBusinessPlace.is_deleted == 'no',
             CustomerBusinessPlace.is_principal_place == is_principal_place,
             CustomerBusinessPlace.effective_from_date <= datetime.now(),
             or_(CustomerBusinessPlace.effective_to_date.is_(None))
@@ -1037,11 +1052,13 @@ def get_business_place(customer_id: int,
             # Fetch business activity type and master details
             business_activity_type = db.query(CustomerBusinessPlaceActivityType).filter(
                 CustomerBusinessPlaceActivityType.business_place_id == bp.id,
+                CustomerBusinessPlaceActivityType.is_deleted == 'no',
                 CustomerBusinessPlaceActivityType.effective_from_date <= datetime.now(),
                 or_(CustomerBusinessPlaceActivityType.effective_to_date.is_(None))
             ).first()
             business_activity_master = db.query(CustomerBusinessPlaceCoreActivity).filter(
                 CustomerBusinessPlaceCoreActivity.business_place_id == bp.id,
+                CustomerBusinessPlaceCoreActivity.is_deleted == 'no',
                 CustomerBusinessPlaceCoreActivity.effective_from_date <= datetime.now(),
                 or_(CustomerBusinessPlaceCoreActivity.effective_to_date.is_(None))
             ).first()
@@ -1128,6 +1145,7 @@ def get_business_place(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 #-------------Get hsn sac
@@ -1457,7 +1475,86 @@ def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetails
         raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")
 
 #-----------------------------------------------------------------------------------------------------------------
+def delete_gst_registration_record(
+    db: Session,
+    user_id: int,
+    customer_id: int,
+    stakeholder_id: Optional[int] = None,
+    business_place_id: Optional[int] = None
+):
+    if not stakeholder_id and not business_place_id:
+        return []
 
+    try:
+        if stakeholder_id:
+            # Delete Stakeholder records with customer_id filter
+            stakeholder = db.query(StakeHolderMaster).filter_by(id=stakeholder_id).first()
+            if not stakeholder:
+                return []
+            
+            stakeholder.is_deleted = "yes"
+            stakeholder.deleted_by = user_id
+            stakeholder.deleted_on = datetime.now()
+
+            # Delete related StakeHolderContactDetails with customer_id filter
+            contact_details = db.query(StakeHolderContactDetails).filter_by(stake_holder_id=stakeholder_id)
+            for contact in contact_details:
+                contact.is_deleted = "yes"
+                contact.deleted_by = user_id
+                contact.deleted_on = datetime.now()
+
+            # Delete related StakeHolderAddress with customer_id filter
+            addresses = db.query(StakeHolderAddress).filter_by(stake_holder_id=stakeholder_id)
+            for address in addresses:
+                address.is_deleted = "yes"
+                address.deleted_by = user_id
+                address.deleted_on = datetime.now()
+
+            # Delete related CustomerStakeHolder with customer_id filter
+            customer_stakeholders = db.query(CustomerStakeHolder).filter_by(stake_holder_master_id=stakeholder_id, customer_id=customer_id)
+            for customer_sh in customer_stakeholders:
+                customer_sh.is_deleted = "yes"
+                customer_sh.deleted_by = user_id
+                customer_sh.deleted_on = datetime.now()
+
+        elif business_place_id:
+            # Delete Business Place records with customer_id filter
+            business_place = db.query(CustomerBusinessPlace).filter_by(id=business_place_id, customer_id=customer_id).first()
+            if not business_place:
+                return []
+            
+            business_place.is_deleted = "yes"
+            business_place.deleted_by = user_id
+            business_place.deleted_on = datetime.now()
+
+            # Delete related CustomerBusinessPlaceActivity with customer_id filter
+            activities = db.query(CustomerBusinessPlaceActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            for activity in activities:
+                activity.is_deleted = "yes"
+                activity.deleted_by = user_id
+                activity.deleted_on = datetime.now()
+
+            # Delete related CustomerBusinessPlaceActivityType with customer_id filter
+            activity_types = db.query(CustomerBusinessPlaceActivityType).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            for activity_type in activity_types:
+                activity_type.is_deleted = "yes"
+                activity_type.deleted_by = user_id
+                activity_type.deleted_on = datetime.now()
+
+            # Delete related CustomerBusinessPlaceCoreActivity with customer_id filter
+            core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            for core_activity in core_activities:
+                core_activity.is_deleted = "yes"
+                core_activity.deleted_by = user_id
+                core_activity.deleted_on = datetime.now()
+
+        db.commit()
+        return {"success": True, "message": "Data deleted successfully."}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+#----------------------------------------------------------------------------------------------------------------
 
 
 def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
@@ -1709,3 +1806,5 @@ def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[
 
     db.commit()
     return {"success": True, "message": f"Trade name amendments processed successfully with action: {action.value}"}
+
+#-------------------------------------------------------------------------------------------------------------
