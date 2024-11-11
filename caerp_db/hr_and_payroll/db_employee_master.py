@@ -1245,7 +1245,8 @@ def save_employee_salary_details(
             existing_salary_detail.modified_on = datetime.now()
 
         db.commit()
-        return {"message": "Saved successfully"}
+        return {"success":True,
+                "message": "Saved successfully"}
 
     except Exception as e:
         db.rollback()
