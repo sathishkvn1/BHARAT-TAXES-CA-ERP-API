@@ -1,5 +1,9 @@
-from fastapi import FastAPI
+import asyncio
+from contextlib import asynccontextmanager
+from typing import List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, logger
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware 
 from caerp_auth import authentication
 from caerp_router.common import user,otp_process,common,common_functions
@@ -11,15 +15,30 @@ from caerp_router.hr_and_payroll import employee_master
 from caerp_functions import captcha
 from caerp_db.database import caerp_base, caerp_engine
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
 
-# from caerp_router.accounts im
-# from fastapi_cache import FastAPICache
-# from fastapi_cache.backends.redis import RedisBackend
-# import redis
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+load_dotenv()
+
 
 caerp_base.metadata.create_all(bind=caerp_engine)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # logger.info("Lifespan startup called")
+    task = asyncio.create_task(office_master.notify_on_new_appointment())
+    yield
+    # logger.info("Lifespan shutdown called")
+    task.cancel()
+    await task
+
+
 app = FastAPI(
+    lifespan=lifespan, 
     debug=True,
     title="Main Application API",
     description="""
@@ -35,20 +54,11 @@ app = FastAPI(
 )
 
 
-
-# @app.on_event("startup")
-# async def startup():
-#     # Initialize cache
-#     redis_client = redis.Redis.from_url("redis://localhost:6379")
-#     FastAPICache.init(RedisBackend(redis_client), prefix="cache")
-
-# @app.on_event("shutdown")
-# async def shutdown():
-#     await FastAPICache.clear()
-
   
 app_common=FastAPI(debug=True)
+
 app_office=FastAPI(debug=True)
+
 hr_and_payroll=FastAPI(debug=True)
 accounts=FastAPI(debug=True)
 gst_services=FastAPI(debug=True)
@@ -57,10 +67,12 @@ gst_services=FastAPI(debug=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    # allow_origins=["http://localhost:5000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 app.add_middleware(SessionMiddleware, secret_key="da30300a84b6fa144a20702bd15acac18ff3954aa67e72b485d59df5e27fb5d3")
@@ -86,6 +98,9 @@ app_common.include_router(captcha.router)
 # # for office module
 app_office.include_router(authentication.router)
 app_office.include_router(office_master.router)
+
+
+
 # # for hr_and_payroll module
 hr_and_payroll.include_router(authentication.router)
 hr_and_payroll.include_router(employee_master.router)
@@ -98,6 +113,8 @@ accounts.include_router(quotation.router)
 # for gst service
 gst_services.include_router(authentication.router)
 gst_services.include_router(gst_registration.router) 
+
+
 
 app.mount("/common", app_common, name="common")
 app.mount("/office", app_office, name="office")

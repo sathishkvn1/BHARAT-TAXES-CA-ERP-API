@@ -1,35 +1,45 @@
+from contextlib import asynccontextmanager
 import io
+import logging
 import os
 from shutil import Error
-from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, Body, Depends, FastAPI, HTTPException, Header, UploadFile, File, WebSocket, WebSocketDisconnect, logger,status,Query,Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+import pandas as pd
 import sqlalchemy
 from sqlalchemy.orm import Session
 from caerp_auth.authentication import authenticate_user
 from caerp_constants.caerp_constants import  ActionType, ApplyTo, BooleanFlag, DeletedStatus, EntryPoint, RecordActionType,SearchCriteria, Status
-from caerp_db.common.models import  EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
-from caerp_db.database import  get_db
+from caerp_db.common.models import  AppActivityHistory, EmployeeContactDetails, EmployeeEmploymentDetails, EmployeeMaster
+from caerp_db.database import  get_db,SessionLocal
+
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek , OffConsultantSchedule, OffConsultationMode,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import   AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
-from sqlalchemy import text,null
+from sqlalchemy import insert, text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
 from pathlib import Path 
-
+from io import BytesIO
 from sqlalchemy import select, func, and_
 from collections import defaultdict
+import asyncio
+import shutil
 from settings import BASE_URL
+
+from fastapi.openapi.utils import get_openapi
+
+
 
 
 router = APIRouter(
@@ -39,14 +49,182 @@ router = APIRouter(
 UPLOAD_DIR_CONSULTANT_DETAILS       = "uploads/consultant_details"
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
+# SOURCE_DIRECTORY = r"C:\BHARAT-TAXES-CA-ERP-API\downloads\excel_templates"
+
+SOURCE_DIRECTORY  = "C:/BHARAT-TAXES-CA-ERP-API/downloads/excel_templates"
+
+# DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser("~"), "Downloads")  
+
+
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+connected_clients: List[WebSocket] = []
+connected_clients = []
+
+
+@router.websocket("/ws/notifications")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    # logger.info("WebSocket connection accepted.")
+    connected_clients.append(websocket)
+    try:
+        while True:
+            message = await websocket.receive_text()
+            if message == '{"type": "keepalive"}':
+                # logger.info("Received keepalive message")
+                continue  # Ignore keep-alive messages
+            # logger.info(f"Received message: {message}")
+    except WebSocketDisconnect as e:
+        # logger.info(f"WebSocket disconnect: {e.code}, {e.reason}")
+        connected_clients.remove(websocket)
+        # logger.info("WebSocket connection closed.")
+    except Exception as e:
+        logger.error(f"An error occurred in WebSocket: {str(e)}")
+
+
+
+# async def notify_on_new_appointment():
+#     last_seen_id = None
+#     # logger.info("notify_on_new_appointment function started...")
+#     while True:
+#         try:
+#             with SessionLocal() as db:
+#                 # logger.info("Database session opened.")
+#                 latest_appointment = db.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
+#                 if latest_appointment:
+#                     # logger.info(f"Latest appointment ID: {latest_appointment.id}")
+#                     if latest_appointment.id != last_seen_id:
+#                         last_seen_id = latest_appointment.id
+#                         for client in connected_clients:
+#                             await client.send_text("New appointment added!")
+#                             # logger.info("Sent notification to client")
+#                     else:
+#                         logger.info("No new appointments")
+#                 else:
+#                     logger.info("No appointments found")
+#         except Exception as e:
+#             logger.error(f"Error querying appointments or sending notifications: {e}")
+#         await asyncio.sleep(5)
+#         # logger.info("Sleeping for 5 seconds...")
+
+
+
+async def notify_on_new_appointment():
+    last_seen_id = None
+    # logger.info("notify_on_new_appointment function started...")
+    while True:
+        try:
+            with SessionLocal() as db:
+                # logger.info("Database session opened.")
+                latest_appointment = db.query(OffAppointmentMaster).order_by(OffAppointmentMaster.id.desc()).first()
+                
+                if latest_appointment:
+                    # logger.info(f"Latest appointment ID: {latest_appointment.id}")
+                    if latest_appointment.id != last_seen_id:
+                        last_seen_id = latest_appointment.id
+                        for client in connected_clients:
+                            await client.send_text("New appointment added!")
+                            # logger.info("Sent notification to client")
+                # Removed the else block here
+
+        except Exception as e:
+            # Log the error for later investigation
+            logger.error(f"Error querying appointments or sending notifications: {e}")
+
+        await asyncio.sleep(5)
+        # logger.info("Sleeping for 5 seconds...")
+
+
+def custom_openapi():
+    if router.openapi_schema:
+        return router.openapi_schema
+    openapi_schema = get_openapi(
+        title="Your API with WebSocket",
+        version="1.0.0",
+        description="This API supports WebSocket connections for real-time notifications. Connect to `/ws/notifications` using WebSocket.",
+        routes=router.routes,
+    )
+    router.openapi_schema = openapi_schema
+    return router.openapi_schema
+
+router.openapi = custom_openapi
+
+
+
+
+# # async def notify_clients(message: str):
+# #     for client in connected_clients:
+# #         try:
+# #             await client.send_text(message)
+# #         except Exception:
+# #             connected_clients.remove(client)
+
+# @router.get("/docs/websocket", response_class=HTMLResponse)
+# async def websocket_docs():
+#     return """
+#     <h2>WebSocket Endpoint Documentation</h2>
+#     <p>To connect to the WebSocket, open a WebSocket connection to <code>ws://localhost:5000/ws/notifications</code>.</p>
+#     <p>Once connected, you will receive real-time notifications when an appointment is created or updated.</p>
+#     <p>Example JavaScript code to connect:</p>
+#     <pre>
+#     const websocket = new WebSocket("ws://localhost:5000/office/ws/notifications");
+    
+#     websocket.onmessage = (event) => {
+#         console.log("Received:", event.data);
+#     };
+#     </pre>
+#     """
+
+
+
+# @router.post("/save_appointment_details/{id}")
+# async def save_appointment_details(
+#     id: int,
+#     action_type: RecordActionType,
+#     appointment_data: List[OffAppointmentDetails], 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         for appointment in appointment_data:
+#             result = db_office_master.save_appointment_visit_master(
+#                 db, id, appointment, user_id, action_type
+#             )
+        
+#         # Notify WebSocket clients
+#         await notify_clients("An appointment has been saved or updated.")
+
+#         return {
+#             "success": True,
+#             "message": "Saved successfully and clients notified",
+#             "id": result["id"],
+#             "visit_master_id": result.get("visit_master_id", None),
+#             "consultant_id": result.get("consultant_id", None)
+#         }
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 #--------------------save_appointment_details-------------------------------------------------------
+
 @router.post("/save_appointment_details/{id}")
 def save_appointment_details(
     id: int,
+    action_type: RecordActionType,
     appointment_data: List[OffAppointmentDetails], 
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-    
 ):
     """
    - Save or create appointment details for a specific ID.
@@ -60,8 +238,8 @@ def save_appointment_details(
     - Returns: The updated appointment_details as the response.
     - If action_type is INSERT_ONLY, the id parameter should be 0.
     - If action_type is UPDATE_ONLY, the id parameter should be greater than 0.
+    - If action_type is UPDATE_and_insert, the id parameter should be greater than 0.
     """
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
@@ -70,17 +248,22 @@ def save_appointment_details(
 
     try:
         for appointment in appointment_data:
-            db_office_master.save_appointment_visit_master(
-                db, id, appointment, user_id
+            result = db_office_master.save_appointment_visit_master(
+                db, id, appointment, user_id,action_type
             )
 
-        return {"success": True, "message": "Saved successfully"}
+        return {
+            "success": True,
+            "message": "Saved successfully",
+            "id": result["id"],
+            "visit_master_id": result.get("visit_master_id", None),
+            "consultant_id": result.get("consultant_id", None)
+        }
     
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-# # get all
 
 #---------------------------------------------------------------------------------------------------------------
 @router.get('/get_appointment_details_by_id', response_model=OffAppointmentMasterSchema)
@@ -137,6 +320,9 @@ async def reschedule_or_cancel_appointment(
    
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
+
+
+
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
                                
@@ -158,6 +344,7 @@ async def get_appointment_info(type: str = Query(..., description="Type of infor
     return {"info": info}
 
 #-------------get all-------------------------------------------------------------------------
+
 @router.get("/get_appointments", response_model=Dict[str, List[ResponseSchema]])
 def get_and_search_appointments(
     consultant_id: Optional[str] = "ALL",
@@ -201,8 +388,6 @@ def get_and_search_appointments(
 
 #-------------------------swathy-------------------------------------------------------------------------------
 
-
-
 from time import time
 @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master(
@@ -241,13 +426,7 @@ def get_all_service_goods_master(
             delattr(result, "details")
 
     return results
-
-
-
 #------------------------------------------------------------------------------------------------------------
-
-
-
 @router.get('/services/get_all_service_goods_master_test', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master_test(
     deleted_status: Optional[DeletedStatus] = Query(None, title="Select deleted status", enum=list(DeletedStatus)),
@@ -285,6 +464,47 @@ def get_all_service_goods_master_test(
 
 #--------------------------------------------------------------------------------------------------------
 
+# @router.post("/services/save_services_goods_master/{id}")
+# def save_services_goods_master(
+#     id: int,
+#     data: List[SaveServicesGoodsMasterRequest], 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):  
+#     """
+#     Save or update service and goods master records.
+
+#     This endpoint allows the user to save or update records in the service and goods master table.
+#     If the `id` is 0, it will insert new records; otherwise, it will update the existing records with the specified `id`.
+
+#     - **id**: The ID of the master record. Use 0 for new records.
+#     - **data**: A list of `SaveServicesGoodsMasterRequest` objects containing the master and detail data to be saved or updated.
+    
+#     **Returns**:
+#     - A JSON object indicating the success status and a message detailing the action performed (insert or update).
+
+#     """  
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     try:
+#         result_message = ""
+#         for service in data:
+#             result = db_office_master.save_services_goods_master(
+#                 db, id, service, user_id
+#             )
+#             result_message = result["message"]
+        
+#         return {"success": True, "message": result_message}
+    
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 @router.post("/services/save_services_goods_master/{id}")
 def save_services_goods_master(
     id: int,
@@ -302,8 +522,7 @@ def save_services_goods_master(
     - **data**: A list of `SaveServicesGoodsMasterRequest` objects containing the master and detail data to be saved or updated.
     
     **Returns**:
-    - A JSON object indicating the success status and a message detailing the action performed (insert or update).
-
+    - A JSON object indicating the success status, a message detailing the action performed (insert or update), and the ID of the record affected.
     """  
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -313,13 +532,16 @@ def save_services_goods_master(
 
     try:
         result_message = ""
+        inserted_id = None  # Variable to hold the inserted ID
         for service in data:
             result = db_office_master.save_services_goods_master(
                 db, id, service, user_id
             )
             result_message = result["message"]
+            if "inserted_id" in result:
+                inserted_id = result["inserted_id"]
         
-        return {"success": True, "message": result_message}
+        return {"success": True, "message": result_message, "id": inserted_id}
     
     except HTTPException as e:
         raise e
@@ -328,6 +550,37 @@ def save_services_goods_master(
 
 
 #-------------------------------------------------------------------------------------------------------
+# @router.post("/services/save_off_document_master/{id}")
+# def save_off_document_master(
+#     id: int,
+#     data: OffDocumentDataBase, 
+#     document_type: str = Query(enum=["DOCUMENT", "DATA"]),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         result = db_office_master.save_off_document_master(
+#             db, id, data, document_type
+#         )
+        
+#         # Return the message from the database function
+
+#         if result["success"]:
+          
+#             return {"success": True, "message":result["message"]}
+#         else:
+#             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
+
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 @router.post("/services/save_off_document_master/{id}")
 def save_off_document_master(
     id: int,
@@ -344,11 +597,13 @@ def save_off_document_master(
             db, id, data, document_type
         )
         
-        # Return the message from the database function
-
+        # Return the message and ID from the database function
         if result["success"]:
-          
-            return {"success": True, "message":result["message"]}
+            return {
+                "success": True, 
+                "message": result["message"],
+                "id": result.get("id")  # Include the saved/updated record ID
+            }
         else:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=result["message"])
 
@@ -356,7 +611,6 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 #----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
@@ -403,13 +657,13 @@ def save_service_document_data_master(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
-    # user_id = auth_info.get("user_id")
+    user_id = auth_info.get("user_id")
 
     try:
         result_message = ""
         for service in data:
             result = db_office_master.save_service_document_data_master(
-                db, id, service
+                db, id, service,user_id
             )
             result_message = result["message"]
         
@@ -423,7 +677,44 @@ def save_service_document_data_master(
 #---------------------------------------------------------------------------------------------------------------
 from datetime import datetime, timedelta
 
+# @router.get("/get_consultant_schedule")
+# def get_consultant_schedule(
+#     consultant_id: int,
+#     consultation_mode_id: int,
+#     db: Session = Depends(get_db),
+#     check_date: Optional[date] = None,
+#     service_goods_master_id: Optional[int] = None,
+#     appointment_id: Optional[int] = None
+# ):
+#     """
+# #### Parameters:
 
+# - `consultant_id` (int, required): The ID of the consultant whose schedule is to be fetched.
+# - `consultation_mode_id` (int, required): The ID of the consultation mode.
+# - `db` (Session, required): The database session, provided by the dependency injection.
+# - `check_date` (date, optional): The specific date to check the schedule for. If not provided, the endpoint will fetch the schedule for the next 10 days.
+# - `service_goods_master_id` (int, optional): The ID of the service or goods master to get slot duration.
+
+# #### Response:
+# The endpoint returns a JSON object containing either available slots or messages about unavailable dates. The response format varies depending on whether `check_date` is provided or not.
+
+# 1. **When All parameters are provided**:
+#     - **Available slots found**: Returns a list of available time slots.
+#     - **No available slots**: Returns a message indicating no available slots for the specified date.
+
+# 2. **When `check_date` and `service_goods_master_id`  is not provided**:
+#     - **Unavailable dates**: Returns a list of unavailable dates within the next 10 days.
+#     - **Available dates**: Returns a list of available dates within the next 10 days.
+# """
+
+#     return db_office_master.fetch_available_and_unavailable_dates_and_slots(
+#         consultant_id=consultant_id,
+#         consultation_mode_id=consultation_mode_id,
+#         db=db,
+#         check_date=check_date,
+#         service_goods_master_id=service_goods_master_id,
+#         appointment_id=appointment_id
+#     )
 
 @router.get("/get_consultant_schedule")
 def get_consultant_schedule(
@@ -464,12 +755,7 @@ The endpoint returns a JSON object containing either available slots or messages
         appointment_id=appointment_id
     )
 
-
 #---------------------------------------------------------------------------------------------------------------
-
-
-
-
 @router.get("/consultants_and_services/")
 def get_consultants_and_services(
     category: Optional[str] = Query(None, description="Selection category: 'consultant', 'all'"),
@@ -507,7 +793,18 @@ def get_consultants_and_services(
         # Fetch consultants for the given service_id from off_view_consultant_details table
         consultants = db_office_master.get_consultants_for_service(db, service_id)
         # Convert consultants to a list of dictionaries
-        consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        # consultants_data = [{"id": consultant.consultant_id, "first_name": consultant.first_name, "middle_name": consultant.middle_name, "last_name": consultant.last_name} for consultant in consultants]
+        consultants_data = [
+    {
+        "id": consultant.consultant_id,
+        "first_name": consultant.first_name,
+        "middle_name": consultant.middle_name,
+        "last_name": consultant.last_name,
+        "consultant_details_effective_from_date": consultant.consultant_details_effective_from_date,
+        "consultant_details_effective_to_date": consultant.consultant_details_effective_to_date
+    }
+    for consultant in consultants
+]
         return {"consultants": consultants_data}
     
     else:
@@ -877,6 +1174,7 @@ def get_service_documents_list_by_group_category(
     - A list of filtered service documents that match the provided criteria.
     - If no matching documents are found, returns a 404 status code with a message "No data found".
     - If an internal server error occurs, returns a 500 status code with a message "Internal Server Error".
+    
     """
     try:
         results = db_office_master.get_service_documents_list_by_group_category(
@@ -1275,6 +1573,7 @@ def get_all_service_document_data_master(
         LEFT JOIN off_service_document_data_master AS a 
             ON g.id = a.service_goods_master_id 
             AND f.id = a.constitution_id
+            AND a.is_deleted = 'no' 
         LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
         LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
         LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id
@@ -1464,9 +1763,85 @@ def get_consultant_employees(
 
 #-------------------------------------------------------------------------------------------------------------
 
+# @router.post("/save_consultant_service_details/")
+# def save_consultant_service_details(
+#     data: List[ConsultantService],
+#     action_type: RecordActionType,
+#     consultant_id: Optional[int] = None,
+#     service_id: Optional[int] = None,
+#     id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Save or update consultant service details.
+#     To save give action_type =Update and Insert
+#     id:0
+#     consultant_id:1
+#     service_id:88
+#     these data should be given
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         for item in data:
+#             db_office_master.save_consultant_service_details_db(
+#                 item, consultant_id, service_id, user_id, action_type, db, id
+#             )
+        
+#         return {"success": True, "detail": "Saved successfully"}
+    
+#     except ValueError as ve:
+#         raise HTTPException(status_code=400, detail=str(ve))
+    
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+# @router.post("/save_consultant_service_details/")
+# def save_consultant_service_details(
+#     data: ConsultantService,
+#     action_type: RecordActionType,
+#     consultant_id: Optional[int] = None,
+#     service_id: Optional[int] = None,
+#     id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Save or update consultant service details.
+#     To save give action_type =Update and Insert
+#     id: 0
+#     consultant_id: 1
+#     service_id: 88
+#     these data should be given
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         record_id = db_office_master.save_consultant_service_details_db(
+#             data, consultant_id, service_id, user_id, action_type, db, id
+#         )
+        
+#         return {"success": True, "detail": "Saved successfully", "id": record_id}
+    
+#     except ValueError as ve:
+#         raise HTTPException(status_code=400, detail=str(ve))
+    
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/save_consultant_service_details/")
 def save_consultant_service_details(
-    data: List[ConsultantService],
+    data: ConsultantService,
     action_type: RecordActionType,
     consultant_id: Optional[int] = None,
     service_id: Optional[int] = None,
@@ -1476,25 +1851,32 @@ def save_consultant_service_details(
 ):
     """
     Save or update consultant service details.
-    To save give action_type =Update and Insert
-    id:0
-    consultant_id:1
-    service_id:88
-    these data should be given
+    To save, provide action_type as UPDATE_AND_INSERT.
+    id: 0
+    consultant_id: 1
+    service_id: 88
+    These data should be provided.
     """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
-    
+
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     
     try:
-        for item in data:
-            db_office_master.save_consultant_service_details_db(
-                item, consultant_id, service_id, user_id, action_type, db, id
-            )
+        record_id = db_office_master.save_consultant_service_details_db(
+            data, consultant_id, service_id, user_id, action_type, db, id
+        )
         
-        return {"success": True, "detail": "Saved successfully"}
+        # Include consultant_id, service_id, and effective_from_date in the response
+        return {
+            "success": True,
+            "detail": "Saved successfully",
+            "id": record_id,
+            "consultant_id": consultant_id,
+            "service_id": service_id,
+            "effective_from_date": data.effective_from_date,  # Assuming data has this attribute
+        }
     
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
@@ -1502,7 +1884,6 @@ def save_consultant_service_details(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-     
 #------------------------------------------------------------------------------------------------
 @router.get("/get_service_details_by_consultant/", response_model=ConsultantServiceDetailsListResponse)
 def get_service_details_by_consultant(
@@ -1561,6 +1942,37 @@ def get_service_details_by_consultant(
 
 #-------------------------------------------------------------------------------------------------------------
 
+
+# @router.post("/save_consultant_schedule/")
+# def save_consultant_schedule(
+#     schedules: List[ConsultantScheduleCreate], 
+#     action_type: RecordActionType,
+#     id: Optional[int] = None,
+#     consultant_id: Optional[int] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     try:
+#         # Assuming only one schedule will be saved/updated at a time.
+#         # If multiple schedules are needed, this can be adjusted to return a list of ids.
+#         last_saved_id = None
+        
+#         for data in schedules:
+#             last_saved_id = db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        
+#         return {"success": True, "detail": "Saved successfully", "id": last_saved_id}
+    
+#     except Exception as e:
+#         print(f"Error in endpoint: {e}")
+#         raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/save_consultant_schedule/")
 def save_consultant_schedule(
     schedules: List[ConsultantScheduleCreate], 
@@ -1577,19 +1989,27 @@ def save_consultant_schedule(
     user_id = auth_info.get("user_id")
     
     try:
-        for data in schedules:
-            db_office_master.save_consultant_schedule(data, consultant_id, user_id, id, action_type, db)
+        last_saved_id = None
+        effective_from_date = None  # Initialize the effective_from_date
         
-        return {"success": True, "detail": "Saved successfully"}
+        for data in schedules:
+            last_saved_id, effective_from_date = db_office_master.save_consultant_schedule(
+                data, consultant_id, user_id, id, action_type, db
+            )
+        
+        return {
+            "success": True, 
+            "detail": "Saved successfully", 
+            "id": last_saved_id,
+            "effective_from_date": effective_from_date  # Include the effective_from_date in the response
+        }
     
     except Exception as e:
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
-    
- #-------------------------------------------------------------------------------------------------------------   
-    
-        
+
+
 from fastapi import Query
 @router.get("/get_time_slots/", response_model=List[TimeSlotResponse])
 def get_time_slots(
@@ -1654,41 +2074,31 @@ def get_time_slots(
 @router.post("/enquiry/save_enquiry_details/{id}")
 def save_enquiry_details(
     id: int,
+    action_type: RecordActionType,
     enquiry_data: OffEnquiryResponseSchema,
-    
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-   - Save or create enquiry details for a specific ID.
-    - **enquiry_data**: Data for the enquiry master and details, provided as parameters of type OffEnquiryResponseSchema.
-    - **id**: An optional integer parameter with a default value of 0, indicating the enquiry master's identifier.
-    
-    - If enquiry_master id is 0, it indicates the creation of a new enquiry.
-    - Returns: The newly created enquiry details as the response.
-    - If enquiry_master id is not 0, it indicates the update of an existing enquiry.
-    - Returns: The updated enquiry details as the response.
-    
+    Save or create enquiry details based on action type and ID.
     """
-
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
+
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
     try:
         result = db_office_master.save_enquiry_master(
-            db, id, enquiry_data, user_id
+            db, id, enquiry_data, user_id, action_type
         )
 
-        return {"success": True, "message": "Saved successfully"}
-    
+        return {"success": True, "message": "Saved successfully", "id": result["id"],"visit_details_id":result["visit_details_id"]}
+
     except HTTPException as e:
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -1776,6 +2186,9 @@ def save_off_consultation_task_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 #-----------------------------------------------------------------------------------------
 
 # @router.get('/services/get_all_consultation_task_master_details', response_model=Union[List[OffViewConsultationTaskMasterSchema], dict])
@@ -2482,15 +2895,14 @@ def get_work_order_details(
 
 #------------------------------------------------------------------------------------------------------------
 
-
-@router.get('/get_work_order_list', response_model=List[OffViewWorkOrderMasterSchema])
+@router.get('/get_work_order_list')
 def get_work_order_list(
     
    
     work_order_number 	    : Optional[str]= None,
     search_value            :  Union[str, int] = "ALL",
 
-    work_order_from_date  	: Optional[date]= None,
+    work_ordetr_from_date  	: Optional[date]= None,
     work_order_to_date  	: Optional[date]= None,
     work_order_status_id 	: Optional[Union[int, str]] = "ALL",
     # mobile_number  	    : Optional[str]= None,
@@ -2515,9 +2927,10 @@ def get_work_order_list(
     - 404: No data present based on the filter criteria.
     """
     results = db_office_master.get_work_order_list(
-         db,search_value,work_order_number,work_order_status_id,work_order_from_date,work_order_to_date)
+         db,search_value,work_order_number,work_order_status_id,work_ordetr_from_date,work_order_to_date)
     
     return results
+    # return WorkOrderResponseModel(work_orders=results)
 
 
 #-------------------------------------------------------------------------------------------------------------
@@ -2557,8 +2970,12 @@ def save_work_order(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
    auth_info = authenticate_user(token)
    user_id = auth_info.get("user_id")
+   financial_year_id   =  auth_info.get("financial_year_id") 
+   customer_id         =  auth_info.get("mother_customer_id") 
    
-   return db_office_master.save_work_order(request, db, user_id,work_order_master_id)
+   return db_office_master.save_work_order(request, db, user_id,financial_year_id,customer_id,work_order_master_id)
+
+
 #---------------------------------------------------------------------------------------------------------
 @router.post('/save_work_order_service_details')
 def save_work_order_service_details(
@@ -2781,10 +3198,6 @@ def get_service_task_history(
         result.append(history_data)
 
     return result
-
-
-
-
 
 
 #------------------------------------------------------------------------------------------------------
@@ -3207,7 +3620,7 @@ def get_dependent_services(
             work_order_details_id,
             service_goods_name,
             trade_name,
-            leagal_name,
+            legal_name,
             service_status
         FROM off_view_work_order_details
         WHERE work_order_details_id IN ({dependent_ids_str})
@@ -3222,7 +3635,7 @@ def get_dependent_services(
                 "work_order_details_id": row[0],
                 "service_goods_name": row[1],
                 "trade_name": row[2],
-                "leagal_name": row[3],
+                "legal_name": row[3],
                 "service_status":row[4]
             }
             for row in result
@@ -3324,6 +3737,461 @@ def get_dependent_services(
 
 #     # Match the response to the expected format of ServiceResponse
 #     return {"aggregated_data": aggregated_data}
+
+
+
+def log_activity(db: Session, user_id: int, action_type: str, db_table_name: str, action_query: str):
+    try:
+        # Create a new activity history record
+        activity_history = AppActivityHistory(
+            action_taken_on=datetime.utcnow(),
+            action_taken_by=user_id,
+            action_type=action_type,
+            db_table_name=db_table_name,
+            action_query=action_query
+        )
+        
+        # Add the new record to the session and commit
+        db.add(activity_history)
+        db.commit()
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        print(f"Error logging activity: {str(e)}")  # Log the error as needed
+
+@router.post("/test/save_consultant_schedule/")
+def save_consultant_schedule(
+    schedules: List[ConsultantScheduleCreate], 
+    action_type: RecordActionType,
+    id: Optional[int] = None,
+    consultant_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    
+    try:
+        for data in schedules:
+            save_consultant_schedule_detail_test(data, consultant_id, user_id, id, action_type, db)
+        
+        return {"success": True, "detail": "Saved successfully"}
+    
+    except Exception as e:
+        print(f"Error in endpoint: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+    
+
+def save_consultant_schedule_detail_test(
+    schedule_data: ConsultantScheduleCreate,
+    consultant_id: Optional[int],
+    user_id: int,
+    id: Optional[int],
+    action_type: RecordActionType,
+    db: Session
+):
+    try:
+        # Convert schedule_data to dictionary format for processing
+        schedule_dict = schedule_data.model_dump()
+        print("schedule_dict", schedule_dict)
+
+        # Handle special schedules (`is_normal_schedule == "no"`)
+        if schedule_data.is_normal_schedule == "no":
+            if not schedule_data.consultation_date:
+                raise ValueError("For 'is_normal_schedule' no, 'consultation_date' must be provided.")
+            
+            # Remove `effective_from_date` as it's not needed in special schedules
+            schedule_dict.pop("effective_from_date", None)
+
+            # Assign `day_of_week_id` using SQL query based on `consultation_date`
+            day_of_week_query = text(f"SELECT DAYOFWEEK('{schedule_data.consultation_date}')")
+            day_of_week_id = db.execute(day_of_week_query).fetchone()[0]
+            schedule_dict['day_of_week_id'] = day_of_week_id
+
+            # INSERT ONLY logic
+            if action_type == RecordActionType.INSERT_ONLY:
+                if consultant_id is None:
+                    raise ValueError("consultant_id is required for INSERT_ONLY")
+                
+                # Check if the record already exists to avoid duplicates
+                existing_schedule = db.query(OffConsultantSchedule).filter(
+                    OffConsultantSchedule.consultant_id == consultant_id,
+                    OffConsultantSchedule.consultation_date == schedule_data.consultation_date,
+                    OffConsultantSchedule.consultation_mode_id == schedule_data.consultation_mode_id
+                ).first()
+
+               
+                if existing_schedule:
+                    raise ValueError("A schedule for this consultant on this date already exists.")
+
+                # Insert the new schedule
+                new_schedule = OffConsultantSchedule(
+                    **schedule_dict, 
+                    consultant_id=consultant_id, 
+                    created_by=user_id, 
+                    created_on=datetime.now()
+                )
+
+                stmt = insert(OffConsultantSchedule).values(
+                **schedule_dict, 
+                consultant_id=consultant_id, 
+                created_by=user_id, 
+                created_on=datetime.now()
+            )
+
+            # Compile the statement to get the raw SQL
+                action_query = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+                print("action_query:", action_query)
+                action_type = action_query.split()[0]  # This will give you the first word
+                print("action_type:", action_type)  #
+
+
+                
+                db.add(new_schedule)
+                db.commit()
+
+                # Log activity
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type=action_type,
+                    db_table_name="OffConsultantSchedule",
+                    action_query=action_query
+                )
+
+                return True
+
+            # UPDATE ONLY logic
+            elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+                # Fetch the existing schedule based on the provided ID
+                existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+
+                if not existing_schedule:
+                    raise ValueError(f"Schedule with ID {id} not found.")
+
+                # Update only the fields that are provided in the schedule_dict
+                for key, value in schedule_dict.items():
+                    setattr(existing_schedule, key, value)
+
+                # Update the modification metadata
+                existing_schedule.modified_by = user_id
+                existing_schedule.modified_on = datetime.now()
+                
+                # Commit the update to the existing schedule
+                db.commit()
+
+                # Log activity
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type="UPDATE",
+                    db_table_name="OffConsultantSchedule",
+                    action_query=str(db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id))  # Log the SQL query
+                )
+
+                return True
+
+            else:
+                raise ValueError("Invalid action type for special schedules (is_normal_schedule = 'no').")
+
+        # Handle normal schedules (`is_normal_schedule == "yes"`)
+        elif schedule_data.is_normal_schedule == "yes":
+            if action_type == RecordActionType.UPDATE_AND_INSERT:
+                if consultant_id is None:
+                    raise ValueError("consultant_id is required for UPDATE_AND_INSERT")
+
+                # Ensure `effective_from_date` is provided
+                effective_from_date = schedule_dict.get('effective_from_date')
+                if not effective_from_date:
+                    raise ValueError("effective_from_date is required for UPDATE_AND_INSERT when is_normal_schedule is 'yes'.")
+
+                # Query for the existing schedule (active record)
+                existing_schedule_query = db.query(OffConsultantSchedule).filter(
+                    OffConsultantSchedule.consultant_id == consultant_id,
+                    OffConsultantSchedule.day_of_week_id == schedule_dict['day_of_week_id'],
+                    OffConsultantSchedule.consultation_mode_id == schedule_dict['consultation_mode_id'],
+                    OffConsultantSchedule.effective_to_date.is_(None)
+                )
+                existing_schedule = existing_schedule_query.first()
+
+                # If an active schedule exists, update its `effective_to_date`
+                if existing_schedule:
+                    new_effective_to_date = effective_from_date - timedelta(days=1)
+                    existing_schedule.effective_to_date = new_effective_to_date
+                    existing_schedule.modified_by = user_id
+                    existing_schedule.modified_on = datetime.now()
+                    db.commit()  # Commit the update for the existing schedule
+
+                    # Log activity for existing schedule update
+                    log_activity(
+                        db=db,
+                        user_id=user_id,
+                        action_type="UPDATE",
+                        db_table_name="OffConsultantSchedule",
+                        action_query=str(existing_schedule_query)  # Log the SQL query
+                    )
+
+                # Insert the new schedule
+                new_schedule = OffConsultantSchedule(
+                    **schedule_dict, 
+                    consultant_id=consultant_id, 
+                    created_by=user_id, 
+                    created_on=datetime.now()
+                )
+                db.add(new_schedule)
+                db.commit()
+
+                # Log activity for new schedule insertion
+                log_activity(
+                    db=db,
+                    user_id=user_id,
+                    action_type="INSERT",
+                    db_table_name="OffConsultantSchedule",
+                    action_query=f"Inserted new schedule for consultant ID {consultant_id}: {schedule_dict}"
+                )
+
+                return True
+
+            # UPDATE ONLY logic for normal schedule
+            elif action_type == RecordActionType.UPDATE_ONLY and id is not None:
+                # Handle the update of an existing schedule based on the provided ID
+                existing_schedule = db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id).first()
+                if existing_schedule:
+                    for key, value in schedule_dict.items():
+                        setattr(existing_schedule, key, value)
+                    existing_schedule.modified_by = user_id
+                    existing_schedule.modified_on = datetime.now()
+                    db.commit()
+
+                    # Log activity for updating an existing schedule
+                    log_activity(
+                        db=db,
+                        user_id=user_id,
+                        action_type="UPDATE",
+                        db_table_name="OffConsultantSchedule",
+                        action_query=str(db.query(OffConsultantSchedule).filter(OffConsultantSchedule.id == id))  # Log the SQL query
+                    )
+
+                    return True
+                else:
+                    raise ValueError(f"Schedule with ID {id} not found.")
+
+            else:
+                raise ValueError("Invalid action type for normal schedules (is_normal_schedule = 'yes').")
+
+        else:
+            raise ValueError("Invalid schedule type or action type provided.")
+
+    except Exception as e:
+        db.rollback()  # Rollback changes in case of an error
+        raise HTTPException(status_code=400, detail=str(e))
+    
+
+
+@router.get('/services/get_all_hsn_sac_master_details', response_model=List[AppViewHsnSacMasterSchema])
+def get_all_hsn_sac_master_details(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+    group: Union[int, str] = Query("ALL", description="Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both."),
+    hsn_sac_code: Union[str, int] = "ALL",
+    effective_date: Optional[date] = None
+):  
+    """
+    This endpoint retrieves HSN/SAC master details by applying the following filters:
+    - **group**: Filter by hsn_sac_class_id. Use 1 for goods, 2 for services, or 'ALL' for both.
+    - **hsn_sac_code**: Specify a specific HSN/SAC code, or 'ALL' to fetch all matching records.
+    - **effective_date**: If provided, the records valid for the given effective date will be returned. Defaults to the current date if not provided.
+    """
+
+    try:
+        if not token:
+            raise HTTPException(status_code=401, detail="Token is missing")
+        effective_date = effective_date or date.today()
+
+        results = db_office_master.get_all_hsn_sac_master_details(db, group, hsn_sac_code, effective_date)
+
+        if not results:
+            return []
+
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+
+
+
+
+########-UPLOAD HSN SAC MASTER DETAILS#########
+
+@router.post('/upload_hsn_sac_master_details')
+def upload_hsn_sac_master_details(
+    db: Session = Depends(get_db),
+    item_category: int = Query(..., description="Specify 1 for GOODS or 2 for SERVICES"),
+    effective_date: date = Query(...),
+    file: UploadFile = File(...),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        # Read the uploaded CSV file into a DataFrame
+        file_content = BytesIO(file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+        hsn_sac_master_rows_processed = 0
+        hsn_sac_tax_master_rows_processed = 0
+
+        for _, row in df.iterrows():
+            hsn_sac_code = row['HSN/SAC CODE']
+            description = row['DESCRIPTION']
+            gst_rate = float(row['GST RATE']) if 'GST RATE' in row and pd.notnull(row['GST RATE']) else 0.0
+            cess_rate = float(row['CESS RATE']) if 'CESS RATE' in row and pd.notnull(row['CESS RATE']) else 0.0
+            additional_cess_rate = 0.0
+            
+            # Check if the HSN/SAC code already exists 
+            hsn_sac_master_entry = db.query(AppHsnSacMaster).filter(
+                AppHsnSacMaster.hsn_sac_code == hsn_sac_code,
+                AppHsnSacMaster.hsn_sac_class_id == item_category,
+                AppHsnSacMaster.is_deleted == 'no'
+            ).first()
+
+            if not hsn_sac_master_entry:
+                # Insert into the master table if it doesn't exist
+                hsn_sac_master_entry = AppHsnSacMaster(
+                    hsn_sac_code=hsn_sac_code,
+                    hsn_sac_description=description,
+                    hsn_sac_class_id=item_category
+                )
+                db.add(hsn_sac_master_entry)
+                db.flush()  # Flush to get the master_entry.id
+                hsn_sac_master_rows_processed += 1
+
+            # Update `effective_to_date` for all entries with the same `hsn_sac_id`, `None` for `effective_to_date`, and `effective_from_date` < `effective_date`
+            previous_active_hsn_sac_tax_entries = db.query(AppHsnSacTaxMaster).filter(
+                AppHsnSacTaxMaster.hsn_sac_id == hsn_sac_master_entry.id,
+                AppHsnSacTaxMaster.effective_from_date < effective_date,
+                AppHsnSacTaxMaster.effective_to_date == None,
+                AppHsnSacTaxMaster.is_deleted == 'no'
+            ).all()
+
+            for entry in previous_active_hsn_sac_tax_entries:
+                entry.effective_to_date = effective_date - timedelta(days=1)
+                db.add(entry)
+
+            # Check if the tax entry for the same effective date already exists
+            existing_tax_entry = db.query(AppHsnSacTaxMaster).filter(
+                AppHsnSacTaxMaster.hsn_sac_id == hsn_sac_master_entry.id,
+                AppHsnSacTaxMaster.effective_from_date == effective_date,
+                AppHsnSacTaxMaster.is_deleted == 'no'
+            ).first()
+
+            # If a tax rate entry for the effective date already exists, update it
+            if existing_tax_entry:
+                existing_tax_entry.gst_rate = gst_rate
+                existing_tax_entry.cess_rate = cess_rate
+                db.add(existing_tax_entry)
+            else:
+                # Insert new tax rate data if no entry exists for the effective date
+                tax_entry = AppHsnSacTaxMaster(
+                    hsn_sac_id=hsn_sac_master_entry.id,
+                    gst_rate=gst_rate,
+                    cess_rate=cess_rate,
+                    additional_cess_rate=additional_cess_rate,
+                    effective_from_date=effective_date
+                )
+                db.add(tax_entry)
+                hsn_sac_tax_master_rows_processed += 1
+
+        # Commit after processing all rows
+        if hsn_sac_master_rows_processed > 0 or hsn_sac_tax_master_rows_processed > 0:
+            db.commit()
+            return {
+                "success": True,
+                "message": f"Processed {hsn_sac_master_rows_processed} master records and {hsn_sac_tax_master_rows_processed} tax records."
+            }
+        else:
+            return {"message": "No new data was processed."}
+
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+#-------------------------------------------------------------------------------------------------------
+
+@router.post('/upload_document_data_master')
+def upload_document_data_master(
+    db: Session = Depends(get_db),
+    select_file: UploadFile = File(...),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    try:
+        # Read the uploaded CSV file into a DataFrame
+        file_content = BytesIO(select_file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+        rows_processed = 0
+        duplicate_entries = 0
+
+        for _, row in df.iterrows():
+            document_data_name = row['NAME']
+            document_data_type = row['TYPE']
+            has_expiry = row['HAS EXPIRY'] 
+            
+            # Assign document_data_type_id based on document_data_type
+            if document_data_type == "DOCUMENT":
+                document_data_type_id = 1
+            else:
+                document_data_type_id = 2
+
+            # Check if document data already exists in OffDocumentDataMaster
+            doc_data_entry = db.query(OffDocumentDataMaster).filter(
+                OffDocumentDataMaster.document_data_name == document_data_name,
+                OffDocumentDataMaster.document_data_type_id == document_data_type_id,
+                OffDocumentDataMaster.is_deleted == 'no'
+            ).first()
+
+            if doc_data_entry:
+                duplicate_entries += 1  # Track the number of rows duplicated
+            else:
+                # Insert a new record if it doesn't exist
+                doc_data_entry = OffDocumentDataMaster(
+                    document_data_name=document_data_name,
+                    document_data_type_id=document_data_type_id,  # Correctly use document_data_type_id here
+                    has_expiry=has_expiry,
+                    is_deleted='no'
+                )
+                db.add(doc_data_entry)
+                rows_processed += 1  # Track the number of rows processed
+
+        db.commit()  
+        
+        return {
+            "success"  : True,
+            "message": f"Successfully processed {rows_processed} records and {duplicate_entries} duplicate entries."
+        }
+ 
+    except Exception as e:
+        db.rollback()  
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+#------------------------------------------------------------------------------------------------------------
+
+@router.get('/download_csv_templates')
+def download_csv_templates(file_name: str = Query(...)):
+    # Construct the file path in the source directory
+    source_file_path = os.path.join(SOURCE_DIRECTORY, f"{file_name}.csv")
+    print("source_file_path", source_file_path)
+    
+    # Check if the file exists
+    if not os.path.isfile(source_file_path):
+        raise HTTPException(status_code=404, detail=f"File '{file_name}.csv' not found in source directory.")
+
+    # Return the file as a response for download
+    return FileResponse(source_file_path, media_type='application/octet-stream', filename=f"{file_name}.csv")
+
+
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 

@@ -31,7 +31,6 @@ class PrlCalculationMethod(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
     
     
-    
 class EmployeeSalaryDetails(caerp_base):
     __tablename__ = "employee_salary_details"
 
@@ -49,8 +48,8 @@ class EmployeeSalaryDetails(caerp_base):
     created_by                  = Column(Integer, nullable=False, default=0)
     created_on                  = Column(DateTime, nullable=False, default=func.now())
     is_approved                 = Column(Enum('yes', 'no'), nullable=False, default='no')
-    approved_by                 = Column(Integer, nullable=False)
-    approved_on                 = Column(DateTime, nullable=False)
+    approved_by                 = Column(Integer, nullable=True)
+    approved_on                 = Column(DateTime, nullable=True)
     modified_by                 = Column(Integer, default=None)
     modified_on                 = Column(DateTime, default=None)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')

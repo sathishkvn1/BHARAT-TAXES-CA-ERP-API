@@ -674,6 +674,9 @@ def search_employee_master_details(
         EmployeeMaster.nationality_id,
         EmployeeMaster.marital_status_id,
         MaritalStatus.marital_status, 
+        EmployeeMaster.is_locked,
+        EmployeeMaster.locked_on ,
+        EmployeeMaster.locked_by,
         EmployeeMaster.joining_date,
         EmployeeEmploymentDetails.employee_category_id,
         HrEmployeeCategory.category_name,
@@ -1171,39 +1174,52 @@ def update_employee_address_or_bank_details(
 
 #--------------------------------------------------------------------------------------------------------
 
+
 def save_employee_salary_details(
     db: Session,
     id: int,
-    employee_id: int,
     salary_data: EmployeeSalarySchema,
-    user_id: int
-) -> Union[str, List]:
-    # Validate calculation frequency and method
+    user_id: int,
+    employee_id: Optional[int] = None
+):  
+
+    # If id is 0, employee_id must be provided
+    if id == 0 and not employee_id:
+        return {
+            "success" :False,
+            "message": "Employee ID is required for new salary details."}
+
+    # Validation checks
     if salary_data.calculation_frequency_id == 1:  # ONE TIME
         if not salary_data.effective_to_date:
-            return {"message":"Effective To Date is required for ONE TIME calculation frequency."}
+            return {"success" :False,
+            "message": "Effective To Date is required for ONE TIME calculation frequency."}
         elif salary_data.effective_to_date.month != salary_data.effective_from_date.month:
-            return {"message":"Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
+            return {"success" :False,
+                "message": "Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
 
     if salary_data.calculation_method_id == 1:  # FIXED
         if salary_data.amount <= 0:
-            return {"message":"Amount must be non-zero for FIXED calculation method."}
-
-    if salary_data.calculation_method_id == 2:  # PERCENTAGE
-        if salary_data.percentage is None or salary_data.percentage <= 0:
-            return {"message":"Percentage must be non-zero for PERCENTAGE calculation method."}
+            return {"success" :False,
+                "message": "Amount must be non-zero for FIXED calculation method."}
+    else:
+        if salary_data.percentage <= 0:
+            return {"success" :False,
+                "message": "Percentage must be non-zero for PERCENTAGE calculation method."}
 
     try:
         # Query existing salary detail
         existing_salary_detail = db.query(EmployeeSalaryDetails).filter(
             EmployeeSalaryDetails.employee_id == employee_id,
             EmployeeSalaryDetails.component_id == salary_data.component_id,
-            EmployeeSalaryDetails.calculation_frequency_id == salary_data.calculation_frequency_id,
+            EmployeeSalaryDetails.is_deleted == 'no',
             EmployeeSalaryDetails.effective_to_date.is_(None)
         ).first()
 
+        # Update effective_to_date if the new effective_from_date is greater than existing
         if existing_salary_detail:
-            if salary_data.calculation_frequency_id != 1:
+            if (salary_data.effective_from_date > existing_salary_detail.effective_from_date
+                    and salary_data.calculation_frequency_id != 1):
                 new_effective_to_date = salary_data.effective_from_date - timedelta(days=1)
                 existing_salary_detail.effective_to_date = new_effective_to_date
                 existing_salary_detail.modified_by = user_id
@@ -1215,18 +1231,22 @@ def save_employee_salary_details(
                 employee_id=employee_id,
                 created_by=user_id,
                 created_on=datetime.now(),
-                approved_by=user_id,
-                approved_on=datetime.now(),
                 **salary_data.model_dump(exclude_unset=True)
             )
             db.add(new_salary_detail)
             db.flush()
 
         else:
-            # Update existing salary detail
+            # Update existing salary detail if found
             existing_salary_detail = db.query(EmployeeSalaryDetails).filter(EmployeeSalaryDetails.id == id).first()
             if not existing_salary_detail:
                 return []
+
+            # Validation for next_increment_date
+            if salary_data.next_increment_date and existing_salary_detail.effective_to_date:
+                if salary_data.next_increment_date <= existing_salary_detail.effective_to_date:
+                    return {"success" :False,
+                            "message": "Next Increment Date must be greater than Effective To Date."}
 
             for field, value in salary_data.model_dump(exclude_unset=True).items():
                 setattr(existing_salary_detail, field, value)
@@ -1234,12 +1254,22 @@ def save_employee_salary_details(
             existing_salary_detail.modified_on = datetime.now()
 
         db.commit()
-        return {"message":"Saved successfully"}
+        return {
+                "success": True,
+                "message": "Updated successfully"
+            }
 
-   
+
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "message": str(e)}
+
+
+
+
+
+#------------------------------------------------------------------------------------------
+
 
 #-------------------------------------------------------------------------------------------------------
 def get_employee_salary_details(db: Session, 
@@ -1261,6 +1291,15 @@ def get_employee_salary_details(db: Session,
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1475,7 +1514,7 @@ def add_employee_to_team(
         db.add(new_member)
         db.commit()
 
-        return {"status": "success", "message": "Employee added to team successfully."}
+        return {"success": True, "message": "Employee added to team successfully."}
     
     except Exception as e:
         db.rollback()

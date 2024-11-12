@@ -120,11 +120,13 @@ class OffAppointmentMasterViewSchema(BaseModel):
     is_deleted           : str
     deleted_by           : Optional[int]
     deleted_on           : Optional[date]
-
+    is_locked            : str
+    locked_on            : Optional[date]
+    locked_by            : Optional[int]
+    
     class Config:
         orm_mode = True
         from_attributes = True
-
 
 class OffAppointmentVisitMasterViewSchema(BaseModel):
     visit_master_id           : Optional[int]
@@ -158,11 +160,11 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
     cgst_amount                : Optional[float]
     bill_amount                : Optional[float]
     remarks                    : Optional[str]
+    is_editable                :Optional[bool]=False
     
     class Config:
         orm_mode = True
         from_attributes = True
-
 
 
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
@@ -176,10 +178,13 @@ class OffAppointmentVisitDetailsViewSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
 class ResponseSchema(BaseModel):
     appointment_master: OffAppointmentMasterViewSchema
     visit_master      : OffAppointmentVisitMasterViewSchema
     visit_details     : List[OffAppointmentVisitDetailsViewSchema]
+    # is_editable       : Optional[bool] = False
+
 
  
 
@@ -658,7 +663,7 @@ class OffEnquiryMasterSchema(BaseModel):
 
 
 class OffEnquiryDetailsSchema(BaseModel):
- 
+    id                      :Optional[int] =None 
     financial_year_id       : Optional[int]
     # enquiry_number: Optional[str]
     enquiry_date            : Optional[date]
@@ -715,7 +720,9 @@ class OffViewEnquiryMasterSchema(BaseModel):
     country_id               : Optional[int]
     country_name_english     : Optional[str]
     country_name_arabic      : Optional[str]
-
+    is_locked                : str
+    locked_on                : Optional[date]
+    locked_by                : Optional[int]
     
 class OffViewEnquiryDetailsSchema(BaseModel):
     enquiry_details_id      : int
@@ -732,18 +739,17 @@ class OffViewEnquiryDetailsSchema(BaseModel):
     person_type             : Optional[str]
     company_or_business_name: Optional[str]
     remarks                 : Optional[str]
-
-
+    is_editable             : Optional[bool] =  False
 
 class OffViewEnquiryResponseSchema(BaseModel):
     enquiry_master  : OffViewEnquiryMasterSchema
     enquiry_details : List[OffViewEnquiryDetailsSchema]
+   # is_editable     : Optional[bool] = False
 
     class Config:
         orm_mode        = True
         from_attributes = True
 
-        
         
 class ConsultationToolSchema(BaseModel):
     id                 : int
@@ -1031,7 +1037,7 @@ class WorkOrderDetailsSchema(BaseModel):
     # service_goods_name          : Optional[str] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id          : Optional[int] = None
     business_activity_master_id : Optional[int] = None
     business_activity_id      : Optional[int] = None
@@ -1049,7 +1055,7 @@ class WorkOrderDetailsSchema(BaseModel):
     bundle_service_id       : Optional[int] = None
     is_depended_service     : Optional[str] ='no' 
     processing_order        : Optional[int] = None
-    service_required        : Optional[str] = 'YES'
+    is_service_required        : Optional[str] = 'YES'
     service_required_date   : Optional[date] = None
     service_status_id    : Optional[int] = None
     file_opened_on        : Optional[date] = None
@@ -1091,7 +1097,7 @@ class WorkOrderDetailsResponseSchema(BaseModel):
     service_id                  : Optional[int] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id          : Optional[int] = None
     business_activity_master_id : Optional[int] = None
     business_activity_id      : Optional[int] = None
@@ -1197,7 +1203,6 @@ class ServiceRequest(BaseModel):
     input_date: str
 
 
-
 class OffViewWorkOrderMasterSchema(BaseModel):
 
     work_order_master_id     : Optional[int] =None
@@ -1213,7 +1218,7 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     first_name          : Optional[str] = None
     middle_name         : Optional[str] = None
     last_name           : Optional[str] = None
-    gender_id           : int
+    gender_id           : Optional[int] = None
     gender              : Optional[str] = None
     date_of_birth       : Optional[date] = None
     mobile_number       : Optional[str] = None
@@ -1248,10 +1253,18 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     contact_person_email_id         : Optional[str] = None
     work_order_status_id            : Optional[int] = None
     work_order_status               : Optional[str] = None
+    # is_editable                     : Optional[bool]= False
     class Config:
         orm_mode = True
         from_attributes = True
-  
+
+
+class WorkOrderViewResponseSchema(BaseModel):
+    work_order: OffViewWorkOrderMasterSchema
+    is_editable: Optional[bool] =False
+
+    class Config:
+        orm_mode = True
 
 class OffViewWorkOrderDetailsSchema(BaseModel):
     
@@ -1262,7 +1275,7 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
     constitution_id             : Optional[int] = None
     business_constitution_name  : Optional[str] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id   : Optional[int] = None
     business_activity_type      : Optional[str] = None
     business_activity_master_id : Optional[int] = None
@@ -1301,10 +1314,12 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
         from_attributes = True
 
 
+
+
 class WorkOrderResponseSchema(BaseModel):
     work_order: OffViewWorkOrderMasterSchema
-    # service_data: List[WorkOrderDetailsSchema]
     service_data: List[OffViewWorkOrderDetailsSchema]
+    is_editable : Optional[bool] = False
     class Config:
         orm_mode = True
         from_attributes = True
@@ -1466,12 +1481,16 @@ class OffServiceTaskHistorySchema(BaseModel):
 
 
 
+
 class OffViewServiceTaskMasterSchema(BaseModel):
     task_id                        : int
     work_order_master_id           : int
     work_order_number              : Optional[str] 
     work_order_date                : Optional[date] 
     work_order_details_id          : Optional[int] = None
+    constitution_id                : int
+    trade_name                      : Optional[str] = None     
+    legal_name                     : Optional[str] = None 
     service_goods_master_id        : int  
     service_goods_name             : str   
     group_id                       : int   
@@ -1505,7 +1524,10 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     task_priority_id               : Optional[int] = None
     task_priority                  : Optional[str] = ""
     remarks                        : Optional[str] = ""
-    
+    is_locked                      : str
+    locked_on                      : Optional[date]
+    locked_by                      : Optional[int]
+
     class Config:
         orm_mode = True
 
@@ -1598,3 +1620,21 @@ class ServiceResponse(BaseModel):
 # class ServiceResponse(BaseModel):
 #     data: List[BundlePriceResponse]
 #     aggregated_data: List[BundlePriceResponse] 
+
+class AppViewHsnSacMasterSchema(BaseModel):
+    hsn_sac_master_id     : int
+    hsn_sac_class_id      : int
+    hsn_sac_class         : str
+    hsn_sac_id            : int
+    hsn_sac_code          : str
+    hsn_sac_description   : Optional[str]
+    gst_rate              : Optional[float]
+    cess_rate             : Optional[float]
+    additional_cess_rate  : Optional[float]
+    effective_from_date   : Optional[date]
+    effective_to_date     : Optional[date]
+    is_deleted            : str
+    tax_master_id         : int
+
+    class Config:
+        orm_mode = True

@@ -103,3 +103,31 @@ class EntryPoint(str, Enum):
     ENQUIRY         =   'ENQUIRY'
     WORK_ORDER       =   'WORK_ORDER'
     QUOTATION       =   'QUOTATION'
+
+
+class BookType(str, Enum):
+
+    APPOINTMENT         = 'APPOINTMENT'
+    ENQUIRY             = 'ENQUIRY'
+    CONSULTATION_TASK   = 'CONSULTATION_TASK'
+    SERVICE_TASK        = 'SERVICE_TASK'
+    WORK_ORDER          = 'WORK_ORDER'
+    CUSTOMER            = 'CUSTOMER'
+    QUOTATION           = 'QUOTATION'
+    PROFORMA_INVOICE    = 'PROFORMA_INVOICE'
+    TAX_INVOICE         = 'TAX_INVOICE'   
+    RECEIPT_VOUCHER     = 'RECEIPT_VOUCHER'
+    PAYMENT_VOUCHER     = 'PAYMENT_VOUCHER'
+    CREDIT_NOTE         = 'CREDIT_NOTE'
+    DEBIT_NOTE          = 'DEBIT_NOTE'
+    JOURNAL_VOUCHER     = 'JOURNAJOURNAL_VOUCHERL'
+    FILE                = 'FILE'
+    
+
+
+
+
+class AmendmentAction(str, Enum):
+    ADDED = "ADDED"
+    EDITED = "EDITED"
+    DELETED = "DELETED"

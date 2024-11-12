@@ -1,5 +1,5 @@
 from caerp_db.common.models import EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster
+from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
@@ -617,7 +617,7 @@ def get_employee_details(
                     salary_info = db_employee_master.get_employee_salary_details(db, employee_id=employee_id)
                     if salary_info:
                         employee_details.append({
-                            'employee_salary': EmployeeSalaryGet(**salary_info[0].__dict__)
+                            'employee_salary': [EmployeeSalaryGet(**salary.__dict__) for salary in salary_info]
                         })
 
                 if option == "educational_qualification":
@@ -706,7 +706,10 @@ def get_employee_details(
                 "email_id": emp.personal_email_id,
                 "is_consultant": emp.is_consultant,
                 "user_status": emp.is_active,
-                "approval_status": emp.is_approved
+                "approval_status": emp.is_approved,
+                "is_locked":emp.is_locked,
+                "locked_on":emp.locked_on,
+                "locked_by":emp.locked_by,
             }
             employee_details.append(emp_detail)
 
@@ -1022,20 +1025,118 @@ def update_employee_address_or_bank_details(
 @router.post("/save_employee_salary_details/{id}")
 def save_employee_salary_details(
     id: int,
-    employee_id: int,
     salary_data: EmployeeSalarySchema,
+    employee_id: Optional[int] = None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-) -> Union[dict, List]:
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-    auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")
+):  
+    """
+    Add or Update Employee Salary Details.
 
-    message = db_employee_master.save_employee_salary_details(db, id, employee_id, salary_data, user_id)
+    This endpoint allows you to either add a new salary detail or update an existing one for an employee.
+
+    **Parameters:**
+
+    - `id`: The ID of the salary record to be added or updated. Use `0` to create a new record.
+
+    **Request Body:**
+
+    The request body should be a JSON object containing the employee's salary details with the following keys:
+
+    - `employee_id`: The ID of the employee whose salary details are being added/updated.
+    - `component_id`: The ID of the salary component.
+    - `calculation_frequency_id`: The frequency at which salary is calculated.
+    - `calculation_method_id`: The method used for salary calculation (e.g., FIXED or PERCENTAGE).
+    - `amount`: The amount for the salary component (for FIXED method).
+    - `percentage_of_component_id`: The ID of the component if percentage-based calculation is used.
+    - `percentage`: The percentage for the salary calculation (for PERCENTAGE method).
+    - `effective_from_date`: The date when the salary becomes effective.
+    - `effective_to_date`: The date when the salary ends (optional, only required for one-time calculations).
+    - `next_increment_date`: The date for the next salary increment (optional).
+    """
+
+    try:
+        if not token:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+        
+        auth_info = authenticate_user(token)
+        user_id = auth_info.get("user_id")
+
+        message = db_employee_master.save_employee_salary_details(db, id, salary_data, user_id, employee_id)
+        
+        return message
     
-    return message
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+#----------------------------------------------------------------------------------------------------------
+
+# @router.get("/get_salary_component_by_compons_type")
+# def get_salary_component_by_type(
+
+#     component_type: Optional[str] = Query("ALL"),
+#     db: Session = Depends(get_db)
+# ):
+#     """
+#     Get all salary component names by component_type.
+    
+#     """
+#     component_type = component_type.upper()
+    
+#     if component_type not in ['ALL', 'ALLOWANCE', 'DEDUCTION']:
+#         return {"message": "Invalid component type. Use 'ALL', 'ALLOWANCE', or 'DEDUCTION'."}
+    
+#     # If 'ALL' is selected, fetch both ALLOWANCE and DEDUCTION components
+#     if component_type == 'ALL':
+#         components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+#             PrlSalaryComponent.is_deleted == 'no'
+#         ).all()
+#     else:
+#         components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+#             PrlSalaryComponent.component_type == component_type,
+#             PrlSalaryComponent.is_deleted == 'no'
+#         ).all()
+    
+#     # Return components or message if none found
+#     if not components:
+#         return []
+    
+#     return [{"id": component.id,
+#              "component_type": component.component_type, 
+#              "component_name": component.component_name} for component in components]
+
+@router.get("/get_salary_component_by_type")
+def get_salary_component_by_type(
+
+    component_type: str = Query(..., enum=['ALL', 'ALLOWANCE', 'DEDUCTION'], description="Select 'ALL', 'ALLOWANCE', or 'DEDUCTION'"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all salary component names by component_type.
+    
+    """
+    component_type = component_type.upper()
+    
+    # If 'ALL' is selected, fetch both ALLOWANCE and DEDUCTION components
+    if component_type == 'ALL':
+        components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+            PrlSalaryComponent.is_deleted == 'no'
+        ).all()
+    else:
+        components = db.query(PrlSalaryComponent.id, PrlSalaryComponent.component_type,PrlSalaryComponent.component_name).filter(
+            PrlSalaryComponent.component_type == component_type,
+            PrlSalaryComponent.is_deleted == 'no'
+        ).all()
+    
+    # Return components or message if none found
+    if not components:
+        return []
+    
+    return [{"id": component.id,
+             "component_type": component.component_type, 
+             "component_name": component.component_name} for component in components]
+
+
 
 #--------------------------------------------------------------------------------------------------------------
 
@@ -1437,6 +1538,7 @@ def add_employee_to_team(
 #         }
 
 #     return result
+
 
 @router.get("/check_username_mobile_and_email")
 def check_user_and_mobile(
