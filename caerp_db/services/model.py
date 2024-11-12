@@ -381,6 +381,7 @@ class CustomerBusinessPlace(caerp_base):
     district_id                     = Column(Integer, nullable=False)
     taluk_id                        = Column(Integer, nullable=False)
     city_id                         = Column(Integer, nullable=False)
+    post_office_id                  = Column(Integer, nullable=True)
     lsg_type_id                     = Column(Integer, nullable=False)
     lsg_id                          = Column(Integer, nullable=False)
     village_id                      = Column(Integer, nullable=False)

@@ -1058,7 +1058,7 @@ def get_business_place(customer_id: int,
             ).first()
             business_activity_master = db.query(CustomerBusinessPlaceCoreActivity).filter(
                 CustomerBusinessPlaceCoreActivity.business_place_id == bp.id,
-                CustomerBusinessPlaceCoreActivity.is_deleted == 'no',
+                CustomerBusinessPlaceActivityType.is_deleted == 'no',
                 CustomerBusinessPlaceCoreActivity.effective_from_date <= datetime.now(),
                 or_(CustomerBusinessPlaceCoreActivity.effective_to_date.is_(None))
             ).first()
@@ -1077,6 +1077,8 @@ def get_business_place(customer_id: int,
                 "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=bp.taluk_id).scalar() if bp.taluk_id else None,
                 "city_id": bp.city_id,
                 "city_name": db.query(CityDB.city_name).filter_by(id=bp.city_id).scalar() if bp.city_id else None,
+                "post_office_id": bp.post_office_id if bp else None,
+                "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=bp.post_office_id).scalar() if bp and bp.post_office_id else None,
                 "village_id": bp.village_id,
                 "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=bp.village_id).scalar() if bp.village_id else None,
                 "lsg_type_id": bp.lsg_type_id,
@@ -1145,7 +1147,6 @@ def get_business_place(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #-------------Get hsn sac

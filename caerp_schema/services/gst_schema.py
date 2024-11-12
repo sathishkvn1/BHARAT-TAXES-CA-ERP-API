@@ -120,7 +120,7 @@ class AddressSchema(BaseModel):
     address_type   : Optional[str]
     pin_code       : Optional[str]
     country_id     : Optional[int]
-    state_id       :  Optional[int]
+    state_id       : Optional[int]
     district_id    : Optional[int]
     city_id        : Optional[int]
     village_id     : Optional[int]
@@ -151,6 +151,7 @@ class BusinessPlace(BaseModel):
     district_id               : Optional[int]
     taluk_id                  : Optional[int]
     city_id                   : Optional[int]
+    post_office_id            : Optional[int]
     lsg_type_id               : Optional[int]
     lsg_id                    : Optional[int]
     village_id                : Optional[int]
@@ -179,14 +180,10 @@ class NatureOfBusiness(BaseModel):
     business_activity_id: Optional[int]
 
 class BusinessData(BaseModel):
-    business_place: List[BusinessPlace]
-    business_activity_type_id: int
-    business_activity_master_id: int
-    nature_of_business: List[NatureOfBusiness]
-
-
-
-
+    business_place                  : List[BusinessPlace]
+    business_activity_type_id       : int
+    business_activity_master_id     : int
+    nature_of_business              : List[NatureOfBusiness]
 
 
 class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
@@ -204,8 +201,6 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
 
 
 #-jurisdition
-
-
 
 class RangeDetailsSchema(BaseModel):
     address              : str
