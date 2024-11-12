@@ -988,12 +988,13 @@ class SaveOfferDetails(BaseModel):
 
 #------------------------WORKORDER SCHEMA-----------------------------------
 class OffWorkOrderMasterSchema(BaseModel):
-
+ 
     id                  : Optional[int] =None
     financial_year_id   : Optional[int] = None
     enquiry_master_id      : Optional[int] =None
     appointment_master_id  : Optional[int] = None
     visit_master_id        : Optional[int] = None
+    customer_id            : Optional[int] = None
     enquiry_details_id     : Optional[int] = None
     work_order_number   : Optional[str] = None
     work_order_date     : Optional[date] = None
@@ -1026,7 +1027,6 @@ class OffWorkOrderMasterSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
-  
 
 
 class WorkOrderDetailsSchema(BaseModel):
@@ -1203,6 +1203,7 @@ class ServiceRequest(BaseModel):
     input_date: str
 
 
+
 class OffViewWorkOrderMasterSchema(BaseModel):
 
     work_order_master_id     : Optional[int] =None
@@ -1212,6 +1213,7 @@ class OffViewWorkOrderMasterSchema(BaseModel):
     appointment_master_id  : Optional[int] = None
     visit_master_id        : Optional[int] = None
     enquiry_details_id     : Optional[int] = None
+    customer_id             : Optional[int] =None
     work_order_number   : Optional[str] = None
     work_order_date     : Optional[date] = None
     
@@ -1481,18 +1483,17 @@ class OffServiceTaskHistorySchema(BaseModel):
 
 
 
-
 class OffViewServiceTaskMasterSchema(BaseModel):
     task_id                        : int
     work_order_master_id           : int
     work_order_number              : Optional[str] 
     work_order_date                : Optional[date] 
     work_order_details_id          : Optional[int] = None
-    financial_year_id               : Optional[int] = None 
-    enquiry_master_id               : Optional[int] = None  
-    enquiry_details_id              : Optional[int] = None  
-    appointment_master_id           : Optional[int] = None  
-    visit_master_id                 : Optional[int] = None  
+    financial_year_id              : Optional[int] = None
+    enquiry_master_id              : Optional[int] = None
+    enquiry_details_id             : Optional[int] = None
+    appointment_master_id          : Optional[int] = None
+    visit_master_id                : Optional[int] = None
     constitution_id                : int
     trade_name                      : Optional[str] = None     
     legal_name                     : Optional[str] = None 
