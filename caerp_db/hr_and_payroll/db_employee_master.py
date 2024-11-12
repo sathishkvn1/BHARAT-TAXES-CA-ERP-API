@@ -662,6 +662,7 @@ def search_employee_master_details(
     ):
     query = db.query(
         EmployeeMaster.employee_id,
+        EmployeeMaster.employee_number,
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
         EmployeeMaster.last_name,
@@ -1189,15 +1190,6 @@ def save_employee_salary_details(
             "success" :False,
             "message": "Employee ID is required for new salary details."}
 
-    # Validation checks
-    if salary_data.calculation_frequency_id == 1:  # ONE TIME
-        if not salary_data.effective_to_date:
-            return {"success" :False,
-            "message": "Effective To Date is required for ONE TIME calculation frequency."}
-        elif salary_data.effective_to_date.month != salary_data.effective_from_date.month:
-            return {"success" :False,
-                "message": "Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
-
     if salary_data.calculation_method_id == 1:  # FIXED
         if salary_data.amount <= 0:
             return {"success" :False,
@@ -1226,15 +1218,20 @@ def save_employee_salary_details(
                 existing_salary_detail.modified_on = datetime.now()
 
         if id == 0:
+            if existing_salary_detail and salary_data.calculation_frequency_id == 1 :
+               existing_salary_detail.effective_from_date = salary_data.effective_from_date
+               existing_salary_detail.modified_by = user_id
+               existing_salary_detail.modified_on = datetime.now()
+            else:
             # Insert new salary detail
-            new_salary_detail = EmployeeSalaryDetails(
-                employee_id=employee_id,
-                created_by=user_id,
-                created_on=datetime.now(),
-                **salary_data.model_dump(exclude_unset=True)
-            )
-            db.add(new_salary_detail)
-            db.flush()
+              new_salary_detail = EmployeeSalaryDetails(
+                  employee_id=employee_id,
+                  created_by=user_id,
+                  created_on=datetime.now(),
+                  **salary_data.model_dump(exclude_unset=True)
+              )
+              db.add(new_salary_detail)
+              db.flush()
 
         else:
             # Update existing salary detail if found
@@ -1263,9 +1260,7 @@ def save_employee_salary_details(
     except Exception as e:
         db.rollback()
         return {"success": False, "message": str(e)}
-
-
-
+    
 
 
 #------------------------------------------------------------------------------------------

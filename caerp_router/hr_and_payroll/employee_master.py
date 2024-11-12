@@ -682,6 +682,7 @@ def get_employee_details(
         for emp in employees_query:
             emp_detail = {
                 "employee_id": emp.employee_id,
+                "employee_number": emp.employee_number,
                 "first_name": emp.first_name,
                 "middle_name": emp.middle_name,
                 "last_name": emp.last_name,
@@ -1051,7 +1052,7 @@ def save_employee_salary_details(
     - `percentage_of_component_id`: The ID of the component if percentage-based calculation is used.
     - `percentage`: The percentage for the salary calculation (for PERCENTAGE method).
     - `effective_from_date`: The date when the salary becomes effective.
-    - `effective_to_date`: The date when the salary ends (optional, only required for one-time calculations).
+    - `effective_to_date`: The date when the salary ends (optional).
     - `next_increment_date`: The date for the next salary increment (optional).
     """
 
