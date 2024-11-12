@@ -11,6 +11,7 @@ class CustomerMaster(caerp_base):
 
     id                                      = Column(Integer, primary_key=True, autoincrement=True)
     customer_id                             = Column(Integer, nullable=False)
+    agent_id                                 = Column(Integer, nullable=True)
     customer_number                         = Column(String(100), nullable=True)
     financial_year_id                       = Column(Integer, nullable=False)
     enquiry_master_id                       = Column(Integer, nullable=True)
@@ -398,6 +399,7 @@ class CustomerBusinessPlace(caerp_base):
     nature_of_possession_id         = Column(Integer, nullable=True)
     office_email_address            = Column(String(100), nullable=True)
     office_mobile_number            = Column(String(100), nullable=True)
+    office_whatsapp_number           = Column(String(100), nullable=True)
     office_phone_std_code           = Column(String(100), nullable=True)
     office_phone_number             = Column(String(100), nullable=True)
     office_fax_std_code             = Column(String(100), nullable=True)

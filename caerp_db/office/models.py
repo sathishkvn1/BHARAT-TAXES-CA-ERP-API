@@ -1299,6 +1299,7 @@ class WorkOrderMasterView(caerp_base):
     locked_by                        = Column(String, nullable=True)
 
 
+
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
     
@@ -1309,7 +1310,7 @@ class WorkOrderDetailsView(caerp_base):
     constitution_id         = Column(Integer, nullable=True)
     business_constitution_name  = Column(String, nullable=True) 
     trade_name              = Column(String, nullable=True)
-    leagal_name             = Column(String, nullable=True)
+    legal_name             = Column(String, nullable=True)
     business_activity_type_id      = Column(Integer, nullable=True)
     business_activity_type         = Column(String, nullable=True)
     business_activity_master_id   = Column(Integer, nullable=True)
