@@ -1488,6 +1488,11 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     work_order_number              : Optional[str] 
     work_order_date                : Optional[date] 
     work_order_details_id          : Optional[int] = None
+    financial_year_id               : Optional[int] = None 
+    enquiry_master_id               : Optional[int] = None  
+    enquiry_details_id              : Optional[int] = None  
+    appointment_master_id           : Optional[int] = None  
+    visit_master_id                 : Optional[int] = None  
     constitution_id                : int
     trade_name                      : Optional[str] = None     
     legal_name                     : Optional[str] = None 
