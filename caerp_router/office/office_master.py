@@ -53,18 +53,16 @@ UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
 
 SOURCE_DIRECTORY  = "C:/BHARAT-TAXES-CA-ERP-API/downloads/excel_templates"
 
-DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser("~"), "Downloads")  
+# DOWNLOADS_DIRECTORY = os.path.join(os.path.expanduser("~"), "Downloads")  
 
 
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
 connected_clients: List[WebSocket] = []
-
 connected_clients = []
+
 
 @router.websocket("/ws/notifications")
 async def websocket_endpoint(websocket: WebSocket):
@@ -390,8 +388,6 @@ def get_and_search_appointments(
 
 #-------------------------swathy-------------------------------------------------------------------------------
 
-
-
 from time import time
 @router.get('/services/get_all_service_goods_master', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master(
@@ -430,9 +426,6 @@ def get_all_service_goods_master(
             delattr(result, "details")
 
     return results
-
-
-
 #------------------------------------------------------------------------------------------------------------
 @router.get('/services/get_all_service_goods_master_test', response_model=Union[List[OffViewServiceGoodsMasterDisplay], dict])
 def get_all_service_goods_master_test(
@@ -3627,7 +3620,7 @@ def get_dependent_services(
             work_order_details_id,
             service_goods_name,
             trade_name,
-            leagal_name,
+            legal_name,
             service_status
         FROM off_view_work_order_details
         WHERE work_order_details_id IN ({dependent_ids_str})
@@ -3642,7 +3635,7 @@ def get_dependent_services(
                 "work_order_details_id": row[0],
                 "service_goods_name": row[1],
                 "trade_name": row[2],
-                "leagal_name": row[3],
+                "legal_name": row[3],
                 "service_status":row[4]
             }
             for row in result
@@ -4181,31 +4174,7 @@ def upload_document_data_master(
     except Exception as e:
         db.rollback()  
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-#-----------------------------------------------------------------------------------------
-# @router.get('/download_csv_templates')
-# def download_csv_templates(file_name: str = Query(...)):
-#     # Construct the file path in the source directory
-#     source_file_path = os.path.join(SOURCE_DIRECTORY, f"{file_name}.csv")
-#     print("source_file_path",source_file_path)
-    
-#     # Check if the file exists
-#     if not os.path.isfile(source_file_path):
-#         raise HTTPException(status_code=404, detail=f"File '{file_name}.csv' not found in source directory.")
-    
-#     # Define the destination path in the Downloads folder
-#     destination_file_path = os.path.join(DOWNLOADS_DIRECTORY, f"{file_name}.csv")
-#     print("destination_file_path",destination_file_path)
-
-#     # Copy the file to the Downloads folder
-#     try:
-#         shutil.copy(source_file_path, destination_file_path)
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Failed to copy file: {e}")
-
-#     return {"message": f"File '{file_name}.csv' has been successfully downloaded."}
-
-# #333-----------------------------------------------------------------------------------------------------
-
+#------------------------------------------------------------------------------------------------------------
 
 @router.get('/download_csv_templates')
 def download_csv_templates(file_name: str = Query(...)):
@@ -4219,6 +4188,10 @@ def download_csv_templates(file_name: str = Query(...)):
 
     # Return the file as a response for download
     return FileResponse(source_file_path, media_type='application/octet-stream', filename=f"{file_name}.csv")
+
+
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 

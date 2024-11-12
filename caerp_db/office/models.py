@@ -267,7 +267,7 @@ class OffAppointmentStatus(caerp_base):
 
 
 
-#..........................by swathy 15/5----------------------------------
+#..........................by swathy----------------------------------
 
 class AppHsnSacClasses(caerp_base):
     __tablename__ = 'app_hsn_sac_classes'
@@ -298,8 +298,6 @@ class OffServiceGoodsCategory(caerp_base):
     category_name = Column(String(200), nullable=True)
     gst_category_code = Column(String(20), nullable=True) 
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-
-
 
 
 class OffServiceGoodsSubCategory(caerp_base):
@@ -1136,6 +1134,7 @@ class OffWorkOrderMaster(caerp_base):
     enquiry_master_id       = Column(Integer, nullable=True)
     appointment_master_id   = Column(Integer, nullable=True)
     visit_master_id         =  Column(Integer, nullable=True)
+    customer_id             = Column(Integer, nullable=True)
     enquiry_details_id      = Column(Integer, nullable=True)
     work_order_number       = Column(Integer, nullable=False)
     work_order_date         = Column(Date, nullable=True)
@@ -1185,7 +1184,7 @@ class OffWorkOrderDetails(caerp_base):
     service_goods_master_id   = Column(Integer, nullable=True)
     constitution_id         = Column(Integer, nullable=True)
     trade_name              = Column(String, nullable=True)
-    leagal_name             = Column(String, nullable=True)
+    legal_name             = Column(String, nullable=True)
     business_activity_type_id      = Column(Integer, nullable=True)
     business_activity_master_id   = Column(Integer, nullable=True)
     business_activity_id        = Column(Integer, nullable=True)
@@ -1251,6 +1250,7 @@ class WorkOrderMasterView(caerp_base):
     enquiry_details_id      = Column(Integer, nullable=True)
     work_order_number       = Column(String(50), nullable=False)
     work_order_date         = Column(Date, nullable=True)
+    customer_id             = Column(Integer, nullable=True)
     first_name              = Column(String, nullable=True)
     middle_name             = Column(String, nullable=True)
     last_name               = Column(String, nullable=True)
@@ -1404,6 +1404,12 @@ class CustomerDataDocumentMaster(caerp_base):
 class OffServiceTaskMaster(caerp_base):
     __tablename__               = 'off_service_task_master'
     id                          = Column(Integer, primary_key=True, autoincrement=True)
+    financial_year_id           = Column(Integer, nullable=False)
+    enquiry_master_id           = Column(Integer, nullable=True)
+    enquiry_details_id          = Column(Integer, nullable=True)
+    appointment_master_id       = Column(Integer, nullable=True)
+    visit_master_id             = Column(Integer, nullable=True)
+    
     work_order_master_id        = Column(Integer, nullable=False)
     work_order_details_id       = Column(Integer, nullable=False)
     proforma_invoice_master_id  = Column(Integer, nullable=False)
@@ -1448,9 +1454,14 @@ class OffViewServiceTaskMaster(caerp_base):
     work_order_number              = Column(String, nullable=True)
     work_order_date                = Column(Date, nullable=True)
     work_order_details_id          = Column(Integer, nullable=True)
+    financial_year_id              = Column(Integer, nullable=False)
+    enquiry_master_id              = Column(Integer, nullable=True)
+    enquiry_details_id             = Column(Integer, nullable=True)
+    appointment_master_id          = Column(Integer, nullable=True)
+    visit_master_id                = Column(Integer, nullable=True)
     constitution_id                = Column(Integer, nullable=True)
     trade_name                     = Column(Integer, nullable=True)
-    leagal_name                    = Column(Integer, nullable=True)
+    legal_name                    = Column(Integer, nullable=True)
     service_goods_master_id        = Column(Integer, nullable=False)  
     service_goods_name             = Column(String, nullable=False)   
     group_id                       = Column(Integer, nullable=False)  

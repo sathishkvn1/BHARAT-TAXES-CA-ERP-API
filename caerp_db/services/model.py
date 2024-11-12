@@ -6,13 +6,17 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import Column ,DateTime
 
 
-
 class CustomerMaster(caerp_base):
     __tablename__                = 'customer_master'
 
     id                                      = Column(Integer, primary_key=True, autoincrement=True)
     customer_id                             = Column(Integer, nullable=False)
     customer_number                         = Column(String(100), nullable=True)
+    financial_year_id                       = Column(Integer, nullable=False)
+    enquiry_master_id                       = Column(Integer, nullable=True)
+    enquiry_details_id                      = Column(Integer, nullable=True)
+    appointment_master_id                   = Column(Integer, nullable=True)
+    visit_master_id                         = Column(Integer, nullable=True)
     service_task_id                         = Column(Integer, nullable=True)
     legal_name                              = Column(String(100), nullable=True)
     customer_name                           = Column(String(100), nullable=True)
@@ -45,7 +49,6 @@ class CustomerMaster(caerp_base):
     is_deleted                              = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                              = Column(Integer, nullable=True)
     deleted_on                              = Column(DateTime, nullable=True)
-
 
 
 class CustomerAdditionalTradeName(caerp_base):

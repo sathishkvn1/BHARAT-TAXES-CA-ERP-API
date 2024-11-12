@@ -4,22 +4,27 @@ from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 from datetime import date, datetime,time
 
-
 class BusinessDetailsSchema(BaseModel):
-    pan_number                                 : Optional[str] =None
-    pan_creation_date                          : Optional[date]=None
-    state_id                                   : Optional[int] =None
-    district_id                                : Optional[int] =None
-    legal_name                                 : Optional[str] =None
-    customer_name                              : Optional[str] =None
-    email_address                              : Optional[str] =None
-    mobile_number                              : Optional[str] =None
-    tan_number                                 : Optional[str] =None
-    passport_number                            : Optional[str] =None
-    tin_number                                 : Optional[str] =None
-    authorized_signatory_name_as_in_pan        : Optional[str] =None
-    authorized_signatory_pan_number            : Optional[str] =None
-   
+
+    financial_year_id                          : Optional[int] = None
+    enquiry_master_id                          : Optional[int] = None
+    appointment_master_id                      : Optional[int] = None
+    visit_master_id                            : Optional[int] = None
+    enquiry_details_id                         : Optional[int] = None
+    pan_number                                 : Optional[str] = None
+    pan_creation_date                          : Optional[date]= None
+    state_id                                   : Optional[int] = None
+    district_id                                : Optional[int] = None
+    legal_name                                 : Optional[str] = None
+    customer_name                              : Optional[str] = None
+    email_address                              : Optional[str] = None
+    mobile_number                              : Optional[str] = None
+    tan_number                                 : Optional[str] = None
+    passport_number                            : Optional[str] = None
+    tin_number                                 : Optional[str] = None
+    authorized_signatory_name_as_in_pan        : Optional[str] = None
+    authorized_signatory_pan_number            : Optional[str] = None
+ 
   
 #--------------
 
@@ -343,10 +348,10 @@ class CustomerGstStateSpecificInformationSchemaGet(BaseModel):
 
 class CustomerAmendmentSchema(BaseModel):
    
-    old_value: str
-    new_value: str
-    amendment_remarks: str
-    amendment_request_date: date
+    old_value               : str
+    new_value               : str
+    amendment_remarks       : str
+    amendment_request_date  : date
     # amendment_effective_date: Optional[date] = None
 
     class Config:
@@ -355,6 +360,6 @@ class CustomerAmendmentSchema(BaseModel):
 
 class AdditionalTradeNameAmendment(BaseModel):
     
-    new_trade_name: str
-    request_date: datetime
-    remarks: str
+    new_trade_name          : str
+    request_date            : datetime
+    remarks                 : str

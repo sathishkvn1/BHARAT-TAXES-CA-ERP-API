@@ -167,9 +167,6 @@ class OffAppointmentVisitMasterViewSchema(BaseModel):
         from_attributes = True
 
 
-
-
-
 class OffAppointmentVisitDetailsViewSchema(BaseModel):
     visit_master_id   : Optional[int]
     visit_details_id  : int
@@ -1040,7 +1037,7 @@ class WorkOrderDetailsSchema(BaseModel):
     # service_goods_name          : Optional[str] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id          : Optional[int] = None
     business_activity_master_id : Optional[int] = None
     business_activity_id      : Optional[int] = None
@@ -1100,7 +1097,7 @@ class WorkOrderDetailsResponseSchema(BaseModel):
     service_id                  : Optional[int] = None
     constitution_id             : Optional[int] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id          : Optional[int] = None
     business_activity_master_id : Optional[int] = None
     business_activity_id      : Optional[int] = None
@@ -1278,7 +1275,7 @@ class OffViewWorkOrderDetailsSchema(BaseModel):
     constitution_id             : Optional[int] = None
     business_constitution_name  : Optional[str] = None
     trade_name                  : Optional[str] = None
-    leagal_name                 : Optional[str] = None
+    legal_name                 : Optional[str] = None
     business_activity_type_id   : Optional[int] = None
     business_activity_type      : Optional[str] = None
     business_activity_master_id : Optional[int] = None
@@ -1493,7 +1490,7 @@ class OffViewServiceTaskMasterSchema(BaseModel):
     work_order_details_id          : Optional[int] = None
     constitution_id                : int
     trade_name                      : Optional[str] = None     
-    leagal_name                     : Optional[str] = None 
+    legal_name                     : Optional[str] = None 
     service_goods_master_id        : int  
     service_goods_name             : str   
     group_id                       : int   
