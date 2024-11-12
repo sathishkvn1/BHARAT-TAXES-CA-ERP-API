@@ -1173,6 +1173,8 @@ def update_employee_address_or_bank_details(
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 #--------------------------------------------------------------------------------------------------------
+
+
 def save_employee_salary_details(
     db: Session,
     id: int,
@@ -1183,21 +1185,27 @@ def save_employee_salary_details(
 
     # If id is 0, employee_id must be provided
     if id == 0 and not employee_id:
-        return {"message": "Employee ID is required for new salary details."}
+        return {
+            "success" :False,
+            "message": "Employee ID is required for new salary details."}
 
     # Validation checks
     if salary_data.calculation_frequency_id == 1:  # ONE TIME
         if not salary_data.effective_to_date:
-            return {"message": "Effective To Date is required for ONE TIME calculation frequency."}
+            return {"success" :False,
+            "message": "Effective To Date is required for ONE TIME calculation frequency."}
         elif salary_data.effective_to_date.month != salary_data.effective_from_date.month:
-            return {"message": "Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
+            return {"success" :False,
+                "message": "Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
 
     if salary_data.calculation_method_id == 1:  # FIXED
         if salary_data.amount <= 0:
-            return {"message": "Amount must be non-zero for FIXED calculation method."}
+            return {"success" :False,
+                "message": "Amount must be non-zero for FIXED calculation method."}
     else:
         if salary_data.percentage <= 0:
-            return {"message": "Percentage must be non-zero for PERCENTAGE calculation method."}
+            return {"success" :False,
+                "message": "Percentage must be non-zero for PERCENTAGE calculation method."}
 
     try:
         # Query existing salary detail
@@ -1237,7 +1245,8 @@ def save_employee_salary_details(
             # Validation for next_increment_date
             if salary_data.next_increment_date and existing_salary_detail.effective_to_date:
                 if salary_data.next_increment_date <= existing_salary_detail.effective_to_date:
-                    return {"message": "Next Increment Date must be greater than Effective To Date."}
+                    return {"success" :False,
+                            "message": "Next Increment Date must be greater than Effective To Date."}
 
             for field, value in salary_data.model_dump(exclude_unset=True).items():
                 setattr(existing_salary_detail, field, value)
@@ -1245,12 +1254,17 @@ def save_employee_salary_details(
             existing_salary_detail.modified_on = datetime.now()
 
         db.commit()
-        return {"success":True,
-                "message": "Saved successfully"}
+        return {
+                "success": True,
+                "message": "Updated successfully"
+            }
+
 
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"success": False, "message": str(e)}
+
+
 
 
 
@@ -1500,7 +1514,7 @@ def add_employee_to_team(
         db.add(new_member)
         db.commit()
 
-        return {"status": "success", "message": "Employee added to team successfully."}
+        return {"success": True, "message": "Employee added to team successfully."}
     
     except Exception as e:
         db.rollback()

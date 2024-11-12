@@ -617,7 +617,7 @@ def get_employee_details(
                     salary_info = db_employee_master.get_employee_salary_details(db, employee_id=employee_id)
                     if salary_info:
                         employee_details.append({
-                            'employee_salary': EmployeeSalaryGet(**salary_info[0].__dict__)
+                            'employee_salary': [EmployeeSalaryGet(**salary.__dict__) for salary in salary_info]
                         })
 
                 if option == "educational_qualification":
