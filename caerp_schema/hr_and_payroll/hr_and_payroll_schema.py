@@ -216,16 +216,20 @@ class EmployeeEmployementGet(BaseModel):
 
 
 
-class EmployeeEducationalQualficationGet(BaseModel):
-    id                        : Optional[int] = None
-    employee_id               : int
-    qualification_name        : Optional[str] = None
-    institution               : Optional[str] = None
-    percentage_or_grade       : Optional[str] = None
-    month_and_year_of_completion : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
+class EmployeeEducationalQualficationGet(BaseModel):
+    id                           : int
+    employee_id                  : int
+    qualification_name           : str
+    course_name                  : str
+    institution                  : str
+    percentage_or_grade          : str
+    month_and_year_of_completion : str
+    status                       : Optional[str] = None
+    remarks                      : Optional[str] = None
+    class Config:  
         orm_mode = True
+
 
 class EmployeeSalarySchema(BaseModel):
        
@@ -271,18 +275,23 @@ class EmployeeSalaryGet(BaseModel):
 
 
 
+
 class EmployeeExperienceGet(BaseModel):
-    id            : int
-    employee_id   : int
-    position_held : str
-    company_name  : str
-    responsibilty : str
-    start_date    : date
-    end_date      : date
-
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
-
+    id                     : int
+    employee_id            : int
+    position_held          : str
+    company_name           : str
+    company_address        : str
+    company_contact_number : str
+    company_email          : Optional[str] = None
+    position_held          : str
+    responsibility         : str
+    start_date             : date
+    end_date               : date
+    remarks                : Optional[str] = None
+   
+    class Config:
+        orm_mode           = True
 
 class EmployeeDocumentsSchema(BaseModel):
     document_id      : int
@@ -363,17 +372,19 @@ class EmployeeDependentsGet(BaseModel):
     class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
-
 class EmployeeProfessionalQualificationGet(BaseModel):
-    id                  : int
-    employee_id         : int
-    qualification_id    : int
-    membership_number   : Optional[str] = None
-    enrollment_date     : date
-
-    class Config:  # Corrected class name to 'Config'
+    id                           : int
+    employee_id                  : int
+    qualification_id             : int
+    membership_number            : Optional[str] = None
+    enrollment_date              : date
+    percentage_or_grade          : Optional[str] = None
+    month_and_year_of_completion : Optional[str] = None
+    status                       : Optional[str] = None
+    remarks                      : Optional[str] = None
+    
+    class Config: 
         orm_mode = True
-
 
 
 class EmployeeSecurityCredentials(BaseModel):
@@ -406,34 +417,51 @@ class EmployeeUserRolesGet(BaseModel):
    role_id            : int
 
 
-
 class EmployeeEducationalQualficationSchema(BaseModel):
-    id: Optional[int]                  = None
-    qualification_name: Optional[str]  = None
-    institution: Optional[str]         = None
-    percentage_or_grade: Optional[str] = None
-    month_and_year_of_completion: Optional[str] = None
+    id                           : Optional[int] = None
+    qualification_name           : str
+    course_name                  : str
+    institution                  : str
+    percentage_or_grade          : str
+    month_and_year_of_completion : str
+    status                       :  Optional[str] = None
+    remarks                      : Optional[str] = None
 
     class Config:
         orm_mode = True
 
 class EmployeeExperienceSchema(BaseModel):
-    id: Optional[int]      = None
+    id                     : Optional[int] = None
     position_held          : str
     company_name           : str
-    responsibilty          : str
+    company_address        : str
+    company_contact_number : str
+    company_email          : Optional[str] = None
+    position_held          : str
+    responsibility         : str
     start_date             : date
     end_date               : date
-
+    remarks                : Optional[str] = None
+   
     class Config:
         orm_mode           = True
 
+
 class EmployeeProfessionalQualificationSchema(BaseModel):
-    id: Optional[int]      = None
-    qualification_id       : int
-    membership_number      : Optional[str] = None
-    enrollment_date        : date
-   
+    id                           : Optional[int]      = None
+    qualification_id             : int
+    membership_number            : Optional[str] = None
+    enrollment_date              : date
+    percentage_or_grade          : Optional[str] = None
+    month_and_year_of_completion : Optional[str] = None
+    status                       : Optional[str] = None
+    remarks                      : Optional[str] = None
+    
+    class Config:
+        orm_mode           = True
+
+
+
 class EmployeeDetailsCombinedSchema(BaseModel):
     educational_qualifications   : Optional[List[EmployeeEducationalQualficationSchema]] = None
     experiences                  : Optional[List[EmployeeExperienceSchema]] = None

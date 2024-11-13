@@ -851,10 +851,60 @@ def employee_save_update(
         raise HTTPException(status_code=500, detail=str(e))
     
 #--------------------------------------------------------------------------------------------------------------
+# @router.post('/employee_save_update_qualification_and_experience')
+# def employee_save_update(
+#     employee_id: int,
+#     employee_profile_component: Optional[str] = Query(None, description="Comma-separated list of components to Save/Update"),
+#     employee_details: EmployeeDetailsCombinedSchema = Body(...),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info["user_id"]
+
+#     try:
+#         if not employee_profile_component:
+#             raise ValueError("Employee profile component is required")
+
+#         components = employee_profile_component.split(',')
+
+#         # Save or update educational qualifications
+#         if 'educational_qualifications' in components and employee_details.educational_qualifications:
+#             save_or_update_records(
+#                 db, EmployeeEducationalQualification, employee_id, employee_details.educational_qualifications, user_id
+#             )
+
+#         # Save or update experiences
+#         if 'experiences' in components and employee_details.experiences:
+#             save_or_update_records(
+#                 db, EmployeeExperience, employee_id, employee_details.experiences, user_id
+#             )
+
+#         # Save or update professional qualifications
+#         if 'professional_qualifications' in components and employee_details.professional_qualifications:
+#             save_or_update_records(
+#                 db, EmployeeProfessionalQualification, employee_id, employee_details.professional_qualifications, user_id
+#             )
+
+#         return {
+#             "success": True,
+#             "message": "Employee details saved/updated successfully",
+#             "employee_id": employee_id
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post('/employee_save_update_qualification_and_experience')
 def employee_save_update(
     employee_id: int,
-    employee_profile_component: Optional[str] = Query(None, description="Comma-separated list of components to Save/Update"),
+    employee_profile_component: Optional[str] = Query(
+        None,
+        description="Comma-separated list of components to Save/Update; values are 'educational_qualifications', 'experiences', 'professional_qualifications'"
+    ),
     employee_details: EmployeeDetailsCombinedSchema = Body(...),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -894,9 +944,11 @@ def employee_save_update(
             "message": "Employee details saved/updated successfully",
             "employee_id": employee_id
         }
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        db.rollback()
+        return {"success": False, "message": str(e)}
+    
 
 #--------------------------------------------------------------------------------------------------------------
 from pydantic import BaseModel
@@ -1136,7 +1188,6 @@ def get_salary_component_by_type(
     return [{"id": component.id,
              "component_type": component.component_type, 
              "component_name": component.component_name} for component in components]
-
 
 
 #--------------------------------------------------------------------------------------------------------------

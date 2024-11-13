@@ -257,7 +257,7 @@ def get_business_place(
 
 
 
-#-----------------Hsn Sac Data---------------
+#-----------------Hsn Sac Data---------------------------------------------------------------------------
 
 @router.get("/get_hsn_sac_data")
 def get_hsn_sac_data(
@@ -284,7 +284,7 @@ def get_hsn_sac_data(
 
 
 
-#---------Goods Commodities Supply Details-----------------
+#---------Goods Commodities Supply Details--------------------------------------------------------------------
 
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
@@ -309,6 +309,8 @@ def save_goods_commodities(
 
 
 #-------------- Hsn Commodities----------------
+#-----------------------------------------------------------------------------------------------------------------
+
 
 @router.get("/get_hsn_commodities/{customer_id}")
 def get_hsn_commodities(customer_id: int, 
@@ -374,6 +376,7 @@ def get_gst_state_specific_information(
     return gst_state_info
 
 
+#-----------------------------------------------------------------------------------------------------------------
 
 
 #----jurisdiction
@@ -419,23 +422,38 @@ def delete_gst_registration_record(
         raise HTTPException(status_code=500, detail=str(e))
 
 #----------------------------Amendment-----------------------------------------------------------------------------
+
+
 @router.post("/duplicate_customer")
 def duplicate_customer(customer_id: int, 
+                       service_task_id: int,
                        db: Session = Depends(get_db),
                        token: str = Depends(oauth2.oauth2_scheme)):
-    
+    """
+    Duplicates customer data if certain conditions are met.
+
+    Parameters:
+    - customer_id (int): ID of the customer to be duplicated.
+    - service_task_id (int): ID of the service task.
+    - db (Session): Database session.
+    - token (str): Authentication token.
+
+    Returns:
+    - JSON response with success status and message.
+    """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")  
 
-    result = db_gst.duplicate_customer_data(db, customer_id,user_id)
+    result = db_gst.duplicate_customer_data(db, customer_id, service_task_id, user_id)
 
     if not result["success"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
     
     return {"success": True, "message": "Saved successfully", "id": result["id"]}
+
 
 #------------------------------------------------------------------------------------------------------------
 
@@ -477,7 +495,7 @@ def get_customer(id: int,
     customer = db.query(CustomerMaster).filter(
         and_(
             CustomerMaster.id == id,
-            CustomerMaster.is_amendment == 'yes',
+            # CustomerMaster.is_amendment == 'yes',
             CustomerMaster.is_deleted == 'no'
         )
     ).first()
@@ -637,7 +655,9 @@ def save_amendment(
     field_name: str,
     new_value,
     date: datetime = datetime.now(),
+    # date: datetime =datetime.now().date()
     remarks: str = "",
+    token: str = Depends(oauth2.oauth2_scheme),
     db: Session = Depends(get_db)
 ):
     

@@ -1151,8 +1151,6 @@ def get_business_place(customer_id: int,
 
 #-------------Get hsn sac
 #-----------------------------------------------------------------------------------------------------------------
-
-
 def get_hsn_sac_data(
     hsn_sac_class_id: int,
     hsn_sac_code: str,
@@ -1558,21 +1556,34 @@ def delete_gst_registration_record(
 #----------------------------------------------------------------------------------------------------------------
 
 
-def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
+def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int, user_id: int):
     try:
-        # Fetch the existing customer data
-        original_customer = db.query(CustomerMaster).filter(CustomerMaster.customer_id == customer_id).first()
+        # Fetch the active customer data for the given customer_id
+        current_date = datetime.now().date()
+        original_customer = db.query(CustomerMaster).filter(
+            CustomerMaster.customer_id == customer_id,
+            CustomerMaster.effective_from_date <= current_date,
+            (CustomerMaster.effective_to_date.is_(None) | (CustomerMaster.effective_to_date >= current_date))
+        ).first()
+
         if not original_customer:
-            return {"success": False, "message": "Customer not found"}
+            return {"success": False, "message": "Active customer not found"}
+
+        # Check if service_task_id is present
+        if original_customer.service_task_id == service_task_id:
+            # Return the existing record ID if service_task_id is present
+            return {"success": True, "message": "Service task has already started", "id": original_customer.id}
+
         # Use model_validate instead of from_orm
         customer_data = CustomerDuplicateSchema.model_validate(original_customer)
+
         # Create a new CustomerMaster instance from the schema data
         new_customer = CustomerMaster(
-             customer_id=original_customer.customer_id,
+            customer_id=original_customer.customer_id,
             **customer_data.model_dump(exclude_unset=True)
         )
 
-        new_customer.is_amendment = 'yes'
+        # new_customer.is_amendment = 'yes'
         new_customer.effective_from_date = None
         new_customer.effective_to_date = None
         new_customer.created_by = user_id  
@@ -1583,15 +1594,15 @@ def duplicate_customer_data(db: Session, customer_id: int, user_id: int):
         db.commit()
         db.refresh(new_customer)
 
-        return {"success": True, "message": "Saved successfully", "id": new_customer.id}
+        return {"success": True,
+                #  "message": "Saved successfully", 
+                 "id": new_customer.id}
 
     except SQLAlchemyError as e:
         db.rollback()
         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
-    
 
 #------------------Amendment---------------------------------------------------------------------
-
 def amend_customer_data(
     db: Session, 
     customer_id: int, 
@@ -1636,8 +1647,6 @@ def amend_customer_data(
         db.rollback()
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
 #-----------------------------------------------------------------------------------------------------------------------
-
-
 # def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
 #     # Map model names to actual model classes
 #     model_mapping = {
@@ -1676,7 +1685,7 @@ def amend_customer_data(
 
 #     return {"success": True, "message": "Amendment saved successfully", "id": id}
 
-
+#-----------------------------------------------------------------------------------------------------------
 
 def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
   
@@ -1700,6 +1709,9 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
     # Use reflection to get the current value of the specified field
     current_value = getattr(record, field_name, None)
 
+    if current_value is None:
+        current_value = "" 
+
   
     history_entry = CustomerAmendmentHistory(
         amendment_id=id,
@@ -1713,6 +1725,7 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
     
     # Step 3: Update the master table for the specified field
     setattr(record, field_name, new_value)
+    record.amendment_status = 'PENDING'
     db.commit()
 
     return {"success": True, "message": "Amendment saved successfully", "id": id}
@@ -1761,6 +1774,7 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 
 
 #------------------------------------------------------------------------------------------------
+
 def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
     if action == AmendmentAction.ADDED:
         for amendment in amendments:
