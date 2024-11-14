@@ -440,7 +440,7 @@ class EmployeeExperienceSchema(BaseModel):
     position_held          : str
     responsibility         : str
     start_date             : date
-    end_date               : Optional[date]
+    end_date               : Optional[date]=None
     remarks                : Optional[str] = None
    
     class Config:
