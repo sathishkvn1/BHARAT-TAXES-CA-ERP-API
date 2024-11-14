@@ -5,7 +5,6 @@ from caerp_db.database import caerp_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column ,DateTime
 
-
 class CustomerMaster(caerp_base):
     __tablename__                = 'customer_master'
 
@@ -34,11 +33,15 @@ class CustomerMaster(caerp_base):
     state_id                                = Column(Integer, nullable=True)
     district_id                             = Column(Integer, nullable=True)
     is_mother_customer                      = Column(Enum('yes', 'no'), nullable=False, default='no')
+    registration_status                     = Column(Enum('CREATED','UPLOADED','DRAFT','PENDING','VALIDATION_ERROR','APPROVED','REJECTED'), nullable=True)
     is_amendment                            = Column(Enum('yes', 'no'), nullable=False, default='no')
     amendment_date                          = Column(Date, nullable=True)
     amendment_reason                        = Column(String(100), nullable=True)
-    amendment_status                        = Column(Enum('CREATED','UPLOADED','DRAFT','PENDING','VALIDATION_ERROR','APPROVED','REJECTED'), nullable=False, default='APPROVED')
+    amendment_status                        = Column(Enum('CREATED','UPLOADED','DRAFT','PENDING','VALIDATION_ERROR','APPROVED','REJECTED'), nullable=True)
     amendment_history                       = Column(String(2000), nullable=True)
+    base_currency_id                        = Column(Integer, nullable=True)
+    suffix_symbol_to_amount                 = Column(Enum('yes', 'no'), nullable=False, default='no')
+    show_amount_in_millions                 = Column(Enum('yes', 'no'), nullable=False, default='no')
     effective_from_date                     = Column(Date, nullable=True)
     effective_to_date                       = Column(Date, nullable=True, default=None)
     has_authorized_signatory                = Column(Enum('yes', 'no'), nullable=False, default='no')
@@ -344,6 +347,7 @@ class CustomerStakeHolder(caerp_base):
     __tablename__ = 'customer_stake_holders'
 
     id                         = Column(Integer, primary_key=True, autoincrement=True)
+    amended_parent_id          = Column(Integer, nullable=True)
     customer_id                = Column(Integer, nullable=False)
     stake_holder_master_id     = Column(Integer, nullable=False)
     stake_holder_type          = Column(Enum('PROMOTER_PARTNER_DIRECTOR','AUTHORIZED_SIGNATORY','AUTHORIZED_REPRESENTATIVE'), nullable=False, default='PROMOTER_PARTNER_DIRECTOR')
@@ -358,7 +362,7 @@ class CustomerStakeHolder(caerp_base):
     official_mobile_number     = Column(String(100), nullable=True)
     official_email_address     = Column(String(100), nullable=True)
     is_amendment               = Column(Enum('yes', 'no'), nullable=False, default='no')
-    amendment_status           = Column(Enum('CREATED', 'UPLOADED', 'APPROVED', 'REJECTED'), nullable=False, default='APPROVED')
+    amendment_status           = Column(Enum('CREATED', 'UPLOADED', 'APPROVED', 'REJECTED'), nullable=True)
     amendment_history          = Column(String(2000), nullable=True)
     effective_from_date        = Column(Date, nullable=True)
     effective_to_date          = Column(Date, nullable=True)
