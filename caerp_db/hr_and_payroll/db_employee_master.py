@@ -1,7 +1,7 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -898,11 +898,20 @@ def get_dependent_details(db: Session , employee_id: int):
     ).all()
     
 #---------------------------------------------------------------------------------------------------------
+
 def get_professional_qualification_details(db: Session, employee_id: int):
-    return db.query(EmployeeProfessionalQualification).filter(
-        EmployeeProfessionalQualification.employee_id == employee_id,
-        EmployeeProfessionalQualification.is_deleted == 'no'
-    ).all()
+    return (
+        db.query(
+            EmployeeProfessionalQualification,
+            Profession.profession_name
+        )
+        .join(Profession, EmployeeProfessionalQualification.qualification_id == Profession.id)
+        .filter(
+            EmployeeProfessionalQualification.employee_id == employee_id,
+            EmployeeProfessionalQualification.is_deleted == 'no'
+        )
+        .all()
+    )
 
 #---------------------------------------------------------------------------------------------------------
 def get_security_credentials(db: Session, employee_id: int):
@@ -1174,8 +1183,6 @@ def update_employee_address_or_bank_details(
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 #--------------------------------------------------------------------------------------------------------
-
-
 def save_employee_salary_details(
     db: Session,
     id: int,
@@ -1261,11 +1268,6 @@ def save_employee_salary_details(
         db.rollback()
         return {"success": False, "message": str(e)}
     
-
-
-#------------------------------------------------------------------------------------------
-
-
 #-------------------------------------------------------------------------------------------------------
 def get_employee_salary_details(db: Session, 
                                 employee_id: int,
@@ -1286,17 +1288,6 @@ def get_employee_salary_details(db: Session,
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
-
-
-
-
-
-
 
 #=============================================EMPLOYEE TEAM MASTER====================================================================
 

@@ -376,6 +376,8 @@ class EmployeeProfessionalQualificationGet(BaseModel):
     id                           : int
     employee_id                  : int
     qualification_id             : int
+    qualification_name           : str
+    institution                  : Optional[str] = None
     membership_number            : Optional[str] = None
     enrollment_date              : date
     percentage_or_grade          : Optional[str] = None
@@ -385,6 +387,7 @@ class EmployeeProfessionalQualificationGet(BaseModel):
     
     class Config: 
         orm_mode = True
+
 
 
 class EmployeeSecurityCredentials(BaseModel):
@@ -447,9 +450,11 @@ class EmployeeExperienceSchema(BaseModel):
         orm_mode           = True
 
 
+
 class EmployeeProfessionalQualificationSchema(BaseModel):
     id                           : Optional[int]      = None
     qualification_id             : int
+    institution                  : Optional[str] = None
     membership_number            : Optional[str] = None
     enrollment_date              : date
     percentage_or_grade          : Optional[str] = None
@@ -458,7 +463,7 @@ class EmployeeProfessionalQualificationSchema(BaseModel):
     remarks                      : Optional[str] = None
     
     class Config:
-        orm_mode           = True
+        orm_mode           = True  
 
 
 

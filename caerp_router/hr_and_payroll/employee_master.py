@@ -661,10 +661,16 @@ def get_employee_details(
                 if option == "professional_qualification":
                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
                     if prof_qual_info:
-                        prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
+                        prof_qualifications = [
+                            EmployeeProfessionalQualificationGet(
+                               **qual.__dict__, 
+                               qualification_name=profession_name  # Add the profession_name to the schema
+                            )
+                            for qual, profession_name in prof_qual_info
+                        ]
                         employee_details.append({
-                            'professional_qualification': prof_qualifications
-                        })
+                          'professional_qualification': prof_qualifications
+                       })
 
             return employee_details
 
