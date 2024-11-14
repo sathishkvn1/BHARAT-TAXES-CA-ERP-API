@@ -1644,3 +1644,37 @@ class AppViewHsnSacMasterSchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+
+class CustomerEnquiryAppointmentDetailsSchema(BaseModel):
+    id:int
+    source: Optional[str]
+    enquiry_master_id: Optional[str]
+    appointment_master_id: Optional[str]
+    legal_name: Optional[str]
+    customer_id: Optional[str]
+    customer_number: Optional[str]
+    customer_name: Optional[str]
+    mobile_number: Optional[str]
+    whatsapp_number: Optional[str]
+    email_id: Optional[str]
+    address: Optional[str]
+    pin_code: Optional[str] 
+    post_office_id: Optional[int]
+    post_office_name: Optional[str]
+    village_id: Optional[str]  
+    village_name: Optional[str]
+    lsg_type_id: Optional[str] 
+    lsg_type: Optional[str]
+    lsg_id: Optional[str]  
+    lsg_name: Optional[str]
+    taluk_id: Optional[int]
+    taluk_name: Optional[str]
+    district_id: Optional[int]
+    district_name: Optional[str]
+    state_id: Optional[int]
+    state_name: Optional[str]
+
+    class Config:
+        orm_mode = True

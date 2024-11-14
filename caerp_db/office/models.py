@@ -1562,3 +1562,34 @@ class AppViewHsnSacMaster(caerp_base):
 
 
 
+class OffViewCustomerEnquiryAppointmentDetails(caerp_base):
+    __tablename__ = "off_view_customer_enquiry_appointment_details"
+    id = Column(Integer, primary_key=True)
+    source = Column(String, nullable=False) 
+    enquiry_master_id = Column(String(11), nullable=True)
+    appointment_master_id = Column(String(11), nullable=True)
+    legal_name = Column(String(302), nullable=True)
+    customer_id = Column(String(100), nullable=True)
+    customer_number = Column(String(100), nullable=True)
+    customer_name = Column(String(100), nullable=True)
+    mobile_number = Column(String(100), nullable=True)
+    whatsapp_number = Column(String(100), nullable=True)
+    email_id = Column(String(100), nullable=True)
+    address = Column(String(201), nullable=True)
+    pin_code = Column(String(50), nullable=True) 
+    post_office_id = Column(Integer, nullable=True)
+    post_office_name = Column(String(255), nullable=True)
+    village_id = Column(String(11), nullable=True) 
+    village_name = Column(String(500), nullable=True)
+    lsg_type_id = Column(String(11), nullable=True)  
+    lsg_type = Column(String(500), nullable=True)
+    lsg_id = Column(String(11), nullable=True) 
+    lsg_name = Column(String(1000), nullable=True)
+    taluk_id = Column(Integer, nullable=True)
+    taluk_name = Column(String(50), nullable=True)
+    district_id = Column(Integer, nullable=True)
+    district_name = Column(String(50), nullable=True)
+    state_id = Column(Integer, nullable=True)
+    state_name = Column(String(50), nullable=True)
+
+  
