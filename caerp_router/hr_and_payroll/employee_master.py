@@ -12,7 +12,7 @@ from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Respon
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ApprovedStatus, ActiveStatus
-
+from sqlalchemy.exc import SQLAlchemyError
 import os
 from typing import List, Dict
 from settings import BASE_URL
@@ -960,7 +960,6 @@ def employee_save_update(
 from pydantic import BaseModel
 from sqlalchemy import insert, update
 
-
 def save_or_update_records(
     db: Session,
     model_class: Type,
@@ -969,57 +968,75 @@ def save_or_update_records(
     user_id: int
 ):
     try:
-        # Step 1: Retrieve existing records
+        # Step 1: Retrieve existing active records
         existing_records = db.query(model_class).filter(
-            model_class.employee_id == employee_id
+            model_class.employee_id == employee_id,
+            model_class.is_deleted == 'no'
         ).all()
 
-        # Step 2: Determine which records need to be deleted
         existing_ids = {record.id for record in existing_records}
         incoming_ids = {rec.id for rec in records if rec.id != 0}
-        ids_to_delete = existing_ids - incoming_ids
 
+        
+
+        # Step 2: Determine IDs to delete
+        if incoming_ids:  # Proceed with deletion only if there are incoming IDs
+            ids_to_delete = existing_ids - incoming_ids
+        else:
+            ids_to_delete = set()  # Avoid marking everything for deletion when no valid incoming IDs
+        
+
+        # Step 3: Perform deletions
         if ids_to_delete:
             db.query(model_class).filter(
                 model_class.id.in_(ids_to_delete)
             ).update({"is_deleted": 'yes'}, synchronize_session=False)
 
-        # Step 3: Insert or update records
+        # Step 4: Insert or update records
         for rec in records:
             record_data = rec.model_dump(exclude_unset=True)
             record_data['employee_id'] = employee_id
 
             if rec.id == 0:
-                # Insertion logic
+                # New record insertion
                 record_data['created_by'] = user_id
                 record_data['created_on'] = datetime.now()
                 insert_stmt = insert(model_class).values(**record_data)
                 db.execute(insert_stmt)
+
             else:
-                # Update logic
+                # Update existing record
+                print(f"Updating record with id={rec.id} for employee_id={employee_id}")
                 existing_record = db.query(model_class).filter(
                     model_class.id == rec.id,
                     model_class.is_deleted == 'no'
                 ).first()
-                
+
                 if not existing_record:
-                    raise HTTPException(status_code=404, detail=f"Record with id {rec.id} not found or already deleted")
-                
+                    raise HTTPException(status_code=404, detail=f"Record with id {rec.id} not found.")
+
+                # Apply update
                 update_stmt = update(model_class).where(
                     model_class.id == rec.id
                 ).values(
                     **record_data,
-                    is_deleted='no',  # Ensure the record is active
-                    # modified_by=user_id,
-                    # modified_on=datetime.utcnow()
+                    is_deleted='no',  # Ensure the record remains active
+                    modified_by=user_id,
+                    modified_on=datetime.utcnow()
                 )
                 db.execute(update_stmt)
 
+        # Commit all changes
         db.commit()
-    except Exception as e:
+
+    except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-    
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+
+
+
+
 #--------------------------------------------------------------------------------------------------------------
 @router.post('/update_employee_address_or_bank_details')
 def update_employee_address_or_bank_details(
