@@ -646,15 +646,14 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 #--Get Stakeholder Details
 
 #-----------------------------------------------------------------------------------------------------------------
-
 def get_stakeholder_details(
-    db: Session, 
-    user_id: int, 
-    customer_id: Optional[int] = None, 
+    db: Session,
+    user_id: int,
+    customer_id: Optional[int] = None,
     stake_holder_type: Optional[str] = None,
-    is_authorized_signatory: Optional[str] = None, 
-    is_primary_authorized_signatory: Optional[str] = None, 
-    search_value: Optional[str] = None
+    is_authorized_signatory: Optional[str] = None,
+    is_primary_authorized_signatory: Optional[str] = None,
+    search_value: Optional[str] = None,
 ):
     try:
         # Step 1: Query StakeHolderContactDetails based on search_value
@@ -662,7 +661,7 @@ def get_stakeholder_details(
         if search_value:
             matching_contact = db.query(StakeHolderContactDetails).filter(
                 StakeHolderContactDetails.is_deleted == 'no',
-                (StakeHolderContactDetails.mobile_number == search_value) | 
+                (StakeHolderContactDetails.mobile_number == search_value) |
                 (StakeHolderContactDetails.email_address == search_value)
             ).first()
             if not matching_contact:
@@ -673,7 +672,7 @@ def get_stakeholder_details(
         query = db.query(CustomerStakeHolder).filter(
             CustomerStakeHolder.is_deleted == 'no',
             CustomerStakeHolder.effective_from_date <= datetime.now(),
-            (CustomerStakeHolder.effective_to_date.is_(None)) | 
+            (CustomerStakeHolder.effective_to_date.is_(None)) |
             (CustomerStakeHolder.effective_to_date >= datetime.now())
         )
 
@@ -696,7 +695,7 @@ def get_stakeholder_details(
         stakeholder_details = []
         for stakeholder in stakeholders:
             stakeholder_master = db.query(StakeHolderMaster).filter_by(
-                id=stakeholder.stake_holder_master_id, 
+                id=stakeholder.stake_holder_master_id,
                 is_deleted='no'
             ).first()
             if not stakeholder_master:
@@ -713,10 +712,21 @@ def get_stakeholder_details(
                 StakeHolderAddress.is_deleted == 'no'
             ).first()
 
-            designation = db.query(AppDesignation).filter(
-                AppDesignation.id == stakeholder.designation_id,
-                AppDesignation.is_deleted == 'no'
-            ).first()
+            # Fetch designation based on stakeholder type
+            designation = None
+            designation_code = None
+            if stake_holder_type in ['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY']:
+                designation = db.query(AppDesignation).filter(
+                    AppDesignation.id == stakeholder.designation_id,
+                    AppDesignation.is_deleted == 'no'
+                ).first()
+                # designation_code = designation.designation_code if designation else None
+            elif stake_holder_type == 'AUTHORIZED_REPRESENTATIVE':
+                designation = db.query(GstOtherAuthorizedRepresentativeResignation).filter(
+                    GstOtherAuthorizedRepresentativeResignation.id == stakeholder.designation_id,
+                    GstOtherAuthorizedRepresentativeResignation.is_deleted == 'no'
+                ).first()
+                designation_code = designation.designation_code if designation else None
 
             # Prepare response data
             stakeholder_details.append({
@@ -752,18 +762,38 @@ def get_stakeholder_details(
                 "identity_information": {
                     "id": designation.id if designation else None,
                     "designation_id": designation.id if designation else None,
-                    "designation": designation.designation if designation else None
+                    "designation": designation.designation if designation else None,
+                    "designation_code": designation_code
                 },
                 "address": {
-                    "id": address.id if address else None,
-                    "pin_code": address.pin_code if address else None,
-                    "address_type": address.address_type if address else None,
-                    "country_id": address.country_id if address else None,
-                    "state_id": address.state_id if address else None,
-                    "district_id": address.district_id if address else None,
-                    "locality": address.locality if address else None,
-                    "landmark": address.landmark if address else None,
-                }
+                        "id": address.id if address else None,
+                        "pin_code": address.pin_code if address else None,
+                        "address_type": address.address_type if address else None,
+                        "country_id": address.country_id if address else None,
+                        "country_name": db.query(CountryDB.country_name_english).filter_by(id=address.country_id).scalar() if address and address.country_id else None,
+                        "state_id": address.state_id if address else None,
+                        "state_name": db.query(StateDB.state_name).filter_by(id=address.state_id).scalar() if address and address.state_id else None,
+                        "district_id": address.district_id if address else None,
+                        "district_name": db.query(DistrictDB.district_name).filter_by(id=address.district_id).scalar() if address and address.district_id else None,
+                        "city_id": address.city_id if address else None,
+                        "city_name": db.query(CityDB.city_name).filter_by(id=address.city_id).scalar() if address and address.city_id else None,
+                        "village_id": address.village_id if address else None,
+                        "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=address.village_id).scalar() if address and address.village_id else None,
+                        "post_office_id": address.post_office_id if address else None,
+                        "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=address.post_office_id).scalar() if address and address.post_office_id else None,
+                        "taluk_id": address.taluk_id,
+                        "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address and address.taluk_id else None,
+                        "lsg_type_id": address.lsg_type_id,
+                        "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
+                        "lsg_id": address.lsg_id,
+                        "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
+                        "locality": address.locality if address else None,
+                        "road_street_name": address.road_street_name if address else None,
+                        "premises_building_name": address.premises_building_name if address else None,
+                        "building_flat_number": address.building_flat_number if address else None,
+                        "floor_number": address.floor_number if address else None,
+                        "landmark": address.landmark if address else None
+                    }
             })
 
         return stakeholder_details if stakeholder_details else []
@@ -1553,8 +1583,57 @@ def delete_gst_registration_record(
 #----------------------------------------------------------------------------------------------------------------
 
 
+# def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int, user_id: int):
+#     try:
+#         # Fetch the active customer data for the given customer_id
+#         current_date = datetime.now().date()
+#         original_customer = db.query(CustomerMaster).filter(
+#             CustomerMaster.customer_id == customer_id,
+#             CustomerMaster.effective_from_date <= current_date,
+#             (CustomerMaster.effective_to_date.is_(None) | (CustomerMaster.effective_to_date >= current_date))
+#         ).first()
+
+#         if not original_customer:
+#             return {"success": False, "message": "Active customer not found"}
+
+#         # Check if service_task_id is present
+#         if original_customer.service_task_id == service_task_id:
+#             # Return the existing record ID if service_task_id is present
+#             return {"success": True, "message": "Service task has already started", "id": original_customer.id}
+
+#         # Use model_validate instead of from_orm
+#         customer_data = CustomerDuplicateSchema.model_validate(original_customer)
+
+#         # Create a new CustomerMaster instance from the schema data
+#         new_customer = CustomerMaster(
+#             customer_id=original_customer.customer_id,
+#             **customer_data.model_dump(exclude_unset=True)
+#         )
+
+#         # new_customer.is_amendment = 'yes'
+#         new_customer.effective_from_date = None
+#         new_customer.effective_to_date = None
+#         new_customer.created_by = user_id  
+#         new_customer.created_on = datetime.now()  
+#         new_customer.service_task_id = service_task_id
+
+#         # Add and commit the new entry
+#         db.add(new_customer)
+#         db.commit()
+#         db.refresh(new_customer)
+
+#         return {"success": True,
+#                 #  "message": "Saved successfully", 
+#                  "id": new_customer.id}
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
+
 def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int, user_id: int):
     try:
+        print(f"Starting duplication for customer_id: {customer_id}, service_task_id: {service_task_id}, user_id: {user_id}")
+
         # Fetch the active customer data for the given customer_id
         current_date = datetime.now().date()
         original_customer = db.query(CustomerMaster).filter(
@@ -1563,16 +1642,28 @@ def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int,
             (CustomerMaster.effective_to_date.is_(None) | (CustomerMaster.effective_to_date >= current_date))
         ).first()
 
+        print(f"Fetched original customer: {original_customer}")
+
         if not original_customer:
+            print("No active customer found")
             return {"success": False, "message": "Active customer not found"}
 
-        # Check if service_task_id is present
-        if original_customer.service_task_id == service_task_id:
-            # Return the existing record ID if service_task_id is present
-            return {"success": True, "message": "Service task has already started", "id": original_customer.id}
+        print(f"Original customer service_task_id: {original_customer.service_task_id}")
+
+        # Check if the service_task_id is already present for the customer
+        existing_customer_with_service_task = db.query(CustomerMaster).filter(
+            CustomerMaster.customer_id == customer_id,
+            CustomerMaster.service_task_id == service_task_id
+        ).first()
+
+        if existing_customer_with_service_task:
+            # If service_task_id is already present, return the existing row ID
+            print(f"Service task ID {service_task_id} already exists for customer {customer_id}")
+            return {"success": True, "message": "Service task has already started", "id": existing_customer_with_service_task.id}
 
         # Use model_validate instead of from_orm
         customer_data = CustomerDuplicateSchema.model_validate(original_customer)
+        print(f"Customer data for duplication: {customer_data}")
 
         # Create a new CustomerMaster instance from the schema data
         new_customer = CustomerMaster(
@@ -1580,23 +1671,24 @@ def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int,
             **customer_data.model_dump(exclude_unset=True)
         )
 
-        # new_customer.is_amendment = 'yes'
         new_customer.effective_from_date = None
         new_customer.effective_to_date = None
         new_customer.created_by = user_id  
-        new_customer.created_on = datetime.now()  
+        new_customer.created_on = datetime.now()
+        new_customer.service_task_id = service_task_id  # Update service_task_id
 
         # Add and commit the new entry
         db.add(new_customer)
         db.commit()
         db.refresh(new_customer)
 
-        return {"success": True,
-                #  "message": "Saved successfully", 
-                 "id": new_customer.id}
+        print(f"Duplicated customer with new ID: {new_customer.id}")
+
+        return {"success": True, "id": new_customer.id}
 
     except SQLAlchemyError as e:
         db.rollback()
+        print(f"Error duplicating customer: {str(e)}")
         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
 
 #------------------Amendment---------------------------------------------------------------------
