@@ -1,7 +1,7 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -662,6 +662,7 @@ def search_employee_master_details(
     ):
     query = db.query(
         EmployeeMaster.employee_id,
+        EmployeeMaster.employee_number,
         EmployeeMaster.first_name,
         EmployeeMaster.middle_name,
         EmployeeMaster.last_name,
@@ -897,11 +898,20 @@ def get_dependent_details(db: Session , employee_id: int):
     ).all()
     
 #---------------------------------------------------------------------------------------------------------
+
 def get_professional_qualification_details(db: Session, employee_id: int):
-    return db.query(EmployeeProfessionalQualification).filter(
-        EmployeeProfessionalQualification.employee_id == employee_id,
-        EmployeeProfessionalQualification.is_deleted == 'no'
-    ).all()
+    return (
+        db.query(
+            EmployeeProfessionalQualification,
+            Profession.profession_name
+        )
+        .join(Profession, EmployeeProfessionalQualification.qualification_id == Profession.id)
+        .filter(
+            EmployeeProfessionalQualification.employee_id == employee_id,
+            EmployeeProfessionalQualification.is_deleted == 'no'
+        )
+        .all()
+    )
 
 #---------------------------------------------------------------------------------------------------------
 def get_security_credentials(db: Session, employee_id: int):
@@ -1173,8 +1183,6 @@ def update_employee_address_or_bank_details(
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 #--------------------------------------------------------------------------------------------------------
-
-
 def save_employee_salary_details(
     db: Session,
     id: int,
@@ -1188,15 +1196,6 @@ def save_employee_salary_details(
         return {
             "success" :False,
             "message": "Employee ID is required for new salary details."}
-
-    # Validation checks
-    if salary_data.calculation_frequency_id == 1:  # ONE TIME
-        if not salary_data.effective_to_date:
-            return {"success" :False,
-            "message": "Effective To Date is required for ONE TIME calculation frequency."}
-        elif salary_data.effective_to_date.month != salary_data.effective_from_date.month:
-            return {"success" :False,
-                "message": "Effective To Date must be in the same month as Effective From Date for ONE TIME calculation frequency."}
 
     if salary_data.calculation_method_id == 1:  # FIXED
         if salary_data.amount <= 0:
@@ -1226,15 +1225,20 @@ def save_employee_salary_details(
                 existing_salary_detail.modified_on = datetime.now()
 
         if id == 0:
+            if existing_salary_detail and salary_data.calculation_frequency_id == 1 :
+               existing_salary_detail.effective_from_date = salary_data.effective_from_date
+               existing_salary_detail.modified_by = user_id
+               existing_salary_detail.modified_on = datetime.now()
+            else:
             # Insert new salary detail
-            new_salary_detail = EmployeeSalaryDetails(
-                employee_id=employee_id,
-                created_by=user_id,
-                created_on=datetime.now(),
-                **salary_data.model_dump(exclude_unset=True)
-            )
-            db.add(new_salary_detail)
-            db.flush()
+              new_salary_detail = EmployeeSalaryDetails(
+                  employee_id=employee_id,
+                  created_by=user_id,
+                  created_on=datetime.now(),
+                  **salary_data.model_dump(exclude_unset=True)
+              )
+              db.add(new_salary_detail)
+              db.flush()
 
         else:
             # Update existing salary detail if found
@@ -1263,14 +1267,7 @@ def save_employee_salary_details(
     except Exception as e:
         db.rollback()
         return {"success": False, "message": str(e)}
-
-
-
-
-
-#------------------------------------------------------------------------------------------
-
-
+    
 #-------------------------------------------------------------------------------------------------------
 def get_employee_salary_details(db: Session, 
                                 employee_id: int,
@@ -1291,17 +1288,6 @@ def get_employee_salary_details(db: Session,
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
-
-
-
-
-
-
 
 #=============================================EMPLOYEE TEAM MASTER====================================================================
 

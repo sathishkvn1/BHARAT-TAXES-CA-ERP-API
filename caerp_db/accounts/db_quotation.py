@@ -14,7 +14,7 @@ from caerp_functions.send_email import send_email
 from caerp_schema.common.common_schema import Email
 from sqlalchemy.exc import IntegrityError
 from caerp_functions.generate_book_number import generate_book_number, generate_voucher_id
-from typing import Optional,Union,List
+from typing import Any, Optional,Union,List
 
 def get_service_price_details_by_service_id(
         db:Session,
@@ -785,7 +785,13 @@ def generate_profoma_invoice_details(
                 invoice_detail.igst_amount = gst_amount
                 proforma_invoice_master_id = proforma_invoice_master.id
                 proforma_invoice_detail_id = invoice_detail.id
-                task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id,financial_year_id,customer_id)
+                data = {
+                    'enquiry_master_id':work_order_master_data.enquiry_master_id ,      
+                    'enquiry_details_id' : enquiry_details_id,
+                    'appointment_master_id': work_order_master_data.appointment_master_id,
+                    'appointment_details_id' : work_order_master_data.visit_master_id
+                }
+                task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id,financial_year_id,customer_id,data)
                 net_amount = total_invoice_amount
         # Update Invoice Master with total amount
         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount_amount
@@ -809,7 +815,6 @@ def generate_profoma_invoice_details(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # #----------------------------------------------------------------------------------------------------------
 def save_service_task_details(
         db: Session,
@@ -819,7 +824,9 @@ def save_service_task_details(
         proforma_invoice_detail_id: int,
         user_id:int,
         financial_year_id: int,
-        customer_id: int
+        customer_id: int,
+        data :  dict[str, Any]
+
 ):
     try: 
         task_number = generate_book_number('SERVICE_TASK',financial_year_id,customer_id,db)
@@ -827,7 +834,12 @@ def save_service_task_details(
             work_order_master_id=work_order_master_id,
             work_order_details_id=work_order_details_id,
             proforma_invoice_master_id = proforma_invoice_master_id,
-            proforma_invoice_detail_id = proforma_invoice_detail_id,    
+            proforma_invoice_detail_id = proforma_invoice_detail_id,   
+            financial_year_id           = financial_year_id,
+            enquiry_master_id           = data.get('enquiry_master_id'),
+            enquiry_details_id          = data.get('enquiry_details_id'),
+            appointment_master_id       = data.get('appointment_master_id'),
+            visit_master_id             =data.get('visit_master_id'),
             task_number=task_number,
             allocated_by=user_id,
             allocated_on=datetime.utcnow(), 
@@ -843,9 +855,7 @@ def save_service_task_details(
         db.rollback()
         # Handle database exceptions
         raise HTTPException(status_code=500, detail=str(e))
-    
-
-
+   
 #----------------------------------------------------------------------------------------------
 
 

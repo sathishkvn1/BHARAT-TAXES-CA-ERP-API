@@ -12,7 +12,7 @@ from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Respon
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ApprovedStatus, ActiveStatus
-
+from sqlalchemy.exc import SQLAlchemyError
 import os
 from typing import List, Dict
 from settings import BASE_URL
@@ -661,10 +661,16 @@ def get_employee_details(
                 if option == "professional_qualification":
                     prof_qual_info = db_employee_master.get_professional_qualification_details(db, employee_id=employee_id)
                     if prof_qual_info:
-                        prof_qualifications = [EmployeeProfessionalQualificationGet(**qual.__dict__) for qual in prof_qual_info]
+                        prof_qualifications = [
+                            EmployeeProfessionalQualificationGet(
+                               **qual.__dict__, 
+                               qualification_name=profession_name  # Add the profession_name to the schema
+                            )
+                            for qual, profession_name in prof_qual_info
+                        ]
                         employee_details.append({
-                            'professional_qualification': prof_qualifications
-                        })
+                          'professional_qualification': prof_qualifications
+                       })
 
             return employee_details
 
@@ -682,6 +688,7 @@ def get_employee_details(
         for emp in employees_query:
             emp_detail = {
                 "employee_id": emp.employee_id,
+                "employee_number": emp.employee_number,
                 "first_name": emp.first_name,
                 "middle_name": emp.middle_name,
                 "last_name": emp.last_name,
@@ -850,10 +857,60 @@ def employee_save_update(
         raise HTTPException(status_code=500, detail=str(e))
     
 #--------------------------------------------------------------------------------------------------------------
+# @router.post('/employee_save_update_qualification_and_experience')
+# def employee_save_update(
+#     employee_id: int,
+#     employee_profile_component: Optional[str] = Query(None, description="Comma-separated list of components to Save/Update"),
+#     employee_details: EmployeeDetailsCombinedSchema = Body(...),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info["user_id"]
+
+#     try:
+#         if not employee_profile_component:
+#             raise ValueError("Employee profile component is required")
+
+#         components = employee_profile_component.split(',')
+
+#         # Save or update educational qualifications
+#         if 'educational_qualifications' in components and employee_details.educational_qualifications:
+#             save_or_update_records(
+#                 db, EmployeeEducationalQualification, employee_id, employee_details.educational_qualifications, user_id
+#             )
+
+#         # Save or update experiences
+#         if 'experiences' in components and employee_details.experiences:
+#             save_or_update_records(
+#                 db, EmployeeExperience, employee_id, employee_details.experiences, user_id
+#             )
+
+#         # Save or update professional qualifications
+#         if 'professional_qualifications' in components and employee_details.professional_qualifications:
+#             save_or_update_records(
+#                 db, EmployeeProfessionalQualification, employee_id, employee_details.professional_qualifications, user_id
+#             )
+
+#         return {
+#             "success": True,
+#             "message": "Employee details saved/updated successfully",
+#             "employee_id": employee_id
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post('/employee_save_update_qualification_and_experience')
 def employee_save_update(
     employee_id: int,
-    employee_profile_component: Optional[str] = Query(None, description="Comma-separated list of components to Save/Update"),
+    employee_profile_component: Optional[str] = Query(
+        None,
+        description="Comma-separated list of components to Save/Update; values are 'educational_qualifications', 'experiences', 'professional_qualifications'"
+    ),
     employee_details: EmployeeDetailsCombinedSchema = Body(...),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -893,14 +950,15 @@ def employee_save_update(
             "message": "Employee details saved/updated successfully",
             "employee_id": employee_id
         }
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
+        db.rollback()
+        return {"success": False, "message": str(e)}
+    
 
 #--------------------------------------------------------------------------------------------------------------
 from pydantic import BaseModel
 from sqlalchemy import insert, update
-
 
 def save_or_update_records(
     db: Session,
@@ -910,57 +968,75 @@ def save_or_update_records(
     user_id: int
 ):
     try:
-        # Step 1: Retrieve existing records
+        # Step 1: Retrieve existing active records
         existing_records = db.query(model_class).filter(
-            model_class.employee_id == employee_id
+            model_class.employee_id == employee_id,
+            model_class.is_deleted == 'no'
         ).all()
 
-        # Step 2: Determine which records need to be deleted
         existing_ids = {record.id for record in existing_records}
         incoming_ids = {rec.id for rec in records if rec.id != 0}
-        ids_to_delete = existing_ids - incoming_ids
 
+        
+
+        # Step 2: Determine IDs to delete
+        if incoming_ids:  # Proceed with deletion only if there are incoming IDs
+            ids_to_delete = existing_ids - incoming_ids
+        else:
+            ids_to_delete = set()  # Avoid marking everything for deletion when no valid incoming IDs
+        
+
+        # Step 3: Perform deletions
         if ids_to_delete:
             db.query(model_class).filter(
                 model_class.id.in_(ids_to_delete)
             ).update({"is_deleted": 'yes'}, synchronize_session=False)
 
-        # Step 3: Insert or update records
+        # Step 4: Insert or update records
         for rec in records:
             record_data = rec.model_dump(exclude_unset=True)
             record_data['employee_id'] = employee_id
 
             if rec.id == 0:
-                # Insertion logic
+                # New record insertion
                 record_data['created_by'] = user_id
                 record_data['created_on'] = datetime.now()
                 insert_stmt = insert(model_class).values(**record_data)
                 db.execute(insert_stmt)
+
             else:
-                # Update logic
+                # Update existing record
+                print(f"Updating record with id={rec.id} for employee_id={employee_id}")
                 existing_record = db.query(model_class).filter(
                     model_class.id == rec.id,
                     model_class.is_deleted == 'no'
                 ).first()
-                
+
                 if not existing_record:
-                    raise HTTPException(status_code=404, detail=f"Record with id {rec.id} not found or already deleted")
-                
+                    raise HTTPException(status_code=404, detail=f"Record with id {rec.id} not found.")
+
+                # Apply update
                 update_stmt = update(model_class).where(
                     model_class.id == rec.id
                 ).values(
                     **record_data,
-                    is_deleted='no',  # Ensure the record is active
-                    # modified_by=user_id,
-                    # modified_on=datetime.utcnow()
+                    is_deleted='no',  # Ensure the record remains active
+                    modified_by=user_id,
+                    modified_on=datetime.utcnow()
                 )
                 db.execute(update_stmt)
 
+        # Commit all changes
         db.commit()
-    except Exception as e:
+
+    except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-    
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+
+
+
+
 #--------------------------------------------------------------------------------------------------------------
 @router.post('/update_employee_address_or_bank_details')
 def update_employee_address_or_bank_details(
@@ -1051,7 +1127,7 @@ def save_employee_salary_details(
     - `percentage_of_component_id`: The ID of the component if percentage-based calculation is used.
     - `percentage`: The percentage for the salary calculation (for PERCENTAGE method).
     - `effective_from_date`: The date when the salary becomes effective.
-    - `effective_to_date`: The date when the salary ends (optional, only required for one-time calculations).
+    - `effective_to_date`: The date when the salary ends (optional).
     - `next_increment_date`: The date for the next salary increment (optional).
     """
 
@@ -1135,7 +1211,6 @@ def get_salary_component_by_type(
     return [{"id": component.id,
              "component_type": component.component_type, 
              "component_name": component.component_name} for component in components]
-
 
 
 #--------------------------------------------------------------------------------------------------------------

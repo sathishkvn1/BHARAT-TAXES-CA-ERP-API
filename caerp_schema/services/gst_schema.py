@@ -4,6 +4,8 @@ from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 from datetime import date, datetime,time
 
+from caerp_constants.caerp_constants import AmendmentAction
+
 class BusinessDetailsSchema(BaseModel):
 
     financial_year_id                          : Optional[int] = None
@@ -24,8 +26,8 @@ class BusinessDetailsSchema(BaseModel):
     tin_number                                 : Optional[str] = None
     authorized_signatory_name_as_in_pan        : Optional[str] = None
     authorized_signatory_pan_number            : Optional[str] = None
+    constitution_id                            : Optional[int] = None
  
-  
 #--------------
 
 class TradeNameSchema(BaseModel):
@@ -65,13 +67,11 @@ class RegistrationSchema(BaseModel):
     registration_number : str
     registration_date   : date
 
-
 class AuthorizationSchema(BaseModel):
-    constitution_id                : Optional[int]
+   
     has_authorized_signatory       : str
     has_authorized_representative  : str
     is_mother_customer             : str
-
 class CustomerRequestSchema(BaseModel):
     additional_trade_name          : List[TradeNameSchema]
     casual_taxable_person          : CasualTaxablePersonSchema
@@ -84,23 +84,24 @@ class CustomerRequestSchema(BaseModel):
 
 
 #----------stakeholder
-
 class PersonalInformationSchema(BaseModel):
-    id                  : Optional[int]
-    first_name          : str
-    middle_name         : Optional[str]
-    last_name           : Optional[str]
-    fathers_first_name  : Optional[str] =None
-    fathers_middle_name :Optional[str]  =None
-    fathers_last_name   :Optional[str]  =None
-    marital_status_id   : Optional[int]
-    date_of_birth       : Optional[date]
-    gender_id           : int
-    din_number          : Optional[str]=None
-    is_citizen_of_india: Optional[str] =None
-    pan_number         : Optional[str]
-    passport_number    : Optional[str] =None
-    aadhaar_number     : Optional[str]
+    id                    : Optional[int]
+    first_name            : str
+    middle_name           : Optional[str]
+    last_name             : Optional[str]
+    fathers_first_name    : Optional[str]=None
+    fathers_middle_name   : Optional[str]=None
+    fathers_last_name     : Optional[str]=None
+    marital_status_id     : Optional[int]
+    date_of_birth         : Optional[date]
+    gender_id             : int
+    din_number            : Optional[str]=None
+    is_citizen_of_india   : Optional[str]=None
+    pan_number            : Optional[str]
+    passport_number       : Optional[str]=None
+    aadhaar_number        : Optional[str]
+    gst_enrollment_number : Optional[str]=None
+
 
 class ContactDetailsSchema(BaseModel):
     id                               : Optional[int]
@@ -120,7 +121,7 @@ class AddressSchema(BaseModel):
     address_type   : Optional[str]
     pin_code       : Optional[str]
     country_id     : Optional[int]
-    state_id       :  Optional[int]
+    state_id       : Optional[int]
     district_id    : Optional[int]
     city_id        : Optional[int]
     village_id     : Optional[int]
@@ -151,6 +152,7 @@ class BusinessPlace(BaseModel):
     district_id               : Optional[int]
     taluk_id                  : Optional[int]
     city_id                   : Optional[int]
+    post_office_id            : Optional[int]
     lsg_type_id               : Optional[int]
     lsg_id                    : Optional[int]
     village_id                : Optional[int]
@@ -179,14 +181,10 @@ class NatureOfBusiness(BaseModel):
     business_activity_id: Optional[int]
 
 class BusinessData(BaseModel):
-    business_place: List[BusinessPlace]
-    business_activity_type_id: int
-    business_activity_master_id: int
-    nature_of_business: List[NatureOfBusiness]
-
-
-
-
+    business_place                  : List[BusinessPlace]
+    business_activity_type_id       : int
+    business_activity_master_id     : int
+    nature_of_business              : List[NatureOfBusiness]
 
 
 class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
@@ -204,8 +202,6 @@ class CustomerGstStateSpecificInformationSchema(BaseModel):
 
 
 #-jurisdition
-
-
 
 class RangeDetailsSchema(BaseModel):
     address              : str
@@ -363,3 +359,65 @@ class AdditionalTradeNameAmendment(BaseModel):
     new_trade_name          : str
     request_date            : datetime
     remarks                 : str
+
+#----------------------------------------------------------
+
+
+class AmmendPersonalInformationSchema(BaseModel):
+    id:Optional[int]
+    first_name: str
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    fathers_first_name: Optional[str] = None
+    fathers_middle_name: Optional[str] = None
+    fathers_last_name: Optional[str] = None
+    marital_status_id: Optional[int]
+    date_of_birth: Optional[date]
+    gender_id: int
+    din_number: Optional[str] = None
+    is_citizen_of_india: Optional[str] = None
+    pan_number: Optional[str]
+    passport_number: Optional[str] = None
+    aadhaar_number: Optional[str]
+    designation_id:Optional[int]
+
+class AmmendContactDetailsSchema(BaseModel):
+    id:Optional[int]
+    mobile_number: Optional[str]
+    email_address: Optional[str]
+    telephone_number_with_std_code: Optional[str]
+
+class AmmendAddressSchema(BaseModel):
+    id:Optional[int]
+    address_type: Optional[str]
+    pin_code: Optional[str]
+    country_id: Optional[int]
+    state_id: Optional[int]
+    district_id: Optional[int]
+    city_id: Optional[int]
+    village_id: Optional[int]
+    post_office_id: Optional[int]
+    taluk_id: Optional[int]
+    lsg_type_id: Optional[int]
+    lsg_id: Optional[int]
+    locality: Optional[str]
+    road_street_name: Optional[str]
+    premises_building_name: Optional[str]
+    building_flat_number: Optional[str]
+    floor_number: Optional[str]
+    landmark: Optional[str]
+
+class AmmendStakeHolderMasterSchema(BaseModel):
+    personal_information: AmmendPersonalInformationSchema
+    contact_details: List[AmmendContactDetailsSchema]
+    address: List[AmmendAddressSchema]
+
+    class Config:
+        orm_mode = True
+
+
+
+class AmendmentDetailsSchema(BaseModel):
+    
+    reason: str
+    date: datetime
