@@ -284,7 +284,7 @@ class CustomerDuplicateSchema(BaseModel):
     is_amendment                            : str
     amendment_date                          : Optional[date]
     amendment_reason                        : Optional[str]
-    amendment_status                        : str
+    amendment_status                        : Optional[str] 
     amendment_history                       : Optional[str]
     effective_from_date                     : Optional[date]
     effective_to_date                       : Optional[date]
