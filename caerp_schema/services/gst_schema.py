@@ -84,23 +84,24 @@ class CustomerRequestSchema(BaseModel):
 
 
 #----------stakeholder
-
 class PersonalInformationSchema(BaseModel):
-    id                  : Optional[int]
-    first_name          : str
-    middle_name         : Optional[str]
-    last_name           : Optional[str]
-    fathers_first_name  : Optional[str] =None
-    fathers_middle_name :Optional[str]  =None
-    fathers_last_name   :Optional[str]  =None
-    marital_status_id   : Optional[int]
-    date_of_birth       : Optional[date]
-    gender_id           : int
-    din_number          : Optional[str]=None
-    is_citizen_of_india: Optional[str] =None
-    pan_number         : Optional[str]
-    passport_number    : Optional[str] =None
-    aadhaar_number     : Optional[str]
+    id                    : Optional[int]
+    first_name            : str
+    middle_name           : Optional[str]
+    last_name             : Optional[str]
+    fathers_first_name    : Optional[str]=None
+    fathers_middle_name   : Optional[str]=None
+    fathers_last_name     : Optional[str]=None
+    marital_status_id     : Optional[int]
+    date_of_birth         : Optional[date]
+    gender_id             : int
+    din_number            : Optional[str]=None
+    is_citizen_of_india   : Optional[str]=None
+    pan_number            : Optional[str]
+    passport_number       : Optional[str]=None
+    aadhaar_number        : Optional[str]
+    gst_enrollment_number : Optional[str]=None
+
 
 class ContactDetailsSchema(BaseModel):
     id                               : Optional[int]

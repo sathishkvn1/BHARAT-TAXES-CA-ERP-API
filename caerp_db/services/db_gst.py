@@ -454,8 +454,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                              customer_id: int,
                              stake_holder_type: Optional[str] = None,
                              is_authorized_signatory: Optional[str] =None ,  # Added parameter
-                             is_primary_authorized_signatory: Optional[str] =None
-                             
+                             is_primary_authorized_signatory: Optional[str] =None,
+                             authorized_representative_type:Optional[str] =None
                              
                              ):  # Added stake_holder_type as a parameter
     try:
@@ -478,6 +478,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 pan_number=personal_info.pan_number,
                 passport_number=personal_info.passport_number,
                 aadhaar_number=personal_info.aadhaar_number,
+                gst_enrollment_number=personal_info.gst_enrollment_number,
                 created_by=user_id, 
                 created_on=datetime.now()
             )
@@ -500,6 +501,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 stake_holder_master.pan_number = personal_info.pan_number
                 stake_holder_master.passport_number = personal_info.passport_number
                 stake_holder_master.aadhaar_number = personal_info.aadhaar_number
+                stake_holder_master.gst_enrollment_number = personal_info.gst_enrollment_number
                 stake_holder_master.modified_by = user_id 
                 stake_holder_master.modified_on = datetime.now()
             else:
@@ -611,7 +613,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
             customer_stakeholder_entry.residential_address_id = address_entry.id
             customer_stakeholder_entry.stake_holder_type = stake_holder_type
             customer_stakeholder_entry.is_authorized_signatory = is_authorized_signatory  # Set the field
-            customer_stakeholder_entry.is_primary_authorized_signatory = is_primary_authorized_signatory  # Set the field
+            customer_stakeholder_entry.is_primary_authorized_signatory = is_primary_authorized_signatory 
+            customer_stakeholder_entry.authorized_representative_type = authorized_representative_type 
             customer_stakeholder_entry.effective_from_date = datetime.now() 
             customer_stakeholder_entry.modified_by = user_id  
             customer_stakeholder_entry.modified_on = datetime.now()
@@ -625,7 +628,8 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
                 residential_address_id=address_entry.id,
                 stake_holder_type=stake_holder_type, 
                 is_authorized_signatory=is_authorized_signatory,  # Set the field
-                is_primary_authorized_signatory=is_primary_authorized_signatory,  # Set the field
+                is_primary_authorized_signatory=is_primary_authorized_signatory, 
+                authorized_representative_type = authorized_representative_type,  # Set the field
                 effective_from_date=datetime.now(),  
                 effective_to_date=None,  
                 created_by=user_id,  
@@ -646,6 +650,7 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 #--Get Stakeholder Details
 
 #-----------------------------------------------------------------------------------------------------------------
+
 def get_stakeholder_details(
     db: Session,
     user_id: int,
@@ -653,7 +658,8 @@ def get_stakeholder_details(
     stake_holder_type: Optional[str] = None,
     is_authorized_signatory: Optional[str] = None,
     is_primary_authorized_signatory: Optional[str] = None,
-    search_value: Optional[str] = None,
+    authorized_representative_type:Optional[str] =None,
+    search_value: Optional[str] = None
 ):
     try:
         # Step 1: Query StakeHolderContactDetails based on search_value
@@ -687,6 +693,8 @@ def get_stakeholder_details(
             query = query.filter(CustomerStakeHolder.is_authorized_signatory == is_authorized_signatory)
         if is_primary_authorized_signatory is not None:
             query = query.filter(CustomerStakeHolder.is_primary_authorized_signatory == is_primary_authorized_signatory)
+        if authorized_representative_type is not None:
+            query = query.filter(CustomerStakeHolder.authorized_representative_type == authorized_representative_type)
 
         # Fetch all matching stakeholders
         stakeholders = query.all()
@@ -751,7 +759,9 @@ def get_stakeholder_details(
                     "is_citizen_of_india": stakeholder_master.is_citizen_of_india,
                     "pan_number": stakeholder_master.pan_number,
                     "passport_number": stakeholder_master.passport_number,
-                    "aadhaar_number": stakeholder_master.aadhaar_number
+                    "aadhaar_number": stakeholder_master.aadhaar_number,
+                    "gst_enrollment_number": stakeholder_master.gst_enrollment_number
+                    
                 },
                 "contact_details": {
                     "id": contact_details.id if contact_details else None,
@@ -800,7 +810,7 @@ def get_stakeholder_details(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stakeholder details: {str(e)}")
-
+    
 #----get activity
 def fetch_business_activities(
     db: Session, 

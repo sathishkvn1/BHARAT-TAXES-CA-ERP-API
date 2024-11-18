@@ -119,6 +119,7 @@ def save_stake_holder_master(
     stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
     is_authorized_signatory: Optional[str] =None ,  # Added parameter
     is_primary_authorized_signatory: Optional[str] =None,
+    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTIONER', 'OTHER']),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -138,11 +139,14 @@ def save_stake_holder_master(
     user_id = auth_info.get("user_id")
     try:
         # Pass customer_id, address_type, and stakeholder_type to the save function
-        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory)
+        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type)
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+
 
 #------ Get Stakeholder Details---------------------------------------------------------------------------
 @router.get("/get_stakeholder_master")
@@ -151,7 +155,8 @@ def get_stakeholder_master(
     stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),  # Optional stakeholder_type
     search_value: Optional[str] = None, 
     is_authorized_signatory: Optional[str] = None,
-    is_primary_authorized_signatory: Optional[str] = None, # Optional search value parameter
+    is_primary_authorized_signatory: Optional[str] = None, 
+    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTIONER', 'OTHER']),# Optional search value parameter
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -169,12 +174,14 @@ def get_stakeholder_master(
     
 
     # Call your function to get stakeholder details
-    stakeholder_details = db_gst.get_stakeholder_details(db,user_id, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory, search_value=search_value)
+    stakeholder_details = db_gst.get_stakeholder_details(db,user_id, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type, search_value=search_value)
 
     if not stakeholder_details:
         return []
 
     return stakeholder_details
+
+
 
 
 
@@ -428,35 +435,35 @@ def delete_gst_registration_record(
 #----------------------------Amendment-----------------------------------------------------------------------------
 
 
-@router.post("/duplicate_customer")
-def duplicate_customer(customer_id: int, 
-                       service_task_id: int,
-                       db: Session = Depends(get_db),
-                       token: str = Depends(oauth2.oauth2_scheme)):
-    """
-    Duplicates customer data if certain conditions are met.
+# @router.post("/duplicate_customer")
+# def duplicate_customer(customer_id: int, 
+#                        service_task_id: int,
+#                        db: Session = Depends(get_db),
+#                        token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Duplicates customer data if certain conditions are met.
 
-    Parameters:
-    - customer_id (int): ID of the customer to be duplicated.
-    - service_task_id (int): ID of the service task.
-    - db (Session): Database session.
-    - token (str): Authentication token.
+#     Parameters:
+#     - customer_id (int): ID of the customer to be duplicated.
+#     - service_task_id (int): ID of the service task.
+#     - db (Session): Database session.
+#     - token (str): Authentication token.
 
-    Returns:
-    - JSON response with success status and message.
-    """
-    if not token:
-        raise HTTPException(status_code=401, detail="Token is missing")
+#     Returns:
+#     - JSON response with success status and message.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
 
-    auth_info = authenticate_user(token)
-    user_id = auth_info.get("user_id")  
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")  
 
-    result = db_gst.duplicate_customer_data(db, customer_id, service_task_id, user_id)
+#     result = db_gst.duplicate_customer_data(db, customer_id, service_task_id, user_id)
 
-    if not result["success"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+#     if not result["success"]:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
     
-    return {"success": True, "message": "Saved successfully", "id": result["id"]}
+#     return {"success": True, "message": "Saved successfully", "id": result["id"]}
 
 
 #------------------------------------------------------------------------------------------------------------
