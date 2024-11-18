@@ -7,7 +7,7 @@ from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -116,8 +116,9 @@ def get_customer_details(
 def save_stake_holder_master(
     request_data: StakeHolderMasterSchema,
     customer_id: int,
-    # address_type: str = Query(enum=['RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE']),
-    stakeholder_type: str = Query(enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+    stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+    is_authorized_signatory: Optional[str] =None ,  # Added parameter
+    is_primary_authorized_signatory: Optional[str] =None,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -137,20 +138,23 @@ def save_stake_holder_master(
     user_id = auth_info.get("user_id")
     try:
         # Pass customer_id, address_type, and stakeholder_type to the save function
-        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stakeholder_type)
+        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory)
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#------ Get Stakeholder Details-----------------
-@router.get("/get_stakeholder_master/{customer_id}")
+#------ Get Stakeholder Details---------------------------------------------------------------------------
+@router.get("/get_stakeholder_master")
 def get_stakeholder_master(
-    customer_id: int,
-    stakeholder_type: str = Query(...,enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+    customer_id: Optional[int] = None,  # Optional customer_id
+    stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),  # Optional stakeholder_type
+    search_value: Optional[str] = None, 
+    is_authorized_signatory: Optional[str] = None,
+    is_primary_authorized_signatory: Optional[str] = None, # Optional search value parameter
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
-                          ):
+):
     """
     Get the details of a stakeholder by their customer_id and type.
 
@@ -165,7 +169,7 @@ def get_stakeholder_master(
     
 
     # Call your function to get stakeholder details
-    stakeholder_details = db_gst.get_stakeholder_details(db, customer_id, stakeholder_type,user_id)
+    stakeholder_details = db_gst.get_stakeholder_details(db,user_id, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory, search_value=search_value)
 
     if not stakeholder_details:
         return []
@@ -458,30 +462,6 @@ def duplicate_customer(customer_id: int,
 #------------------------------------------------------------------------------------------------------------
 
 
-# @router.get("/get_amended_customer_details/{id}", response_model=CustomerDuplicateSchemaForGet)
-# def get_customer(id: int,
-#                  db: Session = Depends(get_db),
-#                  token: str = Depends(oauth2.oauth2_scheme)):
-
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-
-#     customer = db.query(CustomerMaster).filter(
-#         and_(
-#             CustomerMaster.id == id,
-#             CustomerMaster.is_amendment == 'yes',
-#             CustomerMaster.is_deleted == 'no'
-#         )
-#     ).first()
-
-#     if not customer:
-#         # Returning None when no customer is found
-#         # raise HTTPException(status_code=404, detail="Id not found")
-#         return None
-
-#     # Return the customer data
-#     return customer
-
 from typing import Optional
 
 @router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
@@ -507,144 +487,6 @@ def get_customer(id: int,
     return customer
 
 
-
-#--------------------------------------------------------------------------------------------------------------
-
-# @router.post("/amend_legal_name")
-# def amend_legal_name(data: CustomerAmendmentSchema, 
-#                      customer_id: int,
-#                      db: Session = Depends(get_db),
-#                      token: str = Depends(oauth2.oauth2_scheme)):
-    
-#     # Validate token
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")  
-
-#     # Fetch the original customer data
-#     customer = db.query(CustomerMaster).filter(
-#         CustomerMaster.customer_id == customer_id,
-#         CustomerMaster.is_amendment == 'yes'
-#     ).first()
-    
-#     if not customer:
-#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
-    
-#     # Save the amendment history
-#     amendment_history = CustomerAmendmentHistory(
-#         amendment_id=customer.id, 
-#         field_name="Legal Name Amendment", 
-#         old_value=data.old_value,
-#         new_value=data.new_value,
-#         amendment_request_date=data.amendment_request_date,
-#         amendment_remarks=data.amendment_remarks,
-#     )
-#     db.add(amendment_history)
-
-#     # Update specific fields in CustomerMaster
-#     customer.legal_name = data.new_value  
-#     customer.amendment_status = "CREATED"
-#     # customer.modified_by = user_id
-#     # customer.modified_on = datetime.utcnow()
-
-#     # Commit changes
-#     db.commit()
-#     db.refresh(customer)
-
-#     return {"success": True, "message": "Legal name amendment saved successfully"}
-
-#---------------------------------------------------------------------------------------------------------------
-
-# @router.post("/amend_district")
-# def amend_district(data: CustomerAmendmentSchema, 
-#                    customer_id: int,
-#                    db: Session = Depends(get_db),
-#                    token: str = Depends(oauth2.oauth2_scheme)):
-    
-#     # Validate token
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-    
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")  
-
-#     # Fetch the original customer data to check if it exists and is amendable
-#     customer = db.query(CustomerMaster).filter(
-#         CustomerMaster.customer_id == customer_id,
-#         CustomerMaster.is_amendment == 'yes'
-#     ).first()
-    
-#     if not customer:
-#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
-    
-#     # Save the amendment history with the "District Amendment" field name
-#     amendment_history = CustomerAmendmentHistory(
-#         amendment_id=customer.id, 
-#         field_name="District Amendment", 
-#         old_value=data.old_value,
-#         new_value=data.new_value,
-#         amendment_request_date=data.amendment_request_date,
-#         # amendment_effective_date=data.amendment_effective_date,
-#         amendment_remarks=data.amendment_remarks,
-#     )
-#     db.add(amendment_history)
-
-  
-#     customer.district_id = int(data.new_value) 
-#     customer.amendment_status = "CREATED"
-#     # customer.modified_by = user_id
-#     # customer.modified_on = datetime.utcnow()  
-
-#     # Commit changes to both tables
-#     db.commit()
-#     db.refresh(customer)
-
-#     return {"success": True, "message": "District amendment saved successfully"}
-
-#---------------------------------------------------------------------------------------------------------
-# @router.post("/amend_trade_name")
-# def amend_trade_name(data: CustomerAmendmentSchema, 
-#                      customer_id: int,
-#                      db: Session = Depends(get_db),
-#                      token: str = Depends(oauth2.oauth2_scheme)):
-
-#     # Validate token
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-
-
-#     customer = db.query(CustomerMaster).filter(
-#         CustomerMaster.customer_id == customer_id,
-#         CustomerMaster.is_amendment == 'yes',
-#         CustomerMaster.effective_to_date == None
-#     ).first()
-
-#     if not customer:
-#         raise HTTPException(status_code=404, detail="Customer not found or amendment not allowed")
-
-#     # Record the amendment history for customer_name (trade_name)
-#     amendment_history = CustomerAmendmentHistory(
-#         customer_id=customer_id,
-#         field_name="Trade Name Amndement",  
-#         old_value=customer.customer_name,
-#         new_value=data.new_value,
-#         modified_by=user_id,
-#         modified_on=datetime.utcnow()
-#     )
-#     db.add(amendment_history)
-
-   
-#     customer.customer_name = data.new_value  
-
-
-#     db.commit()
-
-#     return {"success": True, "message": "Updated successfully"}
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -760,3 +602,160 @@ def amend_additonal_trade_names(
 
     response = db_gst.amend_additonal_trade_names(db, id, amendments, action, user_id)
     return response
+
+#---------------------------------------------------------------------------------------------------------
+
+
+
+
+
+#---------------------------------------------------------------------------------------------
+
+# @router.get("/get_active_stake_holders")
+# def get_active_stake_holders(customer_id: int, 
+#                              db: Session = Depends(get_db),
+#                              token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Get Active Stake Holders
+
+#     This endpoint retrieves active stakeholders for a given customer.
+
+#     Parameters:
+#     - customer_id: The ID of the customer.
+
+#     Returns:
+#     - JSON response with active stakeholders.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     active_stake_holders = db.execute(text("""
+#         SELECT *
+#         FROM customer_stake_holders
+#         WHERE customer_id = :customer_id
+#         AND is_deleted = 'no'
+#         AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
+#             SELECT amended_parent_id
+#             FROM customer_stake_holders
+#             WHERE is_amendment = 'yes'
+#         ))
+#         ORDER BY id;
+#     """), {'customer_id': customer_id}).fetchall()
+
+#     if not active_stake_holders:
+#         raise HTTPException(status_code=404, detail="No active stakeholders found for the specified customer")
+
+#     return {
+#         "success": True,
+#         "active_stake_holders": [
+#             {
+#                 "id": stake_holder.id,
+#                 "amended_parent_id": stake_holder.amended_parent_id,
+#                 "customer_id": stake_holder.customer_id,
+#                 "stake_holder_master_id": stake_holder.stake_holder_master_id,
+#                 "stake_holder_type": stake_holder.stake_holder_type,
+#                 "designation_id": stake_holder.designation_id,
+#                 "official_position_id": stake_holder.official_position_id,
+#                 "is_authorized_signatory": stake_holder.is_authorized_signatory,
+#                 "contact_details_id": stake_holder.contact_details_id,
+#                 "present_address_id": stake_holder.present_address_id,
+#                 "permanent_address_id": stake_holder.permanent_address_id,
+#                 "residential_address_id": stake_holder.residential_address_id,
+#                 "official_address_id": stake_holder.official_address_id,
+#                 "official_mobile_number": stake_holder.official_mobile_number,
+#                 "official_email_address": stake_holder.official_email_address,
+#                 "is_amendment": stake_holder.is_amendment,
+#                 "amendment_date": stake_holder.amendment_date,
+#                 "amendment_reason": stake_holder.amendment_reason,
+#                 "amendment_status": stake_holder.amendment_status,
+#                 "effective_from_date": stake_holder.effective_from_date,
+#                 "effective_to_date": stake_holder.effective_to_date,
+#                 "created_by": stake_holder.created_by,
+#                 "created_on": stake_holder.created_on,
+#                 "modified_by": stake_holder.modified_by,
+#                 "modified_on": stake_holder.modified_on,
+#                 "is_deleted": stake_holder.is_deleted,
+#                 "deleted_by": stake_holder.deleted_by,
+#                 "deleted_on": stake_holder.deleted_on
+#             } for stake_holder in active_stake_holders
+#         ]
+#     }
+
+#------------------------------------------------------------------------------------------------
+
+@router.post("/amend_stake_holders")
+def amend_stake_holders(
+    
+    customer_id: int,
+    action: AmendmentAction,
+    request_data: Optional[AmmendStakeHolderMasterSchema] = None,
+    amendment_details: Optional[AmendmentDetailsSchema] = None,
+    id: Optional[int] = None,
+    stakeholder_type: str = Query(..., enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Amend Stake Holders
+
+    Parameters:
+    - request_data: The stakeholder data to be added or amended.
+    - customer_id: The ID of the customer.
+    - id: If action is ADDED, provide the customer_id for the id field. Otherwise, provide the row_id of the record to be amended.
+    - action: The type of amendment. Possible values: ADDED, DELETED.
+    - stakeholder_type: The type of stakeholder.
+
+    Returns:
+    - JSON response with success status and message.
+
+
+    {
+  "amendment_details": {
+    "reason": "marked for deletion",
+    "date": "2024-11-16T05:38:22.572Z"
+  }
+}
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if action == AmendmentAction.ADDED:
+        response = db_gst.add_stake_holder(db, customer_id, stakeholder_type, request_data, user_id)
+    elif action == AmendmentAction.DELETED:
+        response = db_gst.delete_stake_holder(db, id,amendment_details, action, user_id)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+
+    return response
+#-------------------------------------------------------------------------------------------
+
+@router.get("/get_stakeholder_master_for_amndement/{customer_id}")
+def get_stakeholder_master(
+    customer_id: int,
+    stakeholder_type: str = Query(...,enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+                          ):
+    """
+    Get the details of a stakeholder by their customer_id and type.
+
+    - customer_id (int): The ID of the customer.
+    - stakeholder_type (str): The type of stakeholder to filter by.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    
+
+    # Call your function to get stakeholder details
+    stakeholder_details = db_gst.get_stakeholder_master_for_amndement(db, customer_id, stakeholder_type,user_id)
+
+    if not stakeholder_details:
+        return []
+
+    return stakeholder_details

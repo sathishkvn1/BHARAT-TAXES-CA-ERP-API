@@ -4,6 +4,8 @@ from typing import List,Dict,Optional
 from typing import Dict, Any,Union
 from datetime import date, datetime,time
 
+from caerp_constants.caerp_constants import AmendmentAction
+
 class BusinessDetailsSchema(BaseModel):
 
     financial_year_id                          : Optional[int] = None
@@ -360,51 +362,61 @@ class AdditionalTradeNameAmendment(BaseModel):
 #----------------------------------------------------------
 
 
+class AmmendPersonalInformationSchema(BaseModel):
+    id:Optional[int]
+    first_name: str
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    fathers_first_name: Optional[str] = None
+    fathers_middle_name: Optional[str] = None
+    fathers_last_name: Optional[str] = None
+    marital_status_id: Optional[int]
+    date_of_birth: Optional[date]
+    gender_id: int
+    din_number: Optional[str] = None
+    is_citizen_of_india: Optional[str] = None
+    pan_number: Optional[str]
+    passport_number: Optional[str] = None
+    aadhaar_number: Optional[str]
+    designation_id:Optional[int]
 
-# class AddressAmendmentSchema(BaseModel):
-#     address_type: Optional[str]
-#     pin_code: Optional[str]
-#     country_id: Optional[int]
-#     state_id: Optional[int]
-#     district_id: Optional[int]
-#     city_id: Optional[int]
-#     village_id: Optional[int]
-#     post_office_id: Optional[int]
-#     taluk_id: Optional[int]
-#     lsg_type_id: Optional[int]
-#     lsg_id: Optional[int]
-#     locality: Optional[str]
-#     road_street_name: Optional[str]
-#     premises_building_name: Optional[str]
-#     building_flat_number: Optional[str]
-#     floor_number: Optional[str]
-#     landmark: Optional[str]
+class AmmendContactDetailsSchema(BaseModel):
+    id:Optional[int]
+    mobile_number: Optional[str]
+    email_address: Optional[str]
+    telephone_number_with_std_code: Optional[str]
 
-# class ContactDetailsAmendmentSchema(BaseModel):
-#     mobile_number: Optional[str]
-#     email_address: Optional[str]
-#     telephone_number_with_std_code: Optional[str]
+class AmmendAddressSchema(BaseModel):
+    id:Optional[int]
+    address_type: Optional[str]
+    pin_code: Optional[str]
+    country_id: Optional[int]
+    state_id: Optional[int]
+    district_id: Optional[int]
+    city_id: Optional[int]
+    village_id: Optional[int]
+    post_office_id: Optional[int]
+    taluk_id: Optional[int]
+    lsg_type_id: Optional[int]
+    lsg_id: Optional[int]
+    locality: Optional[str]
+    road_street_name: Optional[str]
+    premises_building_name: Optional[str]
+    building_flat_number: Optional[str]
+    floor_number: Optional[str]
+    landmark: Optional[str]
 
-# class StakeHolderMasterAmendmentSchema(BaseModel):
-#     first_name: str
-#     middle_name: Optional[str]
-#     last_name: Optional[str]
-#     fathers_first_name: Optional[str] = None
-#     fathers_middle_name: Optional[str] = None
-#     fathers_last_name: Optional[str] = None
-#     marital_status_id: Optional[int]
-#     date_of_birth: Optional[date]
-#     gender_id: int
-#     din_number: Optional[str] = None
-#     is_citizen_of_india: Optional[str] = None
-#     pan_number: Optional[str]
-#     passport_number: Optional[str] = None
-#     aadhaar_number: Optional[str]
-#     contact_details: ContactDetailsSchema
-#     address: AddressSchema
-#     designation_id: Optional[int]
-#     official_position_id: Optional[int]
-#     is_authorized_signatory: Optional[str] = 'no'
+class AmmendStakeHolderMasterSchema(BaseModel):
+    personal_information: AmmendPersonalInformationSchema
+    contact_details: List[AmmendContactDetailsSchema]
+    address: List[AmmendAddressSchema]
 
-#     class Config:
-#         orm_mode = True
+    class Config:
+        orm_mode = True
+
+
+
+class AmendmentDetailsSchema(BaseModel):
+    
+    reason: str
+    date: datetime
