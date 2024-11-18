@@ -318,7 +318,6 @@ class StakeHolderAddress(caerp_base):
     id                        = Column(Integer, primary_key=True, autoincrement=True)
     stake_holder_id           = Column(Integer, nullable=False)
     address_type              = Column(Enum('RESIDENTIAL', 'PERMANENT', 'PRESENT', 'OFFICE'), nullable=False, default='PRESENT')
-    stake_holder_type         = Column(Enum('GST_PRACTIONER','OTHER'), nullable=False)
     pin_code                  = Column(String(10), nullable=True)
     country_id                = Column(Integer, nullable=True)
     state_id                  = Column(Integer, nullable=True)
@@ -344,6 +343,8 @@ class StakeHolderAddress(caerp_base):
     is_deleted                = Column(Enum('yes', 'NO'), nullable=False, default='no')
     deleted_by                = Column(Integer, nullable=True)
     deleted_on                = Column(DateTime, nullable=True)
+
+
 
 class CustomerStakeHolder(caerp_base):
     __tablename__ = 'customer_stake_holders'
