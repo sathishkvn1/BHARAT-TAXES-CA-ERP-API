@@ -435,35 +435,35 @@ def delete_gst_registration_record(
 #----------------------------Amendment-----------------------------------------------------------------------------
 
 
-# @router.post("/duplicate_customer")
-# def duplicate_customer(customer_id: int, 
-#                        service_task_id: int,
-#                        db: Session = Depends(get_db),
-#                        token: str = Depends(oauth2.oauth2_scheme)):
-#     """
-#     Duplicates customer data if certain conditions are met.
+@router.post("/duplicate_customer")
+def duplicate_customer(customer_id: int, 
+                       service_task_id: int,
+                       db: Session = Depends(get_db),
+                       token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Duplicates customer data if certain conditions are met.
 
-#     Parameters:
-#     - customer_id (int): ID of the customer to be duplicated.
-#     - service_task_id (int): ID of the service task.
-#     - db (Session): Database session.
-#     - token (str): Authentication token.
+    Parameters:
+    - customer_id (int): ID of the customer to be duplicated.
+    - service_task_id (int): ID of the service task.
+    - db (Session): Database session.
+    - token (str): Authentication token.
 
-#     Returns:
-#     - JSON response with success status and message.
-#     """
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
+    Returns:
+    - JSON response with success status and message.
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
 
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")  
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")  
 
-#     result = db_gst.duplicate_customer_data(db, customer_id, service_task_id, user_id)
+    result = db_gst.duplicate_customer_data(db, customer_id, service_task_id, user_id)
 
-#     if not result["success"]:
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+    if not result["success"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
     
-#     return {"success": True, "message": "Saved successfully", "id": result["id"]}
+    return {"success": True, "message": "Saved successfully", "id": result["id"]}
 
 
 #------------------------------------------------------------------------------------------------------------
