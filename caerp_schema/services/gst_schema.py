@@ -310,8 +310,11 @@ class CustomerDuplicateSchemaForGet(BaseModel):
     email_address                           : Optional[str]
     mobile_number                           : Optional[str]
     constitution_id                         : Optional[int]
+    business_constitution_name              : Optional[str]
     state_id                                : Optional[int]
+    state_name                              : Optional[str]           
     district_id                             : Optional[int]
+    district_name                           : Optional[str]
     is_mother_customer                      : str
     is_amendment                            :str
     amendment_date                          : Optional[date]

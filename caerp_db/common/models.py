@@ -767,7 +767,7 @@ class BusinessActivity(caerp_base):
     __tablename__ = 'app_business_activity'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
-    activity_master_id            = Column(Integer,nullable=False)
+    gst_business_activity_code            = Column(String,nullable=False)
     business_activity           = Column(String, nullable=False)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
 
