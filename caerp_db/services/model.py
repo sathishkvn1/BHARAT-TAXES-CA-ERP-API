@@ -597,3 +597,32 @@ class GstOtherAuthorizedRepresentativeResignation(caerp_base):
     designation               = Column(String(200), nullable=False)
     is_deleted                = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
+class GstNatureOfPossessionOfPremises(caerp_base):
+    __tablename__      ='gst_nature_of_possession_of_premises'
+
+    id                  = Column(Integer, primary_key=True)
+    possession_code     = Column(String, nullable = False)
+    possession_type     = Column(String,  nullable = False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+#---------------------------------------------------------------------------
+
+class GstPremisesDocument(caerp_base):
+    __tablename__ = 'gst_premises_document'
+
+    id                  = Column(Integer, primary_key=True)
+    possession_code     = Column(Integer, nullable = False)
+    document_name       = Column(String, nullable = False)
+    document_code       = Column(String, nullable = False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+#---------------------------------------------------------------------------
+
+class GstAuthorizedSignatoryDocument(caerp_base):
+    __tablename__ = 'gst_authorized_signatory_document'
+
+    id                  = Column(Integer, primary_key=True)
+    document_name       = Column(String, nullable = False)
+    document_code       = Column(String, nullable = False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')

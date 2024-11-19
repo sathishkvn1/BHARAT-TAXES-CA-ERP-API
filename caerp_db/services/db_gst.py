@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
-from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
@@ -650,7 +650,6 @@ def save_stakeholder_details(request: StakeHolderMasterSchema,
 #--Get Stakeholder Details
 
 #-----------------------------------------------------------------------------------------------------------------
-
 def get_stakeholder_details(
     db: Session,
     user_id: int,
@@ -773,7 +772,10 @@ def get_stakeholder_details(
                     "id": designation.id if designation else None,
                     "designation_id": designation.id if designation else None,
                     "designation": designation.designation if designation else None,
-                    "designation_code": designation_code
+                    "designation_code": designation_code,
+                    "is_primary_authorized_signatory": stakeholder.is_primary_authorized_signatory,
+                    "authorized_representative_type": stakeholder.authorized_representative_type 
+              
                 },
                 "address": {
                         "id": address.id if address else None,
@@ -810,7 +812,9 @@ def get_stakeholder_details(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stakeholder details: {str(e)}")
-    
+
+
+
 #----get activity
 def fetch_business_activities(
     db: Session, 
@@ -1057,7 +1061,6 @@ def save_business_place(customer_id: int,
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 #-----get business_place----
-
 def get_business_place(customer_id: int, 
                        type: str, 
                        db: Session,
@@ -1087,18 +1090,30 @@ def get_business_place(customer_id: int,
         # Iterate over business places
         for bp in business_places:
             # Fetch business activity type and master details
-            business_activity_type = db.query(CustomerBusinessPlaceActivityType).filter(
-                CustomerBusinessPlaceActivityType.business_place_id == bp.id,
-                CustomerBusinessPlaceActivityType.is_deleted == 'no',
-                CustomerBusinessPlaceActivityType.effective_from_date <= datetime.now(),
-                or_(CustomerBusinessPlaceActivityType.effective_to_date.is_(None))
-            ).first()
-            business_activity_master = db.query(CustomerBusinessPlaceCoreActivity).filter(
-                CustomerBusinessPlaceCoreActivity.business_place_id == bp.id,
-                CustomerBusinessPlaceActivityType.is_deleted == 'no',
-                CustomerBusinessPlaceCoreActivity.effective_from_date <= datetime.now(),
-                or_(CustomerBusinessPlaceCoreActivity.effective_to_date.is_(None))
-            ).first()
+            business_activity_type = (
+                db.query(CustomerBusinessPlaceActivityType)
+                .join(CustomerBusinessPlace, CustomerBusinessPlaceActivityType.business_place_id == CustomerBusinessPlace.id)
+                .filter(
+                    CustomerBusinessPlaceActivityType.business_place_id == bp.id,
+                    CustomerBusinessPlaceActivityType.is_deleted == 'no',
+                    CustomerBusinessPlaceActivityType.effective_from_date <= datetime.now(),
+                    or_(CustomerBusinessPlaceActivityType.effective_to_date.is_(None))
+                )
+                .first()
+            )
+
+            business_activity_master = (
+                db.query(CustomerBusinessPlaceCoreActivity)
+                .join(CustomerBusinessPlace, CustomerBusinessPlaceCoreActivity.business_place_id == CustomerBusinessPlace.id)
+                .filter(
+                    CustomerBusinessPlaceCoreActivity.business_place_id == bp.id,
+                    CustomerBusinessPlaceCoreActivity.is_deleted == 'no',
+                    CustomerBusinessPlaceCoreActivity.effective_from_date <= datetime.now(),
+                    or_(CustomerBusinessPlaceCoreActivity.effective_to_date.is_(None))
+                )
+                .first()
+            )
+
 
             # Prepare the business place data
             business_place_data = {
@@ -1133,7 +1148,8 @@ def get_business_place(customer_id: int,
                 "is_principal_place": bp.is_principal_place,
                 "business_place_type": bp.business_place_type,
                 "nature_of_possession_id": bp.nature_of_possession_id,
-                "nature_of_possession": db.query(OffNatureOfPossession.nature_of_possession).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
+                "nature_of_possession": db.query(GstNatureOfPossessionOfPremises.possession_type).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
+                "nature_of_possession_code": db.query(GstNatureOfPossessionOfPremises.possession_code).filter_by(id=bp.nature_of_possession_id).scalar() if bp.nature_of_possession_id else None,
                 "office_email_address": bp.office_email_address,     
                 "office_mobile_number": bp.office_mobile_number,      
                 "office_phone_std_code" : bp.office_phone_std_code,   
@@ -1686,6 +1702,7 @@ def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int,
         new_customer.created_by = user_id  
         new_customer.created_on = datetime.now()
         new_customer.service_task_id = service_task_id  # Update service_task_id
+        new_customer.amendment_status="CREATED"
 
         # Add and commit the new entry
         db.add(new_customer)
