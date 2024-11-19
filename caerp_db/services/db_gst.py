@@ -1193,7 +1193,8 @@ def get_business_place(customer_id: int,
                 activity_data = {
                     "id": ba.id,
                     "business_activity_id": ba.business_activity_id,
-                    "business_activity_name": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().business_activity if ba.business_activity_id else None
+                    "business_activity_name": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().business_activity if ba.business_activity_id else None,
+                    "business_activity_code": db.query(BusinessActivity).filter(BusinessActivity.id == ba.business_activity_id).first().gst_business_activity_code if ba.business_activity_id else None
                 }
                 nature_of_business_response.append(activity_data)
 
