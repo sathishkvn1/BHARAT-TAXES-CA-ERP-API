@@ -322,6 +322,8 @@ class CustomerDuplicateSchemaForGet(BaseModel):
     effective_to_date                       : Optional[date]
     has_authorized_signatory                : str
     has_authorized_representative           : str
+    amendment_request_date                  : Optional[date]  
+    amendment_remarks                       : Optional[str]  
     created_by                              : Optional[int]
     created_on                              : Optional[datetime]
     modified_by                             : Optional[int]
@@ -421,3 +423,38 @@ class AmendmentDetailsSchema(BaseModel):
     
     reason: str
     date: datetime
+
+
+class CustomerBusinessPlaceAmendmentSchema(BaseModel):
+    pin_code: str
+    country_id: int
+    state_id: int
+    district_id: int
+    taluk_id:int
+    city_id: int
+    post_office_id:int
+    lsg_type_id:int
+    lsg_id:int
+    village_id:int
+    locality: Optional[str] = None
+    road_street_name: Optional[str] = None
+    premises_building_name: str
+    building_flat_number: str
+    floor_number: Optional[str] = None
+    landmark: Optional[str] = None
+    latitude: str
+    longitude: str
+    office_email_address: Optional[str] = None
+    office_mobile_number: Optional[str] = None
+    office_phone_std_code: Optional[str] = None
+    office_phone_number: Optional[str] = None
+    office_fax_std_code: Optional[str] = None
+    office_fax_number: Optional[str] = None
+
+    amendment_date: Optional[date] = None  # New field added
+    amendment_reason: Optional[str] = None  # New field added
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
