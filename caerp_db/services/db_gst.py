@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
-from fastapi import HTTPException, UploadFile,status,Depends
+from fastapi import HTTPException, UploadFile, logger,status,Depends
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,7 +9,7 @@ from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActi
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerBusinessPlaceAmendmentSchema, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -373,6 +373,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                 "state_name": db.query(StateDB.state_name).filter_by(id=customer.state_id).scalar() if customer.state_id else None,
                 "district_id": customer.district_id,
                 "district_name": db.query(DistrictDB.district_name).filter_by(id=customer.district_id).scalar() if customer.district_id else None,
+                "district_code": db.query(DistrictDB.gst_district_code).filter_by(id=customer.district_id).scalar() if customer.district_id else None,
                 "legal_name": customer.legal_name,
                 "trade_name": customer.customer_name,
                 "email_address": customer.email_address,
@@ -422,6 +423,9 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                     "id": gst_other_details.id if gst_other_details else None,
                     "reason_to_obtain_gst_registration_id": gst_other_details.reason_to_obtain_gst_registration_id if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id is not None else None,
                     "reason_to_obtain_gst_registration_name": db.query(GstReasonToObtainRegistration.reason)
+                                                .filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id)
+                                                .scalar() if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id else None,
+                    "reason_to_obtain_gst_registration_code": db.query(GstReasonToObtainRegistration.reason_code)
                                                 .filter_by(id=gst_other_details.reason_to_obtain_gst_registration_id)
                                                 .scalar() if gst_other_details and gst_other_details.reason_to_obtain_gst_registration_id else None,
                     "commencement_of_business_date": gst_other_details.commencement_of_business_date if gst_other_details else None,
@@ -722,7 +726,8 @@ def get_stakeholder_details(
             # Fetch designation based on stakeholder type
             designation = None
             designation_code = None
-            if stake_holder_type in ['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY']:
+            if stake_holder_type in ['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY'] or stake_holder_type is None:
+
                 designation = db.query(AppDesignation).filter(
                     AppDesignation.id == stakeholder.designation_id,
                     AppDesignation.is_deleted == 'no'
@@ -773,6 +778,8 @@ def get_stakeholder_details(
                     "designation_id": designation.id if designation else None,
                     "designation": designation.designation if designation else None,
                     "designation_code": designation_code,
+                    "stake_holder_type":stakeholder.stake_holder_type,
+                    "is_authorized_signatory": stakeholder.is_authorized_signatory,
                     "is_primary_authorized_signatory": stakeholder.is_primary_authorized_signatory,
                     "authorized_representative_type": stakeholder.authorized_representative_type 
               
@@ -787,6 +794,7 @@ def get_stakeholder_details(
                         "state_name": db.query(StateDB.state_name).filter_by(id=address.state_id).scalar() if address and address.state_id else None,
                         "district_id": address.district_id if address else None,
                         "district_name": db.query(DistrictDB.district_name).filter_by(id=address.district_id).scalar() if address and address.district_id else None,
+                        "district_code": db.query(DistrictDB.gst_district_code).filter_by(id=address.district_id).scalar() if address and address.district_id else None,
                         "city_id": address.city_id if address else None,
                         "city_name": db.query(CityDB.city_name).filter_by(id=address.city_id).scalar() if address and address.city_id else None,
                         "village_id": address.village_id if address else None,
@@ -812,7 +820,6 @@ def get_stakeholder_details(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching stakeholder details: {str(e)}")
-
 
 
 #----get activity
@@ -2388,3 +2395,145 @@ def get_stakeholder_master_for_amndement(db: Session,
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+#-------------------------------------------------------------------------------------------
+
+# def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
+#     try:
+#         # Fetch the active business place data for the given customer_id
+#         current_date = datetime.now().date()
+#         original_business_place = db.query(CustomerBusinessPlace).filter(
+#             CustomerBusinessPlace.customer_id == customer_id,
+#             CustomerBusinessPlace.effective_from_date <= current_date,
+#             (CustomerBusinessPlace.effective_to_date.is_(None) | (CustomerBusinessPlace.effective_to_date >= current_date))
+#         ).first()
+
+#         if not original_business_place:
+#             return {"success": False, "message": "Active business place not found"}
+
+#         # Use model_validate instead of from_orm
+#         business_place_data = CustomerBusinessPlaceAmendmentSchema.model_validate(original_business_place)
+        
+#         # Create a new CustomerBusinessPlace instance from the schema data
+#         new_business_place = CustomerBusinessPlace(
+#             customer_id=original_business_place.customer_id,
+#             **business_place_data.model_dump(exclude_unset=True)
+#         )
+
+#         new_business_place.effective_from_date = None
+#         new_business_place.effective_to_date = None
+#         new_business_place.is_amendment = 'yes'
+#         new_business_place.amended_parent_id = original_business_place.id
+#         new_business_place.amendment_date = datetime.now()
+#         new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
+#         new_business_place.amendment_status = "CREATED"
+#         new_business_place.amendment_action = action.value
+
+#         # Update necessary fields from amendment_details
+#         for key, value in amendment_details.dict(exclude_unset=True).items():
+#             if hasattr(new_business_place, key):
+#                 setattr(new_business_place, key, value)
+        
+#         # Add and commit the new entry
+#         db.add(new_business_place)
+#         db.commit()
+#         db.refresh(new_business_place)
+
+#         return {"success": True, "id": new_business_place.id}
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         return {"success": False, "message": f"Error amending business place: {str(e)}"}
+
+# def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
+#     try:
+#         # Fetch active business place
+#         current_date = datetime.now().date()
+#         original_business_place = db.query(CustomerBusinessPlace).filter(
+#             CustomerBusinessPlace.customer_id == customer_id,
+#             CustomerBusinessPlace.effective_from_date <= current_date,
+#             ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
+#              (CustomerBusinessPlace.effective_to_date >= current_date))
+#         ).first()
+
+#         if not original_business_place:
+#             return {"success": False, "message": "Active business place not found"}
+
+#         # Validate and create new amendment
+#         business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
+#         new_business_place = CustomerBusinessPlace(
+#             customer_id=original_business_place.customer_id,
+#             **business_place_data.dict(exclude_unset=True)
+#         )
+
+#         new_business_place.effective_from_date = None
+#         new_business_place.effective_to_date = None
+#         new_business_place.amended_parent_id = original_business_place.id
+#         new_business_place.is_amendment = 'yes'
+#         new_business_place.amendment_date = datetime.now()
+#         new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
+#         new_business_place.amendment_status = "CREATED"
+#         new_business_place.amendment_action = action.value
+
+#         for key, value in amendment_details.dict(exclude_unset=True).items():
+#             if hasattr(new_business_place, key):
+#                 setattr(new_business_place, key, value)
+
+#         db.add(new_business_place)
+#         db.commit()
+#         db.refresh(new_business_place)
+
+#         return {"success": True, "id": new_business_place.id}
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         logger.error(f"SQLAlchemy error: {str(e)}")
+#         return {"success": False, "message": "Internal Server Error"}
+
+
+def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
+    try:
+        # Fetch active business place
+        current_date = datetime.now().date()
+        original_business_place = db.query(CustomerBusinessPlace).filter(
+            CustomerBusinessPlace.customer_id == customer_id,
+            CustomerBusinessPlace.effective_from_date <= current_date,
+            ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
+             (CustomerBusinessPlace.effective_to_date >= current_date))
+        ).first()
+
+        if not original_business_place:
+            return {"success": False, "message": "Active business place not found"}
+
+        # Validate and create new amendment
+        business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
+        new_business_place = CustomerBusinessPlace(
+            customer_id=original_business_place.customer_id,
+            **business_place_data.dict(exclude_unset=True)
+        )
+
+        # Setting effective dates and amendment info
+        new_business_place.effective_from_date = None  # Adjust this logic if needed
+        new_business_place.effective_to_date = None  # Adjust this logic if needed
+        new_business_place.amended_parent_id = original_business_place.id
+        new_business_place.is_amendment = 'yes'
+        new_business_place.amendment_date = datetime.now()
+        new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
+        new_business_place.amendment_status = "CREATED"
+        new_business_place.amendment_action = action.value
+
+        # Apply amendments
+        for key, value in amendment_details.dict(exclude_unset=True).items():
+            if hasattr(new_business_place, key):
+                setattr(new_business_place, key, value)
+
+        db.add(new_business_place)
+        db.commit()
+        db.refresh(new_business_place)
+
+        return {"success": True, "id": new_business_place.id}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"SQLAlchemy error: {str(e)}")
+        return {"success": False, "message": "Internal Server Error"}

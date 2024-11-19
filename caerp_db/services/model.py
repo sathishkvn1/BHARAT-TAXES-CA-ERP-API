@@ -386,6 +386,7 @@ class CustomerBusinessPlace(caerp_base):
     __tablename__ = 'customer_business_place'
 
     id                              = Column(Integer, primary_key=True, autoincrement=True)
+    amended_parent_id                  = Column(Integer, nullable=True)
     customer_id                     = Column(Integer, nullable=False)
     pin_code                        = Column(String(10), nullable=False)
     country_id                      = Column(Integer, nullable=False)
@@ -408,18 +409,21 @@ class CustomerBusinessPlace(caerp_base):
     is_principal_place              = Column(Enum('yes', 'no'), nullable=False, default='yes')
     business_place_type             = Column(Enum('HEAD OFFICE', 'GODOWN', 'BRANCH'), nullable=False, default='HEAD OFFICE')
     nature_of_possession_id         = Column(Integer, nullable=True)
+
     office_email_address            = Column(String(100), nullable=True)
     office_mobile_number            = Column(String(100), nullable=True)
     office_whatsapp_number           = Column(String(100), nullable=True)
     office_phone_std_code           = Column(String(100), nullable=True)
     office_phone_number             = Column(String(100), nullable=True)
     office_fax_std_code             = Column(String(100), nullable=True)
+
     office_fax_number               = Column(String(100), nullable=True)
     is_amendment                    = Column(Enum('yes', 'no'), nullable=False, default='no')
     amendment_date                  = Column(Date, nullable=True)
     amendment_reason                = Column(String(100), nullable=True)
     amendment_status                = Column(Enum('CREATED', 'UPLOADED', 'DRAFT', 'PENDING', 'VALIDATION_ERROR', 'APPROVED', 'REJECTED'), nullable=False, default='APPROVED')
     amendment_history               = Column(String(2000), nullable=True)
+    amendment_action                = Column(Enum('ADDED','EDITED','DELETED'), nullable=True)
     effective_from_date             = Column(Date, nullable=True)
     effective_to_date               = Column(Date, nullable=True)
     created_by                      = Column(Integer, nullable=True)

@@ -7,7 +7,7 @@ from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -471,6 +471,28 @@ def duplicate_customer(customer_id: int,
 
 from typing import Optional
 
+# @router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
+# def get_customer(id: int,
+#                  db: Session = Depends(get_db),
+#                  token: str = Depends(oauth2.oauth2_scheme)):
+
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     customer = db.query(CustomerMaster).filter(
+#         and_(
+#             CustomerMaster.id == id,
+#             # CustomerMaster.is_amendment == 'yes',
+#             CustomerMaster.is_deleted == 'no'
+#         )
+#     ).first()
+
+#     if not customer:
+#         return None  # This will return a 200 response with `null` as the body in JSON format
+
+#     # Return the customer data
+#     return customer
+
 @router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
 def get_customer(id: int,
                  db: Session = Depends(get_db),
@@ -479,19 +501,105 @@ def get_customer(id: int,
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
-    customer = db.query(CustomerMaster).filter(
-        and_(
-            CustomerMaster.id == id,
-            # CustomerMaster.is_amendment == 'yes',
-            CustomerMaster.is_deleted == 'no'
-        )
-    ).first()
+    # Query to join CustomerMaster with CustomerAmendmentHistory
+    query = db.query(CustomerMaster, CustomerAmendmentHistory).join(
+        CustomerAmendmentHistory, CustomerMaster.id == CustomerAmendmentHistory.amendment_id, isouter=True
+    ).filter(
+        CustomerMaster.id == id,
+        CustomerMaster.is_deleted == 'no'
+    )
+    
+    # Fetch data
+    result = query.first()
 
-    if not customer:
+    if not result:
         return None  # This will return a 200 response with `null` as the body in JSON format
 
-    # Return the customer data
-    return customer
+    # Unpacking the result tuple
+    customer_master, amendment_history = result
+
+    # Prepare the response data to match the schema
+    response_data = CustomerDuplicateSchemaForGet(
+        id=customer_master.id,
+        customer_id=customer_master.customer_id,
+        customer_number=customer_master.customer_number,
+        legal_name=customer_master.legal_name,
+        customer_name=customer_master.customer_name,
+        pan_number=customer_master.pan_number,
+        pan_creation_date=customer_master.pan_creation_date,
+        tan_number=customer_master.tan_number,
+        passport_number=customer_master.passport_number,
+        tin_number=customer_master.tin_number,
+        authorized_signatory_name_as_in_pan=customer_master.authorized_signatory_name_as_in_pan,
+        authorized_signatory_pan_number=customer_master.authorized_signatory_pan_number,
+        email_address=customer_master.email_address,
+        mobile_number=customer_master.mobile_number,
+        constitution_id=customer_master.constitution_id,
+        state_id=customer_master.state_id,
+        district_id=customer_master.district_id,
+        is_mother_customer=customer_master.is_mother_customer,
+        is_amendment=customer_master.is_amendment,
+        amendment_date=customer_master.amendment_date,
+        amendment_reason=customer_master.amendment_reason,
+        amendment_status=customer_master.amendment_status,
+        amendment_history=customer_master.amendment_history,
+        effective_from_date=customer_master.effective_from_date,
+        effective_to_date=customer_master.effective_to_date,
+        has_authorized_signatory=customer_master.has_authorized_signatory,
+        has_authorized_representative=customer_master.has_authorized_representative,
+        created_by=customer_master.created_by,
+        created_on=customer_master.created_on,
+        modified_by=customer_master.modified_by,
+        modified_on=customer_master.modified_on,
+        is_deleted=customer_master.is_deleted,
+        deleted_by=customer_master.deleted_by,
+        deleted_on=customer_master.deleted_on,
+        amendment_request_date=amendment_history.amendment_request_date if amendment_history else None,
+        amendment_remarks=amendment_history.amendment_remarks if amendment_history else None
+    )
+    
+    # Return the validated response
+    return response_data
+
+
+
+
+# @router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
+# def get_customer(id: int,
+#                  db: Session = Depends(get_db),
+#                  token: str = Depends(oauth2.oauth2_scheme)):
+
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     # Query to join CustomerMaster with CustomerAmendmentHistory
+#     query = db.query(CustomerMaster, CustomerAmendmentHistory).join(
+#         CustomerAmendmentHistory, CustomerMaster.id == CustomerAmendmentHistory.amendment_id, isouter=True
+#     ).filter(
+#         CustomerMaster.id == id,
+#         CustomerMaster.is_deleted == 'no'
+#     )
+    
+#     # Fetch data
+#     result = query.first()
+
+#     if not result:
+#         return None  # This will return a 200 response with `null` as the body in JSON format
+
+#     # Unpacking the result tuple
+#     customer_master, amendment_history = result
+
+#     # Combine data from both models into a dictionary
+#     response_data = {
+#         **customer_master.__dict__,
+#         **(amendment_history.__dict__ if amendment_history else {})
+#     }
+
+#     # Remove protected SQLAlchemy attributes
+#     response_data.pop('_sa_instance_state', None)
+
+#     # Return the validated response
+#     return CustomerDuplicateSchemaForGet(**response_data)
 
 
 
@@ -766,3 +874,26 @@ def get_stakeholder_master(
         return []
 
     return stakeholder_details
+
+#------------------------------------------------------------------------------------------------------------
+@router.post("/amend_business_place")
+def amend_business_place(customer_id: int, 
+                         amendment_details: CustomerBusinessPlaceAmendmentSchema,
+                         action: AmendmentAction,
+                         db: Session = Depends(get_db),
+                         token: str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    result = db_gst.amend_business_place_data(db, customer_id, amendment_details, action, user_id)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    return {"success": True, "message": "Amendment saved successfully", "id": result["id"]}
