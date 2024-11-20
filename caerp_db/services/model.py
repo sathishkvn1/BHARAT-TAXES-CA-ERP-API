@@ -346,6 +346,42 @@ class StakeHolderAddress(caerp_base):
 
 
 
+# class CustomerStakeHolder(caerp_base):
+#     __tablename__ = 'customer_stake_holders'
+
+#     id                                  = Column(Integer, primary_key=True, autoincrement=True)
+#     amended_parent_id                   = Column(Integer, nullable=True)
+#     customer_id                         = Column(Integer, nullable=False)
+#     stake_holder_master_id              = Column(Integer, nullable=False)
+#     stake_holder_type                   = Column(Enum('PROMOTER_PARTNER_DIRECTOR','AUTHORIZED_SIGNATORY','AUTHORIZED_REPRESENTATIVE'), nullable=False, default='PROMOTER_PARTNER_DIRECTOR')
+#     authorized_representative_type      = Column(Enum('GST_PRACTIONER','OTHER'), nullable=True)
+#     designation_id                      = Column(Integer, nullable=False)
+#     official_position_id                = Column(Integer, nullable=True)
+#     is_authorized_signatory             = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     is_primary_authorized_signatory     = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     contact_details_id                  = Column(Integer, nullable=True)
+#     present_address_id                  = Column(Integer, nullable=True)
+#     permanent_address_id                = Column(Integer, nullable=True)
+#     residential_address_id              = Column(Integer, nullable=True)
+#     official_address_id                 = Column(Integer, nullable=True)
+#     official_mobile_number              = Column(String(100), nullable=True)
+#     official_email_address              = Column(String(100), nullable=True)
+#     is_amendment                        = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     amendment_date                      = Column(Date, nullable=True)
+#     amendment_reason                    = Column(String(100), nullable=True)
+#     amendment_status                    = Column(Enum('CREATED','UPLOADED','DRAFT','PENDING','VALIDATION_ERROR','APPROVED','REJECTED'), nullable=True)
+#     amendment_history                   = Column(String(2000), nullable=True)
+#     amendment_action                    = Column(Enum('ADDED','EDITED','DELETED'), nullable=True)
+#     effective_from_date                 = Column(Date, nullable=True)
+#     effective_to_date                   = Column(Date, nullable=True)
+#     created_by                          = Column(Integer, nullable=True)
+#     created_on                          = Column(DateTime, nullable=True)
+#     modified_by                         = Column(Integer, nullable=True)
+#     modified_on                         = Column(DateTime, nullable=True)
+#     is_deleted                          = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     deleted_by                          = Column(Integer, nullable=True)
+#     deleted_on                          = Column(DateTime, nullable=True)
+
 class CustomerStakeHolder(caerp_base):
     __tablename__ = 'customer_stake_holders'
 
@@ -354,7 +390,7 @@ class CustomerStakeHolder(caerp_base):
     customer_id                         = Column(Integer, nullable=False)
     stake_holder_master_id              = Column(Integer, nullable=False)
     stake_holder_type                   = Column(Enum('PROMOTER_PARTNER_DIRECTOR','AUTHORIZED_SIGNATORY','AUTHORIZED_REPRESENTATIVE'), nullable=False, default='PROMOTER_PARTNER_DIRECTOR')
-    authorized_representative_type      = Column(Enum('GST_PRACTIONER','OTHER'), nullable=True)
+    authorized_representative_type      = Column(Enum('GST_PRACTITIONER','OTHER'), nullable=True)
     designation_id                      = Column(Integer, nullable=False)
     official_position_id                = Column(Integer, nullable=True)
     is_authorized_signatory             = Column(Enum('yes', 'no'), nullable=False, default='no')
@@ -381,6 +417,9 @@ class CustomerStakeHolder(caerp_base):
     is_deleted                          = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                          = Column(Integer, nullable=True)
     deleted_on                          = Column(DateTime, nullable=True)
+
+
+
 
 class CustomerBusinessPlace(caerp_base):
     __tablename__ = 'customer_business_place'
@@ -439,6 +478,7 @@ class CustomerBusinessPlaceActivity(caerp_base):
     __tablename__ = 'customer_business_place_activity'
 
     id                    = Column(Integer, primary_key=True, autoincrement=True)
+    amended_parent_id     = Column(Integer, nullable=True)
     customer_id           = Column(Integer, nullable=False)
     business_place_id     = Column(Integer, nullable=False)
     business_activity_id  = Column(Integer, nullable=False)
@@ -447,6 +487,7 @@ class CustomerBusinessPlaceActivity(caerp_base):
     amendment_reason      = Column(String(100), nullable=True)
     amendment_status      = Column(Enum('CREATED', 'UPLOADED', 'DRAFT', 'PENDING', 'VALIDATION_ERROR', 'APPROVED', 'REJECTED'), nullable=False, default='APPROVED')
     amendment_history     = Column(String(2000), nullable=True)
+    amendment_action      = Column(Enum('ADDED','EDITED','DELETED'), nullable=True)
     effective_from_date   = Column(Date, nullable=True)
     effective_to_date     = Column(Date, nullable=True)
     created_by            = Column(Integer, nullable=True)

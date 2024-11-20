@@ -182,9 +182,10 @@ class NatureOfBusiness(BaseModel):
 
 class BusinessData(BaseModel):
     business_place                  : List[BusinessPlace]
-    business_activity_type_id       : int
-    business_activity_master_id     : int
+    business_activity_type_id       : Optional[int]=None
+    business_activity_master_id     : Optional[int]=None
     nature_of_business              : List[NatureOfBusiness]
+
 
 
 class CustomerGoodsCommoditiesSupplyDetailsSchema(BaseModel):
@@ -428,6 +429,8 @@ class AmendmentDetailsSchema(BaseModel):
     date: datetime
 
 
+
+
 class CustomerBusinessPlaceAmendmentSchema(BaseModel):
     pin_code: str
     country_id: int
@@ -461,3 +464,56 @@ class CustomerBusinessPlaceAmendmentSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
+
+# class BusinessPlaceDetails(BaseModel):
+#     pin_code: str
+#     country_id: int
+#     state_id: int
+#     district_id: int
+#     taluk_id: int
+#     city_id: int
+#     post_office_id: int
+#     lsg_type_id: int
+#     lsg_id: int
+#     village_id: int
+#     locality: Optional[str] = None
+#     road_street_name: Optional[str] = None
+#     premises_building_name: str
+#     building_flat_number: str
+#     floor_number: Optional[str] = None
+#     landmark: Optional[str] = None
+#     latitude: Optional[str] = None
+#     longitude: Optional[str] = None
+#     office_email_address: Optional[str] = None
+#     office_mobile_number: Optional[str] = None
+#     office_phone_std_code: Optional[str] = None
+#     office_phone_number: Optional[str] = None
+#     office_fax_std_code: Optional[str] = None
+#     office_fax_number: Optional[str] = None
+#     amendment_date: Optional[date] = None
+#     amendment_reason: Optional[str] = None
+
+
+
+
+class NatureOfBusinessSchema(BaseModel):
+    business_activity_id: int
+    amendment_date: Optional[date] = None
+    amendment_reason: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+
+
+
+class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
+    business_place: List[CustomerBusinessPlaceAmendmentSchema]
+    nature_of_business: List[NatureOfBusinessSchema]
+
+    class Config:
+        orm_mode = True
+        from_attributes = True

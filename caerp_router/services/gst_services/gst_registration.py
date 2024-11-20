@@ -8,7 +8,7 @@ from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, Bus
 from caerp_db.office.models import AppBusinessConstitution
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -113,6 +113,7 @@ def get_customer_details(
 
 
 #----Save Stakeholder Details--------
+
 @router.post("/save_stake_holder_master")
 def save_stake_holder_master(
     request_data: StakeHolderMasterSchema,
@@ -120,7 +121,7 @@ def save_stake_holder_master(
     stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
     is_authorized_signatory: Optional[str] =None ,  # Added parameter
     is_primary_authorized_signatory: Optional[str] =None,
-    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTIONER', 'OTHER']),
+    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTITIONER', 'OTHER']),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -146,10 +147,8 @@ def save_stake_holder_master(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-
-
 #------ Get Stakeholder Details---------------------------------------------------------------------------
+
 @router.get("/get_stakeholder_master")
 def get_stakeholder_master(
     customer_id: Optional[int] = None,  # Optional customer_id
@@ -157,7 +156,7 @@ def get_stakeholder_master(
     search_value: Optional[str] = None, 
     is_authorized_signatory: Optional[str] = None,
     is_primary_authorized_signatory: Optional[str] = None, 
-    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTIONER', 'OTHER']),# Optional search value parameter
+    authorized_representative_type: Optional[str] = Query(None, enum=['GST_PRACTITIONER', 'OTHER']),# Optional search value parameter
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -181,9 +180,6 @@ def get_stakeholder_master(
         return []
 
     return stakeholder_details
-
-
-
 
 
 #-----------------Business Activity-----------------
@@ -934,9 +930,11 @@ def get_stakeholder_master(
     return stakeholder_details
 
 #------------------------------------------------------------------------------------------------------------
+
+
 @router.post("/amend_business_place")
 def amend_business_place(customer_id: int, 
-                         amendment_details: CustomerBusinessPlaceAmendmentSchema,
+                         amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
                          action: AmendmentAction,
                          db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)):

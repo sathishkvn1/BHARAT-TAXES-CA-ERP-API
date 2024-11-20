@@ -9,7 +9,7 @@ from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActi
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerBusinessPlaceAmendmentSchema, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -920,12 +920,13 @@ def fetch_business_activities(
 #----------------Save Business Place----------
 
 #-----------------------------------------------------------------------------------------------------------------
-
-def save_business_place(customer_id: int, 
-                        data: BusinessData, 
-                        db: Session,
-                        user_id: int,
-                        id: int):
+def save_business_place(
+    customer_id: int,
+    data: BusinessData,
+    db: Session,
+    user_id: int,
+    id: int
+):
     try:
         # Start transaction
         with db.begin():
@@ -936,10 +937,10 @@ def save_business_place(customer_id: int,
                     new_business_place = CustomerBusinessPlace(
                         **business_place.model_dump(exclude_unset=True),
                         customer_id=customer_id,
-                        effective_from_date=datetime.now(),  
+                        effective_from_date=datetime.now(),
                         effective_to_date=None,
-                        created_by=user_id,              
-                        created_on=datetime.now()           
+                        created_by=user_id,
+                        created_on=datetime.now(),
                     )
                     db.add(new_business_place)
                     db.flush()  # Get the generated ID after insert
@@ -955,17 +956,21 @@ def save_business_place(customer_id: int,
                         # Update each attribute of the existing business place
                         for key, value in business_place.model_dump(exclude_unset=True).items():
                             setattr(existing_business_place, key, value)
-                    existing_business_place.effective_from_date = datetime.now() 
+                    existing_business_place.effective_from_date = datetime.now()
                     existing_business_place.effective_to_date = None
-                    existing_business_place.modified_by = user_id                
-                    existing_business_place.modified_on = datetime.now()        
+                    existing_business_place.modified_by = user_id
+                    existing_business_place.modified_on = datetime.now()
                     business_place_id = existing_business_place.id
                 else:
-                    return {"message": "Business place not found for update."} 
-        
+                    return {"message": "Business place not found for update."}
+
             # Process nature_of_business activities for the business place
-            existing_activities = {activity.id: activity for activity in db.query(CustomerBusinessPlaceActivity)
-                                .filter_by(customer_id=customer_id, business_place_id=business_place_id).all()}
+            existing_activities = {
+                activity.id: activity
+                for activity in db.query(CustomerBusinessPlaceActivity)
+                .filter_by(customer_id=customer_id, business_place_id=business_place_id)
+                .all()
+            }
 
             # Collect incoming service IDs to check against existing ones for deletions
             incoming_activity_ids = {nature.id for nature in data.nature_of_business if nature.id != 0}
@@ -1003,61 +1008,63 @@ def save_business_place(customer_id: int,
                         created_by=user_id,
                         created_on=datetime.now(),
                         business_place_id=business_place_id,
-                        business_activity_id=nature.business_activity_id
+                        business_activity_id=nature.business_activity_id,
                     )
                     db.add(new_activity)
 
             # Handle business activity type
-            existing_activity_type = db.query(CustomerBusinessPlaceActivityType).filter_by(
-                customer_id=customer_id,
-                business_place_id=business_place_id
-            ).first()
-
-            if existing_activity_type:
-                # Update the existing record
-                existing_activity_type.business_activity_type_id = data.business_activity_type_id
-                existing_activity_type.effective_from_date = datetime.now() 
-                existing_activity_type.effective_to_date = None
-                existing_activity_type.modified_by = user_id                   
-                existing_activity_type.modified_on = datetime.now()             
-            else:
-                # Add a new record if none exists
-                new_activity_type = CustomerBusinessPlaceActivityType(
+            if data.business_activity_type_id is not None:
+                existing_activity_type = db.query(CustomerBusinessPlaceActivityType).filter_by(
                     customer_id=customer_id,
-                    effective_from_date=datetime.now(),                          
-                    effective_to_date=None,
-                    created_by=user_id,                                      
-                    created_on=datetime.now(),                                  
                     business_place_id=business_place_id,
-                    business_activity_type_id=data.business_activity_type_id
-                )
-                db.add(new_activity_type)
+                ).first()
+
+                if existing_activity_type:
+                    # Update the existing record
+                    existing_activity_type.business_activity_type_id = data.business_activity_type_id
+                    existing_activity_type.effective_from_date = datetime.now()
+                    existing_activity_type.effective_to_date = None
+                    existing_activity_type.modified_by = user_id
+                    existing_activity_type.modified_on = datetime.now()
+                else:
+                    # Add a new record if none exists
+                    new_activity_type = CustomerBusinessPlaceActivityType(
+                        customer_id=customer_id,
+                        effective_from_date=datetime.now(),
+                        effective_to_date=None,
+                        created_by=user_id,
+                        created_on=datetime.now(),
+                        business_place_id=business_place_id,
+                        business_activity_type_id=data.business_activity_type_id,
+                    )
+                    db.add(new_activity_type)
 
             # Handle business activity master
-            existing_core_activity = db.query(CustomerBusinessPlaceCoreActivity).filter_by(
-                customer_id=customer_id,
-                business_place_id=business_place_id
-            ).first()
-
-            if existing_core_activity:
-                # Update the existing record
-                existing_core_activity.business_activity_master_id = data.business_activity_master_id
-                existing_core_activity.effective_from_date = datetime.now() 
-                existing_core_activity.effective_to_date = None
-                existing_core_activity.modified_by = user_id                   
-                existing_core_activity.modified_on = datetime.now()      
-            else:
-                # Add a new record if none exists
-                new_core_activity = CustomerBusinessPlaceCoreActivity(
+            if data.business_activity_master_id is not None:
+                existing_core_activity = db.query(CustomerBusinessPlaceCoreActivity).filter_by(
                     customer_id=customer_id,
-                    effective_from_date=datetime.now(),                         
-                    effective_to_date=None,
-                    created_by=user_id,                                     
-                    created_on=datetime.now(),                                 
                     business_place_id=business_place_id,
-                    business_activity_master_id=data.business_activity_master_id
-                )
-                db.add(new_core_activity)
+                ).first()
+
+                if existing_core_activity:
+                    # Update the existing record
+                    existing_core_activity.business_activity_master_id = data.business_activity_master_id
+                    existing_core_activity.effective_from_date = datetime.now()
+                    existing_core_activity.effective_to_date = None
+                    existing_core_activity.modified_by = user_id
+                    existing_core_activity.modified_on = datetime.now()
+                else:
+                    # Add a new record if none exists
+                    new_core_activity = CustomerBusinessPlaceCoreActivity(
+                        customer_id=customer_id,
+                        effective_from_date=datetime.now(),
+                        effective_to_date=None,
+                        created_by=user_id,
+                        created_on=datetime.now(),
+                        business_place_id=business_place_id,
+                        business_activity_master_id=data.business_activity_master_id,
+                    )
+                    db.add(new_core_activity)
 
             # Commit the transaction after all operations
             db.commit()
@@ -1067,6 +1074,10 @@ def save_business_place(customer_id: int,
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 #-----get business_place----
 def get_business_place(customer_id: int, 
                        type: str, 
@@ -2399,101 +2410,10 @@ def get_stakeholder_master_for_amndement(db: Session,
 
 #-------------------------------------------------------------------------------------------
 
-# def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
-#     try:
-#         # Fetch the active business place data for the given customer_id
-#         current_date = datetime.now().date()
-#         original_business_place = db.query(CustomerBusinessPlace).filter(
-#             CustomerBusinessPlace.customer_id == customer_id,
-#             CustomerBusinessPlace.effective_from_date <= current_date,
-#             (CustomerBusinessPlace.effective_to_date.is_(None) | (CustomerBusinessPlace.effective_to_date >= current_date))
-#         ).first()
-
-#         if not original_business_place:
-#             return {"success": False, "message": "Active business place not found"}
-
-#         # Use model_validate instead of from_orm
-#         business_place_data = CustomerBusinessPlaceAmendmentSchema.model_validate(original_business_place)
-        
-#         # Create a new CustomerBusinessPlace instance from the schema data
-#         new_business_place = CustomerBusinessPlace(
-#             customer_id=original_business_place.customer_id,
-#             **business_place_data.model_dump(exclude_unset=True)
-#         )
-
-#         new_business_place.effective_from_date = None
-#         new_business_place.effective_to_date = None
-#         new_business_place.is_amendment = 'yes'
-#         new_business_place.amended_parent_id = original_business_place.id
-#         new_business_place.amendment_date = datetime.now()
-#         new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
-#         new_business_place.amendment_status = "CREATED"
-#         new_business_place.amendment_action = action.value
-
-#         # Update necessary fields from amendment_details
-#         for key, value in amendment_details.dict(exclude_unset=True).items():
-#             if hasattr(new_business_place, key):
-#                 setattr(new_business_place, key, value)
-        
-#         # Add and commit the new entry
-#         db.add(new_business_place)
-#         db.commit()
-#         db.refresh(new_business_place)
-
-#         return {"success": True, "id": new_business_place.id}
-
-#     except SQLAlchemyError as e:
-#         db.rollback()
-#         return {"success": False, "message": f"Error amending business place: {str(e)}"}
-
-# def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
-#     try:
-#         # Fetch active business place
-#         current_date = datetime.now().date()
-#         original_business_place = db.query(CustomerBusinessPlace).filter(
-#             CustomerBusinessPlace.customer_id == customer_id,
-#             CustomerBusinessPlace.effective_from_date <= current_date,
-#             ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
-#              (CustomerBusinessPlace.effective_to_date >= current_date))
-#         ).first()
-
-#         if not original_business_place:
-#             return {"success": False, "message": "Active business place not found"}
-
-#         # Validate and create new amendment
-#         business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
-#         new_business_place = CustomerBusinessPlace(
-#             customer_id=original_business_place.customer_id,
-#             **business_place_data.dict(exclude_unset=True)
-#         )
-
-#         new_business_place.effective_from_date = None
-#         new_business_place.effective_to_date = None
-#         new_business_place.amended_parent_id = original_business_place.id
-#         new_business_place.is_amendment = 'yes'
-#         new_business_place.amendment_date = datetime.now()
-#         new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
-#         new_business_place.amendment_status = "CREATED"
-#         new_business_place.amendment_action = action.value
-
-#         for key, value in amendment_details.dict(exclude_unset=True).items():
-#             if hasattr(new_business_place, key):
-#                 setattr(new_business_place, key, value)
-
-#         db.add(new_business_place)
-#         db.commit()
-#         db.refresh(new_business_place)
-
-#         return {"success": True, "id": new_business_place.id}
-
-#     except SQLAlchemyError as e:
-#         db.rollback()
-#         logger.error(f"SQLAlchemy error: {str(e)}")
-#         return {"success": False, "message": "Internal Server Error"}
-
-
-def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema, action: AmendmentAction, user_id: int):
+def amend_business_place_data(db: Session, customer_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
     try:
+        print(f"Starting amend_business_place_data for customer_id: {customer_id}, user_id: {user_id}, action: {action}")
+
         # Fetch active business place
         current_date = datetime.now().date()
         original_business_place = db.query(CustomerBusinessPlace).filter(
@@ -2504,37 +2424,103 @@ def amend_business_place_data(db: Session, customer_id: int, amendment_details: 
         ).first()
 
         if not original_business_place:
+            print(f"No active business place found for customer_id: {customer_id}")
             return {"success": False, "message": "Active business place not found"}
+
+        print(f"Fetched original business place: {original_business_place}")
+
+        # Duplicate existing business place activities
+        existing_activities = db.query(CustomerBusinessPlaceActivity).filter(
+            CustomerBusinessPlaceActivity.business_place_id == original_business_place.id,
+            CustomerBusinessPlaceActivity.customer_id == customer_id
+        ).all()
+
+        for activity in existing_activities:
+            new_entry = CustomerBusinessPlaceActivity(
+                **{column.name: getattr(activity, column.name) for column in CustomerBusinessPlaceActivity.__table__.columns}
+            )
+            new_entry.id = None  # Ensure new ID is generated
+            new_entry.amended_parent_id = activity.id
+            new_entry.is_amendment = 'yes'
+            db.add(new_entry)
+            db.commit()
+            db.refresh(new_entry)
+            print(f"Duplicated entry with new ID: {new_entry.id}")
 
         # Validate and create new amendment
         business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
+        print(f"Business place data from ORM: {business_place_data}")
+
         new_business_place = CustomerBusinessPlace(
             customer_id=original_business_place.customer_id,
             **business_place_data.dict(exclude_unset=True)
         )
 
         # Setting effective dates and amendment info
-        new_business_place.effective_from_date = None  # Adjust this logic if needed
-        new_business_place.effective_to_date = None  # Adjust this logic if needed
+        new_business_place.effective_from_date = None
+        new_business_place.effective_to_date = None
         new_business_place.amended_parent_id = original_business_place.id
         new_business_place.is_amendment = 'yes'
         new_business_place.amendment_date = datetime.now()
-        new_business_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
+        new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
         new_business_place.amendment_status = "CREATED"
         new_business_place.amendment_action = action.value
 
         # Apply amendments
-        for key, value in amendment_details.dict(exclude_unset=True).items():
+        for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
             if hasattr(new_business_place, key):
                 setattr(new_business_place, key, value)
+
+        print(f"New business place data: {new_business_place}")
 
         db.add(new_business_place)
         db.commit()
         db.refresh(new_business_place)
 
+        print(f"New business place saved with ID: {new_business_place.id}")
+
+        # Handle nature_of_business amendments
+        current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
+        print(f"Current activity IDs from amendment details: {current_activity_ids}")
+
+        existing_activities = db.query(CustomerBusinessPlaceActivity).filter(
+            CustomerBusinessPlaceActivity.customer_id == customer_id,
+            CustomerBusinessPlaceActivity.is_amendment == 'yes'
+        ).all()
+        print(f"Existing activities: {existing_activities}")
+
+        existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
+        print(f"Existing activity IDs: {existing_activity_ids}")
+
+        # Case 2: Add new rows for new business activities
+        for nature in amendment_details.nature_of_business:
+            if nature.business_activity_id not in existing_activity_ids:
+                new_entry = CustomerBusinessPlaceActivity(
+                    customer_id=customer_id,
+                    business_place_id=new_business_place.id,
+                    business_activity_id=nature.business_activity_id,
+                    amended_parent_id=None,
+                    is_amendment='yes',
+                    amendment_action="ADDED",
+                    amendment_date=nature.amendment_date or datetime.now(),
+                    amendment_reason=nature.amendment_reason or "Not provided"
+                )
+                db.add(new_entry)
+                db.commit()
+                db.refresh(new_entry)
+                print(f"Added new entry for business_activity_id: {nature.business_activity_id}")
+
+        # Case 3: Mark unchecked items as DELETED
+        for activity in existing_activities:
+            if activity.business_activity_id not in current_activity_ids:
+                activity.amendment_action = "DELETED"
+                db.commit()
+                db.refresh(activity)
+                print(f"Marked activity entry as DELETED for business_activity_id: {activity.business_activity_id}")
+
         return {"success": True, "id": new_business_place.id}
 
     except SQLAlchemyError as e:
         db.rollback()
-        logger.error(f"SQLAlchemy error: {str(e)}")
+        print(f"SQLAlchemy error: {str(e)}")
         return {"success": False, "message": "Internal Server Error"}
