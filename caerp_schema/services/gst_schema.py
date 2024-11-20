@@ -466,35 +466,6 @@ class CustomerBusinessPlaceAmendmentSchema(BaseModel):
 
 
 
-# class BusinessPlaceDetails(BaseModel):
-#     pin_code: str
-#     country_id: int
-#     state_id: int
-#     district_id: int
-#     taluk_id: int
-#     city_id: int
-#     post_office_id: int
-#     lsg_type_id: int
-#     lsg_id: int
-#     village_id: int
-#     locality: Optional[str] = None
-#     road_street_name: Optional[str] = None
-#     premises_building_name: str
-#     building_flat_number: str
-#     floor_number: Optional[str] = None
-#     landmark: Optional[str] = None
-#     latitude: Optional[str] = None
-#     longitude: Optional[str] = None
-#     office_email_address: Optional[str] = None
-#     office_mobile_number: Optional[str] = None
-#     office_phone_std_code: Optional[str] = None
-#     office_phone_number: Optional[str] = None
-#     office_fax_std_code: Optional[str] = None
-#     office_fax_number: Optional[str] = None
-#     amendment_date: Optional[date] = None
-#     amendment_reason: Optional[str] = None
-
-
 
 
 class NatureOfBusinessSchema(BaseModel):
@@ -517,3 +488,72 @@ class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+
+
+
+
+class CustomerBusinessPlaceSchemaForGet(BaseModel):
+    business_place_id: int
+    customer_id: int
+    pin_code: str
+    country_id: int
+    state_id: int
+    district_id: int
+    taluk_id: int
+    city_id: int
+    post_office_id: int
+    lsg_type_id: int
+    lsg_id: int
+    village_id: int
+    locality: Optional[str]
+    road_street_name: Optional[str]
+    premises_building_name: str
+    building_flat_number: str
+    floor_number: Optional[str]
+    landmark: Optional[str]
+    latitude: Optional[str]
+    longitude: Optional[str]
+    office_email_address: Optional[str]
+    office_mobile_number: Optional[str]
+    office_phone_std_code: Optional[str]
+    office_phone_number: Optional[str]
+    office_fax_std_code: Optional[str]
+    office_fax_number: Optional[str]
+    is_amendment: str
+    amendment_date: Optional[date]
+    amendment_reason: Optional[str]
+    amendment_status: Optional[str]
+    amended_parent_id: Optional[int]
+    effective_from_date: Optional[date]
+    effective_to_date: Optional[date]
+    created_by: Optional[int]
+    created_on: Optional[date]
+    modified_by: Optional[int]
+    modified_on: Optional[date]
+    is_deleted: str
+    deleted_by: Optional[int]
+    deleted_on: Optional[date]
+
+    class Config:
+        orm_mode = True
+
+class CustomerBusinessPlaceActivitySchemaForGet(BaseModel):
+    id: int
+    business_activity_id: int
+    amendment_date: Optional[date]
+    amendment_reason: Optional[str]
+    amendment_action: Optional[str]
+    amended_parent_id: Optional[int]
+    is_amendment: str
+    is_deleted: str
+
+    class Config:
+        orm_mode = True
+
+class CombinedSchema(BaseModel):
+    business_place: CustomerBusinessPlaceSchemaForGet
+    activity: CustomerBusinessPlaceActivitySchemaForGet
+
+    class Config:
+        orm_mode = True
