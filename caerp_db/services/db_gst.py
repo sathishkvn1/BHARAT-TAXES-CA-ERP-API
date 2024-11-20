@@ -9,7 +9,7 @@ from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActi
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
-from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
+from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CombinedSchema, CustomerBusinessPlaceActivitySchemaForGet, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerBusinessPlaceSchemaForGet, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
@@ -774,9 +774,9 @@ def get_stakeholder_details(
                     "telephone_number_with_std_code": contact_details.telephone_number_with_std_code if contact_details else None
                 },
                 "identity_information": {
-                    "id": designation.id if designation else None,
-                    "designation_id": designation.id if designation else None,
-                    "designation": designation.designation if designation else None,
+                    "id": stakeholder.id,
+                    "designation_id": designation.id,
+                    "designation": designation.designation,
                     "designation_code": designation_code,
                     "stake_holder_type":stakeholder.stake_holder_type,
                     "is_authorized_signatory": stakeholder.is_authorized_signatory,
@@ -1959,138 +1959,6 @@ def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[
 
 #-------------------------------------------------------------------------------------------------------------
 
-# def add_stake_holder(db: Session, customer_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
-#     try:
-#         # Insert data into StakeHolderMaster
-#         new_stake_holder = StakeHolderMaster(
-#             first_name=request_data.personal_information.first_name,
-#             middle_name=request_data.personal_information.middle_name,
-#             last_name=request_data.personal_information.last_name,
-#             fathers_first_name=request_data.personal_information.fathers_first_name,
-#             fathers_middle_name=request_data.personal_information.fathers_middle_name,
-#             fathers_last_name=request_data.personal_information.fathers_last_name,
-#             marital_status_id=request_data.personal_information.marital_status_id,
-#             date_of_birth=request_data.personal_information.date_of_birth,
-#             gender_id=request_data.personal_information.gender_id,
-#             din_number=request_data.personal_information.din_number,
-#             is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
-#             pan_number=request_data.personal_information.pan_number,
-#             passport_number=request_data.personal_information.passport_number,
-#             aadhaar_number=request_data.personal_information.aadhaar_number,
-#             created_by=user_id,
-#             created_on=datetime.now()
-#         )
-#         db.add(new_stake_holder)
-#         db.commit()
-#         db.refresh(new_stake_holder)
-#         stake_holder_id = new_stake_holder.id
-
-#         # Check for existing address
-#         address_exists = db.query(StakeHolderAddress).filter_by(
-#             pin_code=request_data.address[0].pin_code,
-#             country_id=request_data.address[0].country_id,
-#             state_id=request_data.address[0].state_id,
-#             district_id=request_data.address[0].district_id,
-#             city_id=request_data.address[0].city_id,
-#             village_id=request_data.address[0].village_id,
-#             post_office_id=request_data.address[0].post_office_id,
-#             taluk_id=request_data.address[0].taluk_id,
-#             # lsg_type_id=request_data.address[0].lsg_type_id,
-#             # lsg_id=request_data.address[0].lsg_id,
-#             locality=request_data.address[0].locality,
-#             road_street_name=request_data.address[0].road_street_name,
-#             premises_building_name=request_data.address[0].premises_building_name,
-#             building_flat_number=request_data.address[0].building_flat_number,
-#             floor_number=request_data.address[0].floor_number,
-#             landmark=request_data.address[0].landmark,
-#             stake_holder_id=stake_holder_id
-#         ).first()
-
-#         if address_exists:
-#             permanent_address_id = address_exists.id
-#         else:
-#             # Insert data into StakeHolderAddress
-#             new_address = StakeHolderAddress(
-#                 stake_holder_id=stake_holder_id,
-#                 address_type='PERMANENT',
-#                 pin_code=request_data.address[0].pin_code,
-#                 country_id=request_data.address[0].country_id,
-#                 state_id=request_data.address[0].state_id,
-#                 district_id=request_data.address[0].district_id,
-#                 city_id=request_data.address[0].city_id,
-#                 village_id=request_data.address[0].village_id,
-#                 post_office_id=request_data.address[0].post_office_id,
-#                 taluk_id=request_data.address[0].taluk_id,
-#                 lsg_type_id=request_data.address[0].lsg_type_id,
-#                 lsg_id=request_data.address[0].lsg_id,
-#                 locality=request_data.address[0].locality,
-#                 road_street_name=request_data.address[0].road_street_name,
-#                 premises_building_name=request_data.address[0].premises_building_name,
-#                 building_flat_number=request_data.address[0].building_flat_number,
-#                 floor_number=request_data.address[0].floor_number,
-#                 landmark=request_data.address[0].landmark,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_address)
-#             db.commit()
-#             db.refresh(new_address)
-#             permanent_address_id = new_address.id
-
-#         # Check for existing contact details
-#         contact_exists = db.query(StakeHolderContactDetails).filter_by(
-#             mobile_number=request_data.contact_details[0].mobile_number,
-#             email_address=request_data.contact_details[0].email_address,
-#             telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
-#             stake_holder_id=stake_holder_id
-#         ).first()
-
-#         if contact_exists:
-#             contact_details_id = contact_exists.id
-#         else:
-#             # Insert data into StakeHolderContactDetails
-#             new_contact_details = StakeHolderContactDetails(
-#                 stake_holder_id=stake_holder_id,
-#                 mobile_number=request_data.contact_details[0].mobile_number,
-#                 email_address=request_data.contact_details[0].email_address,
-#                 telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_contact_details)
-#             db.commit()
-#             db.refresh(new_contact_details)
-#             contact_details_id = new_contact_details.id
-
-#         # Insert data into CustomerStakeHolder
-#         new_customer_stake_holder = CustomerStakeHolder(
-#             customer_id=customer_id,
-#             stake_holder_master_id=stake_holder_id,
-#             stake_holder_type=stakeholder_type,
-#             designation_id=request_data.personal_information.designation_id,
-#             contact_details_id=contact_details_id,
-#             permanent_address_id=permanent_address_id,
-#             official_mobile_number=request_data.contact_details[0].mobile_number,
-#             official_email_address=request_data.contact_details[0].email_address,
-#             is_amendment='yes',
-#             amendment_date=datetime.now(),
-#             amendment_reason='Adding new stakeholder',
-#             amendment_status='CREATED',
-#             amendment_action='ADDED',
-#             effective_from_date=None,
-#             effective_to_date=None,
-#             created_by=user_id,
-#             created_on=datetime.now()
-#         )
-#         db.add(new_customer_stake_holder)
-#         db.commit()
-
-#         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
-
 def add_stake_holder(db: Session, customer_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
     try:
         # Check if the stakeholder already exists
@@ -2279,7 +2147,7 @@ def get_stakeholder_master_for_amndement(db: Session,
                             user_id: int):
     try:
         # Fetch records from CustomerStakeHolder based on customer_id
-        customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id, is_deleted='no').all()
+        customer_stakeholders = db.query(CustomerStakeHolder).filter_by(customer_id=customer_id, is_deleted='no',is_amendment='yes').all()
 
 
         if not customer_stakeholders:
@@ -2287,7 +2155,7 @@ def get_stakeholder_master_for_amndement(db: Session,
 
         # Initialize an empty list to hold stakeholder details
         stakeholder_details = []
-
+        
         for customer_stakeholder in customer_stakeholders:
             # Check if the stakeholder type matches and effective date conditions are satisfied
             if customer_stakeholder.stake_holder_type == stakeholder_type :
@@ -2309,11 +2177,11 @@ def get_stakeholder_master_for_amndement(db: Session,
                 # Fetch StakeHolderAddress record based on residential_address_id
                 address = (
                     db.query(StakeHolderAddress)
-                    .filter_by(id=customer_stakeholder.residential_address_id)
+                    .filter_by(id=customer_stakeholder.permanent_address_id)
                     # .filter(StakeHolderAddress.effective_from_date <= datetime.now().date())
                     # .filter(StakeHolderAddress.effective_to_date.is_(None))
                      
-                    .first() if customer_stakeholder.residential_address_id else None
+                    .first() if customer_stakeholder.permanent_address_id else None
                 )
 
                 # Fetch designation
@@ -2357,16 +2225,18 @@ def get_stakeholder_master_for_amndement(db: Session,
                         "aadhaar_number": stakeholder.aadhaar_number
                     },
                     "contact_details": {
-                        "id": contact_details.id if contact_details else None,
-                        "mobile_number": contact_details.mobile_number if contact_details else None,
-                        "email_address": contact_details.email_address if contact_details else None,
-                        "telephone_number_with_std_code": contact_details.telephone_number_with_std_code if contact_details else None
-                    } if contact_details else None,
-                    "identity_information": {
-                        "id": designation.id if designation else None,
-                        "designation_id": designation.id if designation else None,
-                        "designation": designation.designation if designation else None
-                    } if designation else None,
+                    "id": contact_details.id if contact_details else None,
+                    "mobile_number": contact_details.mobile_number if contact_details else None,
+                    "email_address": contact_details.email_address if contact_details else None,
+                    "telephone_number_with_std_code": contact_details.telephone_number_with_std_code if contact_details else None
+                },
+                   "identity_information": {
+                    "id": customer_stakeholder.id,
+                    "designation_id": designation.id,
+                    "designation": designation.designation
+                   
+              
+                },
                     "address": {
                         "id": address.id if address else None,
                         "pin_code": address.pin_code if address else None,
@@ -2405,7 +2275,6 @@ def get_stakeholder_master_for_amndement(db: Session,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 #-------------------------------------------------------------------------------------------
@@ -2524,3 +2393,38 @@ def amend_business_place_data(db: Session, customer_id: int, amendment_details: 
         db.rollback()
         print(f"SQLAlchemy error: {str(e)}")
         return {"success": False, "message": "Internal Server Error"}
+
+#----------------------------------------------------------------------------------------------
+
+def fetch_combined_data(db: Session, customer_id: int) -> List[CombinedSchema]:
+    try:
+        print(f"Fetching combined data for customer_id: {customer_id}")
+
+        # Join customer_business_place and customer_business_place_activity tables
+        query = db.query(
+            CustomerBusinessPlace,
+            CustomerBusinessPlaceActivity
+        ).join(
+            CustomerBusinessPlaceActivity,
+            CustomerBusinessPlace.id == CustomerBusinessPlaceActivity.business_place_id
+        ).filter(
+            CustomerBusinessPlace.customer_id == customer_id,
+            # Add any additional filters as needed
+        )
+
+        # Fetch the results
+        results = query.all()
+
+        combined_data = []
+        for business_place, activity in results:
+            combined_entry = CombinedSchema(
+                business_place=CustomerBusinessPlaceSchemaForGet.from_orm(business_place),
+                activity=CustomerBusinessPlaceActivitySchemaForGet.from_orm(activity)
+            )
+            combined_data.append(combined_entry)
+
+        return combined_data
+
+    except SQLAlchemyError as e:
+        print(f"SQLAlchemy error: {str(e)}")
+        raise
