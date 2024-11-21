@@ -436,6 +436,7 @@ def get_customer_details(db: Session, customer_id: int, user_id: int):
                         "id": reg.id,
                         "registration_type_id": reg.registration_type_id if reg.registration_type_id is not None else None, 
                         "registration_type": db.query(GstTypeOfRegistration.type_of_registration).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
+                        "registration_type_code": db.query(GstTypeOfRegistration.type_of_registration_code).filter_by(id=reg.registration_type_id).scalar() if reg.registration_type_id else None,
                         "registration_number": reg.registration_number,
                         "registration_date": reg.registration_date
                     }
