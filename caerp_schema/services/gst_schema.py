@@ -491,17 +491,24 @@ class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
 
 
 
-
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import date
 
 class CustomerBusinessPlaceSchemaForGet(BaseModel):
-    business_place_id: int
+    id: int
     customer_id: int
+    customer_name: Optional[str] = None 
+    legal_name: Optional[str] = None 
     pin_code: str
     country_id: int
     state_id: int
+    state_name: Optional[str] = None
     district_id: int
+    district_name:Optional[str] = None 
     taluk_id: int
     city_id: int
+    city_name:Optional[str] = None 
     post_office_id: int
     lsg_type_id: int
     lsg_id: int
@@ -537,10 +544,13 @@ class CustomerBusinessPlaceSchemaForGet(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 class CustomerBusinessPlaceActivitySchemaForGet(BaseModel):
     id: int
     business_activity_id: int
+    gst_business_activity_code: Optional[str] = None
+    business_activity: Optional[str] = None
     amendment_date: Optional[date]
     amendment_reason: Optional[str]
     amendment_action: Optional[str]
@@ -550,10 +560,12 @@ class CustomerBusinessPlaceActivitySchemaForGet(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
 
 class CombinedSchema(BaseModel):
     business_place: CustomerBusinessPlaceSchemaForGet
-    activity: CustomerBusinessPlaceActivitySchemaForGet
+    activity: List[CustomerBusinessPlaceActivitySchemaForGet]
 
     class Config:
         orm_mode = True
+        from_attributes = True

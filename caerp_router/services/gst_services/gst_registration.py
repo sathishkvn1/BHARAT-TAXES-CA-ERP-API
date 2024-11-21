@@ -8,7 +8,7 @@ from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, Bus
 from caerp_db.office.models import AppBusinessConstitution
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -953,3 +953,55 @@ def amend_business_place(customer_id: int,
         raise HTTPException(status_code=400, detail=result["message"])
     
     return {"success": True, "message": "Amendment saved successfully", "id": result["id"]}
+
+
+#-----------------------------------------------------------------------------------------------------
+# @router.get("/get_amended_business_place", response_model=List[CombinedSchema])
+# def get_amended_business_place(
+#     customer_id: Optional[int] = None, 
+#     business_place_id: Optional[int] = None, 
+#     db: Session = Depends(get_db), 
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     if not user_id:
+#         raise HTTPException(status_code=401, detail="Invalid token")
+
+#     try:
+#         combined_data = db_gst.fetch_combined_data(db, customer_id, business_place_id)
+#         return combined_data
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+#-----------------------------------------------------------------------------------------------------
+
+@router.get("/get_amended_business_place", response_model=List[CombinedSchema])
+def get_amended_business_place(
+    customer_id: Optional[int] = None, 
+    # business_place_id: Optional[int] = None, 
+    db: Session = Depends(get_db), 
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    try:
+        combined_data = db_gst.fetch_combined_data(db, customer_id)
+        return combined_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

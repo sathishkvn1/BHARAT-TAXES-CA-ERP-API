@@ -2396,35 +2396,189 @@ def amend_business_place_data(db: Session, customer_id: int, amendment_details: 
 
 #----------------------------------------------------------------------------------------------
 
-def fetch_combined_data(db: Session, customer_id: int) -> List[CombinedSchema]:
+# def fetch_combined_data(db: Session, customer_id: Optional[int] = None) -> List[CombinedSchema]:
+#     try:
+#         print(f"Fetching combined data for customer_id: {customer_id}")
+
+#         # Fetch amended business place data along with customer, state, district, and city details
+#         print("Fetching amended business place data with customer, state, district, and city details")
+#         amended_business_places = (
+#             db.query(
+#                 CustomerBusinessPlace,
+#                 CustomerMaster.customer_name,
+#                 CustomerMaster.legal_name,
+#                 StateDB.state_name,
+#                 DistrictDB.district_name,
+#                 CityDB.city_name
+#             )
+#             .join(CustomerMaster, CustomerBusinessPlace.customer_id == CustomerMaster.id)
+#             .join(StateDB, CustomerBusinessPlace.state_id == StateDB.id)
+#             .join(DistrictDB, CustomerBusinessPlace.district_id == DistrictDB.id)
+#             .join(CityDB, CustomerBusinessPlace.city_id == CityDB.id)
+#             .filter(
+#                 CustomerBusinessPlace.customer_id == customer_id,
+#                 CustomerBusinessPlace.is_amendment == 'yes'
+#             )
+#             .all()
+#         )
+#         print(f"Amended business places fetched: {amended_business_places}")
+
+#         if not amended_business_places:
+#             print("No amended business places found")
+#             return []
+
+#         # Extract original business place IDs from the amended records
+#         original_business_place_ids = [
+#             bp.amended_parent_id for bp, _, _, _, _, _ in amended_business_places if bp.amended_parent_id
+#         ]
+#         print(f"Original business place IDs: {original_business_place_ids}")
+
+#         # Fetch activities for both original and amended business places
+#         print("Fetching activities for business places")
+#         amended_business_place_ids = [bp.id for bp, _, _, _, _, _ in amended_business_places]
+#         activities = (
+#             db.query(
+#                 CustomerBusinessPlaceActivity,
+#                 BusinessActivity.gst_business_activity_code,
+#                 BusinessActivity.business_activity
+#             )
+#             .join(BusinessActivity, CustomerBusinessPlaceActivity.business_activity_id == BusinessActivity.id)
+#             .filter(
+#                 CustomerBusinessPlaceActivity.business_place_id.in_(original_business_place_ids + amended_business_place_ids),
+#                 CustomerBusinessPlaceActivity.is_amendment == 'yes'
+#             )
+#             .all()
+#         )
+#         print(f"Activities fetched: {activities}")
+
+#         # Combine data
+#         print("Combining business place and activity data")
+#         combined_data = []
+#         for business_place, customer_name, legal_name, state_name, district_name, city_name in amended_business_places:
+#             business_place_data = CustomerBusinessPlaceSchemaForGet.from_orm(business_place).dict()
+#             business_place_data['customer_name'] = customer_name
+#             business_place_data['legal_name'] = legal_name
+#             business_place_data['state_name'] = state_name
+#             business_place_data['district_name'] = district_name
+#             business_place_data['city_name'] = city_name
+
+#             activity_data = [
+#                 {
+#                     **CustomerBusinessPlaceActivitySchemaForGet.from_orm(activity).dict(),
+#                     "gst_business_activity_code": gst_business_activity_code,
+#                     "business_activity": business_activity
+#                 }
+#                 for activity, gst_business_activity_code, business_activity in activities
+#                 if activity.business_place_id in (business_place.id, business_place.amended_parent_id)
+#             ]
+
+#             combined_entry = {
+#                 "business_place": business_place_data,
+#                 "activity": activity_data
+#             }
+#             combined_data.append(combined_entry)
+#             print(f"Combined entry added: {combined_entry}")
+
+#         print("Combined data fetching complete")
+#         return combined_data
+
+#     except SQLAlchemyError as e:
+#         print(f"SQLAlchemy error: {str(e)}")
+#         raise
+
+
+
+def fetch_combined_data(db: Session, customer_id: Optional[int] = None) -> List[CombinedSchema]:
     try:
         print(f"Fetching combined data for customer_id: {customer_id}")
 
-        # Join customer_business_place and customer_business_place_activity tables
-        query = db.query(
-            CustomerBusinessPlace,
-            CustomerBusinessPlaceActivity
-        ).join(
-            CustomerBusinessPlaceActivity,
-            CustomerBusinessPlace.id == CustomerBusinessPlaceActivity.business_place_id
-        ).filter(
-            CustomerBusinessPlace.customer_id == customer_id,
-            # Add any additional filters as needed
-        )
-
-        # Fetch the results
-        results = query.all()
-
-        combined_data = []
-        for business_place, activity in results:
-            combined_entry = CombinedSchema(
-                business_place=CustomerBusinessPlaceSchemaForGet.from_orm(business_place),
-                activity=CustomerBusinessPlaceActivitySchemaForGet.from_orm(activity)
+        # Fetch amended business place data along with customer, state, district, and city details
+        print("Fetching amended business place data with customer, state, district, and city details")
+        amended_business_places = (
+            db.query(
+                CustomerBusinessPlace,
+                CustomerMaster.customer_name,
+                CustomerMaster.legal_name,
+                StateDB.state_name,
+                DistrictDB.district_name,
+                CityDB.city_name
             )
-            combined_data.append(combined_entry)
+            .join(CustomerMaster, CustomerBusinessPlace.customer_id == CustomerMaster.id)
+            .join(StateDB, CustomerBusinessPlace.state_id == StateDB.id)
+            .join(DistrictDB, CustomerBusinessPlace.district_id == DistrictDB.id)
+            .join(CityDB, CustomerBusinessPlace.city_id == CityDB.id)
+            .filter(
+                CustomerBusinessPlace.customer_id == customer_id,
+                CustomerBusinessPlace.is_amendment == 'yes'
+            )
+            .all()
+        )
+        print(f"Amended business places fetched: {amended_business_places}")
 
+        if not amended_business_places:
+            print("No amended business places found")
+            return []
+
+        # Extract original business place IDs from the amended records using a traditional loop
+        original_business_place_ids = []
+        amended_business_place_ids = []
+        for bp, customer_name, legal_name, state_name, district_name, city_name in amended_business_places:
+            if bp.amended_parent_id:
+                original_business_place_ids.append(bp.amended_parent_id)
+            amended_business_place_ids.append(bp.id)  # Also gather amended business place ids here
+        print(f"Original business place IDs: {original_business_place_ids}")
+        print(f"Amended business place IDs: {amended_business_place_ids}")
+
+        # Fetch activities for both original and amended business places
+        print("Fetching activities for business places")
+        activities = (
+            db.query(
+                CustomerBusinessPlaceActivity,
+                BusinessActivity.gst_business_activity_code,
+                BusinessActivity.business_activity
+            )
+            .join(BusinessActivity, CustomerBusinessPlaceActivity.business_activity_id == BusinessActivity.id)
+            .filter(
+                CustomerBusinessPlaceActivity.business_place_id.in_(original_business_place_ids + amended_business_place_ids),
+                CustomerBusinessPlaceActivity.is_amendment == 'yes'
+            )
+            .all()
+        )
+        print(f"Activities fetched: {activities}")
+
+        # Combine data
+        print("Combining business place and activity data")
+        combined_data = []
+        for business_place, customer_name, legal_name, state_name, district_name, city_name in amended_business_places:
+            business_place_data = CustomerBusinessPlaceSchemaForGet.from_orm(business_place).dict()
+            business_place_data['customer_name'] = customer_name
+            business_place_data['legal_name'] = legal_name
+            business_place_data['state_name'] = state_name
+            business_place_data['district_name'] = district_name
+            business_place_data['city_name'] = city_name
+
+            activity_data = [
+                {
+                    **CustomerBusinessPlaceActivitySchemaForGet.from_orm(activity).dict(),
+                    "gst_business_activity_code": gst_business_activity_code,
+                    "business_activity": business_activity
+                }
+                for activity, gst_business_activity_code, business_activity in activities
+                if activity.business_place_id in (business_place.id, business_place.amended_parent_id)
+            ]
+
+            combined_entry = {
+                "business_place": business_place_data,
+                "activity": activity_data
+            }
+            combined_data.append(combined_entry)
+            print(f"Combined entry added: {combined_entry}")
+
+        print("Combined data fetching complete")
         return combined_data
 
     except SQLAlchemyError as e:
         print(f"SQLAlchemy error: {str(e)}")
         raise
+
+
