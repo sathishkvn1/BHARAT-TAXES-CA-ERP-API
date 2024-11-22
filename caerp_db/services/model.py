@@ -17,7 +17,7 @@ class CustomerMaster(caerp_base):
     enquiry_details_id                      = Column(Integer, nullable=True)
     appointment_master_id                   = Column(Integer, nullable=True)
     visit_master_id                         = Column(Integer, nullable=True)
-    service_task_id                         = Column(Integer, nullable=True)
+    service_task_id                           = Column(Integer, nullable=False, default=0)
     legal_name                              = Column(String(100), nullable=True)
     customer_name                           = Column(String(100), nullable=True)
     pan_number                              = Column(String(20), nullable=True)
