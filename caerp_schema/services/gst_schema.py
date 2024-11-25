@@ -301,6 +301,8 @@ class CustomerDuplicateSchemaForGet(BaseModel):
     customer_number                         : Optional[str]
     legal_name                              : Optional[str]
     customer_name                           : Optional[str]
+    service_task_id                         :Optional[int]
+    
     pan_number                              : Optional[str]
     pan_creation_date                       : Optional[date]
     tan_number                              : Optional[str]
@@ -320,7 +322,7 @@ class CustomerDuplicateSchemaForGet(BaseModel):
     is_amendment                            :str
     amendment_date                          : Optional[date]
     amendment_reason                        : Optional[str]
-    amendment_status                        : str
+    amendment_status                        : Optional[str]
     amendment_history                       : Optional[str]
     effective_from_date                     : Optional[date]
     effective_to_date                       : Optional[date]
@@ -491,9 +493,7 @@ class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
 
 
 
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import date
+
 
 class CustomerBusinessPlaceSchemaForGet(BaseModel):
     id: int
@@ -569,3 +569,9 @@ class CombinedSchema(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+
+
+class SuccessResponse(BaseModel):
+    success: bool
+    message: str
+    id: Optional[int]

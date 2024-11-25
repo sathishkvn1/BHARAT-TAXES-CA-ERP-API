@@ -590,7 +590,6 @@ class CustomerGstStateSpecificInformation(caerp_base):
     state_excise_licence_number                 = Column(String(50), nullable=True)
     excise_licence_holder_name                  = Column(String(50), nullable=True)
     service_task_id                             = Column(Integer, nullable=False, default=0)
-
     is_amendment                                = Column(Enum('yes', 'no'), nullable=False, default='no')
     amendment_status                            = Column(Enum('CREATED', 'UPLOADED', 'APPROVED', 'REJECTED'), nullable=False, default='APPROVED')
     amendment_history                           = Column(String(2000), nullable=True)
@@ -604,9 +603,8 @@ class CustomerGstStateSpecificInformation(caerp_base):
     deleted_by                                  = Column(Integer, nullable=True)
     deleted_on                                  = Column(Date, nullable=True)
 
+#---------------Jurisdiction------------------------------------------------------------------
 
-
-#---------------Jurisdiction
 class GstViewRange(caerp_base):
     __tablename__ = 'gst_view_range'
 

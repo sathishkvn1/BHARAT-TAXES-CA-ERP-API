@@ -8,7 +8,7 @@ from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, Bus
 from caerp_db.office.models import AppBusinessConstitution
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, SuccessResponse
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -536,9 +536,15 @@ from typing import Optional
 #     # Return the validated response
 #     return response_data
 
-@router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
-def get_customer(id: int, db: Session = Depends(get_db), token: str = Depends(oauth2.oauth2_scheme)):
 
+
+@router.get("/get_amended_customer_details", response_model=Optional[CustomerDuplicateSchemaForGet])
+def get_customer(
+    customer_id: int, 
+    service_task_id: Optional[int] = None,  
+    db: Session = Depends(get_db), 
+    token: str = Depends(oauth2.oauth2_scheme)
+):
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -558,9 +564,12 @@ def get_customer(id: int, db: Session = Depends(get_db), token: str = Depends(oa
     ).join(
         DistrictDB, CustomerMaster.district_id == DistrictDB.id, isouter=True
     ).filter(
-        CustomerMaster.id == id,
+        CustomerMaster.customer_id == customer_id,
         CustomerMaster.is_deleted == 'no'
     )
+
+    if service_task_id is not None:
+        query = query.filter(CustomerMaster.service_task_id == service_task_id)
 
     # Fetch data
     result = query.first()
@@ -578,6 +587,8 @@ def get_customer(id: int, db: Session = Depends(get_db), token: str = Depends(oa
         customer_number=customer_master.customer_number,
         legal_name=customer_master.legal_name,
         customer_name=customer_master.customer_name,
+        service_task_id=customer_master.service_task_id,
+        
         pan_number=customer_master.pan_number,
         pan_creation_date=customer_master.pan_creation_date,
         tan_number=customer_master.tan_number,
@@ -590,7 +601,9 @@ def get_customer(id: int, db: Session = Depends(get_db), token: str = Depends(oa
         constitution_id=customer_master.constitution_id,
         business_constitution_name=business_constitution_name,
         state_id=customer_master.state_id,
+        state_name=state_name,
         district_id=customer_master.district_id,
+        district_name=district_name,
         is_mother_customer=customer_master.is_mother_customer,
         is_amendment=customer_master.is_amendment,
         amendment_date=customer_master.amendment_date,
@@ -610,52 +623,11 @@ def get_customer(id: int, db: Session = Depends(get_db), token: str = Depends(oa
         is_deleted=customer_master.is_deleted,
         deleted_by=customer_master.deleted_by,
         deleted_on=customer_master.deleted_on,
-        state_name=state_name,
-        district_name=district_name
+      
     )
 
     # Return the validated response
     return response_data
-
-
-# @router.get("/get_amended_customer_details/{id}", response_model=Optional[CustomerDuplicateSchemaForGet])
-# def get_customer(id: int,
-#                  db: Session = Depends(get_db),
-#                  token: str = Depends(oauth2.oauth2_scheme)):
-
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-
-#     # Query to join CustomerMaster with CustomerAmendmentHistory
-#     query = db.query(CustomerMaster, CustomerAmendmentHistory).join(
-#         CustomerAmendmentHistory, CustomerMaster.id == CustomerAmendmentHistory.amendment_id, isouter=True
-#     ).filter(
-#         CustomerMaster.id == id,
-#         CustomerMaster.is_deleted == 'no'
-#     )
-    
-#     # Fetch data
-#     result = query.first()
-
-#     if not result:
-#         return None  # This will return a 200 response with `null` as the body in JSON format
-
-#     # Unpacking the result tuple
-#     customer_master, amendment_history = result
-
-#     # Combine data from both models into a dictionary
-#     response_data = {
-#         **customer_master.__dict__,
-#         **(amendment_history.__dict__ if amendment_history else {})
-#     }
-
-#     # Remove protected SQLAlchemy attributes
-#     response_data.pop('_sa_instance_state', None)
-
-#     # Return the validated response
-#     return CustomerDuplicateSchemaForGet(**response_data)
-
-
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -681,8 +653,56 @@ def save_amendment(
 #-------------------------------------------------------------------------------------------------------------
 
 
+# @router.get("/get_active_trade_names")
+# def get_active_trade_names(customer_id: int, 
+#                            db: Session = Depends(get_db),
+#                            token: str = Depends(oauth2.oauth2_scheme)):
+    
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     active_trade_names = db.execute(text("""
+#         SELECT *
+#         FROM customer_additional_trade_name 
+#         WHERE customer_id = :customer_id
+#         AND is_deleted = 'no'
+#         AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
+#             SELECT amended_parent_id
+#             FROM customer_additional_trade_name
+#             WHERE is_amendment = 'yes'
+#         ))
+#         ORDER BY id;
+#     """), {'customer_id': customer_id}).fetchall()
+
+#     if not active_trade_names:
+#         raise HTTPException(status_code=404, detail="No active trade names found for the specified customer")
+
+#     return {
+#         "success": True,
+#         "active_trade_names": [
+#             {
+#                 "id": trade_name.id,
+#                 "amended_parent_id": trade_name.amended_parent_id,
+#                 "service_task_id":trade_name.service_task,
+#                 "additional_trade_name": trade_name.additional_trade_name,
+#                 "is_amendment": trade_name.is_amendment,
+#                 "amendment_date": trade_name.amendment_date,
+#                 "amendment_reason": trade_name.amendment_reason,
+#                 "amendment_status": trade_name.amendment_status,
+#                 "effective_from_date": trade_name.effective_from_date,
+#                 "effective_to_date": trade_name.effective_to_date,
+#                 "created_by": trade_name.created_by,
+#                 "created_on": trade_name.created_on,
+#                 "modified_by": trade_name.modified_by,
+#                 "modified_on": trade_name.modified_on
+#             } for trade_name in active_trade_names
+#         ]
+#     }
+
+
 @router.get("/get_active_trade_names")
 def get_active_trade_names(customer_id: int, 
+                           service_task_id: int,
                            db: Session = Depends(get_db),
                            token: str = Depends(oauth2.oauth2_scheme)):
     
@@ -693,6 +713,7 @@ def get_active_trade_names(customer_id: int,
         SELECT *
         FROM customer_additional_trade_name 
         WHERE customer_id = :customer_id
+        AND service_task_id = :service_task_id
         AND is_deleted = 'no'
         AND (is_amendment = 'yes' OR amended_parent_id NOT IN (
             SELECT amended_parent_id
@@ -700,10 +721,10 @@ def get_active_trade_names(customer_id: int,
             WHERE is_amendment = 'yes'
         ))
         ORDER BY id;
-    """), {'customer_id': customer_id}).fetchall()
+    """), {'customer_id': customer_id, 'service_task_id': service_task_id}).fetchall()
 
     if not active_trade_names:
-        raise HTTPException(status_code=404, detail="No active trade names found for the specified customer")
+        raise HTTPException(status_code=404, detail="No active trade names found for the specified customer and service task")
 
     return {
         "success": True,
@@ -711,6 +732,7 @@ def get_active_trade_names(customer_id: int,
             {
                 "id": trade_name.id,
                 "amended_parent_id": trade_name.amended_parent_id,
+                "service_task_id": trade_name.service_task_id, 
                 "additional_trade_name": trade_name.additional_trade_name,
                 "is_amendment": trade_name.is_amendment,
                 "amendment_date": trade_name.amendment_date,
@@ -730,38 +752,78 @@ def get_active_trade_names(customer_id: int,
 
 
 
+# @router.post("/amend_additonal_trade_names")
+# def amend_additonal_trade_names(
+#     id: int,
+#     service_task_id: int,
+#     amendments: List[AdditionalTradeNameAmendment],
+#     action: AmendmentAction,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+    
+#     """
+#     id:
+
+#         If action is ADDED, provide the customer_id for id field.
+
+#         Otherwise, provide the row_id of the record to be amended.
+
+#         action: The type of amendment. Possible values: ADDED, EDITED, DELETED.
+
+#         amendments: A list of amendments.
+
+#         {
+#         "id": 1001,  // customer_id for ADD action, row_id for EDIT or DELETE actions
+#         "action": "ADDED",  // or "EDITED", "DELETED"
+#         "amendments": [
+#             {
+#             "new_trade_name": "New Trade Name",  // The new or updated trade name
+#             "request_date": "2024-11-08T04:30:45.156Z",  // The date of the request
+#             "remarks": "Adding new trade name"  // Any remarks for the amendment
+#             }
+#         ]
+#         }
+
+#     """
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     response = db_gst.amend_additonal_trade_names(db, id, amendments, action, user_id)
+#     return response
+
+
+
 @router.post("/amend_additonal_trade_names")
 def amend_additonal_trade_names(
     id: int,
+    service_task_id: int,  # Include service_task_id as a parameter
     amendments: List[AdditionalTradeNameAmendment],
     action: AmendmentAction,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
-    
     """
     id:
-
         If action is ADDED, provide the customer_id for id field.
-
         Otherwise, provide the row_id of the record to be amended.
+    action: The type of amendment. Possible values: ADDED, EDITED, DELETED.
+    amendments: A list of amendments.
 
-        action: The type of amendment. Possible values: ADDED, EDITED, DELETED.
-
-        amendments: A list of amendments.
-
-        {
+    {
         "id": 1001,  // customer_id for ADD action, row_id for EDIT or DELETE actions
         "action": "ADDED",  // or "EDITED", "DELETED"
         "amendments": [
             {
-            "new_trade_name": "New Trade Name",  // The new or updated trade name
-            "request_date": "2024-11-08T04:30:45.156Z",  // The date of the request
-            "remarks": "Adding new trade name"  // Any remarks for the amendment
+                "new_trade_name": "New Trade Name",  // The new or updated trade name
+                "request_date": "2024-11-08T04:30:45.156Z",  // The date of the request
+                "remarks": "Adding new trade name"  // Any remarks for the amendment
             }
         ]
-        }
-
+    }
     """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
@@ -769,7 +831,7 @@ def amend_additonal_trade_names(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
-    response = db_gst.amend_additonal_trade_names(db, id, amendments, action, user_id)
+    response = db_gst.amend_additonal_trade_names(db, id, service_task_id, amendments, action, user_id)
     return response
 
 #---------------------------------------------------------------------------------------------------------
@@ -1005,3 +1067,31 @@ def get_amended_business_place(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+#---------------------------------------------------------------------------------------------
+
+@router.post("/amended_additional_business_places")
+def amended_additional_business_places(
+    customer_id: int, 
+    amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
+    action: AmendmentAction,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Convert Pydantic model to dictionary
+    amendment_details_dict = amendment_details.dict()
+
+    result = db_gst.save_additional_business_places_and_activities(db, customer_id, amendment_details_dict, action, user_id)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
