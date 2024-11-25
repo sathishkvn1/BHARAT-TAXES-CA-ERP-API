@@ -2012,7 +2012,7 @@ def amend_additonal_trade_names(db: Session, customer_id: int, service_task_id: 
 
 #-------------------------------------------------------------------------------------------------------------
 
-def add_stake_holder(db: Session, customer_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
+def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
     try:
         # Check if the stakeholder already exists
         if request_data.personal_information.id and request_data.personal_information.id > 0:
@@ -2095,6 +2095,7 @@ def add_stake_holder(db: Session, customer_id: int, stakeholder_type: str, reque
         # Insert data into CustomerStakeHolder
         new_customer_stake_holder = CustomerStakeHolder(
             customer_id=customer_id,
+            service_task_id=service_task_id,
             stake_holder_master_id=stake_holder_id,
             stake_holder_type=stakeholder_type,
             designation_id=request_data.personal_information.designation_id,

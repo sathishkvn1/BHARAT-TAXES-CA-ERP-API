@@ -918,6 +918,7 @@ def amend_additonal_trade_names(
 def amend_stake_holders(
     
     customer_id: int,
+    service_task_id: int,
     action: AmendmentAction,
     request_data: Optional[AmmendStakeHolderMasterSchema] = None,
     amendment_details: Optional[AmendmentDetailsSchema] = None,
@@ -954,7 +955,7 @@ def amend_stake_holders(
     user_id = auth_info.get("user_id")
 
     if action == AmendmentAction.ADDED:
-        response = db_gst.add_stake_holder(db, customer_id, stakeholder_type, request_data, user_id)
+        response = db_gst.add_stake_holder(db, customer_id,service_task_id, stakeholder_type, request_data, user_id)
     elif action == AmendmentAction.DELETED:
         response = db_gst.delete_stake_holder(db, id,amendment_details, action, user_id)
     else:
