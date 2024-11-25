@@ -540,7 +540,7 @@ from typing import Optional
 
 @router.get("/get_amended_customer_details", response_model=Optional[CustomerDuplicateSchemaForGet])
 def get_customer(
-    customer_id: int, 
+    id: int, 
     service_task_id: Optional[int] = None,  
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2.oauth2_scheme)
@@ -564,7 +564,7 @@ def get_customer(
     ).join(
         DistrictDB, CustomerMaster.district_id == DistrictDB.id, isouter=True
     ).filter(
-        CustomerMaster.customer_id == customer_id,
+        CustomerMaster.id == id,
         CustomerMaster.is_deleted == 'no'
     )
 
