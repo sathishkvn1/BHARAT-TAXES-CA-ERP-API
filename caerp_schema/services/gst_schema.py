@@ -84,6 +84,7 @@ class CustomerRequestSchema(BaseModel):
 
 
 #----------stakeholder
+
 class PersonalInformationSchema(BaseModel):
     id                    : Optional[int]
     first_name            : str
@@ -95,12 +96,6 @@ class PersonalInformationSchema(BaseModel):
     marital_status_id     : Optional[int]
     date_of_birth         : Optional[date]
     gender_id             : int
-    din_number            : Optional[str]=None
-    is_citizen_of_india   : Optional[str]=None
-    pan_number            : Optional[str]
-    passport_number       : Optional[str]=None
-    aadhaar_number        : Optional[str]
-    gst_enrollment_number : Optional[str]=None
 
 
 class ContactDetailsSchema(BaseModel):
@@ -110,7 +105,18 @@ class ContactDetailsSchema(BaseModel):
     telephone_number_with_std_code   : Optional[str]
 
 
+
 class IdentityInformationSchema(BaseModel):
+    id                    : Optional[int]
+    din_number            : Optional[str]=None
+    is_citizen_of_india   : Optional[str]=None
+    pan_number            : Optional[str]
+    passport_number       : Optional[str]=None
+    aadhaar_number        : Optional[str]
+    gst_enrollment_number : Optional[str]=None
+
+
+class CustomerStakeHolders(BaseModel):
     id            : Optional[int]
     designation_id: Optional[int]
 
@@ -136,12 +142,12 @@ class AddressSchema(BaseModel):
     floor_number          : Optional[str]
     landmark              : Optional[str]
 
-
 class StakeHolderMasterSchema(BaseModel):
-    personal_information: PersonalInformationSchema
-    contact_details     : List[ContactDetailsSchema]
-    identity_information: List[IdentityInformationSchema]
-    address             : List[AddressSchema]
+    personal_information  : PersonalInformationSchema
+    identity_information  : IdentityInformationSchema
+    contact_details       : List[ContactDetailsSchema]
+    customer_stakeholders : List[CustomerStakeHolders]
+    address               : List[AddressSchema]
 
 
 class BusinessPlace(BaseModel):
@@ -493,6 +499,54 @@ class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
 
 
 
+
+class NatureOfBusinessAdditionalSchema(BaseModel):
+    business_activity_id: int
+    amendment_date: datetime
+    amendment_reason: str
+
+    class Config:
+        orm_mode = True
+
+
+class CustomerBusinessPlaceAdditionalAmendmentSchema(BaseModel):
+    pin_code: str
+    country_id: int
+    state_id: int
+    district_id: int
+    taluk_id: int
+    city_id: int
+    post_office_id: int
+    lsg_type_id: int
+    lsg_id: int
+    village_id: int
+    locality: str
+    road_street_name: str
+    premises_building_name: str
+    building_flat_number: str
+    floor_number: str
+    landmark: str
+    latitude: str
+    longitude: str
+    office_email_address: str
+    office_mobile_number: str
+    office_phone_std_code: str
+    office_phone_number: str
+    office_fax_std_code: str
+    office_fax_number: str
+    amendment_date: datetime
+    amendment_reason: str
+    nature_of_business: List[NatureOfBusinessAdditionalSchema]  # Nested list for nature_of_business
+
+    class Config:
+        orm_mode = True
+
+
+class CustomerBusinessPlacesFullAmendmentSchema(BaseModel):
+    business_place: List[CustomerBusinessPlaceAdditionalAmendmentSchema]
+
+    class Config:
+        orm_mode = True
 
 
 class CustomerBusinessPlaceSchemaForGet(BaseModel):

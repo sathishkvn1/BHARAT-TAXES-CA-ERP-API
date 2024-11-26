@@ -8,7 +8,7 @@ from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, Bus
 from caerp_db.office.models import AppBusinessConstitution
 from caerp_db.services import db_gst
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
-from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, SuccessResponse
+from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerBusinessPlacesFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, SuccessResponse
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
 from caerp_auth import oauth2
@@ -58,6 +58,7 @@ def save_business_details(
 
 @router.post("/save_customer_details/{customer_id}")
 def save_customer_details(customer_id: int, 
+                          service_task_id: int,
                           customer_data: CustomerRequestSchema, 
                           db: Session = Depends(get_db),
                           token: str = Depends(oauth2.oauth2_scheme)
@@ -73,19 +74,19 @@ def save_customer_details(customer_id: int,
     user_id = auth_info.get("user_id")
     try:
         # Handle customer details with the customer_id
-        db_gst.save_customer_details(customer_id, customer_data,user_id,db)
+        db_gst.save_customer_details(customer_id, service_task_id,customer_data,user_id,db)
 
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    
 
 #--------Get Customer Details---------------
 @router.get("/get_customers/{customer_id}")
 def get_customer_details(
     customer_id: int,
+    service_task_id: int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -104,7 +105,7 @@ def get_customer_details(
     user_id = auth_info.get("user_id")
 
     
-    customer_details = db_gst.get_customer_details(db, customer_id,user_id)
+    customer_details = db_gst.get_customer_details(db, customer_id,service_task_id,user_id)
 
     if customer_details is None:
         return []
@@ -113,11 +114,11 @@ def get_customer_details(
 
 
 #----Save Stakeholder Details--------
-
 @router.post("/save_stake_holder_master")
 def save_stake_holder_master(
     request_data: StakeHolderMasterSchema,
     customer_id: int,
+    service_task_id: int,
     stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
     is_authorized_signatory: Optional[str] =None ,  # Added parameter
     is_primary_authorized_signatory: Optional[str] =None,
@@ -141,17 +142,18 @@ def save_stake_holder_master(
     user_id = auth_info.get("user_id")
     try:
         # Pass customer_id, address_type, and stakeholder_type to the save function
-        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type)
+        result = db_gst.save_stakeholder_details(request_data, user_id, db, customer_id,service_task_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type)
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-#------ Get Stakeholder Details---------------------------------------------------------------------------
 
+#------ Get Stakeholder Details---------------------------------------------------------------------------
 @router.get("/get_stakeholder_master")
 def get_stakeholder_master(
     customer_id: Optional[int] = None,  # Optional customer_id
+    service_task_id:  Optional[int] = None,
     stake_holder_type: Optional[str] = Query(None, enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),  # Optional stakeholder_type
     search_value: Optional[str] = None, 
     is_authorized_signatory: Optional[str] = None,
@@ -174,13 +176,12 @@ def get_stakeholder_master(
     
 
     # Call your function to get stakeholder details
-    stakeholder_details = db_gst.get_stakeholder_details(db,user_id, customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type, search_value=search_value)
+    stakeholder_details = db_gst.get_stakeholder_details(db,user_id, customer_id,service_task_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type, search_value=search_value)
 
     if not stakeholder_details:
         return []
 
     return stakeholder_details
-
 
 #-----------------Business Activity-----------------
 
@@ -219,11 +220,11 @@ def get_business_activities(
     return db_gst.fetch_business_activities(db, activity_type_id, business_activity_master_id,user_id)
 
 #--------Save Business Place--------------
-
 @router.post("/save_business_place")
 def save_business_place_details(
     id:int,
     customer_id: int,
+    service_task_id: int,
     business_data: BusinessData,
     type: str = Query(..., enum=['PRINCIPAL_PLACE_ADDRESS', 'ADDITIONAL_PLACE']),
     db: Session = Depends(get_db),
@@ -237,17 +238,19 @@ def save_business_place_details(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        result = db_gst.save_business_place(customer_id, business_data, db,user_id,id)
+        result = db_gst.save_business_place(customer_id,service_task_id, business_data, db,user_id,id)
         return {"success": True, "message": result["message"]}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 
+
 #--------- Get Business Place-----------------
 @router.get("/get_business_place")
 def get_business_place(
     customer_id: int,
+    service_task_id: int,
     type: str = Query(..., enum=['PRINCIPAL_PLACE_ADDRESS', 'ADDITIONAL_PLACE']),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -261,10 +264,7 @@ def get_business_place(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     
-    return db_gst.get_business_place(customer_id, type, db,user_id)
-
-
-
+    return db_gst.get_business_place(customer_id,service_task_id, type, db,user_id)
 #-----------------Hsn Sac Data---------------------------------------------------------------------------
 
 @router.get("/get_hsn_sac_data")
@@ -293,11 +293,11 @@ def get_hsn_sac_data(
 
 
 #---------Goods Commodities Supply Details--------------------------------------------------------------------
-
 @router.post("/save_goods_commodities")
 def save_goods_commodities(
     
     customer_id: int,
+    service_task_id: int,
     details: List[CustomerGoodsCommoditiesSupplyDetailsSchema],  
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -311,7 +311,7 @@ def save_goods_commodities(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        return db_gst.save_goods_commodities_details(customer_id, details, db, user_id)
+        return db_gst.save_goods_commodities_details(customer_id,service_task_id, details, db, user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -319,9 +319,9 @@ def save_goods_commodities(
 #-------------- Hsn Commodities----------------
 #-----------------------------------------------------------------------------------------------------------------
 
-
 @router.get("/get_hsn_commodities/{customer_id}")
 def get_hsn_commodities(customer_id: int, 
+                        service_task_id: int,
                          db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)
                          ):
@@ -335,7 +335,7 @@ def get_hsn_commodities(customer_id: int,
     user_id = auth_info.get("user_id")  # Retrieve user_id from token
 
     # Call the function to get commodities, passing the user_id
-    commodities = db_gst.get_hsn_commodities_by_customer_id(customer_id, user_id, db)
+    commodities = db_gst.get_hsn_commodities_by_customer_id(customer_id,service_task_id, user_id, db)
     return commodities
 
 #-------------Gst State Specific Information---------------
@@ -343,6 +343,7 @@ def get_hsn_commodities(customer_id: int,
 def save_gst_state_specific_information(
     id: int,
     customer_id: int,
+    service_task_id: int,
     data: CustomerGstStateSpecificInformationSchema,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -356,7 +357,7 @@ def save_gst_state_specific_information(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
-    return db_gst.save_customer_gst_state_specific_information(id, customer_id, data, db, user_id)
+    return db_gst.save_customer_gst_state_specific_information(id, customer_id,service_task_id, data, db, user_id)
 
 #--------Gst State Specific Information
 @router.get("/get_gst_state_specific_information/{customer_id}", 
@@ -364,6 +365,7 @@ def save_gst_state_specific_information(
             )
 def get_gst_state_specific_information(
     customer_id: int,
+    service_task_id: int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -376,12 +378,13 @@ def get_gst_state_specific_information(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")  
 
-    gst_state_info = db_gst.get_gst_state_specific_information_by_customer_id(customer_id, db,user_id)
+    gst_state_info = db_gst.get_gst_state_specific_information_by_customer_id(customer_id, service_task_id,db,user_id)
 
     if not gst_state_info:
         return []
 
     return gst_state_info
+
 
 
 #-----------------------------------------------------------------------------------------------------------------
@@ -800,7 +803,7 @@ def get_active_trade_names(customer_id: int,
 @router.post("/amend_additonal_trade_names")
 def amend_additonal_trade_names(
     id: int,
-    service_task_id: int,  # Include service_task_id as a parameter
+    service_task_id: int, 
     amendments: List[AdditionalTradeNameAmendment],
     action: AmendmentAction,
     db: Session = Depends(get_db),
@@ -962,11 +965,45 @@ def amend_stake_holders(
         raise HTTPException(status_code=400, detail="Invalid action")
 
     return response
-#-------------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------------------------
+
+# @router.get("/get_stakeholder_master_for_amndement/{customer_id}")
+# def get_stakeholder_master(
+#     customer_id: int,
+#     service_task_id: int,
+#     stakeholder_type: str = Query(..., enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Get the details of a stakeholder by their customer_id and type.
+
+#     - customer_id (int): The ID of the customer.
+#     - service_task_id (int): The ID of the service task.
+#     - stakeholder_type (str): The type of stakeholder to filter by.
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+    
+#     # Print the input parameters for debugging
+#     print(f"Received parameters: customer_id={customer_id}, service_task_id={service_task_id}, stakeholder_type={stakeholder_type}")
+
+#     # Call your function to get stakeholder details
+#     stakeholder_details = db_gst.get_stakeholder_master_for_amndement(db, customer_id, service_task_id, stakeholder_type, user_id)
+
+#     if not stakeholder_details:
+#         return []
+
+#     return stakeholder_details
+
 
 @router.get("/get_stakeholder_master_for_amndement/{customer_id}")
 def get_stakeholder_master(
     customer_id: int,
+    service_task_id:int,
     stakeholder_type: str = Query(...,enum=['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY', 'AUTHORIZED_REPRESENTATIVE']),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
@@ -985,7 +1022,7 @@ def get_stakeholder_master(
     
 
     # Call your function to get stakeholder details
-    stakeholder_details = db_gst.get_stakeholder_master_for_amndement(db, customer_id, stakeholder_type,user_id)
+    stakeholder_details = db_gst.get_stakeholder_master_for_amndement(db, customer_id, stakeholder_type,service_task_id,user_id)
 
     if not stakeholder_details:
         return []
@@ -994,13 +1031,93 @@ def get_stakeholder_master(
 
 #------------------------------------------------------------------------------------------------------------
 
-
 @router.post("/amend_business_place")
 def amend_business_place(customer_id: int, 
+                         service_task_id: int,
                          amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
                          action: AmendmentAction,
                          db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)):
+    
+    """
+        Amend Business Place
+
+        This endpoint is used to amend the details of a business place and its associated activities for a specified customer.
+
+        Parameters:
+        - **customer_id** (int): The ID of the customer whose business place is to be amended.
+        - **service_task_id** (int): The ID of the service task associated with the amendment.
+        - **amendment_details** (CustomerBusinessPlaceFullAmendmentSchema): The details of the amendment for the business place and nature of business.
+        - **action** (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+        - **token** (str): The authentication token.
+
+        Request Body Example:
+        ```json
+        {
+            "business_place": [
+                {
+                    "pin_code": "110001",
+                    "country_id": 1,
+                    "state_id": 2,
+                    "district_id": 3,
+                    "taluk_id": 4,
+                    "city_id": 5,
+                    "post_office_id": 6,
+                    "lsg_type_id": 7,
+                    "lsg_id": 8,
+                    "village_id": 9,
+                    "locality": "Connaught Place",
+                    "road_street_name": "Janpath Lane",
+                    "premises_building_name": "Janpath Tower",
+                    "building_flat_number": "101",
+                    "floor_number": "1",
+                    "landmark": "Near Palika Bazar",
+                    "latitude": "28.6345",
+                    "longitude": "77.2190",
+                    "office_email_address": "office@example.com",
+                    "office_mobile_number": "9876543210",
+                    "office_phone_std_code": "011",
+                    "office_phone_number": "12345678",
+                    "office_fax_std_code": "011",
+                    "office_fax_number": "87654321",
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Expansion of business"
+                }
+            ],
+            "nature_of_business": [
+                {
+                    "business_activity_id": 1,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Added new service offering"
+                },
+                {
+                    "business_activity_id": 3,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Added new service offering"
+                },
+                {
+                    "business_activity_id": 2,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Updated product range"
+                }
+            ]
+        }
+        ```
+
+        Returns:
+        - **200 OK**: Amendment saved successfully.
+        - **401 Unauthorized**: Token is missing or invalid.
+        - **400 Bad Request**: If there is an issue with saving the amendment.
+        
+        Example Response:
+        ```json
+        {
+            "success": True,
+            "message": "Amendment saved successfully",
+            "id": 123
+        }
+        ```
+        """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -1010,7 +1127,7 @@ def amend_business_place(customer_id: int,
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    result = db_gst.amend_business_place_data(db, customer_id, amendment_details, action, user_id)
+    result = db_gst.amend_business_place_data(db, customer_id,service_task_id, amendment_details, action, user_id)
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
@@ -1019,35 +1136,13 @@ def amend_business_place(customer_id: int,
 
 
 #-----------------------------------------------------------------------------------------------------
-# @router.get("/get_amended_business_place", response_model=List[CombinedSchema])
-# def get_amended_business_place(
-#     customer_id: Optional[int] = None, 
-#     business_place_id: Optional[int] = None, 
-#     db: Session = Depends(get_db), 
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-
-#     if not user_id:
-#         raise HTTPException(status_code=401, detail="Invalid token")
-
-#     try:
-#         combined_data = db_gst.fetch_combined_data(db, customer_id, business_place_id)
-#         return combined_data
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
 
 #-----------------------------------------------------------------------------------------------------
 
 @router.get("/get_amended_business_place", response_model=List[CombinedSchema])
 def get_amended_business_place(
     customer_id: Optional[int] = None, 
+    service_task_id: Optional[int] = None,
     # business_place_id: Optional[int] = None, 
     db: Session = Depends(get_db), 
     token: str = Depends(oauth2.oauth2_scheme)
@@ -1062,7 +1157,7 @@ def get_amended_business_place(
         raise HTTPException(status_code=401, detail="Invalid token")
 
     try:
-        combined_data = db_gst.fetch_combined_data(db, customer_id)
+        combined_data = db_gst.fetch_combined_data(db, customer_id,service_task_id)
         return combined_data
 
     except Exception as e:
@@ -1070,14 +1165,148 @@ def get_amended_business_place(
 
 #---------------------------------------------------------------------------------------------
 
+# @router.post("/amended_additional_business_places")
+# def amended_additional_business_places(
+#     customer_id: int, 
+#     amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
+#     action: AmendmentAction,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=401, detail="Token is missing")
+
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     if not user_id:
+#         raise HTTPException(status_code=401, detail="Invalid token")
+
+#     # Convert Pydantic model to dictionary
+#     amendment_details_dict = amendment_details.dict()
+
+#     result = db_gst.save_additional_business_places_and_activities(db, customer_id, amendment_details_dict, action, user_id)
+
+#     if not result["success"]:
+#         raise HTTPException(status_code=400, detail=result["message"])
+    
+#     return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
+
+
 @router.post("/amended_additional_business_places")
 def amended_additional_business_places(
     customer_id: int, 
-    amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
+    service_task_id: int,  # Include service_task_id
+    amendment_details: CustomerBusinessPlacesFullAmendmentSchema,
     action: AmendmentAction,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
+    """
+    Amend Additional Business Places
+
+    This endpoint is used to amend the details of additional business places and their associated activities for a specified customer.
+
+    Parameters:
+    - customer_id (int): The ID of the customer.
+    - service_task_id (int): The ID of the service task.
+    - amendment_details (CustomerBusinessPlacesFullAmendmentSchema): The details of the amendment for the business place and nature of business.
+    - action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+    - token (str): The authentication token.
+
+    Returns:
+    - JSON response with success status and message.
+
+    {
+  "business_place": [
+    {
+      "pin_code": "110001",
+      "country_id": 1,
+      "state_id": 2,
+      "district_id": 3,
+      "taluk_id": 4,
+      "city_id": 5,
+      "post_office_id": 6,
+      "lsg_type_id": 7,
+      "lsg_id": 8,
+      "village_id": 9,
+      "locality": "Connaught Place",
+      "road_street_name": "Janpath Lane",
+      "premises_building_name": "Janpath Tower",
+      "building_flat_number": "101",
+      "floor_number": "1",
+      "landmark": "Near Palika Bazar",
+      "latitude": "28.6345",
+      "longitude": "77.2190",
+      "office_email_address": "office@example.com",
+      "office_mobile_number": "9876543210",
+      "office_phone_std_code": "011",
+      "office_phone_number": "12345678",
+      "office_fax_std_code": "011",
+      "office_fax_number": "87654321",
+      "amendment_date": "2024-11-26",
+      "amendment_reason": "Expansion of business",
+      "nature_of_business": [
+        {
+          "business_activity_id": 1,
+          "amendment_date": "2024-11-26",
+          "amendment_reason": "Added new service offering"
+        },
+        {
+          "business_activity_id": 2,
+          "amendment_date": "2024-11-26",
+          "amendment_reason": "Updated product range"
+        }
+      ]
+    },
+    {
+      "pin_code": "560001",
+      "country_id": 1,
+      "state_id": 2,
+      "district_id": 4,
+      "taluk_id": 5,
+      "city_id": 6,
+      "post_office_id": 7,
+      "lsg_type_id": 8,
+      "lsg_id": 9,
+      "village_id": 10,
+      "locality": "MG Road",
+      "road_street_name": "Brigade Road",
+      "premises_building_name": "Brigade Tower",
+      "building_flat_number": "201",
+      "floor_number": "2",
+      "landmark": "Opposite to Metro Station",
+      "latitude": "12.9716",
+      "longitude": "77.5946",
+      "office_email_address": "branch@example.com",
+      "office_mobile_number": "9876543200",
+      "office_phone_std_code": "080",
+      "office_phone_number": "23456789",
+      "office_fax_std_code": "080",
+      "office_fax_number": "87654320",
+      "amendment_date": "2024-11-26",
+      "amendment_reason": "New branch setup",
+      "nature_of_business": [
+        {
+          "business_activity_id": 3,
+          "amendment_date": "2024-11-26",
+          "amendment_reason": "New activity for branch"
+        },
+        {
+          "business_activity_id": 4,
+          "amendment_date": "2024-11-26",
+          "amendment_reason": "Expanded service offerings"
+        }
+      ]
+    }
+  ]
+}
+
+
+
+
+
+    """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -1090,9 +1319,11 @@ def amended_additional_business_places(
     # Convert Pydantic model to dictionary
     amendment_details_dict = amendment_details.dict()
 
-    result = db_gst.save_additional_business_places_and_activities(db, customer_id, amendment_details_dict, action, user_id)
+    result = db_gst.save_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, action, user_id)
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
     
     return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
+
+#--------------------------------------------------------------------------------------------------------------
