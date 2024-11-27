@@ -72,7 +72,6 @@ logger = logging.getLogger(__name__)
 #     )
 
 
-
 @router.post('/admin-login')
 def get_token(
     no_of_attempts: int =0 ,
@@ -268,7 +267,8 @@ def get_token(
                     
                 # Add the log_id to the data dictionary
                 data = {
-                    'user_id'               : user.employee_id,
+                    # 'user_id'               : user.employee_id,
+                    'user_id'               : user.id,
                     'role_id'               : role_ids,
                     'log_id'                : log_id,
                     'mobile_otp_id'         :mobile_otp_id,
@@ -294,7 +294,7 @@ def get_token(
                 # Raise a more specific HTTPException
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to log in: " + str(e))
 
-                 
+                  
 
 def authenticate_user(token: str) -> Dict[str, Union[int, None]]:
     if not token:
