@@ -7,7 +7,7 @@ from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import BusinessActivity, BusinessActivityMaster, BusinessActivityType, DistrictDB, StateDB
 from caerp_db.office.models import AppBusinessConstitution
 from caerp_db.services import db_gst
-from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerMaster, GstViewRange
+from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerMaster, GstViewRange
 from caerp_schema.services.gst_schema import AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, CombinedSchema, CustomerAmendmentSchema, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerBusinessPlacesFullAmendmentSchema, CustomerDuplicateSchemaForGet, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerGstStateSpecificInformationSchemaGet, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, SuccessResponse
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Body, Depends, HTTPException, Header
@@ -1137,7 +1137,6 @@ def amend_business_place(customer_id: int,
 
 #-----------------------------------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------------------------------
 
 @router.get("/get_amended_business_place", response_model=List[CombinedSchema])
 def get_amended_business_place(
@@ -1203,110 +1202,106 @@ def amended_additional_business_places(
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    Amend Additional Business Places
+            Amend Additional Business Places
 
-    This endpoint is used to amend the details of additional business places and their associated activities for a specified customer.
+            This endpoint is used to amend the details of additional business places and their associated activities for a specified customer.
 
-    Parameters:
-    - customer_id (int): The ID of the customer.
-    - service_task_id (int): The ID of the service task.
-    - amendment_details (CustomerBusinessPlacesFullAmendmentSchema): The details of the amendment for the business place and nature of business.
-    - action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
-    - token (str): The authentication token.
+            Parameters:
+            - customer_id (int): The ID of the customer.
+            - service_task_id (int): The ID of the service task.
+            - amendment_details (CustomerBusinessPlacesFullAmendmentSchema): The details of the amendment for the business place and nature of business.
+            - action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+            - token (str): The authentication token.
 
-    Returns:
-    - JSON response with success status and message.
+            Returns:
+            - JSON response with success status and message.
 
-    {
-  "business_place": [
-    {
-      "pin_code": "110001",
-      "country_id": 1,
-      "state_id": 2,
-      "district_id": 3,
-      "taluk_id": 4,
-      "city_id": 5,
-      "post_office_id": 6,
-      "lsg_type_id": 7,
-      "lsg_id": 8,
-      "village_id": 9,
-      "locality": "Connaught Place",
-      "road_street_name": "Janpath Lane",
-      "premises_building_name": "Janpath Tower",
-      "building_flat_number": "101",
-      "floor_number": "1",
-      "landmark": "Near Palika Bazar",
-      "latitude": "28.6345",
-      "longitude": "77.2190",
-      "office_email_address": "office@example.com",
-      "office_mobile_number": "9876543210",
-      "office_phone_std_code": "011",
-      "office_phone_number": "12345678",
-      "office_fax_std_code": "011",
-      "office_fax_number": "87654321",
-      "amendment_date": "2024-11-26",
-      "amendment_reason": "Expansion of business",
-      "nature_of_business": [
-        {
-          "business_activity_id": 1,
-          "amendment_date": "2024-11-26",
-          "amendment_reason": "Added new service offering"
-        },
-        {
-          "business_activity_id": 2,
-          "amendment_date": "2024-11-26",
-          "amendment_reason": "Updated product range"
+            {
+        "business_place": [
+            {
+            "pin_code": "110001",
+            "country_id": 1,
+            "state_id": 2,
+            "district_id": 3,
+            "taluk_id": 4,
+            "city_id": 5,
+            "post_office_id": 6,
+            "lsg_type_id": 7,
+            "lsg_id": 8,
+            "village_id": 9,
+            "locality": "Connaught Place",
+            "road_street_name": "Janpath Lane",
+            "premises_building_name": "Janpath Tower",
+            "building_flat_number": "101",
+            "floor_number": "1",
+            "landmark": "Near Palika Bazar",
+            "latitude": "28.6345",
+            "longitude": "77.2190",
+            "office_email_address": "office@example.com",
+            "office_mobile_number": "9876543210",
+            "office_phone_std_code": "011",
+            "office_phone_number": "12345678",
+            "office_fax_std_code": "011",
+            "office_fax_number": "87654321",
+            "amendment_date": "2024-11-26",
+            "amendment_reason": "Expansion of business",
+            "nature_of_business": [
+                {
+                "business_activity_id": 1,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Added new service offering"
+                },
+                {
+                "business_activity_id": 2,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Updated product range"
+                }
+            ]
+            },
+            {
+            "pin_code": "560001",
+            "country_id": 1,
+            "state_id": 2,
+            "district_id": 4,
+            "taluk_id": 5,
+            "city_id": 6,
+            "post_office_id": 7,
+            "lsg_type_id": 8,
+            "lsg_id": 9,
+            "village_id": 10,
+            "locality": "MG Road",
+            "road_street_name": "Brigade Road",
+            "premises_building_name": "Brigade Tower",
+            "building_flat_number": "201",
+            "floor_number": "2",
+            "landmark": "Opposite to Metro Station",
+            "latitude": "12.9716",
+            "longitude": "77.5946",
+            "office_email_address": "branch@example.com",
+            "office_mobile_number": "9876543200",
+            "office_phone_std_code": "080",
+            "office_phone_number": "23456789",
+            "office_fax_std_code": "080",
+            "office_fax_number": "87654320",
+            "amendment_date": "2024-11-26",
+            "amendment_reason": "New branch setup",
+            "nature_of_business": [
+                {
+                "business_activity_id": 3,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "New activity for branch"
+                },
+                {
+                "business_activity_id": 4,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Expanded service offerings"
+                }
+            ]
+            }
+        ]
         }
-      ]
-    },
-    {
-      "pin_code": "560001",
-      "country_id": 1,
-      "state_id": 2,
-      "district_id": 4,
-      "taluk_id": 5,
-      "city_id": 6,
-      "post_office_id": 7,
-      "lsg_type_id": 8,
-      "lsg_id": 9,
-      "village_id": 10,
-      "locality": "MG Road",
-      "road_street_name": "Brigade Road",
-      "premises_building_name": "Brigade Tower",
-      "building_flat_number": "201",
-      "floor_number": "2",
-      "landmark": "Opposite to Metro Station",
-      "latitude": "12.9716",
-      "longitude": "77.5946",
-      "office_email_address": "branch@example.com",
-      "office_mobile_number": "9876543200",
-      "office_phone_std_code": "080",
-      "office_phone_number": "23456789",
-      "office_fax_std_code": "080",
-      "office_fax_number": "87654320",
-      "amendment_date": "2024-11-26",
-      "amendment_reason": "New branch setup",
-      "nature_of_business": [
-        {
-          "business_activity_id": 3,
-          "amendment_date": "2024-11-26",
-          "amendment_reason": "New activity for branch"
-        },
-        {
-          "business_activity_id": 4,
-          "amendment_date": "2024-11-26",
-          "amendment_reason": "Expanded service offerings"
-        }
-      ]
-    }
-  ]
-}
 
-
-
-
-
-    """
+   """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -1327,3 +1322,80 @@ def amended_additional_business_places(
     return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
 
 #--------------------------------------------------------------------------------------------------------------
+
+@router.get("/get_additional_business_places_and_activities")
+def get_business_places_and_activities(customer_id: int, service_task_id: int, db: Session = Depends(get_db)):
+    try:
+        # Fetch all business places for the given customer and service task
+        business_places = db.query(CustomerBusinessPlace).filter_by(
+            customer_id=customer_id,
+            service_task_id=service_task_id
+        ).all()
+
+        if not business_places:
+            raise HTTPException(status_code=404, detail="Business places not found")
+
+        # Prepare the result dictionary
+        result = {
+            "customer_id": customer_id,
+            "service_task_id": service_task_id,
+            "business_places": []
+        }
+
+        # Iterate through each business place and fetch their activities
+        for business_place in business_places:
+            business_place_data = {
+                "business_place_id": business_place.id,
+                "pin_code": business_place.pin_code,
+                "country_id": business_place.country_id,
+                "state_id": business_place.state_id,
+                "district_id": business_place.district_id,
+                "taluk_id": business_place.taluk_id,
+                "city_id": business_place.city_id,
+                "post_office_id": business_place.post_office_id,
+                "lsg_type_id": business_place.lsg_type_id,
+                "lsg_id": business_place.lsg_id,
+                "village_id": business_place.village_id,
+                "locality": business_place.locality,
+                "road_street_name": business_place.road_street_name,
+                "premises_building_name": business_place.premises_building_name,
+                "building_flat_number": business_place.building_flat_number,
+                "floor_number": business_place.floor_number,
+                "landmark": business_place.landmark,
+                "latitude": business_place.latitude,
+                "longitude": business_place.longitude,
+                "office_email_address": business_place.office_email_address,
+                "office_mobile_number": business_place.office_mobile_number,
+                "office_phone_std_code": business_place.office_phone_std_code,
+                "office_phone_number": business_place.office_phone_number,
+                "office_fax_std_code": business_place.office_fax_std_code,
+                "office_fax_number": business_place.office_fax_number,
+                "amendment_date": business_place.amendment_date,
+                "amendment_reason": business_place.amendment_reason,
+                "nature_of_business": []
+            }
+
+            # Fetch all activities for the current business place
+            activities = db.query(CustomerBusinessPlaceActivity).filter_by(
+                business_place_id=business_place.id
+            ).all()
+
+            # Add activities to the business place data
+            for activity in activities:
+                activity_data = {
+                    "business_activity_id": activity.business_activity_id,
+                    "amendment_date": activity.amendment_date,
+                    "amendment_reason": activity.amendment_reason,
+                    "amendment_status": activity.amendment_status,
+                    "amendment_action": activity.amendment_action,
+                    "is_deleted": activity.is_deleted
+                }
+                business_place_data["nature_of_business"].append(activity_data)
+
+            result["business_places"].append(business_place_data)
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch business places and activities: {str(e)}")
+

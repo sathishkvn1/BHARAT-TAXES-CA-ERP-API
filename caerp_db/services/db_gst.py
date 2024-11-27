@@ -837,12 +837,16 @@ def get_stakeholder_details(
                         "village_name": db.query(AppViewVillages.village_name).filter_by(app_village_id=address.village_id).scalar() if address and address.village_id else None,
                         "post_office_id": address.post_office_id if address else None,
                         "post_office_name": db.query(PostOfficeView.post_office_name).filter_by(id=address.post_office_id).scalar() if address and address.post_office_id else None,
-                        "taluk_id": address.taluk_id,
+                        "taluk_id": address.taluk_id if address else None,
                         "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address and address.taluk_id else None,
-                        "lsg_type_id": address.lsg_type_id,
-                        "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
-                        "lsg_id": address.lsg_id,
-                        "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
+                        "lsg_type_id": address.lsg_type_id if address and address.lsg_type_id else None,
+                        "lsg_type_name": (db.query(AppViewVillages.lsg_type)
+                        .filter_by(lsg_type_id=address.lsg_type_id)
+                           .first().lsg_type if address and address.lsg_type_id else None),
+                        "lsg_id": address.lsg_id if address and address.lsg_id else None,
+                        "lsg_name": (db.query(AppViewVillages.lsg_name)
+                        .filter_by(lsg_id=address.lsg_id)
+                        .first().lsg_name if address and address.lsg_id else None),
                         "locality": address.locality if address else None,
                         "road_street_name": address.road_street_name if address else None,
                         "premises_building_name": address.premises_building_name if address else None,
@@ -856,8 +860,6 @@ def get_stakeholder_details(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
 
 #----get activity
 def fetch_business_activities(
@@ -2013,7 +2015,124 @@ def amend_additonal_trade_names(db: Session, customer_id: int, service_task_id: 
 
 #-------------------------------------------------------------------------------------------------------------
 
-def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
+# def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
+#     try:
+#         # Check if the stakeholder already exists
+#         if request_data.personal_information.id and request_data.personal_information.id > 0:
+#             stake_holder_id = request_data.personal_information.id
+#         else:
+#             # Insert data into StakeHolderMaster
+#             new_stake_holder = StakeHolderMaster(
+#                 first_name=request_data.personal_information.first_name,
+#                 middle_name=request_data.personal_information.middle_name,
+#                 last_name=request_data.personal_information.last_name,
+#                 fathers_first_name=request_data.personal_information.fathers_first_name,
+#                 fathers_middle_name=request_data.personal_information.fathers_middle_name,
+#                 fathers_last_name=request_data.personal_information.fathers_last_name,
+#                 marital_status_id=request_data.personal_information.marital_status_id,
+#                 date_of_birth=request_data.personal_information.date_of_birth,
+#                 gender_id=request_data.personal_information.gender_id,
+#                 din_number=request_data.personal_information.din_number,
+#                 is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
+#                 pan_number=request_data.personal_information.pan_number,
+#                 passport_number=request_data.personal_information.passport_number,
+#                 aadhaar_number=request_data.personal_information.aadhaar_number,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_stake_holder)
+#             db.commit()
+#             db.refresh(new_stake_holder)
+#             stake_holder_id = new_stake_holder.id
+
+#         # Check for existing address
+#         if request_data.address[0].id and request_data.address[0].id > 0:
+#             permanent_address_id = request_data.address[0].id
+#         else:
+#             # Insert data into StakeHolderAddress
+#             new_address = StakeHolderAddress(
+#                 stake_holder_id=stake_holder_id,
+#                 address_type='PERMANENT',
+#                 pin_code=request_data.address[0].pin_code,
+#                 country_id=request_data.address[0].country_id,
+#                 state_id=request_data.address[0].state_id,
+#                 district_id=request_data.address[0].district_id,
+#                 city_id=request_data.address[0].city_id,
+#                 village_id=request_data.address[0].village_id,
+#                 post_office_id=request_data.address[0].post_office_id,
+#                 taluk_id=request_data.address[0].taluk_id,
+#                 lsg_type_id=request_data.address[0].lsg_type_id,
+#                 lsg_id=request_data.address[0].lsg_id,
+#                 locality=request_data.address[0].locality,
+#                 road_street_name=request_data.address[0].road_street_name,
+#                 premises_building_name=request_data.address[0].premises_building_name,
+#                 building_flat_number=request_data.address[0].building_flat_number,
+#                 floor_number=request_data.address[0].floor_number,
+#                 landmark=request_data.address[0].landmark,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_address)
+#             db.commit()
+#             db.refresh(new_address)
+#             permanent_address_id = new_address.id
+
+#         # Check for existing contact details
+#         if request_data.contact_details[0].id and request_data.contact_details[0].id > 0:
+#             contact_details_id = request_data.contact_details[0].id
+#         else:
+#             # Insert data into StakeHolderContactDetails
+#             new_contact_details = StakeHolderContactDetails(
+#                 stake_holder_id=stake_holder_id,
+#                 mobile_number=request_data.contact_details[0].mobile_number,
+#                 email_address=request_data.contact_details[0].email_address,
+#                 telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_contact_details)
+#             db.commit()
+#             db.refresh(new_contact_details)
+#             contact_details_id = new_contact_details.id
+
+#         # Insert data into CustomerStakeHolder
+#         new_customer_stake_holder = CustomerStakeHolder(
+#             customer_id=customer_id,
+#             service_task_id=service_task_id,
+#             stake_holder_master_id=stake_holder_id,
+#             stake_holder_type=stakeholder_type,
+#             designation_id=request_data.personal_information.designation_id,
+#             contact_details_id=contact_details_id,
+#             permanent_address_id=permanent_address_id,
+#             official_mobile_number=request_data.contact_details[0].mobile_number,
+#             official_email_address=request_data.contact_details[0].email_address,
+#             is_amendment='yes',
+#             amendment_date=datetime.now(),
+#             amendment_reason='Adding new stakeholder',
+#             amendment_status='CREATED',
+#             amendment_action='ADDED',
+#             effective_from_date=None,
+#             effective_to_date=None,
+#             created_by=user_id,
+#             created_on=datetime.now()
+#         )
+#         db.add(new_customer_stake_holder)
+#         db.commit()
+#         db.refresh(new_customer_stake_holder)
+
+#         # Update the amended_parent_id to be the same as id 
+#         new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
+#         db.commit()
+
+
+#         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
     try:
         # Check if the stakeholder already exists
         if request_data.personal_information.id and request_data.personal_information.id > 0:
@@ -2093,6 +2212,16 @@ def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakehol
             db.refresh(new_contact_details)
             contact_details_id = new_contact_details.id
 
+        # Check if CustomerStakeHolder already exists with customer_id and service_task_id
+        existing_customer_stake_holder = db.query(CustomerStakeHolder).filter_by(
+            customer_id=customer_id,
+            service_task_id=service_task_id,
+            stake_holder_type=stakeholder_type
+        ).first()
+
+        if existing_customer_stake_holder:
+            return {"success": True, "message": "Stakeholder already exists", "id": existing_customer_stake_holder.id}
+
         # Insert data into CustomerStakeHolder
         new_customer_stake_holder = CustomerStakeHolder(
             customer_id=customer_id,
@@ -2122,13 +2251,11 @@ def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakehol
         new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
         db.commit()
 
-
         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 # def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetailsSchema, action: AmendmentAction, user_id: int):

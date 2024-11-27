@@ -20,3 +20,9 @@ blinker
 certifi
 pillow
 pandas
+fpdf
+reportlab
+ pdfkit
+ selenium
+#  jinja2
+#  WeasyPrint

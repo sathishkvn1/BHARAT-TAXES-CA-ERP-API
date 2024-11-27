@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from caerp_auth import authentication
 from caerp_router.common import user,otp_process,common,common_functions
 from caerp_router.office import office_master
-from caerp_router.services.gst_services import gst_registration
+from caerp_router.services.gst_services import gst_registration,gst_registeration_service
 
 from caerp_router.accounts import quotation
 from caerp_router.hr_and_payroll import employee_master
@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 load_dotenv()
-
 
 caerp_base.metadata.create_all(bind=caerp_engine)
 
@@ -113,6 +112,7 @@ accounts.include_router(quotation.router)
 # for gst service
 gst_services.include_router(authentication.router)
 gst_services.include_router(gst_registration.router) 
+gst_services.include_router(gst_registeration_service.router)
 
 
 
@@ -121,7 +121,6 @@ app.mount("/office", app_office, name="office")
 app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 app.mount("/accounts/",accounts,name="accounts")
 app.mount("/services/",gst_services,name="services")
-
 app_common.mount("/captcha/generate_captcha", StaticFiles(directory="uploads/captcha_modified_images"), name="captcha_images")
 # app_office.mount("/upload_document", StaticFiles(directory="uploads/work_order_documents"), name="documents")
 app_office.mount("/upload_document", StaticFiles(directory="uploads/work_order_documents"), name="office_documents")
