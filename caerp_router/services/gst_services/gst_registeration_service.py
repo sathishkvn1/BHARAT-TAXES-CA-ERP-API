@@ -146,6 +146,7 @@ def enter_text_field(driver, element_id, text_value):
 def gst_registration(
         request : RegistrationData,
         customer_id: int,
+        service_task_id:int,
         db: Session = Depends(get_db),
         token: str = Depends(oauth2.oauth2_scheme)
         ): 
@@ -164,7 +165,7 @@ def gst_registration(
     
     try:
         # customer_id = 43
-        customer_details = get_customer_details(db,customer_id, user_id)
+        customer_details = get_customer_details(db,customer_id,service_task_id, user_id)
         legal_name      = customer_details['customer_business_details']['legal_name']
         mobile_number   = customer_details['customer_business_details']['mobile_number']
         email           = customer_details['customer_business_details']['email_address']
@@ -427,6 +428,7 @@ def start_gst_login(
 @router.post("/fill_business_details")
 def fill_business_details(session_id: str,
                             customer_id :int ,
+                            service_task_id : int,
                             # business_details: BusinessDetails,
                             db: Session = Depends(get_db),
                             token: str = Depends(oauth2.oauth2_scheme)
@@ -436,7 +438,7 @@ def fill_business_details(session_id: str,
     user_id = auth_info.get("user_id")
     # is_composition =customer_details['customer_other_details']['casual_taxable_person']['is_applying_as_casual_taxable_person']
 
-    customer_details = get_customer_details(db,customer_id, user_id)
+    customer_details = get_customer_details(db,customer_id, service_task_id ,user_id)
     trade_name                  = customer_details['customer_business_details']['trade_name']
     business_constitution_code  = customer_details['customer_business_details']['business_constitution_code']
     is_composition              = customer_details['customer_other_details']['option_for_composition']['is_applying_as_composition_taxable_person']
@@ -632,13 +634,14 @@ def fill_business_details(session_id: str,
 @router.post("/fill-promoters-directors-details")
 def fill_promoters_directors_details(session_id: str, 
                         customer_id :int ,
+                        service_task_id : int,
                         business_details: BusinessDetails,
                         db: Session = Depends(get_db),
                         token: str = Depends(oauth2.oauth2_scheme)):
     driver =  get_driver_session(session_id)
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    promoters_details = get_stakeholder_details(db,customer_id, 'PROMOTER_PARTNER_DIRECTOR',user_id)
+    promoters_details = get_stakeholder_details(db,customer_id, service_task_id,'PROMOTER_PARTNER_DIRECTOR',user_id)
 
     # for person in promoters_details:
     for index, person in enumerate(promoters_details):
@@ -853,6 +856,7 @@ def fill_promoters_directors_details(session_id: str,
 def fill_authorized_signatory(
     session_id : str,    
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)):
 
@@ -867,7 +871,7 @@ def fill_authorized_signatory(
     checkbox = driver.find_element(By.ID, 'auth_prim')
     if not checkbox.is_selected():
         checkbox.click() 
-    promoters_details = get_stakeholder_details(db,customer_id, 'AUTHORIZED_SIGNATORY',user_id)
+    promoters_details = get_stakeholder_details(db,customer_id,service_task_id, 'AUTHORIZED_SIGNATORY',user_id)
     
     for index, person in enumerate(promoters_details):
         first_name      = person['personal_information']['first_name']
@@ -1099,6 +1103,7 @@ def fill_authorized_signatory(
 def fill_authorized_representative(
     session_id : str,
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)):
 
@@ -1137,8 +1142,7 @@ def fill_authorized_representative(
     # # Click the radio button if not already selected
     # if not radio_button.is_selected():
     radio_button.click()
-    repersentative_details = get_stakeholder_details(db,customer_id, 'AUTHORIZED_REPRESENTATIVE',user_id)
-    print(repersentative_details)
+    repersentative_details = get_stakeholder_details(db,customer_id,service_task_id, 'AUTHORIZED_REPRESENTATIVE',user_id)
     for person in repersentative_details:
         # ar_first_name   = person['personal_information']['first_name']
         ar_middle_name  = person['personal_information']['middle_name']
@@ -1181,6 +1185,7 @@ def fill_authorized_representative(
 @router.post('/fill_principal_place')
 def fill_principal_place(session_id : str,
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)):
 
@@ -1188,7 +1193,7 @@ def fill_principal_place(session_id : str,
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     WebDriverWait(driver, 300).until(EC.url_contains('business/place'))
-    principal_place_details = get_business_place(customer_id,'PRINCIPAL_PLACE_ADDRESS',db,user_id)
+    principal_place_details = get_business_place(customer_id,service_task_id,'PRINCIPAL_PLACE_ADDRESS',db,user_id)
     
     business_places = principal_place_details.get("business_places", [])
 
@@ -1294,6 +1299,7 @@ def fill_principal_place(session_id : str,
 def fill_additional_bussiness_places(
     session_id : str,
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1301,7 +1307,7 @@ def fill_additional_bussiness_places(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     WebDriverWait(driver, 300).until(EC.url_contains('business/addlplace'))
-    additional_place_details = get_business_place(customer_id,'ADDITIONAL_PLACE',db,user_id)
+    additional_place_details = get_business_place(customer_id,service_task_id ,'ADDITIONAL_PLACE',db,user_id)
     business_places = additional_place_details.get("business_places", [])
     count = len(business_places)
     # abp_ctr
@@ -1456,6 +1462,7 @@ def fill_additional_bussiness_places(
 def fill_goods_and_services(
     session_id : str,
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1463,48 +1470,8 @@ def fill_goods_and_services(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     WebDriverWait(driver, 300).until(EC.url_contains('goodsservices'))
-    hsn_commodities =get_hsn_commodities_by_customer_id(customer_id,user_id,db)
-    # for commodity in hsn_commodities:
-    #     enter_text_field(driver, 'gs_hsn_value',commodity['hsn_sac_code'])
-    #     hsn_commodities_field = driver.find_element(By.ID, 'gs_hsn_value')
-    #     if hsn_commodities_field.is_enabled():
-    #                 # Clear and input the pin code
-    #         hsn_commodities_field.clear()
-    #         hsn_commodities_field.send_keys(commodity['hsn_sac_code'])
-    #     # driver.execute_script("arguments[0].dispatchEvent(new Event('input'))", hsn_commodities_field)
-
-    #                         # Wait for suggestion list to load
-    #     # suggestion_list_xpath = "//li[contains(@ng-repeat, 'suggestionPincode')]"
-    #     # WebDriverWait(driver, 20).until(
-    #     #     EC.presence_of_all_elements_located((By.XPATH, suggestion_list_xpath))
-    #     # )
-
-    #     # # Wait for and click the specific pin code suggestion
-    #     # suggestion_xpath = f"//li[contains(., '{hsn_commodities['hsn_sac_code']}')]"
-    #     # suggestion_item = WebDriverWait(driver, 50).until(
-    #     #     EC.element_to_be_clickable((By.XPATH, suggestion_xpath))
-    #     # )
-    #     # suggestion_list_xpath = "//div[contains(@class, 'autocomplete-desc')]"
-    #     # WebDriverWait(driver, 20).until(
-    #     #     EC.presence_of_all_elements_located((By.XPATH, suggestion_list_xpath))
-    #     # )
-
-    #     # Locate the specific suggestion matching the description
-    #     # suggestion_xpath = f"//div[contains(@class, 'autocomplete-desc') and contains(text(), '{commodity['hsn_sac_code']}')]"
-    #     # suggestion_item = WebDriverWait(driver, 50).until(
-    #     #     EC.element_to_be_clickable((By.XPATH, suggestion_xpath))
-    #     # )
-    #     driver.execute_script("arguments[0].dispatchEvent(new Event('input'))", hsn_commodities_field)
-
-    #     # Wait for the suggestion list to appear
-    #     suggestion_xpath = f"//div[contains(@class, 'autocomplete-desc') and text()='{commodity['hsn_sac_description']}']"
-    #     suggestion_item = WebDriverWait(driver, 50).until(
-    #         EC.element_to_be_clickable((By.XPATH, suggestion_xpath))
-    #     )
-
-    #     # Click on the suggestion
-    #     suggestion_item.click()
-    #     suggestion_item.click()
+    hsn_commodities =get_hsn_commodities_by_customer_id(customer_id,service_task_id,user_id,db)
+   
 
     for commodity in hsn_commodities:
         # Locate and fill the HSN/SAC code
@@ -1549,6 +1516,7 @@ def fill_goods_and_services(
 def fill_state_specific_info(
     session_id : str,
     customer_id : int,
+    service_task_id : int,
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1556,7 +1524,7 @@ def fill_state_specific_info(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     WebDriverWait(driver, 300).until(EC.url_contains('statespecific'))
-    state_specific_information =get_gst_state_specific_information_by_customer_id(customer_id,db,user_id)
+    state_specific_information =get_gst_state_specific_information_by_customer_id(customer_id,service_task_id ,db,user_id)
     if state_specific_information:
     # Access the first item in the list
         state_specific_info = state_specific_information[0]
