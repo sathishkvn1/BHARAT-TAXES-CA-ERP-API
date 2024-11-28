@@ -5,7 +5,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_constants.caerp_constants import AmendmentAction
-from caerp_db.common.models import AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
+from caerp_db.common.models import AppConstitutionStakeholders, AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
 from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
@@ -475,7 +475,6 @@ def get_customer_details(db: Session,
 
 #------Save stakeholder
 
-
 def save_stakeholder_details(
     request: StakeHolderMasterSchema,
     user_id: int,
@@ -602,12 +601,13 @@ def save_stakeholder_details(
                     for field in vars(addr)
                     if field != "id" and hasattr(existing_address, field)
                 )
-
+                residential_address_id = existing_address.id
+                
                 if has_changes:
                     existing_address.effective_to_date = datetime.now() - timedelta(days=1)
                     existing_address.modified_by = user_id
                     existing_address.modified_on = datetime.now()
-                    residential_address_id = existing_address.id
+                    
                     new_address = StakeHolderAddress(
                         stake_holder_id=stake_holder_master.id,
                         effective_from_date=datetime.now(),
@@ -675,9 +675,10 @@ def save_stakeholder_details(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
-#--Get Stakeholder Details
 
 #-----------------------------------------------------------------------------------------------------------------
+
+
 def get_stakeholder_details(
     db: Session,
     user_id: int,
@@ -764,9 +765,9 @@ def get_stakeholder_details(
             designation = None
             designation_code = None
             if stake_holder_type in ['PROMOTER_PARTNER_DIRECTOR', 'AUTHORIZED_SIGNATORY'] or stake_holder_type is None:
-                designation = db.query(AppDesignation).filter(
-                    AppDesignation.id == stakeholder.designation_id,
-                    AppDesignation.is_deleted == 'no'
+                designation = db.query(AppConstitutionStakeholders).filter(
+                    AppConstitutionStakeholders.id == stakeholder.designation_id,
+                    AppConstitutionStakeholders.is_deleted == 'no'
                 ).first()
             elif stake_holder_type == 'AUTHORIZED_REPRESENTATIVE':
                 designation = db.query(GstOtherAuthorizedRepresentativeResignation).filter(
@@ -807,7 +808,7 @@ def get_stakeholder_details(
                 "customer_stakeholders": {
                     "id": stakeholder.id,
                     "designation_id": designation.id if designation else None,
-                    "designation": designation.designation if designation else None,
+                    "designation": designation.stakeholder if designation else None,
                     "designation_code": designation_code,
                     "stake_holder_type": stakeholder.stake_holder_type,
                     "is_authorized_signatory": stakeholder.is_authorized_signatory,
@@ -861,7 +862,8 @@ def get_stakeholder_details(
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-#----get activity
+
+#----get activity--------------------------------------------------------------------------------------------------
 def fetch_business_activities(
     db: Session, 
     activity_type_id: Optional[int], 
@@ -2132,11 +2134,174 @@ def amend_additonal_trade_names(db: Session, customer_id: int, service_task_id: 
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
+# def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
+#     try:
+#         # Check if the stakeholder already exists
+#         if request_data.personal_information.id and request_data.personal_information.id > 0:
+#             stake_holder_id = request_data.personal_information.id
+#         else:
+#             # Insert data into StakeHolderMaster
+#             new_stake_holder = StakeHolderMaster(
+#                 first_name=request_data.personal_information.first_name,
+#                 middle_name=request_data.personal_information.middle_name,
+#                 last_name=request_data.personal_information.last_name,
+#                 fathers_first_name=request_data.personal_information.fathers_first_name,
+#                 fathers_middle_name=request_data.personal_information.fathers_middle_name,
+#                 fathers_last_name=request_data.personal_information.fathers_last_name,
+#                 marital_status_id=request_data.personal_information.marital_status_id,
+#                 date_of_birth=request_data.personal_information.date_of_birth,
+#                 gender_id=request_data.personal_information.gender_id,
+#                 din_number=request_data.personal_information.din_number,
+#                 is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
+#                 pan_number=request_data.personal_information.pan_number,
+#                 passport_number=request_data.personal_information.passport_number,
+#                 aadhaar_number=request_data.personal_information.aadhaar_number,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_stake_holder)
+#             db.commit()
+#             db.refresh(new_stake_holder)
+#             stake_holder_id = new_stake_holder.id
+
+#         # Check for existing address
+#         if request_data.address[0].id and request_data.address[0].id > 0:
+#             permanent_address_id = request_data.address[0].id
+#         else:
+#             # Insert data into StakeHolderAddress
+#             new_address = StakeHolderAddress(
+#                 stake_holder_id=stake_holder_id,
+#                 address_type='PERMANENT',
+#                 pin_code=request_data.address[0].pin_code,
+#                 country_id=request_data.address[0].country_id,
+#                 state_id=request_data.address[0].state_id,
+#                 district_id=request_data.address[0].district_id,
+#                 city_id=request_data.address[0].city_id,
+#                 village_id=request_data.address[0].village_id,
+#                 post_office_id=request_data.address[0].post_office_id,
+#                 taluk_id=request_data.address[0].taluk_id,
+#                 lsg_type_id=request_data.address[0].lsg_type_id,
+#                 lsg_id=request_data.address[0].lsg_id,
+#                 locality=request_data.address[0].locality,
+#                 road_street_name=request_data.address[0].road_street_name,
+#                 premises_building_name=request_data.address[0].premises_building_name,
+#                 building_flat_number=request_data.address[0].building_flat_number,
+#                 floor_number=request_data.address[0].floor_number,
+#                 landmark=request_data.address[0].landmark,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_address)
+#             db.commit()
+#             db.refresh(new_address)
+#             permanent_address_id = new_address.id
+
+#         # Check for existing contact details
+#         if request_data.contact_details[0].id and request_data.contact_details[0].id > 0:
+#             contact_details_id = request_data.contact_details[0].id
+#         else:
+#             # Insert data into StakeHolderContactDetails
+#             new_contact_details = StakeHolderContactDetails(
+#                 stake_holder_id=stake_holder_id,
+#                 mobile_number=request_data.contact_details[0].mobile_number,
+#                 email_address=request_data.contact_details[0].email_address,
+#                 telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
+#                 created_by=user_id,
+#                 created_on=datetime.now()
+#             )
+#             db.add(new_contact_details)
+#             db.commit()
+#             db.refresh(new_contact_details)
+#             contact_details_id = new_contact_details.id
+
+#         # Check if CustomerStakeHolder already exists with customer_id and service_task_id
+#         existing_customer_stake_holder = db.query(CustomerStakeHolder).filter_by(
+#             customer_id=customer_id,
+#             service_task_id=service_task_id,
+#             stake_holder_type=stakeholder_type
+#         ).first()
+
+#         if existing_customer_stake_holder:
+#             return {"success": True, "message": "Stakeholder already exists", "id": existing_customer_stake_holder.id}
+
+#         # Insert data into CustomerStakeHolder
+#         new_customer_stake_holder = CustomerStakeHolder(
+#             customer_id=customer_id,
+#             service_task_id=service_task_id,
+#             stake_holder_master_id=stake_holder_id,
+#             stake_holder_type=stakeholder_type,
+#             designation_id=request_data.personal_information.designation_id,
+#             contact_details_id=contact_details_id,
+#             permanent_address_id=permanent_address_id,
+#             official_mobile_number=request_data.contact_details[0].mobile_number,
+#             official_email_address=request_data.contact_details[0].email_address,
+#             is_amendment='yes',
+#             amendment_date=datetime.now(),
+#             amendment_reason='Adding new stakeholder',
+#             amendment_status='CREATED',
+#             amendment_action='ADDED',
+#             effective_from_date=None,
+#             effective_to_date=None,
+#             created_by=user_id,
+#             created_on=datetime.now()
+#         )
+#         db.add(new_customer_stake_holder)
+#         db.commit()
+#         db.refresh(new_customer_stake_holder)
+
+#         # Update the amended_parent_id to be the same as id 
+#         new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
+#         db.commit()
+
+#         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+# def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetailsSchema, action: AmendmentAction, user_id: int):
+#     try:
+#         existing_stake_holder = db.query(CustomerStakeHolder).filter(CustomerStakeHolder.id == id).first()
+#         if not existing_stake_holder:
+#             raise HTTPException(status_code=404, detail="Stakeholder not found")
+
+#         # Update amendment details and mark as deleted
+#         existing_stake_holder.amendment_action = action.value
+#         existing_stake_holder.amendment_reason = amendment_details.reason
+#         existing_stake_holder.amendment_date = amendment_details.date
+        
+#         db.commit()
+
+#         return {"success": True, "message": "Stakeholder deleted successfully"}
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
     try:
-        # Check if the stakeholder already exists
-        if request_data.personal_information.id and request_data.personal_information.id > 0:
-            stake_holder_id = request_data.personal_information.id
+        # Check for existing stakeholder
+        existing_stakeholder = db.query(StakeHolderMaster).filter_by(
+            first_name=request_data.personal_information.first_name,
+            middle_name=request_data.personal_information.middle_name,
+            last_name=request_data.personal_information.last_name,
+            fathers_first_name=request_data.personal_information.fathers_first_name,
+            fathers_middle_name=request_data.personal_information.fathers_middle_name,
+            fathers_last_name=request_data.personal_information.fathers_last_name,
+            marital_status_id=request_data.personal_information.marital_status_id,
+            gender_id=request_data.personal_information.gender_id,
+            din_number=request_data.personal_information.din_number,
+            is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
+            passport_number=request_data.personal_information.passport_number,
+            aadhaar_number=request_data.personal_information.aadhaar_number,
+            date_of_birth=request_data.personal_information.date_of_birth,
+            pan_number=request_data.personal_information.pan_number
+        ).first()
+
+        if existing_stakeholder:
+            stake_holder_id = existing_stakeholder.id
         else:
             # Insert data into StakeHolderMaster
             new_stake_holder = StakeHolderMaster(
@@ -2163,8 +2328,27 @@ def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeh
             stake_holder_id = new_stake_holder.id
 
         # Check for existing address
-        if request_data.address[0].id and request_data.address[0].id > 0:
-            permanent_address_id = request_data.address[0].id
+        existing_address = db.query(StakeHolderAddress).filter_by(
+            pin_code=request_data.address[0].pin_code,
+            country_id=request_data.address[0].country_id,
+            state_id=request_data.address[0].state_id,
+            district_id=request_data.address[0].district_id,
+            city_id=request_data.address[0].city_id,
+            village_id=request_data.address[0].village_id,
+            post_office_id=request_data.address[0].post_office_id,
+            taluk_id=request_data.address[0].taluk_id,
+            lsg_type_id=request_data.address[0].lsg_type_id,
+            lsg_id=request_data.address[0].lsg_id,
+            locality=request_data.address[0].locality,
+            road_street_name=request_data.address[0].road_street_name,
+            premises_building_name=request_data.address[0].premises_building_name,
+            building_flat_number=request_data.address[0].building_flat_number,
+            floor_number=request_data.address[0].floor_number,
+            landmark=request_data.address[0].landmark
+        ).first()
+
+        if existing_address:
+            permanent_address_id = existing_address.id
         else:
             # Insert data into StakeHolderAddress
             new_address = StakeHolderAddress(
@@ -2195,8 +2379,14 @@ def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeh
             permanent_address_id = new_address.id
 
         # Check for existing contact details
-        if request_data.contact_details[0].id and request_data.contact_details[0].id > 0:
-            contact_details_id = request_data.contact_details[0].id
+        existing_contact_details = db.query(StakeHolderContactDetails).filter_by(
+            mobile_number=request_data.contact_details[0].mobile_number,
+            email_address=request_data.contact_details[0].email_address,
+            telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code
+        ).first()
+
+        if existing_contact_details:
+            contact_details_id = existing_contact_details.id
         else:
             # Insert data into StakeHolderContactDetails
             new_contact_details = StakeHolderContactDetails(
@@ -2212,7 +2402,7 @@ def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeh
             db.refresh(new_contact_details)
             contact_details_id = new_contact_details.id
 
-        # Check if CustomerStakeHolder already exists with customer_id and service_task_id
+        # Check if CustomerStakeHolder already exists with customer_id, service_task_id, and stakeholder_type
         existing_customer_stake_holder = db.query(CustomerStakeHolder).filter_by(
             customer_id=customer_id,
             service_task_id=service_task_id,
@@ -2220,64 +2410,50 @@ def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeh
         ).first()
 
         if existing_customer_stake_holder:
-            return {"success": True, "message": "Stakeholder already exists", "id": existing_customer_stake_holder.id}
+            # Update existing CustomerStakeHolder with the new stake_holder_id, contact_details_id, and permanent_address_id
+            existing_customer_stake_holder.stake_holder_master_id = stake_holder_id
+            existing_customer_stake_holder.contact_details_id = contact_details_id
+            existing_customer_stake_holder.permanent_address_id = permanent_address_id
+            existing_customer_stake_holder.designation_id = request_data.personal_information.designation_id
+            db.commit()
+            return {"success": True, "message": "Stakeholder updated successfully", "id": existing_customer_stake_holder.id}
+        else:
+            # Insert data into CustomerStakeHolder
+            new_customer_stake_holder = CustomerStakeHolder(
+                customer_id=customer_id,
+                service_task_id=service_task_id,
+                stake_holder_master_id=stake_holder_id,
+                stake_holder_type=stakeholder_type,
+                designation_id=request_data.personal_information.designation_id,
+                contact_details_id=contact_details_id,
+                permanent_address_id=permanent_address_id,
+                official_mobile_number=request_data.contact_details[0].mobile_number,
+                official_email_address=request_data.contact_details[0].email_address,
+                is_amendment='yes',
+                amendment_date=datetime.now(),
+                amendment_reason='Adding new stakeholder',
+                amendment_status='CREATED',
+                amendment_action='ADDED',
+                effective_from_date=None,
+                effective_to_date=None,
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(new_customer_stake_holder)
+            db.commit()
+            db.refresh(new_customer_stake_holder)
 
-        # Insert data into CustomerStakeHolder
-        new_customer_stake_holder = CustomerStakeHolder(
-            customer_id=customer_id,
-            service_task_id=service_task_id,
-            stake_holder_master_id=stake_holder_id,
-            stake_holder_type=stakeholder_type,
-            designation_id=request_data.personal_information.designation_id,
-            contact_details_id=contact_details_id,
-            permanent_address_id=permanent_address_id,
-            official_mobile_number=request_data.contact_details[0].mobile_number,
-            official_email_address=request_data.contact_details[0].email_address,
-            is_amendment='yes',
-            amendment_date=datetime.now(),
-            amendment_reason='Adding new stakeholder',
-            amendment_status='CREATED',
-            amendment_action='ADDED',
-            effective_from_date=None,
-            effective_to_date=None,
-            created_by=user_id,
-            created_on=datetime.now()
-        )
-        db.add(new_customer_stake_holder)
-        db.commit()
-        db.refresh(new_customer_stake_holder)
+            # Update the amended_parent_id to be the same as id 
+            new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
+            db.commit()
 
-        # Update the amended_parent_id to be the same as id 
-        new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
-        db.commit()
-
-        return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
+            return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetailsSchema, action: AmendmentAction, user_id: int):
-#     try:
-#         existing_stake_holder = db.query(CustomerStakeHolder).filter(CustomerStakeHolder.id == id).first()
-#         if not existing_stake_holder:
-#             raise HTTPException(status_code=404, detail="Stakeholder not found")
-
-#         # Update amendment details and mark as deleted
-#         existing_stake_holder.amendment_action = action.value
-#         existing_stake_holder.amendment_reason = amendment_details.reason
-#         existing_stake_holder.amendment_date = amendment_details.date
-        
-#         db.commit()
-
-#         return {"success": True, "message": "Stakeholder deleted successfully"}
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
+#----------------------------------------------------------------------------------------------------------------
 
 def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetailsSchema, action: AmendmentAction, user_id: int):
     try:
@@ -2463,7 +2639,6 @@ def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetail
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
 
-
 def get_stakeholder_master_for_amndement(db: Session, 
                             customer_id: int, 
                             
@@ -2514,9 +2689,9 @@ def get_stakeholder_master_for_amndement(db: Session,
 
                 # Fetch designation
                 designation = (
-                    db.query(AppDesignation)
+                    db.query(AppConstitutionStakeholders)
                     .filter_by(id=customer_stakeholder.designation_id)
-                    .filter(AppDesignation.is_deleted == 'no')  # Assuming AppDesignation has an is_deleted column
+                    .filter(AppConstitutionStakeholders.is_deleted == 'no')  # Assuming AppDesignation has an is_deleted column
                     .first() if customer_stakeholder.designation_id else None
                 )
 
@@ -2563,7 +2738,7 @@ def get_stakeholder_master_for_amndement(db: Session,
                     "customer_stakeholders": {
                     "id": stakeholder.id,
                     "designation_id": designation.id if designation else None,
-                    "designation": designation.designation if designation else None,
+                    "designation": designation.stakeholder if designation else None,
                 },
                     "contact_details": {
                     "id": contact_details.id if contact_details else None,
@@ -2591,8 +2766,10 @@ def get_stakeholder_master_for_amndement(db: Session,
                         "taluk_name": db.query(TalukDB.taluk_name).filter_by(id=address.taluk_id).scalar() if address and address.taluk_id else None,
                         "lsg_type_id": address.lsg_type_id,
                         "lsg_type_name": db.query(AppViewVillages.lsg_type).filter_by(lsg_type_id=address.lsg_type_id).first().lsg_type if address.lsg_type_id else None,
-                        "lsg_id": address.lsg_id,
-                        "lsg_name": db.query(AppViewVillages.lsg_name).filter_by(lsg_id=address.lsg_id).first().lsg_name if address.lsg_id else None,
+                        "lsg_id": address.lsg_id if address and address.lsg_id else None,
+                        "lsg_name": (db.query(AppViewVillages.lsg_name)
+                        .filter_by(lsg_id=address.lsg_id)
+                        .first().lsg_name if address and address.lsg_id else None),
                         "locality": address.locality if address else None,
                         "road_street_name": address.road_street_name if address else None,
                         "premises_building_name": address.premises_building_name if address else None,
@@ -2610,103 +2787,285 @@ def get_stakeholder_master_for_amndement(db: Session,
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-------------------------------------------------------------------------------------------
 
-def amend_business_place_data(db: Session, customer_id: int,service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
+# def amend_business_place_data(db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
+#     try:
+#         print(f"Starting amend_business_place_data for customer_id: {customer_id}, user_id: {user_id}, action: {action}")
+
+#         original_business_place = None
+#         original_business_place_id = None
+
+#         # Step 1: Check if service_task_id is present
+#         existing_task = db.query(CustomerBusinessPlace).filter_by(
+#             customer_id=customer_id,
+#             service_task_id=service_task_id
+#         ).first()
+
+#         if existing_task:
+#             print(f"Task already started for customer_id: {customer_id} and service_task_id: {service_task_id}")
+#             new_business_place = existing_task
+#             original_business_place_id = existing_task.amended_parent_id or existing_task.id
+#         else:
+#             # Fetch active business place with is_principal_place=no
+#             current_date = datetime.now().date()
+#             original_business_place = db.query(CustomerBusinessPlace).filter(
+#                 CustomerBusinessPlace.customer_id == customer_id,
+#                 CustomerBusinessPlace.effective_from_date <= current_date,
+#                 CustomerBusinessPlace.is_principal_place == 'no',
+#                 ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
+#                  (CustomerBusinessPlace.effective_to_date >= current_date))
+#             ).first()
+
+#             if not original_business_place:
+#                 print(f"No active business place found for customer_id: {customer_id}")
+#                 return {"success": False, "message": "Active business place not found"}
+
+#             original_business_place_id = original_business_place.id
+#             print(f"Fetched original business place: {original_business_place}")
+
+#             # Step 2: Duplicate and create new business place
+#             business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
+#             print(f"Business place data from ORM: {business_place_data}")
+
+#             new_business_place = CustomerBusinessPlace(
+#                 customer_id=original_business_place.customer_id,
+#                 **business_place_data.dict(exclude_unset=True)
+#             )
+
+#             # Setting effective dates and amendment info
+#             new_business_place.effective_from_date = None
+#             new_business_place.effective_to_date = None
+#             new_business_place.amended_parent_id = original_business_place.id
+#             new_business_place.is_amendment = 'yes'
+#             new_business_place.amendment_date = datetime.now()
+#             new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
+#             new_business_place.amendment_status = "CREATED"
+#             new_business_place.amendment_action = action.value
+#             new_business_place.service_task_id = service_task_id
+
+#             # Apply amendments
+#             for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
+#                 if hasattr(new_business_place, key):
+#                     setattr(new_business_place, key, value)
+
+#             print(f"New business place data: {new_business_place}")
+
+#             db.add(new_business_place)
+#             db.commit()
+#             db.refresh(new_business_place)
+#             print(f"New business place saved with ID: {new_business_place.id}")
+
+#         # Step 3: Fetch and handle customer_business_place_activity using original_business_place_id
+#         business_place_id = new_business_place.id
+#         print(f"Original business place ID for fetching activities: {original_business_place_id}")
+#         current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
+#         print(f"Current activity IDs from amendment details: {current_activity_ids}")
+
+#         # Fetch activities with the original business_place_id using a JOIN
+#         existing_activities = db.query(CustomerBusinessPlaceActivity).join(
+#             CustomerBusinessPlace, 
+#             CustomerBusinessPlaceActivity.business_place_id == CustomerBusinessPlace.id
+#         ).filter(
+#             CustomerBusinessPlaceActivity.business_place_id == original_business_place_id,
+#             CustomerBusinessPlace.customer_id == customer_id
+#         ).all()
+#         print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")  # Print IDs of existing activities
+#         print(f"Details of fetched existing activities: {existing_activities}")  # Print details of existing activities
+
+#         existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
+#         print(f"Existing activity IDs: {existing_activity_ids}")
+
+#         # Step 3a: Duplicate existing activities
+#         duplicated_activities = []
+#         for activity in existing_activities:
+#             print(f"Duplicating activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}")
+#             new_entry = CustomerBusinessPlaceActivity(
+#                 customer_id=activity.customer_id,
+#                 business_place_id=business_place_id,
+#                 business_activity_id=activity.business_activity_id,
+#                 amended_parent_id=activity.id,  # Set amended parent ID
+#                 is_amendment='yes',
+#                 amendment_action="EDITED",  # Use correct ENUM value
+#                 amendment_date=datetime.now(),
+#                 amendment_reason=activity.amendment_reason,
+#                 service_task_id=service_task_id
+#             )
+#             db.add(new_entry)
+#             db.commit()
+#             db.refresh(new_entry)
+#             duplicated_activities.append(new_entry)
+#             print(f"Duplicated entry with new ID: {new_entry.id}")
+
+#         # Step 3b: Compare with JSON data and add new rows for new business activities
+#         for nature in amendment_details.nature_of_business:
+#             if nature.business_activity_id not in existing_activity_ids:
+#                 print(f"Adding new activity for business_activity_id: {nature.business_activity_id}")
+#                 new_entry = CustomerBusinessPlaceActivity(
+#                     customer_id=customer_id,
+#                     business_place_id=business_place_id,
+#                     business_activity_id=nature.business_activity_id,
+#                     amended_parent_id=None,
+#                     is_amendment='yes',
+#                     amendment_action="ADDED",  # Use correct ENUM value
+#                     amendment_date=nature.amendment_date or datetime.now(),
+#                     amendment_reason=nature.amendment_reason or "Not provided",
+#                     service_task_id=service_task_id
+#                 )
+#                 db.add(new_entry)
+#                 db.commit()
+#                 db.refresh(new_entry)
+#                 duplicated_activities.append(new_entry)
+#                 print(f"Added new entry for business_activity_id: {nature.business_activity_id}")
+
+#         # Step 3c: Mark unchecked items as DELETED
+#         for activity in existing_activities:
+#             if activity.business_activity_id not in current_activity_ids:
+#                 print(f"Marking activity as DELETED for business_activity_id: {activity.business_activity_id}")
+#                 new_entry = CustomerBusinessPlaceActivity(
+#                     customer_id=activity.customer_id,
+#                     business_place_id=business_place_id,
+#                     business_activity_id=activity.business_activity_id,
+#                     amended_parent_id=activity.id,
+#                     is_amendment='yes',
+#                     amendment_action="DELETED",  # Use correct ENUM value
+#                     amendment_date=datetime.now(),
+#                     service_task_id=service_task_id
+#                 )
+#                 db.add(new_entry)
+#                 db.commit()
+#                 db.refresh(new_entry)
+#                 print(f"Marked activity entry as DELETED for business_activity_id: {activity.business_activity_id}")
+
+#         return {"success": True, "id": new_business_place.id}
+
+#     except SQLAlchemyError as e:
+#         db.rollback()
+#         print(f"SQLAlchemy error: {str(e)}")
+#         return {"success": False, "message": "Internal Server Error"}
+
+
+
+def amend_business_place_data(db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
     try:
         print(f"Starting amend_business_place_data for customer_id: {customer_id}, user_id: {user_id}, action: {action}")
 
-        # Fetch active business place
-        current_date = datetime.now().date()
-        original_business_place = db.query(CustomerBusinessPlace).filter(
-            CustomerBusinessPlace.customer_id == customer_id,
-            CustomerBusinessPlace.effective_from_date <= current_date,
-            ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
-             (CustomerBusinessPlace.effective_to_date >= current_date))
+        original_business_place = None
+        original_business_place_id = None
+
+        # Step 1: Check if service_task_id is present
+        existing_task = db.query(CustomerBusinessPlace).filter_by(
+            customer_id=customer_id,
+            service_task_id=service_task_id
         ).first()
 
-        if not original_business_place:
-            print(f"No active business place found for customer_id: {customer_id}")
-            return {"success": False, "message": "Active business place not found"}
+        if existing_task:
+            print(f"Task already started for customer_id: {customer_id} and service_task_id: {service_task_id}")
+            new_business_place = existing_task
+            original_business_place_id = existing_task.amended_parent_id or existing_task.id
+        else:
+            # Fetch active business place with is_principal_place=no
+            current_date = datetime.now().date()
+            original_business_place = db.query(CustomerBusinessPlace).filter(
+                CustomerBusinessPlace.customer_id == customer_id,
+                CustomerBusinessPlace.effective_from_date <= current_date,
+                CustomerBusinessPlace.is_principal_place == 'no',
+                ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
+                 (CustomerBusinessPlace.effective_to_date >= current_date))
+            ).first()
 
-        print(f"Fetched original business place: {original_business_place}")
+            if not original_business_place:
+                print(f"No active business place found for customer_id: {customer_id}")
+                return {"success": False, "message": "Active business place not found"}
 
-        # Duplicate existing business place activities
-        existing_activities = db.query(CustomerBusinessPlaceActivity).filter(
-            CustomerBusinessPlaceActivity.business_place_id == original_business_place.id,
-            CustomerBusinessPlaceActivity.customer_id == customer_id
-        ).all()
+            original_business_place_id = original_business_place.id
+            print(f"Fetched original business place: {original_business_place}")
 
-        for activity in existing_activities:
-            new_entry = CustomerBusinessPlaceActivity(
-                **{column.name: getattr(activity, column.name) for column in CustomerBusinessPlaceActivity.__table__.columns}
+            # Step 2: Duplicate and create new business place
+            business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
+            print(f"Business place data from ORM: {business_place_data}")
+
+            new_business_place = CustomerBusinessPlace(
+                customer_id=original_business_place.customer_id,
+                **business_place_data.dict(exclude_unset=True)
             )
-            new_entry.id = None  # Ensure new ID is generated
-            new_entry.amended_parent_id = activity.id
-            new_entry.is_amendment = 'yes'
-            new_entry.service_task_id = service_task_id
-            db.add(new_entry)
+
+            # Setting effective dates and amendment info
+            new_business_place.effective_from_date = None
+            new_business_place.effective_to_date = None
+            new_business_place.amended_parent_id = original_business_place.id
+            new_business_place.is_amendment = 'yes'
+            new_business_place.amendment_date = datetime.now()
+            new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
+            new_business_place.amendment_status = "CREATED"
+            new_business_place.amendment_action = action.value
+            new_business_place.service_task_id = service_task_id
+
+            # Apply amendments
+            for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
+                if hasattr(new_business_place, key):
+                    setattr(new_business_place, key, value)
+
+            print(f"New business place data: {new_business_place}")
+
+            db.add(new_business_place)
             db.commit()
-            db.refresh(new_entry)
-            print(f"Duplicated entry with new ID: {new_entry.id}")
+            db.refresh(new_business_place)
+            print(f"New business place saved with ID: {new_business_place.id}")
 
-        # Validate and create new amendment
-        business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
-        print(f"Business place data from ORM: {business_place_data}")
-
-        new_business_place = CustomerBusinessPlace(
-            customer_id=original_business_place.customer_id,
-            **business_place_data.dict(exclude_unset=True)
-        )
-
-        # Setting effective dates and amendment info
-        new_business_place.effective_from_date = None
-        new_business_place.effective_to_date = None
-        new_business_place.amended_parent_id = original_business_place.id
-        new_business_place.is_amendment = 'yes'
-        new_business_place.amendment_date = datetime.now()
-        
-        new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-        new_business_place.amendment_status = "CREATED"
-        new_business_place.amendment_action = action.value
-        new_business_place.service_task_id = service_task_id
-
-        # Apply amendments
-        for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-            if hasattr(new_business_place, key):
-                setattr(new_business_place, key, value)
-
-        print(f"New business place data: {new_business_place}")
-
-        db.add(new_business_place)
-        db.commit()
-        db.refresh(new_business_place)
-
-        print(f"New business place saved with ID: {new_business_place.id}")
-
-        # Handle nature_of_business amendments
+        # Step 3: Fetch and handle customer_business_place_activity using original_business_place_id
+        business_place_id = new_business_place.id
+        print(f"Original business place ID for fetching activities: {original_business_place_id}")
         current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
         print(f"Current activity IDs from amendment details: {current_activity_ids}")
 
-        existing_activities = db.query(CustomerBusinessPlaceActivity).filter(
-            CustomerBusinessPlaceActivity.customer_id == customer_id,
-            CustomerBusinessPlaceActivity.is_amendment == 'yes'
+        # Fetch activities with the original business_place_id using a JOIN
+        existing_activities = db.query(CustomerBusinessPlaceActivity).join(
+            CustomerBusinessPlace, 
+            CustomerBusinessPlaceActivity.business_place_id == CustomerBusinessPlace.id
+        ).filter(
+            CustomerBusinessPlaceActivity.business_place_id == original_business_place_id,
+            CustomerBusinessPlace.customer_id == customer_id
         ).all()
-        print(f"Existing activities: {existing_activities}")
+        print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")  # Print IDs of existing activities
+        print(f"Details of fetched existing activities: {existing_activities}")  # Print details of existing activities
 
         existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
         print(f"Existing activity IDs: {existing_activity_ids}")
 
-        # Case 2: Add new rows for new business activities
+        # Step 3a: Duplicate existing activities
+        duplicated_activities = []
+        for activity in existing_activities:
+            print(f"Duplicating activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}")
+            new_entry = CustomerBusinessPlaceActivity(
+                customer_id=activity.customer_id,
+                business_place_id=business_place_id,
+                business_activity_id=activity.business_activity_id,
+                amended_parent_id=activity.id,  # Set amended parent ID
+                is_amendment='yes',
+                amendment_action="EDITED",  # Use correct ENUM value
+                amendment_date=datetime.now(),
+                amendment_reason=activity.amendment_reason,
+                service_task_id=service_task_id
+            )
+            db.add(new_entry)
+            db.commit()
+            db.refresh(new_entry)
+            duplicated_activities.append(new_entry)
+            print(f"Duplicated entry with new ID: {new_entry.id}")
+
+        # Step 3b: Compare with JSON data and add new rows for new business activities
         for nature in amendment_details.nature_of_business:
             if nature.business_activity_id not in existing_activity_ids:
+                print(f"Adding new activity for business_activity_id: {nature.business_activity_id}")
                 new_entry = CustomerBusinessPlaceActivity(
                     customer_id=customer_id,
-                    business_place_id=new_business_place.id,
+                    business_place_id=business_place_id,
                     business_activity_id=nature.business_activity_id,
                     amended_parent_id=None,
                     is_amendment='yes',
-                    amendment_action="ADDED",
+                    amendment_action="ADDED",  # Use correct ENUM value
                     amendment_date=nature.amendment_date or datetime.now(),
                     amendment_reason=nature.amendment_reason or "Not provided",
                     service_task_id=service_task_id
@@ -2714,15 +3073,26 @@ def amend_business_place_data(db: Session, customer_id: int,service_task_id: int
                 db.add(new_entry)
                 db.commit()
                 db.refresh(new_entry)
+                duplicated_activities.append(new_entry)
                 print(f"Added new entry for business_activity_id: {nature.business_activity_id}")
 
-        # Case 3: Mark unchecked items as DELETED
+        # Step 3c: Mark unchecked items as DELETED
         for activity in existing_activities:
             if activity.business_activity_id not in current_activity_ids:
-                activity.amendment_action = "DELETED"
-                activity.service_task_id = service_task_id
+                print(f"Marking activity as DELETED for business_activity_id: {activity.business_activity_id}")
+                new_entry = CustomerBusinessPlaceActivity(
+                    customer_id=activity.customer_id,
+                    business_place_id=business_place_id,
+                    business_activity_id=activity.business_activity_id,
+                    amended_parent_id=activity.id,
+                    is_amendment='yes',
+                    amendment_action="DELETED",  # Use correct ENUM value
+                    amendment_date=datetime.now(),
+                    service_task_id=service_task_id
+                )
+                db.add(new_entry)
                 db.commit()
-                db.refresh(activity)
+                db.refresh(new_entry)
                 print(f"Marked activity entry as DELETED for business_activity_id: {activity.business_activity_id}")
 
         return {"success": True, "id": new_business_place.id}
