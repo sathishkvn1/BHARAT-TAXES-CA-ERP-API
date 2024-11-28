@@ -1,7 +1,7 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
@@ -856,10 +856,23 @@ def get_salary_details(db: Session,employee_id: int):
 
 
 def get_qualification_details(db: Session, employee_id: int):
-    return db.query(EmployeeEducationalQualification).filter(
-        EmployeeEducationalQualification.employee_id == employee_id,
-        EmployeeEducationalQualification.is_deleted == 'no'
-    ).all()
+    return (
+        db.query(
+            EmployeeEducationalQualification,
+            AppEducationalLevel.education_level,
+            AppEducationalStream.education_stream,
+            AppEducationSubjectCourse.subject_or_course_name
+        )
+        .join(AppEducationalLevel, EmployeeEducationalQualification.education_level_id == AppEducationalLevel.id, isouter=True)
+        .join(AppEducationalStream, EmployeeEducationalQualification.education_stream_id == AppEducationalStream.id, isouter=True)
+        .join(AppEducationSubjectCourse, EmployeeEducationalQualification.education_subject_or_course_id == AppEducationSubjectCourse.id, isouter=True)
+        .filter(
+            EmployeeEducationalQualification.employee_id == employee_id,
+            EmployeeEducationalQualification.is_deleted == 'no'
+        )
+        .all()
+    )
+
 
 #---------------------------------------------------------------------------------------------------------
 def get_experience_details(db: Session, employee_id: int):

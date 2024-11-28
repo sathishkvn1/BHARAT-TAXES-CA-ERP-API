@@ -620,13 +620,24 @@ def get_employee_details(
                             'employee_salary': [EmployeeSalaryGet(**salary.__dict__) for salary in salary_info]
                         })
 
+                
                 if option == "educational_qualification":
-                    edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
-                    if edu_qual_info:
-                        qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
+                   edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
+                   if edu_qual_info:
+                        qualifications = [
+                            EmployeeEducationalQualficationGet(
+                               **qual.__dict__,
+                               education_level=education_level,
+                               education_stream=education_stream,
+                               education_subject_or_course=education_subject_or_course
+                            )
+                            for qual, education_level, education_stream, education_subject_or_course in edu_qual_info
+                        ]
+                        
                         employee_details.append({
-                            'educational_qualification': qualifications
+                        'educational_qualification': qualifications
                         })
+
 
                 if option == "employee_experience":
                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
@@ -673,9 +684,10 @@ def get_employee_details(
                        })
 
             return employee_details
-
         else:
-            raise HTTPException(status_code=400, detail="Profile component is required to fetch details for a specific employee.")
+            return {"success": False, "message": "Profile component is required to fetch details for a specific employee."}
+
+    
     else:
         employees_query = db_employee_master.search_employee_master_details(
             db, user_status, approval_status, category, department, designation, is_consultant, search
@@ -721,6 +733,11 @@ def get_employee_details(
             employee_details.append(emp_detail)
 
         return employee_details
+
+
+
+
+
 
 
 

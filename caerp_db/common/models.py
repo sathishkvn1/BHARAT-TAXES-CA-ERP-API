@@ -178,6 +178,7 @@ class CountryDB(caerp_base):
 #     districts                   = relationship("DistrictDB",back_populates="states")
 #     is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
 #     # post_offices = relationship("PostOfficeView", back_populates="state_name")
+
 class StateDB(caerp_base):
     __tablename__ = "app_states"
     id                          = Column(Integer, primary_key=True, autoincrement=True)
@@ -342,12 +343,12 @@ class PanCard(caerp_base):
     pan_card_type_code	= Column(String(1), nullable=False)
     pan_card_type	    = Column(String(100), nullable=False)
     
-class AppEducationalQualificationsMaster(caerp_base):
-    __tablename__   =   "app_educational_qualifications"
+# class AppEducationalQualificationsMaster(caerp_base):
+#     __tablename__   =   "app_educational_qualifications"
 
-    id                  = Column(Integer, primary_key=True, autoincrement=True)
-    qualification	    = Column(String(50), nullable=False)
-    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     id                  = Column(Integer, primary_key=True, autoincrement=True)
+#     qualification	    = Column(String(50), nullable=False)
+#     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     
 class ConstitutionTypes(caerp_base):
     __tablename__   =   "app_constitution_types"
@@ -703,22 +704,24 @@ class EmployeeProfessionalQualification(caerp_base):
 class EmployeeEducationalQualification(caerp_base):
     __tablename__ = "employee_educational_qualification"    
 
-    id                          = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id                 = Column(Integer, nullable=False)
-    qualification_name          = Column(String(100), nullable=False)
-    course_name                 = Column(String(100), nullable=False)
-    institution                 = Column(String(100), nullable=False)
-    percentage_or_grade         = Column(String(100), nullable=False)
-    month_and_year_of_completion = Column(String(50), nullable=False)
-    status                      = Column(Enum('PURSUING','COMPLETED','RESULT AWAITING'),nullable=False)
-    remarks                     = Column(String(500), default=None)
-    created_by                  = Column(Integer, nullable=False)
-    created_on                  = Column(DateTime, nullable=False, default=func.now())
-    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by                  = Column(Integer, default=None)
-    deleted_on                  = Column(DateTime, default=None)
-    modified_by                 = Column(Integer, default=None)
-    modified_on                 = Column(DateTime, default=None)
+    id                            = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id                   = Column(Integer, nullable=False)
+    education_level_id            = Column(Integer, nullable=False)
+    education_stream_id           = Column(Integer, nullable=False)
+    education_subject_or_course_id= Column(Integer, nullable=False)
+    institution                   = Column(String(100), nullable=False)
+    percentage_or_grade           = Column(String(100), nullable=False)
+    month_and_year_of_completion  = Column(String(50), nullable=False)
+    status                        = Column(Enum('PURSUING','COMPLETED','RESULT AWAITING'),nullable=False)
+    remarks                       = Column(String(500), default=None)
+    created_by                    = Column(Integer, nullable=False)
+    created_on                    = Column(DateTime, nullable=False, default=func.now())
+    is_deleted                    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                    = Column(Integer, default=None)
+    deleted_on                    = Column(DateTime, default=None)
+    modified_by                   = Column(Integer, default=None)
+    modified_on                   = Column(DateTime, default=None)
+
 
 
 class AppViewVillages(caerp_base):
@@ -763,6 +766,7 @@ class BusinessActivityMaster(caerp_base):
     business_activity             = Column(String, nullable=False)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
 class BusinessActivity(caerp_base):
     __tablename__ = 'app_business_activity'
 
@@ -806,3 +810,30 @@ class AppConstitutionStakeholders(caerp_base):
     constitution_id            = Column(Integer,nullable=False)
     stakeholder                      = Column(String, nullable=False)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class AppEducationalLevel(caerp_base):
+    __tablename__   =   "app_education_level"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    education_level     = Column(String(100), nullable=False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppEducationalStream(caerp_base):
+    __tablename__   =   "app_education_stream"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    education_level_id  = Column(Integer,nullable=False) 
+    education_stream    = Column(String(100), nullable=False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class AppEducationSubjectCourse(caerp_base):
+    __tablename__   =   "app_education_subject_or_course"
+
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    education_stream_id     = Column(Integer,nullable=False) 
+    subject_or_course_name  = Column(String(100), nullable=False)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+

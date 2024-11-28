@@ -218,18 +218,21 @@ class EmployeeEmployementGet(BaseModel):
 
 
 class EmployeeEducationalQualficationGet(BaseModel):
-    id                           : int
-    employee_id                  : int
-    qualification_name           : str
-    course_name                  : str
-    institution                  : str
-    percentage_or_grade          : str
-    month_and_year_of_completion : str
-    status                       : Optional[str] = None
-    remarks                      : Optional[str] = None
+    id                             : int
+    employee_id                    : int
+    education_level_id             : int
+    education_level                : str
+    education_stream_id            : int
+    education_stream               : str
+    education_subject_or_course_id :int
+    education_subject_or_course    : str
+    institution                    : str
+    percentage_or_grade            : str
+    month_and_year_of_completion   : str
+    status                         : Optional[str] = None
+    remarks                        : Optional[str] = None
     class Config:  
         orm_mode = True
-
 
 class EmployeeSalarySchema(BaseModel):
        
@@ -419,19 +422,21 @@ class EmployeeUserRolesGet(BaseModel):
    employee_id        : int
    role_id            : int
 
-
 class EmployeeEducationalQualficationSchema(BaseModel):
-    id                           : Optional[int] = None
-    qualification_name           : str
-    course_name                  : str
-    institution                  : str
-    percentage_or_grade          : str
-    month_and_year_of_completion : str
-    status                       :  Optional[str] = None
-    remarks                      : Optional[str] = None
+    id                             : Optional[int] = None
+    education_level_id             : int
+    education_stream_id            : int
+    education_subject_or_course_id :int
+    institution                    : str
+    percentage_or_grade            : str
+    month_and_year_of_completion   : str
+    status                         :  Optional[str] = None
+    remarks                        : Optional[str] = None
 
     class Config:
         orm_mode = True
+
+
 
 class EmployeeExperienceSchema(BaseModel):
     id                     : Optional[int] = None

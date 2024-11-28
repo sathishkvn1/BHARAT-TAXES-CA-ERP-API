@@ -2,7 +2,7 @@
 
 
 from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import AppEducationalQualificationsMaster, AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
@@ -21,6 +21,7 @@ def get_countries(db: Session):
 
 
 def get_country_by_id(db: Session, country_id: int):
+    
     return db.query(CountryDB).filter(CountryDB.id == country_id).first()
 
 
@@ -135,50 +136,9 @@ def get_pan_card_by_code_type(db: Session, code_type: str):
 
 
 
-def get_all_qualification(db: Session):
-    return db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.is_deleted == 'no').all() 
 
 
 
-def save_educational_qualifications(db: Session, id: int, data: EducationSchema):
-    if id == 0:
-        # Add operation
-        new_qualification = AppEducationalQualificationsMaster(**data.dict())
-        db.add(new_qualification)
-        db.commit()
-        db.refresh(new_qualification)
-        return new_qualification
-    else:
-        # Update operation
-        existing_qualification = db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.id == id).first()
-        if existing_qualification is None:
-            raise HTTPException(status_code=404, detail="Qualification not found")
-        
-        # Update the existing qualification with new data
-        for field, value in data.dict().items():
-            setattr(existing_qualification, field, value)
-        
-        db.commit()
-        db.refresh(existing_qualification)
-        return existing_qualification
-
-
-
-
-def delete_educational_qualifications(db: Session, id: int):
-    result = db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.id == id).first()
-
-    if result is None:
-        raise HTTPException(status_code=404, detail="Director not found")
-
-    result.is_deleted = 'yes'
-
-
-    db.commit()
-
-    return {
-        "message": "Deleted successfully",
-    }
 
 
 def get_all_constitution(db: Session):
