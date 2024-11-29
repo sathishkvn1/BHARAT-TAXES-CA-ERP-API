@@ -411,7 +411,8 @@ def get_customer_details(db: Session,
                 "business_constitution_code": db.query(AppBusinessConstitution.business_constitution_code).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
                 "has_authorized_signatory": customer.has_authorized_signatory,
                 "has_authorized_representative": customer.has_authorized_representative,
-                "is_mother_customer": customer.is_mother_customer
+                "is_mother_customer": customer.is_mother_customer,
+                "registration_status":customer.registration_status
             },
             "customer_other_details": {
                 "additional_trade_name": [
@@ -678,7 +679,6 @@ def save_stakeholder_details(
 
 #-----------------------------------------------------------------------------------------------------------------
 
-
 def get_stakeholder_details(
     db: Session,
     user_id: int,
@@ -769,13 +769,16 @@ def get_stakeholder_details(
                     AppConstitutionStakeholders.id == stakeholder.designation_id,
                     AppConstitutionStakeholders.is_deleted == 'no'
                 ).first()
-            elif stake_holder_type == 'AUTHORIZED_REPRESENTATIVE':
+                if designation:
+                    designation_name = designation.stakeholder
+            elif stake_holder_type == 'AUTHORIZED_REPRESENTATIVE'or stake_holder_type is None:
                 designation = db.query(GstOtherAuthorizedRepresentativeResignation).filter(
                     GstOtherAuthorizedRepresentativeResignation.id == stakeholder.designation_id,
                     GstOtherAuthorizedRepresentativeResignation.is_deleted == 'no'
                 ).first()
-                designation_code = designation.designation_code if designation else None
-
+                if designation:
+                    designation_name = designation.designation  
+                    designation_code = designation.designation_code 
             # Prepare response data
             stakeholder_details.append({
                 "personal_information": {
@@ -808,7 +811,7 @@ def get_stakeholder_details(
                 "customer_stakeholders": {
                     "id": stakeholder.id,
                     "designation_id": designation.id if designation else None,
-                    "designation": designation.stakeholder if designation else None,
+                    "designation": designation_name,
                     "designation_code": designation_code,
                     "stake_holder_type": stakeholder.stake_holder_type,
                     "is_authorized_signatory": stakeholder.is_authorized_signatory,
@@ -1916,57 +1919,10 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 
 #------------------------------------------------------------------------------------------------
 
-# def amend_additonal_trade_names(db: Session, customer_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
-#     if action == AmendmentAction.ADDED:
-#         for amendment in amendments:
-#             # Insert the new trade name
-#             trade_name_entry = CustomerAdditionalTradeName(
-#                 customer_id=customer_id,
-#                 additional_trade_name=amendment.new_trade_name,
-#                 is_amendment='no',
-#                 amendment_date=amendment.request_date,
-#                 amendment_reason=amendment.remarks,
-#                 amendment_status='CREATED',
-#                 amended_parent_id=None,
-#                 amendment_action=action.value,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(trade_name_entry)
-#             db.commit()  # Commit to get the ID of the new entry
-            
-#             # Update the amended_parent_id to be the same as id
-#             trade_name_entry.amended_parent_id = trade_name_entry.id
-#             db.commit()  # Commit the updated value
-#     else:
-#         # Retrieve the original record for context, if required
-#         original_record = db.query(CustomerAdditionalTradeName).filter_by(id=customer_id).first()
-#         if not original_record:
-#             raise HTTPException(status_code=404, detail=f"Original record with id {customer_id} not found")
-
-#         for amendment in amendments:
-#             # Add a new row in CustomerAdditionalTradeName for the amendment
-#             trade_name_entry = CustomerAdditionalTradeName(
-#                 customer_id=original_record.customer_id,
-#                 additional_trade_name=amendment.new_trade_name,
-#                 is_amendment='yes',
-#                 amendment_date=amendment.request_date,
-#                 amendment_reason=amendment.remarks,
-#                 amendment_status='CREATED',
-#                 amended_parent_id=customer_id,
-#                 amendment_action=action.value,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(trade_name_entry)
-
-#     db.commit()
-#     return {"success": True, "message": f"Trade name amendments processed successfully with action: {action.value}"}
 
 
 
-
-def amend_additonal_trade_names(db: Session, customer_id: int, service_task_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
+def amend_additional_trade_names(db: Session, customer_id: int, service_task_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
     if action == AmendmentAction.ADDED:
         for amendment in amendments:
             # Insert the new trade name with service_task_id
