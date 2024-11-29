@@ -837,3 +837,28 @@ class AppEducationSubjectCourse(caerp_base):
     subject_or_course_name  = Column(String(100), nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
+class AppBankMaster(caerp_base):
+    __tablename__ = "app_bank_master"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    bank_name         = Column(String(100), nullable=False)
+    ifsc_code         = Column(String(50), nullable=True)
+    micr_code         = Column(String(50), nullable=True)
+    branch_name       = Column(String(100), nullable=True)
+    bank_address      = Column(String(500), nullable=True)
+    contact_number    = Column(String(50), nullable=True)
+    city_name         = Column(String(50), nullable=True)
+    district_name     = Column(String(50), nullable=True)
+    state_name        = Column(String(50), nullable=True)
+    net_bank_url      = Column(String(50), nullable=True)
+    is_deleted        = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppBankAccountType(caerp_base):
+    __tablename__ = "app_bank_account_type"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bank_account_type = Column(String(100), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
