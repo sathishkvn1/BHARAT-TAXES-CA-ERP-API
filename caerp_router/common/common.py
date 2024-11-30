@@ -2,8 +2,8 @@ from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
 import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import   CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, VillageResponse
+from caerp_db.common.models import   AppBankMaster, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
@@ -1637,5 +1637,29 @@ def get_villages(pincode: str, db: Session = Depends(get_db)):
     return db_common.get_villages_data(db, pincode)
 
 #-------------------------------------------------------------------------------
+
+@router.get("/get_bank_details/{ifsc_code}", response_model=List[BankMasterBase])
+def get_bank_details_by_ifsc_code(
+    ifsc_code: str, 
+    db: Session = Depends(get_db)
+   
+):
+    """
+    Retrieve all bank details by the given IFSC code.
+    """
+   
+    # Query the bank details based on the IFSC code and not deleted status
+    bank_details = db.query(AppBankMaster).filter(
+        AppBankMaster.ifsc_code == ifsc_code,
+        AppBankMaster.is_deleted == 'no'
+    ).all()
+
+    # If no records are found, raise a 404 error with a custom message
+    if not bank_details:
+        return []
+    return bank_details
+
+
+#-----------------------------------------------------------------------
 
 

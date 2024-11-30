@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, UploadFile, logger,status,Depends
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_constants.caerp_constants import AmendmentAction
@@ -1920,59 +1920,328 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #------------------------------------------------------------------------------------------------
 
 
+# def amend_additional_trade_names_in_db(
+#     db: Session,
+#     customer_id: int,
+#     service_task_id: int,
+#     amendments: List[AdditionalTradeNameAmendment],
+#     created_by: int,
+#     action: AmendmentAction
+# ):
+#     result = {"added": [], "updated": [], "errors": []}
 
+#     try:
+#         # Step 1: Check if the service_task_id exists for the customer
+#         print(f"Checking if service_task_id {service_task_id} exists for customer_id {customer_id}...")
+#         existing_service_task = db.execute(
+#             text("""
+#                 SELECT * FROM customer_additional_trade_name 
+#                 WHERE service_task_id = :service_task_id AND customer_id = :customer_id
+#             """),
+#             {"service_task_id": service_task_id, "customer_id": customer_id}
+#         ).fetchone()
 
-def amend_additional_trade_names(db: Session, customer_id: int, service_task_id: int, amendments: List[AdditionalTradeNameAmendment], action: AmendmentAction, user_id: int):
-    if action == AmendmentAction.ADDED:
+#         if not existing_service_task:
+#             # If no existing service_task_id, insert it into the table
+#             print(f"No existing service_task found. Inserting new service task {service_task_id}.")
+#             for amendment in amendments:
+#                 trade_name = amendment.new_trade_name.strip()
+#                 # Check if the trade name already exists for this customer_id
+#                 existing_trade_name = db.execute(
+#                     text("""
+#                         SELECT * FROM customer_additional_trade_name 
+#                         WHERE customer_id = :customer_id AND additional_trade_name = :additional_trade_name
+#                     """),
+#                     {"customer_id": customer_id, "additional_trade_name": trade_name}
+#                 ).fetchone()
+
+#                 if not existing_trade_name:
+#                     # Insert the new trade name if it doesn't already exist
+#                     db.execute(
+#                         text("""
+#                             INSERT INTO customer_additional_trade_name 
+#                             (service_task_id, customer_id, created_by, is_amendment, amendment_action, amendment_status, additional_trade_name)
+#                             VALUES (:service_task_id, :customer_id, :created_by, :is_amendment, :amendment_action, :amendment_status, :additional_trade_name)
+#                         """),
+#                         {
+#                             "service_task_id": service_task_id,
+#                             "customer_id": customer_id,
+#                             "created_by": created_by,
+#                             "is_amendment": 'yes',  
+#                             "amendment_action": 'ADDED',  
+#                             "amendment_status": 'CREATED', 
+#                             "additional_trade_name": trade_name  
+#                         }
+#                     )
+#                     # Fetch the last inserted id for setting `amended_parent_id`
+#                     last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+#                     # Update the `amended_parent_id` for the newly inserted row
+#                     db.execute(
+#                         text("""
+#                             UPDATE customer_additional_trade_name
+#                             SET amended_parent_id = :amended_parent_id
+#                             WHERE id = :id
+#                         """),
+#                         {
+#                             "amended_parent_id": last_inserted_id,
+#                             "id": last_inserted_id
+#                         }
+#                     )
+#                     result["added"].append(f"Service task {service_task_id} added with trade name {trade_name}")
+#                 else:
+#                     result["updated"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
+#         else:
+#             print(f"Service task {service_task_id} already exists for customer_id {customer_id}.")
+
+#         # Step 2: Process amendments for additional trade names
+#         for amendment in amendments:
+#             trade_name = amendment.new_trade_name.strip()
+#             effective_from_date = amendment.request_date
+
+#             if amendment.id == 0:
+#                 # Case 1: If `id=0`, Insert new trade name record
+#                 print(f"Inserting new trade_name {trade_name} for customer_id {customer_id}.")
+#                 # Check if trade name already exists before inserting
+#                 existing_trade_name = db.execute(
+#                     text("""
+#                         SELECT * FROM customer_additional_trade_name 
+#                         WHERE customer_id = :customer_id AND additional_trade_name = :additional_trade_name
+#                     """),
+#                     {"customer_id": customer_id, "additional_trade_name": trade_name}
+#                 ).fetchone()
+
+#                 if not existing_trade_name:
+#                     db.execute(
+#                         text("""
+#                             INSERT INTO customer_additional_trade_name 
+#                             (customer_id, additional_trade_name, effective_from_date, effective_to_date, created_by, service_task_id)
+#                             VALUES (:customer_id, :additional_trade_name, :effective_from_date, NULL, :created_by, :service_task_id)
+#                         """),
+#                         {
+#                             "customer_id": customer_id,
+#                             "additional_trade_name": trade_name,
+#                             "effective_from_date": effective_from_date,
+#                             "created_by": created_by,
+#                             "service_task_id": service_task_id
+#                         }
+#                     )
+#                     # Fetch the last inserted id for setting `amended_parent_id`
+#                     last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+#                     # Update the `amended_parent_id` for the newly inserted row
+#                     db.execute(
+#                         text("""
+#                             UPDATE customer_additional_trade_name
+#                             SET amended_parent_id = :amended_parent_id
+#                             WHERE id = :id
+#                         """),
+#                         {
+#                             "amended_parent_id": last_inserted_id,
+#                             "id": last_inserted_id
+#                         }
+#                     )
+#                     result["added"].append(f"Trade name {trade_name} added for customer {customer_id}.")
+#                 else:
+#                     result["updated"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
+
+#             else:
+#                 # Case 2: Update an existing trade name if amendment ID is not zero
+#                 print(f"Updating trade_name {trade_name} for customer_id {customer_id}.")
+#                 db.execute(
+#                     text("""
+#                         UPDATE customer_additional_trade_name
+#                         SET additional_trade_name = :additional_trade_name,
+#                             effective_from_date = :effective_from_date,
+#                             service_task_id = :service_task_id
+#                         WHERE id = :id
+#                     """),
+#                     {
+#                         "additional_trade_name": trade_name,
+#                         "effective_from_date": effective_from_date,
+#                         "service_task_id": service_task_id,
+#                         "id": amendment.id
+#                     }
+#                 )
+#                 result["updated"].append(f"Trade name {trade_name} updated for customer {customer_id}.")
+
+#         # Commit the changes after all operations
+#         db.commit()
+#         print("Changes committed successfully.")
+#     except Exception as e:
+#         db.rollback()
+#         print(f"An error occurred: {e}")
+#         result["errors"].append(str(e))
+
+#     return {"success": True, "message": "Amendments processed successfully", "details": result}
+
+def amend_additional_trade_names_in_db(
+    db: Session,
+    customer_id: int,
+    service_task_id: int,
+    amendments: List[AdditionalTradeNameAmendment],
+    created_by: int,
+    action: AmendmentAction
+):
+    result = {"added": [], "updated": [], "errors": []}
+
+    try:
+        # Step 1: Check if the service_task_id exists for the customer
+        print(f"Checking if service_task_id {service_task_id} exists for customer_id {customer_id}...")
+        existing_service_task = db.execute(
+            text("""
+                SELECT * FROM customer_additional_trade_name 
+                WHERE service_task_id = :service_task_id AND customer_id = :customer_id
+            """),
+            {"service_task_id": service_task_id, "customer_id": customer_id}
+        ).fetchone()
+
+        if not existing_service_task:
+            # If no existing service_task_id, insert it into the table
+            print(f"No existing service_task found. Inserting new service task {service_task_id}.")
+            for amendment in amendments:
+                trade_name = amendment.new_trade_name.strip()
+                db.execute(
+                    text("""
+                        INSERT INTO customer_additional_trade_name 
+                        (service_task_id, customer_id, created_by, is_amendment, amendment_action, amendment_status, additional_trade_name)
+                        VALUES (:service_task_id, :customer_id, :created_by, :is_amendment, :amendment_action, :amendment_status, :additional_trade_name)
+                    """),
+                    {
+                        "service_task_id": service_task_id,
+                        "customer_id": customer_id,
+                        "created_by": created_by,
+                        "is_amendment": 'yes',  
+                        "amendment_action": 'ADDED',  
+                        "amendment_status": 'CREATED', 
+                        "additional_trade_name": trade_name  
+                    }
+                )
+                # Fetch the last inserted id for setting `amended_parent_id`
+                last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+                # Update the `amended_parent_id` for the newly inserted row
+                db.execute(
+                    text("""
+                        UPDATE customer_additional_trade_name
+                        SET amended_parent_id = :amended_parent_id
+                        WHERE id = :id
+                    """),
+                    {
+                        "amended_parent_id": last_inserted_id,
+                        "id": last_inserted_id
+                    }
+                )
+                result["added"].append(f"Service task {service_task_id} added with trade name {trade_name}")
+
+        # Step 2: Process amendments for additional trade names
         for amendment in amendments:
-            # Insert the new trade name with service_task_id
-            trade_name_entry = CustomerAdditionalTradeName(
-                customer_id=customer_id,
-                additional_trade_name=amendment.new_trade_name,
-                service_task_id=service_task_id,  # Include service_task_id
-                is_amendment='no',
-                amendment_date=amendment.request_date,
-                amendment_reason=amendment.remarks,
-                amendment_status='CREATED',
-                amended_parent_id=None,
-                amendment_action=action.value,
-                created_by=user_id,
-                created_on=datetime.now()
-            )
-            db.add(trade_name_entry)
-            db.commit()  # Commit to get the ID of the new entry
-            
-            # Update the amended_parent_id to be the same as id
-            trade_name_entry.amended_parent_id = trade_name_entry.id
-            db.commit()  # Commit the updated value
-    else:
-        # Retrieve the original record for context, if required
-        original_record = db.query(CustomerAdditionalTradeName).filter_by(id=customer_id).first()
-        if not original_record:
-            raise HTTPException(status_code=404, detail=f"Original record with id {customer_id} not found")
+            trade_name = amendment.new_trade_name.strip()
+            effective_from_date = amendment.request_date
 
-        for amendment in amendments:
-            # Add a new row in CustomerAdditionalTradeName for the amendment
-            trade_name_entry = CustomerAdditionalTradeName(
-                customer_id=original_record.customer_id,
-                additional_trade_name=amendment.new_trade_name,
-                service_task_id=service_task_id, 
-                is_amendment='yes',
-                amendment_date=amendment.request_date,
-                amendment_reason=amendment.remarks,
-                amendment_status='CREATED',
-                amended_parent_id=customer_id,
-                amendment_action=action.value,
-                created_by=user_id,
-                created_on=datetime.now()
-            )
-            db.add(trade_name_entry)
+            if amendment.id == 0:
+                # Case 1: Insert new trade name record only if it does not already exist
+                print(f"Inserting new trade_name {trade_name} for customer_id {customer_id}.")
+                existing_trade_name = db.execute(
+                    text("""
+                        SELECT * FROM customer_additional_trade_name 
+                        WHERE customer_id = :customer_id AND additional_trade_name = :additional_trade_name
+                    """),
+                    {"customer_id": customer_id, "additional_trade_name": trade_name}
+                ).fetchone()
 
-    db.commit()
-    return {"success": True, "message": f"Trade name amendments processed successfully with action: {action.value}"}
+                if not existing_trade_name:
+                    db.execute(
+                        text("""
+                            INSERT INTO customer_additional_trade_name 
+                            (customer_id, additional_trade_name,  created_by, service_task_id)
+                            VALUES (:customer_id, :additional_trade_name, :created_by, :service_task_id)
+                        """),
+                        {
+                            "customer_id": customer_id,
+                            "additional_trade_name": trade_name,
+                            # "effective_from_date": effective_from_date,
+                            "created_by": created_by,
+                            "service_task_id": service_task_id
+                        }
+                    )
+                    # Fetch the last inserted id for setting `amended_parent_id`
+                    last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+                    # Update the `amended_parent_id` for the newly inserted row
+                    db.execute(
+                        text("""
+                            UPDATE customer_additional_trade_name
+                            SET amended_parent_id = :amended_parent_id
+                            WHERE id = :id
+                        """),
+                        {
+                            "amended_parent_id": last_inserted_id,
+                            "id": last_inserted_id
+                        }
+                    )
+                    result["added"].append(f"Trade name {trade_name} added for customer {customer_id}.")
+                else:
+                    result["errors"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
 
-#-------------------------------------------------------------------------------------------------------------
+            else:
+                # Check if effective_from_date exists for the given id
+                existing_trade_name = db.execute(
+                    text("""
+                        SELECT effective_from_date FROM customer_additional_trade_name 
+                        WHERE id = :id
+                    """),
+                    {"id": amendment.id}
+                ).fetchone()
 
+                if existing_trade_name and existing_trade_name[0]:
+                    # Case 2: Duplicate the row with amendment_parent_id as the row we are updating
+                    print(f"Duplicating and updating trade_name {trade_name} for customer_id {customer_id}.")
+                    db.execute(
+                        text("""
+                            INSERT INTO customer_additional_trade_name 
+                            (customer_id, additional_trade_name, effective_from_date, effective_to_date, created_by, service_task_id, amended_parent_id, is_amendment, amendment_action, amendment_status)
+                            VALUES (:customer_id, :additional_trade_name, NULL, NULL, :created_by, :service_task_id, :amended_parent_id, :is_amendment, :amendment_action, :amendment_status)
+                        """),
+                        {
+                            "customer_id": customer_id,
+                            "additional_trade_name": trade_name,
+                            "created_by": created_by,
+                            "service_task_id": service_task_id,
+                            "amended_parent_id": amendment.id,
+                            "is_amendment": 'yes',
+                            "amendment_action": 'EDITED',
+                            "amendment_status": 'CREATED'
+                        }
+                    )
+                    result["updated"].append(f"Trade name {trade_name} duplicated and updated for customer {customer_id}.")
+                else:
+                    # Case 3: Update the existing row without duplication
+                    print(f"Updating trade_name {trade_name} for customer_id {customer_id} without duplication.")
+                    db.execute(
+                        text("""
+                            UPDATE customer_additional_trade_name
+                            SET additional_trade_name = :additional_trade_name,
+                                
+                                service_task_id = :service_task_id
+                            WHERE id = :id
+                        """),
+                        {
+                            "additional_trade_name": trade_name,
+                            
+                            "service_task_id": service_task_id,
+                            "id": amendment.id
+                        }
+                    )
+                    result["updated"].append(f"Trade name {trade_name} updated for customer {customer_id} without duplication.")
+
+        # Commit the changes after all operations
+        db.commit()
+        print("Changes committed successfully.")
+    except Exception as e:
+        db.rollback()
+        print(f"An error occurred: {e}")
+        result["errors"].append(str(e))
+
+    return {"success": True, "message": "Amendments processed successfully", "details": result}
+
+# -------------------------------------------------------------------------------------------------------------
 # def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
 #     try:
 #         # Check if the stakeholder already exists

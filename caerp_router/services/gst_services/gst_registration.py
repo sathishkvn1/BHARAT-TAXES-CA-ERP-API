@@ -799,43 +799,28 @@ def get_active_trade_names(customer_id: int,
 #     return response
 
 
-
-@router.post("/amend_additonal_trade_names")
-def amend_additonal_trade_names(
+@router.post("/amend_additional_trade_names")
+def amend_additional_trade_names(
     id: int,
-    service_task_id: int, 
+    service_task_id: int,
     amendments: List[AdditionalTradeNameAmendment],
     action: AmendmentAction,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
+    token: str = Depends(oauth2.oauth2_scheme),
 ):
-    """
-    id:
-        If action is ADDED, provide the customer_id for id field.
-        Otherwise, provide the row_id of the record to be amended.
-    action: The type of amendment. Possible values: ADDED, EDITED, DELETED.
-    amendments: A list of amendments.
-
-    {
-        "id": 1001,  // customer_id for ADD action, row_id for EDIT or DELETE actions
-        "action": "ADDED",  // or "EDITED", "DELETED"
-        "amendments": [
-            {
-                "new_trade_name": "New Trade Name",  // The new or updated trade name
-                "request_date": "2024-11-08T04:30:45.156Z",  // The date of the request
-                "remarks": "Adding new trade name"  // Any remarks for the amendment
-            }
-        ]
-    }
-    """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
+    # Authenticate user and get user_id
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
 
-    response = db_gst.amend_additonal_trade_names(db, id, service_task_id, amendments, action, user_id)
+    # Call the database operation
+    response = db_gst.amend_additional_trade_names_in_db(
+        db, id, service_task_id, amendments, user_id, action
+    )
     return response
+
 
 #---------------------------------------------------------------------------------------------------------
 

@@ -631,20 +631,3 @@ class AddEmployeeToTeam(BaseModel):
 
 
 
-
-class BankMasterBase(BaseModel):
-    id             : int
-    bank_name      : str
-    ifsc_code      : Optional[str] = None
-    micr_code      : Optional[str] = None
-    branch_name    : Optional[str] = None
-    bank_address   : Optional[str] = None
-    contact_number : Optional[str] = None
-    city_name      : Optional[str] = None
-    district_name  : Optional[str] = None
-    state_name     : Optional[str] = None
-    net_bank_url   : Optional[str] = None
-   
-
-    class Config:
-        orm_mode = True
