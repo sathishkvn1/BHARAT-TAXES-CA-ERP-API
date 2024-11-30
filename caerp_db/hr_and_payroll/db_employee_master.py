@@ -1,12 +1,12 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, AppLanguageProficiency, AppLanguages, EmployeeLanguageProficiency, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -1783,3 +1783,157 @@ def search_employee_master_details_with_page(
     result = query.all()
 
     return result
+
+
+def get_employee_language_proficiency_details(db: Session, employee_id: int):
+    # Fetch employee proficiency details
+    emp_lang_prof_info = (
+        db.query(
+            EmployeeLanguageProficiency.id,
+            EmployeeLanguageProficiency.employee_id,
+            EmployeeLanguageProficiency.language_id,
+            AppLanguages.language,
+            EmployeeLanguageProficiency.read_proficiency_id,
+            EmployeeLanguageProficiency.write_proficiency_id,
+            EmployeeLanguageProficiency.speak_proficiency_id,
+            EmployeeLanguageProficiency.remarks
+        )
+        .join(AppLanguages, EmployeeLanguageProficiency.language_id == AppLanguages.id)
+        .filter(
+            EmployeeLanguageProficiency.employee_id == employee_id,
+            EmployeeLanguageProficiency.is_deleted == 'no'
+        )
+        .all()
+    )
+
+    lang_proficiencies = []
+
+    for prof in emp_lang_prof_info:
+        # Fetch the level names for the proficiency IDs
+        read_level = (
+            db.query(AppLanguageProficiency.proficiency_level)
+            .filter(AppLanguageProficiency.id == prof.read_proficiency_id)
+            .first()
+        )
+        write_level = (
+            db.query(AppLanguageProficiency.proficiency_level)
+            .filter(AppLanguageProficiency.id == prof.write_proficiency_id)
+            .first()
+        )
+        speak_level = (
+            db.query(AppLanguageProficiency.proficiency_level)
+            .filter(AppLanguageProficiency.id == prof.speak_proficiency_id)
+            .first()
+        )
+
+        # Add the fetched data to the response list
+        lang_proficiencies.append({
+            "id": prof.id,
+            "employee_id": prof.employee_id,
+            "language_id": prof.language_id,
+            "language": prof.language,
+            "read_proficiency_id": prof.read_proficiency_id,
+            "read_proficiency_level": read_level.proficiency_level if read_level else None,
+            "write_proficiency_id": prof.write_proficiency_id,
+            "write_proficiency_level": write_level.proficiency_level if write_level else None,
+            "speak_proficiency_id": prof.speak_proficiency_id,
+            "speak_proficiency_level": speak_level.proficiency_level if speak_level else None,
+            "remarks": prof.remarks,
+        })
+
+    return lang_proficiencies
+
+
+
+def save_employee_language_proficiency(
+    db: Session,
+    employee_id: int,
+    data: List[EmployeeLanguageProficiencyBase],
+    user_id: int
+):
+    saved_ids = []
+    updated_ids = []
+    unavailable_ids = []
+   
+    try:
+         # Fetch all existing rows for the given employee_id
+        existing_rows = db.query(EmployeeLanguageProficiency).filter(
+            EmployeeLanguageProficiency.employee_id == employee_id,
+            EmployeeLanguageProficiency.is_deleted == 'no'
+        ).all()
+
+        # Extract IDs from the incoming data
+        incoming_ids = {record.id for record in data if record.id != 0}
+
+        # Determine rows to mark as deleted (those not in the incoming data)
+        existing_ids = {row.id for row in existing_rows}
+        ids_to_delete = existing_ids - incoming_ids
+
+        for record in data:
+            if record.id == 0:
+                # Create a new record
+                new_record_data = record.dict(exclude={"id"})
+                new_record_data["employee_id"] = employee_id
+                new_record_data["created_by"] = user_id
+                new_record_data["created_on"] = datetime.now()
+
+                new_record = EmployeeLanguageProficiency(**new_record_data)
+                db.add(new_record)
+                db.commit()
+                db.refresh(new_record)
+
+                saved_ids.append(new_record.id)
+
+            else:
+                # Update an existing record
+                existing_record = db.query(EmployeeLanguageProficiency).filter(
+                    EmployeeLanguageProficiency.id == record.id,
+                    EmployeeLanguageProficiency.is_deleted == 'no'
+                ).first()
+
+                if existing_record:
+                    update_data = record.dict(exclude={"id"})
+                    update_data["modified_by"] = user_id
+                    update_data["modified_on"] = datetime.now()
+
+                    for key, value in update_data.items():
+                        setattr(existing_record, key, value)
+
+                    db.commit()
+                    db.refresh(existing_record)
+
+                    updated_ids.append(existing_record.id)
+                else:
+                    # If the record does not exist, mark as unavailable
+                    unavailable_ids.append(record.id)
+
+        # Mark rows as deleted for unused records
+        for id_to_delete in ids_to_delete:
+            row_to_delete = db.query(EmployeeLanguageProficiency).filter(
+                EmployeeLanguageProficiency.id == id_to_delete
+            ).first()
+            if row_to_delete:
+                row_to_delete.is_deleted = 'yes'
+                row_to_delete.deleted_by = user_id
+                row_to_delete.deleted_on = datetime.now()
+
+                db.commit()
+
+        # Create response message based on saved and updated records
+        if saved_ids or updated_ids:
+            response_message = "Saved successfully."
+            if unavailable_ids:
+                response_message += f" The following records were not available: {', '.join(map(str, unavailable_ids))}."
+            return {
+                "success": True,
+                "message": response_message
+            }
+        else:
+            return {
+                "success": False,
+                "message": "No records were saved or updated."
+            }
+
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": str(e)}

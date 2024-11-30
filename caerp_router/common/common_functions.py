@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
-from caerp_db.common.models import AppBankAccountType, AppConstitutionStakeholders, AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, BloodGroupDB, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CountryDB, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
+from caerp_db.common.models import AppBankAccountType, AppConstitutionStakeholders, AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, AppLanguageProficiency, AppLanguages, BloodGroupDB, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CountryDB, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeLanguageProficiency, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 
@@ -124,7 +124,10 @@ TABLE_MODEL_MAPPING = {
     "AppEducationalLevel":AppEducationalLevel,
     "AppEducationalStream":AppEducationalStream,
     "AppEducationSubjectCourse":AppEducationSubjectCourse,
-    "AppBankAccountType":AppBankAccountType
+    "AppBankAccountType":AppBankAccountType,
+    "AppLanguageProficiency":AppLanguageProficiency,
+    "AppLanguages":AppLanguages,
+    "EmployeeLanguageProficiency":EmployeeLanguageProficiency
     
 }
 

@@ -1,6 +1,6 @@
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -507,7 +507,7 @@ def get_employee_details(
             "Comma-separated list of components to view employee details. "
             "Valid options are: [present_address, permanent_address, bank_details, contact_details, "
             "employment_details, emergency_contact_details, dependent_details, employee_salary, "
-            "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+            "educational_qualification, employee_experience, employee_documents, professional_qualification,language_proficiency.]"
         )
     ),
     category: Optional[Union[str, int]] = Query("ALL", description="Filter by category or 'ALL'"),
@@ -682,7 +682,18 @@ def get_employee_details(
                         employee_details.append({
                           'professional_qualification': prof_qualifications
                        })
-
+                
+                if option == "language_proficiency":
+                    emp_lang_prof_info = db_employee_master.get_employee_language_proficiency_details(db, employee_id=employee_id)
+                    if emp_lang_prof_info:
+                       
+                        employee_details.append({
+                          'employee_language_proficiency': emp_lang_prof_info
+                       })
+                    else:
+                        employee_details.append({
+                            'employee_language_proficiency': []
+                        })
             return employee_details
         else:
             return {"success": False, "message": "Profile component is required to fetch details for a specific employee."}
@@ -733,9 +744,6 @@ def get_employee_details(
             employee_details.append(emp_detail)
 
         return employee_details
-
-
-
 
 
 
@@ -1734,4 +1742,40 @@ def check_user_and_mobile(
 
 
 #--------------------------------------------------------------------------------------------------------
+
+
+@router.post("/save_employee_language_proficiency/")
+def save_employee_language_proficiency(
+    data: List[EmployeeLanguageProficiencyBase], 
+    employee_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        # Call the database function to process records
+        result = db_employee_master.save_employee_language_proficiency(
+            db, employee_id, data, user_id
+        )
+
+        if result["success"]:
+            return {
+                "success": True,
+                "message": result["message"]
+            }
+        else:
+            return {
+                "success": False,
+                "message": result["message"]
+            }
+            
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 

@@ -1,6 +1,6 @@
 
 # from sqlalchemy import Date
-from sqlalchemy import Date
+from sqlalchemy import TIMESTAMP, Date
 from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
@@ -861,4 +861,55 @@ class AppBankAccountType(caerp_base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     bank_account_type = Column(String(100), nullable=True)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class UserRegistration(caerp_base):
+    __tablename__ = 'users_registration'  # Table name
+
+    id = Column(Integer, primary_key=True, index=True)  # Unique ID for each user
+    username = Column(String(100), unique=True, nullable=False)  # Username (unique)
+    password = Column(String(255), nullable=False)  # Encrypted password
+    latitude = Column(Float, nullable=False)  # User's latitude
+    longitude = Column(Float, nullable=False)  # User's longitude
+    created_at = Column(TIMESTAMP, server_default=func.now())  
+
+
+
+class AppLanguageProficiency(caerp_base):
+    __tablename__ = "app_language_proficiency"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    proficiency_level = Column(String(100), nullable=False)
+    is_deleted        = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class AppLanguages(caerp_base):
+    __tablename__ = "app_languages"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    language    = Column(String(100), nullable=False)
+    is_deleted  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class EmployeeLanguageProficiency(caerp_base):
+    __tablename__ = "employee_language_proficiency"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id         = Column(Integer,nullable=False)
+    language_id         = Column(Integer,nullable=False)
+    read_proficiency_id = Column(Integer,nullable=False)
+    write_proficiency_id = Column(Integer,nullable=False)
+    speak_proficiency_id = Column(Integer,nullable=False)
+    remarks             = Column(String(500),nullable=True)
+    created_by          = Column(Integer,nullable=False)
+    created_on          = Column(DateTime,nullable=False, default=datetime.now)
+    modified_by         = Column(Integer,nullable=True)
+    modified_on         = Column(DateTime,nullable=True)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, nullable=True)
+    deleted_on          = Column(DateTime, nullable=True)
+
+
 

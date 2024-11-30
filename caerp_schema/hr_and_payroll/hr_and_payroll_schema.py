@@ -496,6 +496,23 @@ class EmployeeDetails(BaseModel):
    user_roles                    : Optional[EmployeeUserRoles] = None
 
 
+class EmployeeLanguageProficiencyGet(BaseModel):
+   
+    id                      : int
+    employee_id             : int
+    language_id             : int
+    language                : str
+    read_proficiency_id     : int
+    read_proficiency_level  : str
+    write_proficiency_id    : int
+    write_proficiency_level : str
+    speak_proficiency_id    : int
+    speak_proficiency_level : str
+    remarks                 : Optional[str] =None
+
+    class Config:
+        orm_mode = True
+
 
 class EmployeeDetailsGet(BaseModel):
   
@@ -514,7 +531,7 @@ class EmployeeDetailsGet(BaseModel):
    professional_qualification    : List[EmployeeProfessionalQualificationGet] = None
    employee_security_credentials : Optional[EmployeeSecurityCredentialsGet] = None
    user_roles                    : List[EmployeeUserRolesGet] = None   
-
+   language_proficiency          : List[EmployeeLanguageProficiencyGet] = None 
 
 class EmployeeAddressDetailsSchema(BaseModel):
     present_address        : Optional[EmployeePresentAddressSchema] = None
@@ -630,4 +647,16 @@ class AddEmployeeToTeam(BaseModel):
         from_attributes = True 
 
 
+
+
+class EmployeeLanguageProficiencyBase(BaseModel):
+    id                  : Optional[int] =None
+    language_id         : int
+    read_proficiency_id : int
+    write_proficiency_id: int
+    speak_proficiency_id: int
+    remarks             : Optional[str] =None
+
+    class Config:
+        orm_mode = True
 
