@@ -1920,6 +1920,7 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #------------------------------------------------------------------------------------------------
 
 
+
 # def amend_additional_trade_names_in_db(
 #     db: Session,
 #     customer_id: int,
@@ -1946,52 +1947,37 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #             print(f"No existing service_task found. Inserting new service task {service_task_id}.")
 #             for amendment in amendments:
 #                 trade_name = amendment.new_trade_name.strip()
-#                 # Check if the trade name already exists for this customer_id
-#                 existing_trade_name = db.execute(
+#                 db.execute(
 #                     text("""
-#                         SELECT * FROM customer_additional_trade_name 
-#                         WHERE customer_id = :customer_id AND additional_trade_name = :additional_trade_name
+#                         INSERT INTO customer_additional_trade_name 
+#                         (service_task_id, customer_id, created_by, is_amendment, amendment_action, amendment_status, additional_trade_name)
+#                         VALUES (:service_task_id, :customer_id, :created_by, :is_amendment, :amendment_action, :amendment_status, :additional_trade_name)
 #                     """),
-#                     {"customer_id": customer_id, "additional_trade_name": trade_name}
-#                 ).fetchone()
-
-#                 if not existing_trade_name:
-#                     # Insert the new trade name if it doesn't already exist
-#                     db.execute(
-#                         text("""
-#                             INSERT INTO customer_additional_trade_name 
-#                             (service_task_id, customer_id, created_by, is_amendment, amendment_action, amendment_status, additional_trade_name)
-#                             VALUES (:service_task_id, :customer_id, :created_by, :is_amendment, :amendment_action, :amendment_status, :additional_trade_name)
-#                         """),
-#                         {
-#                             "service_task_id": service_task_id,
-#                             "customer_id": customer_id,
-#                             "created_by": created_by,
-#                             "is_amendment": 'yes',  
-#                             "amendment_action": 'ADDED',  
-#                             "amendment_status": 'CREATED', 
-#                             "additional_trade_name": trade_name  
-#                         }
-#                     )
-#                     # Fetch the last inserted id for setting `amended_parent_id`
-#                     last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
-#                     # Update the `amended_parent_id` for the newly inserted row
-#                     db.execute(
-#                         text("""
-#                             UPDATE customer_additional_trade_name
-#                             SET amended_parent_id = :amended_parent_id
-#                             WHERE id = :id
-#                         """),
-#                         {
-#                             "amended_parent_id": last_inserted_id,
-#                             "id": last_inserted_id
-#                         }
-#                     )
-#                     result["added"].append(f"Service task {service_task_id} added with trade name {trade_name}")
-#                 else:
-#                     result["updated"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
-#         else:
-#             print(f"Service task {service_task_id} already exists for customer_id {customer_id}.")
+#                     {
+#                         "service_task_id": service_task_id,
+#                         "customer_id": customer_id,
+#                         "created_by": created_by,
+#                         "is_amendment": 'yes',  
+#                         "amendment_action": 'ADDED',  
+#                         "amendment_status": 'CREATED', 
+#                         "additional_trade_name": trade_name  
+#                     }
+#                 )
+#                 # Fetch the last inserted id for setting `amended_parent_id`
+#                 last_inserted_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+#                 # Update the `amended_parent_id` for the newly inserted row
+#                 db.execute(
+#                     text("""
+#                         UPDATE customer_additional_trade_name
+#                         SET amended_parent_id = :amended_parent_id
+#                         WHERE id = :id
+#                     """),
+#                     {
+#                         "amended_parent_id": last_inserted_id,
+#                         "id": last_inserted_id
+#                     }
+#                 )
+#                 result["added"].append(f"Service task {service_task_id} added with trade name {trade_name}")
 
 #         # Step 2: Process amendments for additional trade names
 #         for amendment in amendments:
@@ -1999,9 +1985,8 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #             effective_from_date = amendment.request_date
 
 #             if amendment.id == 0:
-#                 # Case 1: If `id=0`, Insert new trade name record
+#                 # Case 1: Insert new trade name record only if it does not already exist
 #                 print(f"Inserting new trade_name {trade_name} for customer_id {customer_id}.")
-#                 # Check if trade name already exists before inserting
 #                 existing_trade_name = db.execute(
 #                     text("""
 #                         SELECT * FROM customer_additional_trade_name 
@@ -2014,13 +1999,13 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #                     db.execute(
 #                         text("""
 #                             INSERT INTO customer_additional_trade_name 
-#                             (customer_id, additional_trade_name, effective_from_date, effective_to_date, created_by, service_task_id)
-#                             VALUES (:customer_id, :additional_trade_name, :effective_from_date, NULL, :created_by, :service_task_id)
+#                             (customer_id, additional_trade_name,  created_by, service_task_id)
+#                             VALUES (:customer_id, :additional_trade_name, :created_by, :service_task_id)
 #                         """),
 #                         {
 #                             "customer_id": customer_id,
 #                             "additional_trade_name": trade_name,
-#                             "effective_from_date": effective_from_date,
+#                             # "effective_from_date": effective_from_date,
 #                             "created_by": created_by,
 #                             "service_task_id": service_task_id
 #                         }
@@ -2041,27 +2026,58 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #                     )
 #                     result["added"].append(f"Trade name {trade_name} added for customer {customer_id}.")
 #                 else:
-#                     result["updated"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
+#                     result["errors"].append(f"Trade name {trade_name} already exists for customer {customer_id}.")
 
 #             else:
-#                 # Case 2: Update an existing trade name if amendment ID is not zero
-#                 print(f"Updating trade_name {trade_name} for customer_id {customer_id}.")
-#                 db.execute(
+#                 # Check if effective_from_date exists for the given id
+#                 existing_trade_name = db.execute(
 #                     text("""
-#                         UPDATE customer_additional_trade_name
-#                         SET additional_trade_name = :additional_trade_name,
-#                             effective_from_date = :effective_from_date,
-#                             service_task_id = :service_task_id
+#                         SELECT effective_from_date FROM customer_additional_trade_name 
 #                         WHERE id = :id
 #                     """),
-#                     {
-#                         "additional_trade_name": trade_name,
-#                         "effective_from_date": effective_from_date,
-#                         "service_task_id": service_task_id,
-#                         "id": amendment.id
-#                     }
-#                 )
-#                 result["updated"].append(f"Trade name {trade_name} updated for customer {customer_id}.")
+#                     {"id": amendment.id}
+#                 ).fetchone()
+
+#                 if existing_trade_name and existing_trade_name[0]:
+#                     # Case 2: Duplicate the row with amendment_parent_id as the row we are updating
+#                     print(f"Duplicating and updating trade_name {trade_name} for customer_id {customer_id}.")
+#                     db.execute(
+#                         text("""
+#                             INSERT INTO customer_additional_trade_name 
+#                             (customer_id, additional_trade_name, effective_from_date, effective_to_date, created_by, service_task_id, amended_parent_id, is_amendment, amendment_action, amendment_status)
+#                             VALUES (:customer_id, :additional_trade_name, NULL, NULL, :created_by, :service_task_id, :amended_parent_id, :is_amendment, :amendment_action, :amendment_status)
+#                         """),
+#                         {
+#                             "customer_id": customer_id,
+#                             "additional_trade_name": trade_name,
+#                             "created_by": created_by,
+#                             "service_task_id": service_task_id,
+#                             "amended_parent_id": amendment.id,
+#                             "is_amendment": 'yes',
+#                             "amendment_action": 'EDITED',
+#                             "amendment_status": 'CREATED'
+#                         }
+#                     )
+#                     result["updated"].append(f"Trade name {trade_name} duplicated and updated for customer {customer_id}.")
+#                 else:
+#                     # Case 3: Update the existing row without duplication
+#                     print(f"Updating trade_name {trade_name} for customer_id {customer_id} without duplication.")
+#                     db.execute(
+#                         text("""
+#                             UPDATE customer_additional_trade_name
+#                             SET additional_trade_name = :additional_trade_name,
+                                
+#                                 service_task_id = :service_task_id
+#                             WHERE id = :id
+#                         """),
+#                         {
+#                             "additional_trade_name": trade_name,
+                            
+#                             "service_task_id": service_task_id,
+#                             "id": amendment.id
+#                         }
+#                     )
+#                     result["updated"].append(f"Trade name {trade_name} updated for customer {customer_id} without duplication.")
 
 #         # Commit the changes after all operations
 #         db.commit()
@@ -2072,6 +2088,7 @@ def save_amended_data(db: Session, id: int, model_name: str, field_name: str, ne
 #         result["errors"].append(str(e))
 
 #     return {"success": True, "message": "Amendments processed successfully", "details": result}
+
 
 def amend_additional_trade_names_in_db(
     db: Session,
@@ -2151,15 +2168,17 @@ def amend_additional_trade_names_in_db(
                     db.execute(
                         text("""
                             INSERT INTO customer_additional_trade_name 
-                            (customer_id, additional_trade_name,  created_by, service_task_id)
-                            VALUES (:customer_id, :additional_trade_name, :created_by, :service_task_id)
+                            (customer_id, additional_trade_name, created_by, service_task_id, is_amendment, amendment_action, amendment_status)
+                            VALUES (:customer_id, :additional_trade_name, :created_by, :service_task_id, :is_amendment, :amendment_action, :amendment_status)
                         """),
                         {
                             "customer_id": customer_id,
                             "additional_trade_name": trade_name,
-                            # "effective_from_date": effective_from_date,
                             "created_by": created_by,
-                            "service_task_id": service_task_id
+                            "service_task_id": service_task_id,
+                            "is_amendment": 'yes',
+                            "amendment_action": 'ADDED',
+                            "amendment_status": 'CREATED'
                         }
                     )
                     # Fetch the last inserted id for setting `amended_parent_id`
@@ -2218,13 +2237,11 @@ def amend_additional_trade_names_in_db(
                         text("""
                             UPDATE customer_additional_trade_name
                             SET additional_trade_name = :additional_trade_name,
-                                
                                 service_task_id = :service_task_id
                             WHERE id = :id
                         """),
                         {
                             "additional_trade_name": trade_name,
-                            
                             "service_task_id": service_task_id,
                             "id": amendment.id
                         }
@@ -2241,268 +2258,64 @@ def amend_additional_trade_names_in_db(
 
     return {"success": True, "message": "Amendments processed successfully", "details": result}
 
+
+
 # -------------------------------------------------------------------------------------------------------------
-# def add_stake_holder(db: Session, customer_id: int,service_task_id:int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
-#     try:
-#         # Check if the stakeholder already exists
-#         if request_data.personal_information.id and request_data.personal_information.id > 0:
-#             stake_holder_id = request_data.personal_information.id
-#         else:
-#             # Insert data into StakeHolderMaster
-#             new_stake_holder = StakeHolderMaster(
-#                 first_name=request_data.personal_information.first_name,
-#                 middle_name=request_data.personal_information.middle_name,
-#                 last_name=request_data.personal_information.last_name,
-#                 fathers_first_name=request_data.personal_information.fathers_first_name,
-#                 fathers_middle_name=request_data.personal_information.fathers_middle_name,
-#                 fathers_last_name=request_data.personal_information.fathers_last_name,
-#                 marital_status_id=request_data.personal_information.marital_status_id,
-#                 date_of_birth=request_data.personal_information.date_of_birth,
-#                 gender_id=request_data.personal_information.gender_id,
-#                 din_number=request_data.personal_information.din_number,
-#                 is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
-#                 pan_number=request_data.personal_information.pan_number,
-#                 passport_number=request_data.personal_information.passport_number,
-#                 aadhaar_number=request_data.personal_information.aadhaar_number,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_stake_holder)
-#             db.commit()
-#             db.refresh(new_stake_holder)
-#             stake_holder_id = new_stake_holder.id
 
-#         # Check for existing address
-#         if request_data.address[0].id and request_data.address[0].id > 0:
-#             permanent_address_id = request_data.address[0].id
-#         else:
-#             # Insert data into StakeHolderAddress
-#             new_address = StakeHolderAddress(
-#                 stake_holder_id=stake_holder_id,
-#                 address_type='PERMANENT',
-#                 pin_code=request_data.address[0].pin_code,
-#                 country_id=request_data.address[0].country_id,
-#                 state_id=request_data.address[0].state_id,
-#                 district_id=request_data.address[0].district_id,
-#                 city_id=request_data.address[0].city_id,
-#                 village_id=request_data.address[0].village_id,
-#                 post_office_id=request_data.address[0].post_office_id,
-#                 taluk_id=request_data.address[0].taluk_id,
-#                 lsg_type_id=request_data.address[0].lsg_type_id,
-#                 lsg_id=request_data.address[0].lsg_id,
-#                 locality=request_data.address[0].locality,
-#                 road_street_name=request_data.address[0].road_street_name,
-#                 premises_building_name=request_data.address[0].premises_building_name,
-#                 building_flat_number=request_data.address[0].building_flat_number,
-#                 floor_number=request_data.address[0].floor_number,
-#                 landmark=request_data.address[0].landmark,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_address)
-#             db.commit()
-#             db.refresh(new_address)
-#             permanent_address_id = new_address.id
+def delete_amendment_business_place(db: Session, id: int, user_id: int):
+    try:
+        # Fetch the amendment record based on id
+        amendment_record = db.execute(
+            text("""
+                SELECT id, amended_parent_id FROM customer_additional_trade_name 
+                WHERE id = :id
+            """),
+            {"id": id}
+        ).fetchone()
 
-#         # Check for existing contact details
-#         if request_data.contact_details[0].id and request_data.contact_details[0].id > 0:
-#             contact_details_id = request_data.contact_details[0].id
-#         else:
-#             # Insert data into StakeHolderContactDetails
-#             new_contact_details = StakeHolderContactDetails(
-#                 stake_holder_id=stake_holder_id,
-#                 mobile_number=request_data.contact_details[0].mobile_number,
-#                 email_address=request_data.contact_details[0].email_address,
-#                 telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_contact_details)
-#             db.commit()
-#             db.refresh(new_contact_details)
-#             contact_details_id = new_contact_details.id
+        if not amendment_record:
+            print("Record not found")
+            return {"success": False, "message": "Record not found"}
 
-#         # Insert data into CustomerStakeHolder
-#         new_customer_stake_holder = CustomerStakeHolder(
-#             customer_id=customer_id,
-#             service_task_id=service_task_id,
-#             stake_holder_master_id=stake_holder_id,
-#             stake_holder_type=stakeholder_type,
-#             designation_id=request_data.personal_information.designation_id,
-#             contact_details_id=contact_details_id,
-#             permanent_address_id=permanent_address_id,
-#             official_mobile_number=request_data.contact_details[0].mobile_number,
-#             official_email_address=request_data.contact_details[0].email_address,
-#             is_amendment='yes',
-#             amendment_date=datetime.now(),
-#             amendment_reason='Adding new stakeholder',
-#             amendment_status='CREATED',
-#             amendment_action='ADDED',
-#             effective_from_date=None,
-#             effective_to_date=None,
-#             created_by=user_id,
-#             created_on=datetime.now()
-#         )
-#         db.add(new_customer_stake_holder)
-#         db.commit()
-#         db.refresh(new_customer_stake_holder)
+        print(f"Fetched amendment_record: {amendment_record}")
 
-#         # Update the amended_parent_id to be the same as id 
-#         new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
-#         db.commit()
+        if amendment_record[0] == amendment_record[1]:  # id === amended_parent_id
+            # Case 1: id and amended_parent_id are the same
+            print("Case 1: id and amended_parent_id are the same")
+            db.execute(
+                text("""
+                    UPDATE customer_additional_trade_name
+                    SET is_deleted = 'yes'
+                    WHERE id = :id
+                """),
+                {"id": id}
+            )
+            db.commit()
+            return {"success": True, "message": "Record marked as deleted"}
+        else:
+            # Case 2: id and amended_parent_id are not the same
+            print("Case 2: id and amended_parent_id are not the same")
+            db.execute(
+                text("""
+                    UPDATE customer_additional_trade_name
+                    SET amendment_action = 'DELETED'
+                    WHERE id = :id
+                """),
+                {"id": id}
+            )
+            db.commit()
+            return {"success": True, "message": "Amendment marked as deleted"}
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        db.rollback()
+        return {"success": False, "message": str(e)}
 
 
-#         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
 
 
-# def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):
-#     try:
-#         # Check if the stakeholder already exists
-#         if request_data.personal_information.id and request_data.personal_information.id > 0:
-#             stake_holder_id = request_data.personal_information.id
-#         else:
-#             # Insert data into StakeHolderMaster
-#             new_stake_holder = StakeHolderMaster(
-#                 first_name=request_data.personal_information.first_name,
-#                 middle_name=request_data.personal_information.middle_name,
-#                 last_name=request_data.personal_information.last_name,
-#                 fathers_first_name=request_data.personal_information.fathers_first_name,
-#                 fathers_middle_name=request_data.personal_information.fathers_middle_name,
-#                 fathers_last_name=request_data.personal_information.fathers_last_name,
-#                 marital_status_id=request_data.personal_information.marital_status_id,
-#                 date_of_birth=request_data.personal_information.date_of_birth,
-#                 gender_id=request_data.personal_information.gender_id,
-#                 din_number=request_data.personal_information.din_number,
-#                 is_citizen_of_india=request_data.personal_information.is_citizen_of_india,
-#                 pan_number=request_data.personal_information.pan_number,
-#                 passport_number=request_data.personal_information.passport_number,
-#                 aadhaar_number=request_data.personal_information.aadhaar_number,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_stake_holder)
-#             db.commit()
-#             db.refresh(new_stake_holder)
-#             stake_holder_id = new_stake_holder.id
+#---------------------------------------------------------------------------------------------------------------
 
-#         # Check for existing address
-#         if request_data.address[0].id and request_data.address[0].id > 0:
-#             permanent_address_id = request_data.address[0].id
-#         else:
-#             # Insert data into StakeHolderAddress
-#             new_address = StakeHolderAddress(
-#                 stake_holder_id=stake_holder_id,
-#                 address_type='PERMANENT',
-#                 pin_code=request_data.address[0].pin_code,
-#                 country_id=request_data.address[0].country_id,
-#                 state_id=request_data.address[0].state_id,
-#                 district_id=request_data.address[0].district_id,
-#                 city_id=request_data.address[0].city_id,
-#                 village_id=request_data.address[0].village_id,
-#                 post_office_id=request_data.address[0].post_office_id,
-#                 taluk_id=request_data.address[0].taluk_id,
-#                 lsg_type_id=request_data.address[0].lsg_type_id,
-#                 lsg_id=request_data.address[0].lsg_id,
-#                 locality=request_data.address[0].locality,
-#                 road_street_name=request_data.address[0].road_street_name,
-#                 premises_building_name=request_data.address[0].premises_building_name,
-#                 building_flat_number=request_data.address[0].building_flat_number,
-#                 floor_number=request_data.address[0].floor_number,
-#                 landmark=request_data.address[0].landmark,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_address)
-#             db.commit()
-#             db.refresh(new_address)
-#             permanent_address_id = new_address.id
-
-#         # Check for existing contact details
-#         if request_data.contact_details[0].id and request_data.contact_details[0].id > 0:
-#             contact_details_id = request_data.contact_details[0].id
-#         else:
-#             # Insert data into StakeHolderContactDetails
-#             new_contact_details = StakeHolderContactDetails(
-#                 stake_holder_id=stake_holder_id,
-#                 mobile_number=request_data.contact_details[0].mobile_number,
-#                 email_address=request_data.contact_details[0].email_address,
-#                 telephone_number_with_std_code=request_data.contact_details[0].telephone_number_with_std_code,
-#                 created_by=user_id,
-#                 created_on=datetime.now()
-#             )
-#             db.add(new_contact_details)
-#             db.commit()
-#             db.refresh(new_contact_details)
-#             contact_details_id = new_contact_details.id
-
-#         # Check if CustomerStakeHolder already exists with customer_id and service_task_id
-#         existing_customer_stake_holder = db.query(CustomerStakeHolder).filter_by(
-#             customer_id=customer_id,
-#             service_task_id=service_task_id,
-#             stake_holder_type=stakeholder_type
-#         ).first()
-
-#         if existing_customer_stake_holder:
-#             return {"success": True, "message": "Stakeholder already exists", "id": existing_customer_stake_holder.id}
-
-#         # Insert data into CustomerStakeHolder
-#         new_customer_stake_holder = CustomerStakeHolder(
-#             customer_id=customer_id,
-#             service_task_id=service_task_id,
-#             stake_holder_master_id=stake_holder_id,
-#             stake_holder_type=stakeholder_type,
-#             designation_id=request_data.personal_information.designation_id,
-#             contact_details_id=contact_details_id,
-#             permanent_address_id=permanent_address_id,
-#             official_mobile_number=request_data.contact_details[0].mobile_number,
-#             official_email_address=request_data.contact_details[0].email_address,
-#             is_amendment='yes',
-#             amendment_date=datetime.now(),
-#             amendment_reason='Adding new stakeholder',
-#             amendment_status='CREATED',
-#             amendment_action='ADDED',
-#             effective_from_date=None,
-#             effective_to_date=None,
-#             created_by=user_id,
-#             created_on=datetime.now()
-#         )
-#         db.add(new_customer_stake_holder)
-#         db.commit()
-#         db.refresh(new_customer_stake_holder)
-
-#         # Update the amended_parent_id to be the same as id 
-#         new_customer_stake_holder.amended_parent_id = new_customer_stake_holder.id 
-#         db.commit()
-
-#         return {"success": True, "message": "Stakeholder added successfully", "id": new_customer_stake_holder.id}
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# def delete_stake_holder(db: Session, id: int, amendment_details: AmendmentDetailsSchema, action: AmendmentAction, user_id: int):
-#     try:
-#         existing_stake_holder = db.query(CustomerStakeHolder).filter(CustomerStakeHolder.id == id).first()
-#         if not existing_stake_holder:
-#             raise HTTPException(status_code=404, detail="Stakeholder not found")
-
-#         # Update amendment details and mark as deleted
-#         existing_stake_holder.amendment_action = action.value
-#         existing_stake_holder.amendment_reason = amendment_details.reason
-#         existing_stake_holder.amendment_date = amendment_details.date
-        
-#         db.commit()
-
-#         return {"success": True, "message": "Stakeholder deleted successfully"}
-
-#     except Exception as e:
-#         db.rollback()
-#         raise HTTPException(status_code=500, detail=str(e))
 
 
 def add_stake_holder(db: Session, customer_id: int, service_task_id: int, stakeholder_type: str, request_data: AmmendStakeHolderMasterSchema, user_id: int):

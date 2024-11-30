@@ -1,6 +1,6 @@
 
 
-from typing import List, Union
+from typing import Any, List, Union
 from fastapi import APIRouter, Body, Depends, HTTPException, Header, UploadFile, File,status,Query,Response
 from sqlalchemy import and_, or_, select, text
 from caerp_constants.caerp_constants import AmendmentAction
@@ -755,50 +755,6 @@ def get_active_trade_names(customer_id: int,
 
 
 
-# @router.post("/amend_additonal_trade_names")
-# def amend_additonal_trade_names(
-#     id: int,
-#     service_task_id: int,
-#     amendments: List[AdditionalTradeNameAmendment],
-#     action: AmendmentAction,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-    
-#     """
-#     id:
-
-#         If action is ADDED, provide the customer_id for id field.
-
-#         Otherwise, provide the row_id of the record to be amended.
-
-#         action: The type of amendment. Possible values: ADDED, EDITED, DELETED.
-
-#         amendments: A list of amendments.
-
-#         {
-#         "id": 1001,  // customer_id for ADD action, row_id for EDIT or DELETE actions
-#         "action": "ADDED",  // or "EDITED", "DELETED"
-#         "amendments": [
-#             {
-#             "new_trade_name": "New Trade Name",  // The new or updated trade name
-#             "request_date": "2024-11-08T04:30:45.156Z",  // The date of the request
-#             "remarks": "Adding new trade name"  // Any remarks for the amendment
-#             }
-#         ]
-#         }
-
-#     """
-#     if not token:
-#         raise HTTPException(status_code=401, detail="Token is missing")
-
-#     auth_info = authenticate_user(token)
-#     user_id = auth_info.get("user_id")
-
-#     response = db_gst.amend_additonal_trade_names(db, id, amendments, action, user_id)
-#     return response
-
-
 @router.post("/amend_additional_trade_names")
 def amend_additional_trade_names(
     id: int,
@@ -808,6 +764,47 @@ def amend_additional_trade_names(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme),
 ):
+    """
+        Amend additional trade names for a customer.
+
+        Parameters:
+            id (int): If action is ADDED, provide the customer_id. 
+            service_task_id (int): The ID of the service task.
+            amendments (List[AdditionalTradeNameAmendment]): A list of amendments containing trade name details.
+            action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+            db (Session): Database session.
+            token (str): Authentication token.
+
+        Returns:
+            dict: Response indicating the success or failure of the amendment process.
+
+        Example:
+        {
+            "id": 1001,  # customer_id for ADD action, 
+            "service_task_id": 100,
+            "amendments": [
+                { 
+                    "id":0
+                    "new_trade_name": "New Trade Name",  # The new or updated trade name
+                    "request_date": "2024-11-08T04:30:45.156Z",  # The date of the request
+                    "remarks": "Adding new trade name"  # Any remarks for the amendment
+                },
+                { 
+                    "id":0
+                    "new_trade_name": "New Trade Name1",  # The new or updated trade name
+                    "request_date": "2024-11-08T04:30:45.156Z",  # The date of the request
+                    "remarks": "Adding new trade name"  # Any remarks for the amendment
+                },
+                { 
+                    "id":10
+                    "new_trade_name": "New Trade Name1 updated",  # The new or updated trade name
+                    "request_date": "2024-11-08T04:30:45.156Z",  # The date of the request
+                    "remarks": "Adding new trade name"  # Any remarks for the amendment
+                }
+            ],
+            
+        }
+        """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -821,6 +818,30 @@ def amend_additional_trade_names(
     )
     return response
 
+
+
+
+
+
+
+@router.delete("/delete_amendment_business_place/{id}", response_model=dict)
+def delete_amendment_business_place_endpoint(
+    id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+) -> Any:
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    # Assume there's a function to extract user info from the token
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    response = db_gst.delete_amendment_business_place(db, id, user_id)
+    if not response["success"]:
+        raise HTTPException(status_code=400, detail=response["message"])
+
+    return response
 
 #---------------------------------------------------------------------------------------------------------
 
