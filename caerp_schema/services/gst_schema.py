@@ -369,10 +369,12 @@ class CustomerAmendmentSchema(BaseModel):
 
 
 class AdditionalTradeNameAmendment(BaseModel):
-    
+    id: Optional[int] = 0
     new_trade_name          : str
     request_date            : datetime
     remarks                 : str
+
+
 
 #----------------------------------------------------------
 
