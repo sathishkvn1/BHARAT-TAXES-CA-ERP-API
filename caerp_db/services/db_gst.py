@@ -33,6 +33,7 @@ def save_business_details(
                 **business_details_data.model_dump(exclude_unset=True),
                 customer_number=customer_number,   
                 service_task_id=task_id,
+                registration_status="CREATED",
                 created_by=user_id,  
                 created_on=datetime.now(),  
                 effective_from_date=datetime.now(), 
@@ -678,7 +679,6 @@ def save_stakeholder_details(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-----------------------------------------------------------------------------------------------------------------
-
 def get_stakeholder_details(
     db: Session,
     user_id: int,
@@ -692,38 +692,31 @@ def get_stakeholder_details(
 ):
     try:
         # Step 1: Query StakeHolderContactDetails based on search_value
-        matching_contact_id = None
+        matching_contact_ids = []
         if search_value:
-            # Build base filter for contact details
-            base_query = db.query(StakeHolderContactDetails).filter(
+            # Build query to search by mobile_number or email_address
+            matching_contacts = db.query(StakeHolderContactDetails).filter(
                 StakeHolderContactDetails.is_deleted == 'no',
                 StakeHolderContactDetails.effective_from_date <= datetime.now(),
-                StakeHolderContactDetails.effective_to_date.is_(None)
-            )
-            
-            # Add the search condition for either mobile_number or email_address
-            matching_contact = base_query.filter(
+                StakeHolderContactDetails.effective_to_date.is_(None),
                 or_(
-                    StakeHolderContactDetails.mobile_number == search_value,
-                    StakeHolderContactDetails.email_address == search_value
-                )
-            ).first()
+                    StakeHolderContactDetails.mobile_number == search_value) |
+                   (StakeHolderContactDetails.email_address == search_value)
+            ).all()
 
-            if not matching_contact:
-                return []  # Return early if no contact found
-            matching_contact_id = matching_contact.id
+            # Extract contact IDs for filtering
+            matching_contact_ids = [contact.id for contact in matching_contacts]
 
         # Step 2: Query CustomerStakeHolder with filters
         query = db.query(CustomerStakeHolder).filter(
             CustomerStakeHolder.is_deleted == 'no',
             CustomerStakeHolder.effective_from_date <= datetime.now(),
-            (CustomerStakeHolder.effective_to_date.is_(None)) |
-            (CustomerStakeHolder.effective_to_date >= datetime.now())
-        )
+            (CustomerStakeHolder.effective_to_date.is_(None)) )
+    
 
         # Apply filters dynamically
-        if matching_contact_id:
-            query = query.filter(CustomerStakeHolder.contact_details_id == matching_contact_id)
+        if matching_contact_ids:
+            query = query.filter(CustomerStakeHolder.contact_details_id.in_(matching_contact_ids))
         if customer_id:
             query = query.filter(CustomerStakeHolder.customer_id == customer_id)
         if stake_holder_type:
@@ -864,7 +857,6 @@ def get_stakeholder_details(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
 
 #----get activity--------------------------------------------------------------------------------------------------
 def fetch_business_activities(
@@ -2985,6 +2977,7 @@ def get_stakeholder_master_for_amndement(db: Session,
 #         db.rollback()
 #         print(f"SQLAlchemy error: {str(e)}")
 #         return {"success": False, "message": "Internal Server Error"}
+
 
 def amend_business_place_data(db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
     try:
