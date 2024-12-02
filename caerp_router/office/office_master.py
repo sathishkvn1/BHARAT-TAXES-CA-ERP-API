@@ -25,7 +25,7 @@ from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
-from sqlalchemy import insert, text,null
+from sqlalchemy import desc, insert, text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
@@ -401,7 +401,7 @@ def get_customer_enquiry_appointment_details(
     if mobile_number:
         query = query.filter(OffViewCustomerEnquiryAppointmentDetails.mobile_number == mobile_number)
     
-    records = query.all()
+    records = query.all() 
 
     if not records:
         raise HTTPException(status_code=404, detail="No records found for the given phone number.")
@@ -1668,18 +1668,22 @@ def get_all_service_document_data_master(
 
 from datetime import datetime
 
+
+
+
 # @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 # def get_consultant_employees(
 #     db: Session = Depends(get_db),
 #     search_query: str = Query(None, description="Search query to filter consultant employees")
 # ):
 #     current_date = datetime.utcnow().date()
+    
+#     # Initial query with necessary joins
 #     query = db.query(
 #         EmployeeMaster.employee_id,
 #         EmployeeMaster.first_name,
 #         EmployeeMaster.middle_name,
-#          EmployeeMaster.last_name,
-#         # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+#         EmployeeMaster.last_name,
 #         EmployeeMaster.employee_number,
 #         EmployeeContactDetails.personal_email_id.label('personal_email'),
 #         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -1703,6 +1707,8 @@ from datetime import datetime
 #         EmployeeEmploymentDetails.is_consultant == 'yes',
 #         EmployeeEmploymentDetails.effective_from_date <= current_date,
 #         (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
+#         EmployeeContactDetails.effective_from_date <= current_date,
+#         (EmployeeContactDetails.effective_to_date == None) | (EmployeeContactDetails.effective_to_date >= current_date),
 #         EmployeeMaster.is_deleted == 'no',
 #         EmployeeEmploymentDetails.is_deleted == 'no',
 #         EmployeeContactDetails.is_deleted == 'no'
@@ -1719,7 +1725,10 @@ from datetime import datetime
 #             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
 #             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
 #         )
+
+       
 #         query = query.filter(search_filter)
+#         query = query.order_by(desc(EmployeeMaster.employee_id))
 
 #     return query.all()
 
@@ -1730,7 +1739,7 @@ def get_consultant_employees(
     search_query: str = Query(None, description="Search query to filter consultant employees")
 ):
     current_date = datetime.utcnow().date()
-    
+
     # Initial query with necessary joins
     query = db.query(
         EmployeeMaster.employee_id,
@@ -1780,8 +1789,9 @@ def get_consultant_employees(
         )
         query = query.filter(search_filter)
 
-    return query.all()
+    query = query.order_by(desc(EmployeeMaster.employee_id))  # Ensure this line is applied last
 
+    return query.all()
 
 #-------------------------------------------------------------------------------------------------------------
 

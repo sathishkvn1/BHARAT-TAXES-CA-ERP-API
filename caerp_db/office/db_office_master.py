@@ -18,7 +18,7 @@ from caerp_router.common.common_functions import update_column_value
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.office.office_schema import AdditionalServices, AppointmentStatusConstants, Category, ConsultantScheduleCreate, ConsultantService, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, DocumentsSchema, OffAppointmentDetails, OffAppointmentMasterViewSchema,OffAppointmentVisitDetailsViewSchema, OffAppointmentVisitMasterViewSchema, OffConsultationTaskMasterSchema, OffDocumentDataMasterBase, OffEnquiryDetailsSchema, OffEnquiryMasterSchema, OffEnquiryResponseSchema, OffServiceTaskMasterSchema, OffViewBusinessPlaceDetailsScheema, OffViewConsultationTaskMasterSchema, OffViewEnquiryDetailsSchema, OffViewEnquiryMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsDetailsDisplay, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema, OffViewWorkOrderDetailsSchema, OffViewWorkOrderMasterSchema, OffWorkOrderMasterSchema, PriceData, PriceHistoryModel, RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group, ServiceDocumentsList_Group,  ServiceModel, ServiceModelSchema, ServicePriceHistory, ServiceTaskMasterAssign, Slot, SubCategory, SubGroup, UpdateCustomerDataDocumentSchema, WorkOrderDependancyResponseSchema, WorkOrderDependancySchema,  WorkOrderResponseSchema, WorkOrderSetDetailsResponseSchema, WorkOrderViewResponseSchema
 from typing import Union,List
-from sqlalchemy import  and_, insert,or_, func
+from sqlalchemy import  and_, desc, insert,or_, func
 from pathlib import Path 
 # from caerp_constants.caerp_constants import SearchCriteria
 from fastapi import logger
@@ -4828,8 +4828,11 @@ def get_all_service_task_list(
 
     # Ensure that is_deleted is not equal to 'yes'
     query = query.filter(OffViewServiceTaskMaster.is_deleted == 'no')
+
+    query = query.order_by(desc(OffViewServiceTaskMaster.allocated_on))
     
     results = query.all()
+
 
     for task in results:
         task.employee_allocated_first_name = task.employee_allocated_first_name or ""

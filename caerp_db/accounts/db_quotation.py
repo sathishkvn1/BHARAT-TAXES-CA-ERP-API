@@ -7,7 +7,7 @@ from caerp_schema.office.office_schema import  OffWorkOrderMasterSchema,OffViewS
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceDetailsViewSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceMasterViewSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationDetailsViewSchema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceDetailsViewSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceMasterViewSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
 from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceDetailsView, AccProformaInvoiceMaster, AccProformaInvoiceMasterView, AccQuotationDetailsView, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceDetailsView, AccTaxInvoiceMaster, AccTaxInvoiceMasterView
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import and_,or_, func, text
+from sqlalchemy import and_, desc,or_, func, text
 from datetime import date, datetime
 from caerp_constants.caerp_constants import EntryPoint
 from caerp_functions.send_email import send_email
@@ -464,6 +464,8 @@ def get_quotation_data(
     if to_date:
         query = query.filter(AccQuotationMasterView.quotation_date <= to_date)
 
+    query = query.order_by(desc(AccQuotationMasterView.quotation_date))
+
     # Fetch master data
     master_data = query.all()
     
@@ -504,6 +506,10 @@ def get_quotation_data(
         #     'is_editable': is_editable
         #     }
     return quotations
+
+
+
+
 #-------------------------------------------------------------
 # def generate_profoma_invoice_details(
 #         db: Session,
@@ -1195,6 +1201,9 @@ def get_proforma_invoice_details(
         if to_date:
             query = query.filter(AccProformaInvoiceMasterView.proforma_invoice_date <= to_date)
 
+        
+        query = query.order_by(desc(AccProformaInvoiceMasterView.proforma_invoice_date))
+
             # Fetch the invoice master data
         invoice_master_data = query.all()
 
@@ -1227,17 +1236,7 @@ def get_proforma_invoice_details(
                 is_editable = is_editable
             )
             )
-            # Add the details to the response schema
-            # invoice_response_data.proforma_invoice_details = invoice_details_list
-        # if proforma_invoice_master_id:
-        #     if master.proforma_invoice_status_id == 1:
-        #         is_editable = True
-        #     else:
-        #         is_editable = False
-            # return {
-            #     'invoice_response_data': invoice_response_data,
-            #     'is_editable' : is_editable
-            # }
+
         return invoice_response_data
     except Exception as e:
         print(f"Error: {e}")
@@ -1283,6 +1282,8 @@ def get_tax_invoice_details(
             query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date >= from_date)
         if to_date:
             query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date <= to_date)
+
+        query = query.order_by(desc(AccTaxInvoiceMasterView.tax_invoice_date))
 
         # Fetch the invoice master data
         invoice_master_data = query.all()
