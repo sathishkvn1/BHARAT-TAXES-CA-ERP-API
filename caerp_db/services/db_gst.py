@@ -1551,6 +1551,7 @@ def delete_gst_registration_record(
     db: Session,
     user_id: int,
     customer_id: int,
+    service_task_id: int,
     stakeholder_id: Optional[int] = None,
     business_place_id: Optional[int] = None
 ):
@@ -1559,31 +1560,15 @@ def delete_gst_registration_record(
 
     try:
         if stakeholder_id:
-            # Delete Stakeholder records with customer_id filter
+            # # Delete Stakeholder records with customer_id filter
             stakeholder = db.query(StakeHolderMaster).filter_by(id=stakeholder_id).first()
             if not stakeholder:
                 return []
             
-            stakeholder.is_deleted = "yes"
-            stakeholder.deleted_by = user_id
-            stakeholder.deleted_on = datetime.now()
-
-            # Delete related StakeHolderContactDetails with customer_id filter
-            contact_details = db.query(StakeHolderContactDetails).filter_by(stake_holder_id=stakeholder_id)
-            for contact in contact_details:
-                contact.is_deleted = "yes"
-                contact.deleted_by = user_id
-                contact.deleted_on = datetime.now()
-
-            # Delete related StakeHolderAddress with customer_id filter
-            addresses = db.query(StakeHolderAddress).filter_by(stake_holder_id=stakeholder_id)
-            for address in addresses:
-                address.is_deleted = "yes"
-                address.deleted_by = user_id
-                address.deleted_on = datetime.now()
+            
 
             # Delete related CustomerStakeHolder with customer_id filter
-            customer_stakeholders = db.query(CustomerStakeHolder).filter_by(stake_holder_master_id=stakeholder_id, customer_id=customer_id)
+            customer_stakeholders = db.query(CustomerStakeHolder).filter_by(stake_holder_master_id=stakeholder_id, customer_id=customer_id,service_task_id=service_task_id)
             for customer_sh in customer_stakeholders:
                 customer_sh.is_deleted = "yes"
                 customer_sh.deleted_by = user_id
@@ -1591,7 +1576,7 @@ def delete_gst_registration_record(
 
         elif business_place_id:
             # Delete Business Place records with customer_id filter
-            business_place = db.query(CustomerBusinessPlace).filter_by(id=business_place_id, customer_id=customer_id).first()
+            business_place = db.query(CustomerBusinessPlace).filter_by(id=business_place_id, customer_id=customer_id,service_task_id=service_task_id).first()
             if not business_place:
                 return []
             
@@ -1600,21 +1585,21 @@ def delete_gst_registration_record(
             business_place.deleted_on = datetime.now()
 
             # Delete related CustomerBusinessPlaceActivity with customer_id filter
-            activities = db.query(CustomerBusinessPlaceActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            activities = db.query(CustomerBusinessPlaceActivity).filter_by(business_place_id=business_place_id,customer_id=customer_id,service_task_id=service_task_id)
             for activity in activities:
                 activity.is_deleted = "yes"
                 activity.deleted_by = user_id
                 activity.deleted_on = datetime.now()
 
             # Delete related CustomerBusinessPlaceActivityType with customer_id filter
-            activity_types = db.query(CustomerBusinessPlaceActivityType).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            activity_types = db.query(CustomerBusinessPlaceActivityType).filter_by(business_place_id=business_place_id, customer_id=customer_id,service_task_id=service_task_id)
             for activity_type in activity_types:
                 activity_type.is_deleted = "yes"
                 activity_type.deleted_by = user_id
                 activity_type.deleted_on = datetime.now()
 
             # Delete related CustomerBusinessPlaceCoreActivity with customer_id filter
-            core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id)
+            core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id,service_task_id=service_task_id)
             for core_activity in core_activities:
                 core_activity.is_deleted = "yes"
                 core_activity.deleted_by = user_id
@@ -1626,6 +1611,7 @@ def delete_gst_registration_record(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 #----------------------------------------------------------------------------------------------------------------
 
 
@@ -3722,13 +3708,10 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 #                         db.add(duplicated_activity)
 #                         db.commit()
 #                         db.refresh(duplicated_activity)
-
 #                         print(f"Duplicated activity saved: {duplicated_activity.id}")
-
 #                     # Compare duplicated activities with the amendment JSON
 #                     for activity_data in nature_of_business_data:
 #                         print(f"Processing activity data: {activity_data} for amended_place_id: {amended_place.id}")
-
 #                         # Check if the activity already exists
 #                         existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
 #                             business_place_id=amended_place.id,

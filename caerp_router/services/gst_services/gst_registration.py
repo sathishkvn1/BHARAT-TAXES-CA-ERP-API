@@ -414,6 +414,7 @@ async def get_range_details(pin: str,
 @router.delete("/delete_gst_registration_record")
 def delete_gst_registration_record(
     customer_id:int,
+    service_task_id: int,
     stakeholder_id: int = None,
     business_place_id: int = None,
     db: Session = Depends(get_db),
@@ -428,7 +429,7 @@ def delete_gst_registration_record(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        return db_gst.delete_gst_registration_record(db,user_id,customer_id,stakeholder_id, business_place_id)
+        return db_gst.delete_gst_registration_record(db,user_id,customer_id,service_task_id,stakeholder_id, business_place_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
