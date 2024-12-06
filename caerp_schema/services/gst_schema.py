@@ -503,6 +503,7 @@ class CustomerBusinessPlaceFullAmendmentSchema(BaseModel):
 
 
 class NatureOfBusinessAdditionalSchema(BaseModel):
+    id: int
     business_activity_id: int
     amendment_date: datetime
     amendment_reason: str
