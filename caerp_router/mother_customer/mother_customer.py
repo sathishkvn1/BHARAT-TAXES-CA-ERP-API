@@ -43,15 +43,15 @@ def save_mother_customer_details(
     # Extract user and mother customer ID from the token
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     if not mother_customer_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mother customer ID not found in token")
 
     try:
         # Update customer details
         db_mother_customer.save_mother_customer_details(mother_customer_id, mother_customer_data, user_id, db)
-        return {"success": True, "message": "Updated successfully"}
+        return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
        db.rollback()
@@ -79,8 +79,8 @@ def get_mother_customer_details(
 
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-     # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     if not mother_customer_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mother customer ID not found in token")
 
@@ -120,8 +120,8 @@ def save_mother_customer_stake_holder_master(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-     # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     try:
         # Pass customer_id, address_type, and stakeholder_type to the save function
         result = db_mother_customer.save_mother_customer_stakeholder_details(request_data, user_id, db, mother_customer_id, stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type)
@@ -155,8 +155,8 @@ def get_mother_customer_stakeholder_master(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
 
     # Call your function to get stakeholder details
     stakeholder_details = db_mother_customer.get_mother_customer_stakeholder_details(db,user_id,mother_customer_id,stake_holder_type,is_authorized_signatory,is_primary_authorized_signatory,authorized_representative_type, search_value=search_value)
@@ -182,8 +182,8 @@ def save_mother_customer_business_place(
         raise HTTPException(status_code=401, detail="Token is missing")
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-     # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     try:
         result = db_mother_customer.save_mother_customer_business_place(mother_customer_id,business_data, db,user_id,id)
         return {"success": True, "message": result["message"]}
@@ -210,8 +210,8 @@ def get_mother_customer_business_place(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     return db_mother_customer.get_mother_customer_business_place(mother_customer_id, type, db,user_id)
 
 #-----------------------------------------
@@ -231,8 +231,8 @@ def save_mother_customer_goods_commodities(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     try:
         return db_mother_customer.save_mother_customer_goods_commodities_details(mother_customer_id,details, db, user_id)
     except Exception as e:
@@ -256,8 +256,8 @@ def get_mother_customer_hsn_commodities(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")  # Retrieve user_id from token
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     # Call the function to get commodities, passing the user_id
     commodities = db_mother_customer.get_mother_customer_hsn_commodities(mother_customer_id,user_id, db)
     return commodities
@@ -279,8 +279,8 @@ def save_mother_customer_gst_state_specific_information(
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     return db_mother_customer.save_mother_customer_gst_state_specific_information(id, mother_customer_id,data, db, user_id)
 
 #--------Gst State Specific Information
@@ -300,8 +300,8 @@ def get_mother_customer_gst_state_specific_information(
 
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")  
-    # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     gst_state_info = db_mother_customer.get_mother_customer_gst_state_specific_information(mother_customer_id,db,user_id)
 
     if not gst_state_info:
@@ -328,8 +328,8 @@ def delete_mother_customer_gst_registration_record(
         raise HTTPException(status_code=401, detail="Token is missing")
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-     # mother_customer_id = auth_info.get("mother_customer_id")
-    mother_customer_id =1
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
     try:
         return db_mother_customer.delete_mother_customer_gst_registration_record(db,user_id,mother_customer_id,stakeholder_id, business_place_id)
     except Exception as e:
