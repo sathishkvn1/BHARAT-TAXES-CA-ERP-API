@@ -13,7 +13,7 @@ from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, Amen
 
 
 
-#-------------------------business details
+#-------------------------business details---------------------------------------------------------------
 def save_business_details(
     db: Session,
     business_details_data: BusinessDetailsSchema,
@@ -1219,7 +1219,8 @@ def get_business_place(customer_id: int,
                 "office_phone_std_code" : bp.office_phone_std_code,   
                 "office_phone_number" : bp.office_phone_number,     
                 "office_fax_std_code"  : bp.office_fax_std_code,    
-                "office_fax_number"  : bp.office_fax_number      
+                "office_fax_number"  : bp.office_fax_number,
+                "office_whatsapp_number":bp.office_whatsapp_number  
             }
 
             # Add business activity type and master details to the business place data
@@ -1265,6 +1266,7 @@ def get_business_place(customer_id: int,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
@@ -1724,6 +1726,7 @@ def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int,
         print(f"Error duplicating customer: {str(e)}")
         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
 
+
 #------------------Amendment---------------------------------------------------------------------
 def amend_customer_data(
     db: Session, 
@@ -1768,6 +1771,8 @@ def amend_customer_data(
     except SQLAlchemyError as e:
         db.rollback()
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
+
+
 #-----------------------------------------------------------------------------------------------------------------------
 # def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
 #     # Map model names to actual model classes

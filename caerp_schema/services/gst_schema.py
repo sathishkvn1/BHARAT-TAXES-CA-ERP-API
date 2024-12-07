@@ -179,7 +179,7 @@ class BusinessPlace(BaseModel):
     office_phone_number       : Optional[str]
     office_fax_std_code       : Optional[str]
     office_fax_number         : Optional[str]
-
+    office_whatsapp_number    : Optional[str]=None
 
 
 class NatureOfBusiness(BaseModel):
