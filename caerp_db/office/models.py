@@ -1309,11 +1309,10 @@ class OffViewWorkOrderBusinessPlaceDetails(caerp_base):
     business_place_type     = Column(Enum('MAIN OFFICE','GODOWN','BRANCH'), nullable=False, default='MAIN OFFICE')   
     nature_of_possession_id = Column(Integer, nullable=False) 
     nature_of_possession    = Column(String, nullable=False)
-    business_place_doc_id   = Column(Integer, nullable=False)
+    business_place_document_id   = Column(Integer, nullable=False)
     utility_document_id     = Column(Integer, nullable=False)
     document_data_name      = Column(String, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
-
 
 
 class WorkOrderDetailsView(caerp_base):
@@ -1366,6 +1365,7 @@ class WorkOrderDetailsView(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
+
 class WorkOrderBusinessPlaceDetails(caerp_base):
     __tablename__ = 'work_order_business_place_details'
     
@@ -1373,7 +1373,7 @@ class WorkOrderBusinessPlaceDetails(caerp_base):
     work_order_details_id   = Column(Integer, nullable=False) 
     business_place_type     = Column(Enum('MAIN OFFICE','GODOWN','BRANCH'), nullable=False, default='MAIN OFFICE')   
     nature_of_possession_id = Column(Integer, nullable=False) 
-    business_place_doc_id   = Column(Integer, nullable=False)
+    business_place_document_id   = Column(Integer, nullable=False)
     utility_document_id     = Column(Integer, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
 
