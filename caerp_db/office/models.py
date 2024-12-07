@@ -1176,6 +1176,7 @@ class OffWorkOrderMaster(caerp_base):
     locked_by                        = Column(String, nullable=True)
 
 
+
 class OffWorkOrderDetails(caerp_base):
     __tablename__ = 'work_order_details'
     
@@ -1197,6 +1198,7 @@ class OffWorkOrderDetails(caerp_base):
     number_of_shareholders      = Column(Integer, nullable=True)
     number_of_trustees          = Column(Integer, nullable=True)
     number_of_members           = Column(Integer, nullable=True)
+    number_of_authorized_signatory = Column(Integer, nullable=True)
     is_main_service             = Column(Enum('yes', 'no'), nullable=False, default='no')
     is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
     bundle_service_id           = Column(Integer, nullable=True)
@@ -1300,6 +1302,7 @@ class WorkOrderMasterView(caerp_base):
 
 
 
+
 class WorkOrderDetailsView(caerp_base):
     __tablename__ = 'off_view_work_order_details'
     
@@ -1326,6 +1329,7 @@ class WorkOrderDetailsView(caerp_base):
     number_of_shareholders      = Column(Integer, nullable=True)
     number_of_trustees          = Column(Integer, nullable=True)
     number_of_members           = Column(Integer, nullable=True)
+    number_of_authorized_signatory = Column(Integer, nullable=True)
     is_main_service             = Column(Enum('yes', 'no'), nullable=False, default='no')
     is_bundle_service           = Column(Enum('yes', 'no'), nullable=False, default='no')
     bundle_service_id           = Column(Integer, nullable=True)
@@ -1349,7 +1353,6 @@ class WorkOrderDetailsView(caerp_base):
     deleted_by                       = Column(String, nullable=True)
     deleted_on                       = Column(DateTime, nullable=True)
 
-
 class WorkOrderBusinessPlaceDetails(caerp_base):
     __tablename__ = 'work_order_business_place_details'
     
@@ -1357,34 +1360,29 @@ class WorkOrderBusinessPlaceDetails(caerp_base):
     work_order_details_id   = Column(Integer, nullable=False) 
     business_place_type     = Column(Enum('MAIN OFFICE','GODOWN','BRANCH'), nullable=False, default='MAIN OFFICE')   
     nature_of_possession_id = Column(Integer, nullable=False) 
+    business_place_doc_id   = Column(Integer, nullable=False)
     utility_document_id     = Column(Integer, nullable=False)
-    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
-
-
-class OffViewWorkOrderBusinessPlaceDetails(caerp_base):
-    __tablename__ = 'off_view_work_order_business_place_details'
-
-    business_place_id       = Column(Integer, primary_key=True, autoincrement=True)        
-    work_order_details_id   = Column(Integer, nullable=False) 
-    business_place_type     = Column(Enum('MAIN OFFICE','GODOWN','BRANCH'), nullable=False, default='MAIN OFFICE')   
-    nature_of_possession_id = Column(Integer, nullable=False) 
-    nature_of_possession    = Column(String, nullable=False)
-    utility_document_id     = Column(Integer, nullable=False)
-    document_data_name      = Column(String, nullable=False)
     is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
 
 
 class CustomerDataDocumentMaster(caerp_base):
     __tablename__ = 'customer_data_document_master'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    work_order_master_id = Column(Integer, nullable=False)
-    work_order_details_id = Column(Integer, nullable=False)
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_master_id    = Column(Integer, nullable=False)
+    work_order_details_id   = Column(Integer, nullable=False)
+    service_task_id         = Column(Integer, nullable=False)
     document_data_category_id = Column(Integer, nullable=False)
     document_data_master_id = Column(Integer, nullable=False)
     customer_id = Column(Integer, nullable=True)
     stake_holder_master_id = Column(Integer, nullable=True)
-    data = Column(String(1000), nullable=True)
+    is_partner_director_proprietor  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    is_authorised_sigantory         = Column(Enum('yes', 'no'), nullable=False, default='no')
+    is_business_place               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    business_place_type_and_name    = Column(String(100), nullable=True)
+    stake_holder_role               = Column(String(100), nullable=True)
+    signatory_serial_number         = Column(String(100), nullable=True)
+    # data = Column(String(1000), nullable=True)
     display_order = Column(Integer, nullable=False, default=1)
     is_document_uploded = Column(Enum('yes', 'no'), nullable=False, default='no')
     uploaded_date = Column(DateTime, nullable=True)
@@ -1393,7 +1391,6 @@ class CustomerDataDocumentMaster(caerp_base):
     valid_to_date = Column(Date, nullable=True)
     remarks = Column(String(1000), nullable=True)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
-
 
 
 

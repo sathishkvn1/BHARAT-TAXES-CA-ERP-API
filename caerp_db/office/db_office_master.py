@@ -2355,7 +2355,6 @@ def save_price_data(data: PriceData, service_goods_master_id: int, user_id: int,
 #         # logging.error(f"Error fetching service documents details: {e}")
 #         raise HTTPException(status_code=500, detail=f"Error fetching service documents details: {e}")
 
-
 def get_service_documents_data_details(
     db: Session,
     service_document_data_master_id: Optional[int] = None,
@@ -2392,7 +2391,7 @@ def get_service_documents_data_details(
                 OffViewServiceDocumentsDataDetails.document_data_category_category_name == document_category
             )
 
-        if nature_of_possession_id is not None and document_category == 'PRINCIPAL PLACE DOC':
+        if nature_of_possession_id is not None and document_category == 'BUSINESS PLACE DOC':
             query = query.filter(
                 OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
             )
@@ -2402,6 +2401,81 @@ def get_service_documents_data_details(
 
     except Exception as e:
         raise Exception(f"Error fetching service documents details: {e}")
+    
+
+
+def get_utility_document_by_service_id(
+        service_id: int,
+        constitution_id: int,        
+        db: Session 
+)->List[OffViewServiceDocumentsDataDetailsSchema]:
+    try:
+        # Extract service_document_master_id
+        service_document_master_id_row = db.query(OffServiceDocumentDataMaster.id).filter(
+            OffServiceDocumentDataMaster.service_goods_master_id == service_id,
+            OffServiceDocumentDataMaster.constitution_id == constitution_id
+        ).first()
+        # print("service_document_master data ---- ",service_document_master_id_row)
+        # Check if service_document_master_id_row is None
+        if service_document_master_id_row is None:
+            return []
+
+        # Extract the actual ID from the row
+        service_document_master_id = service_document_master_id_row.id
+        # Fetch service document details
+        service_document_details_data = db.query(OffViewServiceDocumentsDataDetails).filter(
+            OffViewServiceDocumentsDataDetails.service_document_data_master_id == service_document_master_id,
+            OffViewServiceDocumentsDataDetails.document_data_category_category_name == 'UTILITY DOC'
+        ).all()
+
+        if service_document_details_data:
+            return service_document_details_data
+        else:
+            return []
+
+    except SQLAlchemyError as e:
+        return {"error": str(e)}
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+
+def get_business_place_document_by_nature_of_possession(
+        service_id: int,
+        constitution_id: int,
+        nature_of_possession_id: int,
+        db: Session 
+)->List[OffViewServiceDocumentsDataDetailsSchema]:
+    try:
+        # Extract service_document_master_id
+        service_document_master_id_row = db.query(OffServiceDocumentDataMaster.id).filter(
+            OffServiceDocumentDataMaster.service_goods_master_id == service_id,
+            OffServiceDocumentDataMaster.constitution_id == constitution_id
+        ).first()
+        # print("service_document_master data ---- ",service_document_master_id_row)
+        # Check if service_document_master_id_row is None
+        if service_document_master_id_row is None:
+            return []
+
+        # Extract the actual ID from the row
+        service_document_master_id = service_document_master_id_row.id
+        # Fetch service document details
+        service_document_details_data = db.query(OffViewServiceDocumentsDataDetails).filter(
+            OffViewServiceDocumentsDataDetails.service_document_data_master_id == service_document_master_id,
+            OffViewServiceDocumentsDataDetails.nature_of_possession_id == nature_of_possession_id
+        ).all()
+
+        if service_document_details_data:
+            return service_document_details_data
+        else:
+            return []
+
+    except SQLAlchemyError as e:
+        return {"error": str(e)}
+
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # def get_service_documents_data_details(
