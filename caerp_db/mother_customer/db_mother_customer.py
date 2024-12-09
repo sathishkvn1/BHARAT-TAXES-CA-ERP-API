@@ -17,7 +17,6 @@ from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, Amen
 
 #------save_mother_customer_details
 
-
 def save_mother_customer_details(
     mother_customer_id: int,
     mother_customer_data: MotherCustomerRequestSchema,
@@ -29,7 +28,7 @@ def save_mother_customer_details(
         customer_master = db.query(CustomerMaster).filter(CustomerMaster.customer_id == mother_customer_id).first()
 
         if not customer_master:
-            raise HTTPException(status_code=404, detail="Customer master not found")
+            return []
 
         # Update or add business details
         business_details = mother_customer_data.mother_customer_business_details
@@ -42,7 +41,7 @@ def save_mother_customer_details(
                 business_details_record.modified_by = user_id
                 business_details_record.modified_on = datetime.now()
             else:
-                raise HTTPException(status_code=404, detail="Business details record not found")
+                return []
         else:
             # Add new business details if ID is 0
             new_business_details = CustomerMaster(**business_details.model_dump(exclude_unset=True), 
@@ -144,7 +143,7 @@ def save_mother_customer_details(
             # Ensure reason_to_obtain_gst_registration_id is not None if it's required
             reason_to_obtain_gst_registration_id = mother_customer_data.mother_customerreason_to_obtain_registration.reason_to_obtain_gst_registration_id
             if reason_to_obtain_gst_registration_id is None:
-                raise HTTPException(status_code=400, detail="reason_to_obtain_gst_registration_id cannot be null")
+                return []
 
             gst_other_details = CustomerGSTOtherDetails(
                 customer_id=mother_customer_id,
@@ -306,6 +305,8 @@ def get_customer_details(db: Session,
                 "trade_name": customer.customer_name,
                 "email_address": customer.email_address,
                 "mobile_number": customer.mobile_number,
+                "constitution_id": customer.constitution_id,
+                "constitution_name": db.query(AppBusinessConstitution.business_constitution_name).filter_by(id=customer.constitution_id).scalar() if customer.constitution_id else None,
                 "registration_status":customer.registration_status
             },
             "customer_other_details": {
@@ -360,6 +361,9 @@ def get_customer_details(db: Session,
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 
 #------------------save stakeholder

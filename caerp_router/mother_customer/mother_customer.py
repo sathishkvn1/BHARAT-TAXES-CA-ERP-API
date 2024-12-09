@@ -58,7 +58,7 @@ def save_mother_customer_details(
        print(f"Error: {str(e)}")  # Log the error message for debugging
        raise HTTPException(status_code=500, detail=str(e))
 
-#---------------------------------------------
+#-------------------------------------------------------------------------------------------------------
 
 @router.get("/get_mother_customer_details")
 def get_mother_customer_details(
@@ -241,8 +241,7 @@ def save_mother_customer_goods_commodities(
 
 #-------------- Hsn Commodities----------------
 #-----------------------------------------------------------------------------------------------------------------
-
-@router.get("/get_mother_customer_hsn_commodities/{customer_id}")
+@router.get("/get_mother_customer_hsn_commodities")
 def get_mother_customer_hsn_commodities(
                          db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)
@@ -261,6 +260,27 @@ def get_mother_customer_hsn_commodities(
     # Call the function to get commodities, passing the user_id
     commodities = db_mother_customer.get_mother_customer_hsn_commodities(mother_customer_id,user_id, db)
     return commodities
+#--------------------------
+
+@router.post("/save_mother_customer_gst_state_specific_information")
+def save_mother_customer_gst_state_specific_information(
+    id: int,
+    data: CustomerGstStateSpecificInformationSchema,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    - mother_customer_id =1
+    - Save or update GST state-specific information.
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    mother_customer_id = auth_info.get("mother_customer_id")
+    # mother_customer_id =1
+    return db_mother_customer.save_mother_customer_gst_state_specific_information(id, mother_customer_id,data, db, user_id)
 
 #-------------Gst State Specific Information---------------
 @router.post("/save_mother_customer_gst_state_specific_information/{id}")
@@ -284,7 +304,7 @@ def save_mother_customer_gst_state_specific_information(
     return db_mother_customer.save_mother_customer_gst_state_specific_information(id, mother_customer_id,data, db, user_id)
 
 #--------Gst State Specific Information
-@router.get("/get_mother_customer_gst_state_specific_information/{customer_id}", 
+@router.get("/get_mother_customer_gst_state_specific_information", 
             response_model=List[CustomerGstStateSpecificInformationSchemaGet]
             )
 def get_mother_customer_gst_state_specific_information(
