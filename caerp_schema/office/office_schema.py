@@ -1454,9 +1454,14 @@ class UpdateCustomerDataDocumentSchema(BaseModel):
 class DocumentsSchema(BaseModel):
     valid_from_date         : Optional[date] = None
     valid_to_date           : Optional[date] = None
-    remarks                 : Optional[str]=None
+    business_place_type_and_name     : Optional[str]  = None
+    stake_holder_role           : Optional[str] = None
+    signatory_serial_number     : Optional[str] = None
+    remarks                     : Optional[str]=None
 
-
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class OffServiceTaskMasterSchema(BaseModel):
     task_status_id          : int

@@ -4795,6 +4795,12 @@ def upload_documents(db: Session,
         document.valid_from_date = request.valid_from_date
         document.valid_to_date = request.valid_to_date
         document.remarks = request.remarks
+        # if request.business_place_name :
+        document.business_place_type_and_name = request.business_place_type_and_name
+        # if request.authorised_signatory: 
+        document.signatory_serial_number = request.signatory_serial_number
+        # if request.name_and_designation :
+        document.stake_holder_role = request.stake_holder_role
         document.uploaded_date = datetime.now()
         document.uploaded_by = user_id
         document.is_document_uploded = 'yes'
@@ -4825,7 +4831,7 @@ def upload_documents(db: Session,
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to upload the file: {str(e)}")
-    
+     
 #---------------------------------------------------------------------------------------------------------------------
 
 

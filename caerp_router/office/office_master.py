@@ -16,7 +16,7 @@ from caerp_db.database import  get_db,SessionLocal
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory, OffViewCustomerEnquiryAppointmentDetails
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, CustomerDataDocumentMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory, OffViewCustomerEnquiryAppointmentDetails
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
@@ -3237,64 +3237,6 @@ def update_customer_data_document(
     
 #------------------------------------------------------------------------------------------------------
 
-# @router.get("/get_documents_and_data")
-# def get_documents(
-#     type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
-#     db: Session = Depends(get_db)
-# ) -> List[Dict[str, Any]]:
-    
-#     """  Fetches a list of documents and data records based on an optional filter type.
-#     **Parameters:**
-
-#     - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
-#     """
-#     sql_query = text("""
-#     SELECT
-#         a.id,
-#         a.work_order_master_id,
-#         a.work_order_details_id,
-#         a.document_data_category_id,
-#         b.category_name,
-#         a.document_data_master_id,
-#         c.document_data_name,
-#         d.id AS document_data_type_id, 
-#         d.document_data_type, 
-#         c.has_expiry,
-#         a.customer_id,
-#         a.stake_holder_master_id,
-#         a.data,
-#         a.display_order,
-#         a.is_document_uploded,
-#         a.uploaded_date,
-#         a.uploaded_by,
-#         a.valid_from_date,
-#         a.valid_to_date,
-#         a.remarks,
-#         a.is_deleted
-#     FROM
-#         customer_data_document_master a
-#     LEFT JOIN
-#         off_document_data_category b ON a.document_data_category_id = b.id
-#     LEFT JOIN
-#         off_document_data_master c ON a.document_data_master_id = c.id
-#     LEFT JOIN
-#         off_document_data_type d ON c.document_data_type_id = d.id 
-#     WHERE
-#         a.is_deleted = 'no'
-#     AND 
-#         (:type IS NULL OR d.document_data_type = :type)
-#     """)
-
-#     try:
-#         result = db.execute(sql_query, {"type": type})
-#         # Convert results to a list of dictionaries
-#         results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
-#         return results_list
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-    
-
-
 @router.get("/get_documents_and_data")
 def get_documents(
     work_order_master_id: int,  # Required parameter
@@ -3322,10 +3264,15 @@ def get_documents(
         c.document_data_name,
         d.id AS document_data_type_id, 
         d.document_data_type, 
+        a.is_partner_director_proprietor,
+        a.is_business_place,
+        a.is_authorised_sigantory,
+        a.business_place_type_and_name,
+        a.stake_holder_role,
+        a.signatory_serial_number,            
         c.has_expiry,
         a.customer_id,
         a.stake_holder_master_id,
-        a.data,
         a.display_order,
         a.is_document_uploded,
         a.uploaded_date,
@@ -3359,6 +3306,7 @@ def get_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------------------------------------------------------------------------------------------------------
+
 @router.post('/upload_document/{id}')
 def upload_document(
    id: int,
@@ -3384,9 +3332,11 @@ def upload_document(
     except Exception as e:    
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-----------------------------------------------------------------------------------------------------
 @router.get("/get_upload_document/{id}", response_model=dict)
-def get_upload_document(id: int):
+def get_upload_document(id: int,
+                        db : Session = Depends(get_db)):
     # Search for a file that starts with the given ID and has any extension
     file_path = None
     for file in Path(UPLOAD_WORK_ORDER_DOCUMENTS).glob(f"{id}.*"):
@@ -3396,9 +3346,18 @@ def get_upload_document(id: int):
 
     if not file_path:
         raise HTTPException(status_code=404, detail="File not found")
-
+    else:
+        data = db.query(CustomerDataDocumentMaster).filter(CustomerDataDocumentMaster.id == id).first()
+    if not data:
+        raise HTTPException(status_code=404, detail="Document data not found")
     
-    return {"photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}"}
+    # Convert ORM model to Pydantic model
+    serialized_data = DocumentsSchema.from_orm(data)
+
+    return {
+        "photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}",
+        "data": serialized_data.dict()
+    }
 
 
 #---------------------------------------------------------------------------------------------------
