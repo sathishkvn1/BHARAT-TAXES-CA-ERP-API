@@ -9,7 +9,7 @@ from caerp_auth import authentication
 from caerp_router.common import user,otp_process,common,common_functions
 from caerp_router.office import office_master
 from caerp_router.mother_customer import mother_customer
-from caerp_router.services.gst_services import gst_registration,gst_registeration_service
+from caerp_router.services.gst_services import gst_registration,gst_registeration_service,gst_amendment
 
 from caerp_router.accounts import quotation
 from caerp_router.hr_and_payroll import employee_master
@@ -116,6 +116,7 @@ accounts.include_router(quotation.router)
 gst_services.include_router(authentication.router)
 gst_services.include_router(gst_registration.router) 
 gst_services.include_router(gst_registeration_service.router)
+gst_services.include_router(gst_amendment.router)
 
 gst_mother_customer.include_router(authentication.router)
 gst_mother_customer.include_router(mother_customer.router) 

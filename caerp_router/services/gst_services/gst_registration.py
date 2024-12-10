@@ -238,7 +238,7 @@ def save_business_place_details(
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
     try:
-        result = db_gst.save_business_place(customer_id,service_task_id, business_data, db,user_id,id)
+        result = db_gst.save_business_place(customer_id,service_task_id,type,business_data, db,user_id,id)
         return {"success": True, "message": result["message"]}
     
     except Exception as e:
@@ -1174,118 +1174,11 @@ def get_amended_business_place(
 # @router.post("/amended_additional_business_places")
 # def amended_additional_business_places(
 #     customer_id: int, 
-#     service_task_id: int,  # Include service_task_id
-   
-#     amendment_details: CustomerBusinessPlacesFullAmendmentSchema,
-    
+#     amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
 #     action: AmendmentAction,
-    
 #     db: Session = Depends(get_db),
-#     id: Optional[int] = None,
 #     token: str = Depends(oauth2.oauth2_scheme)
-    
 # ):
-#     """
-#             Amend Additional Business Places
-
-#             This endpoint is used to amend the details of additional business places and their associated activities for a specified customer.
-
-#             Parameters:
-#             - customer_id (int): The ID of the customer.
-#             - service_task_id (int): The ID of the service task.
-#             - amendment_details (CustomerBusinessPlacesFullAmendmentSchema): The details of the amendment for the business place and nature of business.
-#             - action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
-#             - token (str): The authentication token.
-
-#             Returns:
-#             - JSON response with success status and message.
-
-#             {
-#         "business_place": [
-#             {
-#             "pin_code": "110001",
-#             "country_id": 1,
-#             "state_id": 2,
-#             "district_id": 3,
-#             "taluk_id": 4,
-#             "city_id": 5,
-#             "post_office_id": 6,
-#             "lsg_type_id": 7,
-#             "lsg_id": 8,
-#             "village_id": 9,
-#             "locality": "Connaught Place",
-#             "road_street_name": "Janpath Lane",
-#             "premises_building_name": "Janpath Tower",
-#             "building_flat_number": "101",
-#             "floor_number": "1",
-#             "landmark": "Near Palika Bazar",
-#             "latitude": "28.6345",
-#             "longitude": "77.2190",
-#             "office_email_address": "office@example.com",
-#             "office_mobile_number": "9876543210",
-#             "office_phone_std_code": "011",
-#             "office_phone_number": "12345678",
-#             "office_fax_std_code": "011",
-#             "office_fax_number": "87654321",
-#             "amendment_date": "2024-11-26",
-#             "amendment_reason": "Expansion of business",
-#             "nature_of_business": [
-#                 {
-#                 "business_activity_id": 1,
-#                 "amendment_date": "2024-11-26",
-#                 "amendment_reason": "Added new service offering"
-#                 },
-#                 {
-#                 "business_activity_id": 2,
-#                 "amendment_date": "2024-11-26",
-#                 "amendment_reason": "Updated product range"
-#                 }
-#             ]
-#             },
-#             {
-#             "pin_code": "560001",
-#             "country_id": 1,
-#             "state_id": 2,
-#             "district_id": 4,
-#             "taluk_id": 5,
-#             "city_id": 6,
-#             "post_office_id": 7,
-#             "lsg_type_id": 8,
-#             "lsg_id": 9,
-#             "village_id": 10,
-#             "locality": "MG Road",
-#             "road_street_name": "Brigade Road",
-#             "premises_building_name": "Brigade Tower",
-#             "building_flat_number": "201",
-#             "floor_number": "2",
-#             "landmark": "Opposite to Metro Station",
-#             "latitude": "12.9716",
-#             "longitude": "77.5946",
-#             "office_email_address": "branch@example.com",
-#             "office_mobile_number": "9876543200",
-#             "office_phone_std_code": "080",
-#             "office_phone_number": "23456789",
-#             "office_fax_std_code": "080",
-#             "office_fax_number": "87654320",
-#             "amendment_date": "2024-11-26",
-#             "amendment_reason": "New branch setup",
-#             "nature_of_business": [
-#                 {
-#                 "business_activity_id": 3,
-#                 "amendment_date": "2024-11-26",
-#                 "amendment_reason": "New activity for branch"
-#                 },
-#                 {
-#                 "business_activity_id": 4,
-#                 "amendment_date": "2024-11-26",
-#                 "amendment_reason": "Expanded service offerings"
-#                 }
-#             ]
-#             }
-#         ]
-#         }
-
-#    """
 #     if not token:
 #         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -1298,12 +1191,142 @@ def get_amended_business_place(
 #     # Convert Pydantic model to dictionary
 #     amendment_details_dict = amendment_details.dict()
 
-#     result = db_gst.save_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, action, user_id)
+#     result = db_gst.save_additional_business_places_and_activities(db, customer_id, amendment_details_dict, action, user_id)
 
 #     if not result["success"]:
 #         raise HTTPException(status_code=400, detail=result["message"])
     
 #     return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
+
+
+@router.post("/amended_additional_business_places")
+def amended_additional_business_places(
+    customer_id: int, 
+    service_task_id: int,  # Include service_task_id
+    amendment_details: CustomerBusinessPlacesFullAmendmentSchema,
+    action: AmendmentAction,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+            Amend Additional Business Places
+
+            This endpoint is used to amend the details of additional business places and their associated activities for a specified customer.
+
+            Parameters:
+            - customer_id (int): The ID of the customer.
+            - service_task_id (int): The ID of the service task.
+            - amendment_details (CustomerBusinessPlacesFullAmendmentSchema): The details of the amendment for the business place and nature of business.
+            - action (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+            - token (str): The authentication token.
+
+            Returns:
+            - JSON response with success status and message.
+
+            {
+        "business_place": [
+            {
+            "pin_code": "110001",
+            "country_id": 1,
+            "state_id": 2,
+            "district_id": 3,
+            "taluk_id": 4,
+            "city_id": 5,
+            "post_office_id": 6,
+            "lsg_type_id": 7,
+            "lsg_id": 8,
+            "village_id": 9,
+            "locality": "Connaught Place",
+            "road_street_name": "Janpath Lane",
+            "premises_building_name": "Janpath Tower",
+            "building_flat_number": "101",
+            "floor_number": "1",
+            "landmark": "Near Palika Bazar",
+            "latitude": "28.6345",
+            "longitude": "77.2190",
+            "office_email_address": "office@example.com",
+            "office_mobile_number": "9876543210",
+            "office_phone_std_code": "011",
+            "office_phone_number": "12345678",
+            "office_fax_std_code": "011",
+            "office_fax_number": "87654321",
+            "amendment_date": "2024-11-26",
+            "amendment_reason": "Expansion of business",
+            "nature_of_business": [
+                {
+                "business_activity_id": 1,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Added new service offering"
+                },
+                {
+                "business_activity_id": 2,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Updated product range"
+                }
+            ]
+            },
+            {
+            "pin_code": "560001",
+            "country_id": 1,
+            "state_id": 2,
+            "district_id": 4,
+            "taluk_id": 5,
+            "city_id": 6,
+            "post_office_id": 7,
+            "lsg_type_id": 8,
+            "lsg_id": 9,
+            "village_id": 10,
+            "locality": "MG Road",
+            "road_street_name": "Brigade Road",
+            "premises_building_name": "Brigade Tower",
+            "building_flat_number": "201",
+            "floor_number": "2",
+            "landmark": "Opposite to Metro Station",
+            "latitude": "12.9716",
+            "longitude": "77.5946",
+            "office_email_address": "branch@example.com",
+            "office_mobile_number": "9876543200",
+            "office_phone_std_code": "080",
+            "office_phone_number": "23456789",
+            "office_fax_std_code": "080",
+            "office_fax_number": "87654320",
+            "amendment_date": "2024-11-26",
+            "amendment_reason": "New branch setup",
+            "nature_of_business": [
+                {
+                "business_activity_id": 3,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "New activity for branch"
+                },
+                {
+                "business_activity_id": 4,
+                "amendment_date": "2024-11-26",
+                "amendment_reason": "Expanded service offerings"
+                }
+            ]
+            }
+        ]
+        }
+
+   """
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Convert Pydantic model to dictionary
+    amendment_details_dict = amendment_details.dict()
+
+    result = db_gst.save_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, action, user_id)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    
+    return {"success": True, "message": "Amendment saved successfully", "id": result.get("id")}
 
 #--------------------------------------------------------------------------------------------------------------
 
@@ -1383,20 +1406,96 @@ def get_business_places_and_activities(customer_id: int, service_task_id: int, d
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch business places and activities: {str(e)}")
 
-#-----------------------------------------------------------------------------
+#--------------------------
 
 
+@router.post("/amend_business_place")
+def amend_business_place(customer_id: int, 
+                         service_task_id: int,
+                         amendment_details: CustomerBusinessPlaceFullAmendmentSchema,
+                         action: AmendmentAction,
+                         db: Session = Depends(get_db),
+                         token: str = Depends(oauth2.oauth2_scheme)):
+    
+    """
+        Amend Business Place
 
-@router.post("/amended_additional_business_places")
-def amended_additional_business_places(
-    customer_id: int, 
-    service_task_id: int,
-    amendment_details: CustomerBusinessPlacesFullAmendmentSchema,
-    action: AmendmentAction,
-    db: Session = Depends(get_db),
-    id: Optional[int] = None,
-    token: str = Depends(oauth2.oauth2_scheme)
-):
+        This endpoint is used to amend the details of a business place and its associated activities for a specified customer.
+
+        Parameters:
+        - **customer_id** (int): The ID of the customer whose business place is to be amended.
+        - **service_task_id** (int): The ID of the service task associated with the amendment.
+        - **amendment_details** (CustomerBusinessPlaceFullAmendmentSchema): The details of the amendment for the business place and nature of business.
+        - **action** (AmendmentAction): The type of amendment. Possible values: ADDED, EDITED, DELETED.
+        - **token** (str): The authentication token.
+
+        Request Body Example:
+        ```json
+        {
+            "business_place": [
+                {
+                    "pin_code": "110001",
+                    "country_id": 1,
+                    "state_id": 2,
+                    "district_id": 3,
+                    "taluk_id": 4,
+                    "city_id": 5,
+                    "post_office_id": 6,
+                    "lsg_type_id": 7,
+                    "lsg_id": 8,
+                    "village_id": 9,
+                    "locality": "Connaught Place",
+                    "road_street_name": "Janpath Lane",
+                    "premises_building_name": "Janpath Tower",
+                    "building_flat_number": "101",
+                    "floor_number": "1",
+                    "landmark": "Near Palika Bazar",
+                    "latitude": "28.6345",
+                    "longitude": "77.2190",
+                    "office_email_address": "office@example.com",
+                    "office_mobile_number": "9876543210",
+                    "office_phone_std_code": "011",
+                    "office_phone_number": "12345678",
+                    "office_fax_std_code": "011",
+                    "office_fax_number": "87654321",
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Expansion of business"
+                }
+            ],
+            "nature_of_business": [
+                {
+                    "business_activity_id": 1,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Added new service offering"
+                },
+                {
+                    "business_activity_id": 3,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Added new service offering"
+                },
+                {
+                    "business_activity_id": 2,
+                    "amendment_date": "2024-11-26",
+                    "amendment_reason": "Updated product range"
+                }
+            ]
+        }
+        ```
+
+        Returns:
+        - **200 OK**: Amendment saved successfully.
+        - **401 Unauthorized**: Token is missing or invalid.
+        - **400 Bad Request**: If there is an issue with saving the amendment.
+        
+        Example Response:
+        ```json
+        {
+            "success": True,
+            "message": "Amendment saved successfully",
+            "id": 123
+        }
+        ```
+        """
     if not token:
         raise HTTPException(status_code=401, detail="Token is missing")
 
@@ -1406,15 +1505,13 @@ def amended_additional_business_places(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    amendment_details_dict = amendment_details.dict()
-
-    if action == AmendmentAction.ADDED:
-        result = db_gst.add_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, user_id)
-
-    elif action == AmendmentAction.EDITED and id:
-        result = db_gst.edit_existing_business_places_and_activities(db, customer_id, service_task_id, id, amendment_details_dict, user_id)
+    result = db_gst.amend_business_place_data(db, customer_id,service_task_id, amendment_details, action, user_id)
 
     if not result["success"]:
         raise HTTPException(status_code=400, detail=result["message"])
+    
+    return {"success": True, "message": "Amendment saved successfully", "id": result["id"]}
 
-    return {"success": True, "message": "Amendment saved successfully"}
+
+
+

@@ -1,19 +1,19 @@
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 from fastapi import HTTPException, UploadFile, logger,status,Depends
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_constants.caerp_constants import AmendmentAction
 from caerp_db.common.models import AppConstitutionStakeholders, AppDesignation, AppViewVillages, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CityDB, CountryDB, DistrictDB, Gender, MaritalStatus, PostOfficeView, StateDB, TalukDB
-from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskMaster
+from caerp_db.office.models import AppBusinessConstitution, AppHsnSacClasses, AppHsnSacMaster, OffNatureOfPossession, OffServiceTaskHistory, OffServiceTaskMaster
 from caerp_db.services.model import CustomerAdditionalTradeName, CustomerAmendmentHistory, CustomerBusinessPlace, CustomerBusinessPlaceActivity, CustomerBusinessPlaceActivityType, CustomerBusinessPlaceCoreActivity, CustomerExistingRegistrationDetails, CustomerGSTCasualTaxablePersonDetails, CustomerGSTCompositionOptedPersonDetails, CustomerGSTOtherDetails, CustomerGoodsCommoditiesSupplyDetails, CustomerGstStateSpecificInformation, CustomerMaster, CustomerStakeHolder, GstNatureOfPossessionOfPremises, GstOtherAuthorizedRepresentativeResignation,GstReasonToObtainRegistration,GstTypeOfRegistration, GstViewRange, StakeHolderAddress, StakeHolderContactDetails, StakeHolderMaster
 from caerp_functions.generate_book_number import generate_book_number
 from caerp_schema.services.gst_schema import  AdditionalTradeNameAmendment, AmendmentDetailsSchema, AmmendStakeHolderMasterSchema, BusinessData, BusinessDetailsSchema, BusinessPlace, CombinedSchema, CustomerBusinessPlaceActivitySchemaForGet, CustomerBusinessPlaceAmendmentSchema, CustomerBusinessPlaceFullAmendmentSchema, CustomerBusinessPlaceSchemaForGet, CustomerDuplicateSchema, CustomerGoodsCommoditiesSupplyDetailsSchema, CustomerGstStateSpecificInformationSchema, CustomerRequestSchema, RangeDetailsSchema, StakeHolderMasterSchema, TradeNameSchema
 
 
 
-#-------------------------business details---------------------------------------------------------------
+#-------------------------business details
 def save_business_details(
     db: Session,
     business_details_data: BusinessDetailsSchema,
@@ -24,8 +24,9 @@ def save_business_details(
 ):
     financial_year_id = 1
     customer_id = 1
+
     try:
-        is_mother_customer_value = "yes" if is_mother_customer.lower() == "yes" else "no"
+        operation_type = "Saved"
         if id == 0:
             # Insert new CustomerMaster
             customer_number = generate_book_number('CUSTOMER', financial_year_id, customer_id, db)
@@ -38,7 +39,7 @@ def save_business_details(
                 created_on=datetime.now(),  
                 effective_from_date=datetime.now(), 
                 effective_to_date=None,
-                is_mother_customer=is_mother_customer_value
+                is_mother_customer="no"
             )
             db.add(customer_master)
             db.flush()  # Generate the `id` for the new customer_master
@@ -60,8 +61,8 @@ def save_business_details(
 
             customer_master.modified_by = user_id  
             customer_master.modified_on = datetime.now()  
-            customer_master.is_mother_customer = is_mother_customer_value
-            # Update `is_mother_customer` if provided
+            customer_master.is_mother_customer = "no"
+            operation_type = "Updated"
             
 
         db.flush()
@@ -75,7 +76,16 @@ def save_business_details(
             # Update the task's customer_id
             service_task_master.customer_id = customer_master.customer_id
             db.add(service_task_master)
-
+            history_description = (
+                f"Business details {operation_type} by user {user_id} with customer number {customer_master.customer_number}"
+            )
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)
         db.commit()  # Commit transaction
 
         return {"customer_id": customer_master.customer_id,"customer_number": customer_master.customer_number, "message": "Customer details saved successfully"}
@@ -92,6 +102,7 @@ def save_customer_details(customer_id: int,
                           user_id: int, 
                           db: Session):
     try:
+        
         for additional_trade_name in customer_data.additional_trade_name:
             if additional_trade_name.id == 0:
                 # Create a new trade name record
@@ -128,6 +139,7 @@ def save_customer_details(customer_id: int,
                         existing_trade.deleted_on = datetime.now()
                         existing_trade.modified_by = user_id
                         existing_trade.modified_on = datetime.now()
+                       
 
                 for additional_trade_name in customer_data.additional_trade_name:
                     trade_data = additional_trade_name.model_dump(exclude_unset=True)
@@ -142,6 +154,7 @@ def save_customer_details(customer_id: int,
                         existing_trade.deleted_on = None
                         existing_trade.modified_by = user_id
                         existing_trade.modified_on = datetime.now()
+                        
         # Handle Casual Taxable Person Details
         if customer_data.casual_taxable_person.is_applying_as_casual_taxable_person == "no":
             # When is_applying_as_casual_taxable_person is "no", set other fields to None
@@ -183,7 +196,7 @@ def save_customer_details(customer_id: int,
                 existing_casual_taxable_person.effective_to_date = None
                 existing_casual_taxable_person.modified_by = user_id
                 existing_casual_taxable_person.modified_on = datetime.now()
-
+                
         # Handle Composition Option
         if customer_data.option_for_composition.is_applying_as_composition_taxable_person == "no":
             # When is_applying_as_composition_taxable_person is "no", set other fields to None
@@ -218,7 +231,7 @@ def save_customer_details(customer_id: int,
                 existing_composition_option.effective_to_date = None
                 existing_composition_option.modified_by = user_id
                 existing_composition_option.modified_on = datetime.now()
-
+                
         # Handle Other GST Details
         if customer_data.reason_to_obtain_registration.id == 0:
             gst_other_details = CustomerGSTOtherDetails(
@@ -240,7 +253,7 @@ def save_customer_details(customer_id: int,
                 existing_gst_other_details.effective_to_date = None
                 existing_gst_other_details.modified_by = user_id
                 existing_gst_other_details.modified_on = datetime.now()
-
+                
         # Handle Existing Registrations
         for registration in customer_data.existing_registrations:
             if registration.id == 0:
@@ -281,6 +294,7 @@ def save_customer_details(customer_id: int,
                         existing_registration.deleted_on = None
                         existing_registration.modified_by = user_id
                         existing_registration.modified_on = datetime.now()
+                       
         # Handle Authorization
         if customer_id >= 0:
             existing_authorization = db.query(CustomerMaster).filter_by(customer_id=customer_id).first()
@@ -292,6 +306,7 @@ def save_customer_details(customer_id: int,
                 existing_authorization.effective_to_date = None
                 existing_authorization.modified_by = user_id
                 existing_authorization.modified_on = datetime.now()
+                
             else:
                 new_authorization = CustomerMaster(
                     customer_id=customer_id,
@@ -303,6 +318,21 @@ def save_customer_details(customer_id: int,
                 )
                 db.add(new_authorization)
 
+        if service_task_id:
+            service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+            if not service_task_master:
+                return {"detail": "Service task not found"}
+
+            history_description = (
+                f"Customer details operation performed by user {user_id}"
+            )
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)
         # Commit transaction
         db.commit()
 
@@ -542,7 +572,10 @@ def save_stakeholder_details(
         db.flush()  # Flush to get stake_holder_master.id
 
         # Handle StakeHolderContactDetails
-        
+        new_contact = None
+        existing_contact = None
+        new_address = None
+        existing_address = None
         for contact_details in request.contact_details:
             existing_contact = db.query(StakeHolderContactDetails).filter(
                 StakeHolderContactDetails.stake_holder_id == stake_holder_master.id,
@@ -671,7 +704,30 @@ def save_stakeholder_details(
         db.add(customer_stakeholder_entry)
         db.flush()
         new_record_id = customer_stakeholder_entry.id
-        customer_stakeholder_entry.amended_parent_id = new_record_id  
+        customer_stakeholder_entry.amended_parent_id = new_record_id
+        if service_task_id:
+            service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+            if not service_task_master:
+                return {"detail": "Service task not found"}
+            
+            history_description = (
+                f"{stake_holder_type} operation performed by user {user_id} to added "
+                f"Name: {personal_info.first_name}, "
+                f"Mobile number: "
+                f"{(new_contact.mobile_number if new_contact else existing_contact.mobile_number) if existing_contact else 'N/A'}, "
+                f"Pincode: "
+                f"{(new_address.pin_code if new_address else existing_address.pin_code) if existing_address else 'N/A'}, "
+                f"Landmark: "
+                f"{(new_address.landmark if new_address else existing_address.landmark) if existing_address else 'N/A'}"
+            )
+
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)  
         db.commit()
         return {"detail": "Stakeholder details saved successfully"}
     except Exception as e:
@@ -959,15 +1015,19 @@ def fetch_business_activities(
 def save_business_place(
     customer_id: int,
     service_task_id: int, 
+    type: Optional[str],
     data: BusinessData,
     db: Session,
     user_id: int,
     id: int
 ):
     try:
+       
         # Start transaction
         with db.begin():
             # Check if creating a new business place or updating an existing one
+            new_business_place=None
+            existing_business_place=None
             if id == 0:
                 # Create new business place
                 for business_place in data.business_place:
@@ -1109,7 +1169,27 @@ def save_business_place(
                         business_activity_master_id=data.business_activity_master_id,
                     )
                     db.add(new_core_activity)
+            if service_task_id:
+                service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+                if not service_task_master:
+                    return {"detail": "Service task not found"}
 
+                history_description = (
+                    f"{type} operation performed by user {user_id} to "
+                    f"Pincode: "
+                    f"{(new_business_place.pin_code if new_business_place and new_business_place else existing_business_place.pin_code) if existing_business_place else ""}, "
+                    f"Landmark: "
+                    f"{(new_business_place.landmark if new_business_place and new_business_place else existing_business_place.landmark) if existing_business_place else ""}, "
+                    f"Office WhatsApp Number: "
+                    f"{(new_business_place.office_whatsapp_number if new_business_place and new_business_place else existing_business_place.office_whatsapp_number) if existing_business_place else ""}."
+                )
+                history_entry = OffServiceTaskHistory(
+                    service_task_master_id=service_task_master.id,
+                    history_updated_on=datetime.now(),
+                    history_update_by=user_id,
+                    history_description=history_description,
+                )
+                db.add(history_entry)  
             # Commit the transaction after all operations
             db.commit()
 
@@ -1269,7 +1349,6 @@ def get_business_place(customer_id: int,
 
 
 
-
 #-------------Get hsn sac
 #-----------------------------------------------------------------------------------------------------------------
 def get_hsn_sac_data(
@@ -1329,6 +1408,8 @@ def save_goods_commodities_details(
     user_id: int
 ):
     try:
+        existing_entry=None
+        new_entry=None
         # Fetch existing records for the customer
         existing_entries = {entry.id: entry for entry in db.query(CustomerGoodsCommoditiesSupplyDetails)
                             .filter_by(customer_id=customer_id).all()}
@@ -1347,7 +1428,7 @@ def save_goods_commodities_details(
 
         # Process each item in the incoming details list
         for item in details:
-            item_data = item.dict(exclude_unset=True)
+            item_data = item.model_dump(exclude_unset=True)
             entry_id = item_data.get("id")
 
             if entry_id in existing_entries:
@@ -1376,7 +1457,26 @@ def save_goods_commodities_details(
                 db.add(new_entry)
                 db.commit()  # Commit to save the new entry
                 db.refresh(new_entry)  # Refresh to get the updated instance with id
+        if service_task_id:
+            service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+            if not service_task_master:
+                return {"detail": "Service task not found"}
 
+            history_description = (
+                f"Customer Goods Commodities Supply Details operation performed by user {user_id} to "
+                f"Hsn Sac Class id: "
+                f"{(new_entry.hsn_sac_class_id if new_entry else existing_entry.hsn_sac_class_id) if existing_entry else ''}, "
+                f"Hsn Sac Code id: "
+                f"{(new_entry.hsn_sac_code_id if new_entry else existing_entry.hsn_sac_code_id) if existing_entry else ''}."
+            )
+
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)       
         db.commit()  # Final commit after processing all records
 
         return {"success": True, "message": "Data saved successfully"}
@@ -1452,6 +1552,8 @@ def save_customer_gst_state_specific_information(
     user_id: int  # Optionally track the user making the changes
 ):
     try:
+        existing_entry=None
+        new_entry=None
         # Use model_dump to get the details as a dictionary
         detail_data = data.model_dump(exclude_unset=True)  # Only include set fields
 
@@ -1470,7 +1572,7 @@ def save_customer_gst_state_specific_information(
             db.commit()  # Commit to save the new entry
             db.refresh(new_entry)  # Refresh to get the updated instance with id
 
-            return {"success": True, "message": "Data saved successfully"}
+            
 
         else:
             # Fetch the existing record by ID for updating
@@ -1485,10 +1587,31 @@ def save_customer_gst_state_specific_information(
 
             existing_entry.modified_on = datetime.now()  
             existing_entry.modified_by = user_id  
+        if service_task_id:
+            service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+            if not service_task_master:
+                return []
 
-            db.commit()  # Commit the changes to the database
 
-            return {"success": True, "message": "Data updated successfully"}
+            history_description = (
+                f"Customer GST State Specific Information performed by user {user_id}, "
+                f"Professional Tax Employee Code: "
+                f"{(new_entry.professional_tax_employee_code if new_entry else existing_entry.professional_tax_employee_code) if existing_entry else ''}, "
+                f"Excise Licence Holder Name: "
+                f"{(new_entry.excise_licence_holder_name if new_entry else existing_entry.excise_licence_holder_name) if existing_entry else ''}."
+            )
+
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)
+
+        db.commit()  # Commit the changes to the database
+
+        return {"success": True, "message": "Data saved successfully"}
 
     except Exception as e:
         db.rollback()  # Rollback the transaction in case of an error
@@ -1549,6 +1672,87 @@ def get_details_by_pin(db: Session, pin: str, user_id: int) -> List[RangeDetails
         raise HTTPException(status_code=500, detail=f"Error occurred while fetching details: {str(e)}")
 
 #-----------------------------------------------------------------------------------------------------------------
+# def delete_gst_registration_record(
+#     db: Session,
+#     user_id: int,
+#     customer_id: int,
+#     service_task_id: int,
+#     stakeholder_id: Optional[int] = None,
+#     business_place_id: Optional[int] = None
+# ):
+#     if not stakeholder_id and not business_place_id:
+#         return []
+
+#     try:
+#         if stakeholder_id:
+#             # # Delete Stakeholder records with customer_id filter
+#             stakeholder = db.query(StakeHolderMaster).filter_by(id=stakeholder_id).first()
+#             if not stakeholder:
+#                 return []
+            
+#             # stakeholder.is_deleted = "yes"
+#             # stakeholder.deleted_by = user_id
+#             # stakeholder.deleted_on = datetime.now()
+
+#             # # Delete related StakeHolderContactDetails with customer_id filter
+#             # contact_details = db.query(StakeHolderContactDetails).filter_by(stake_holder_id=stakeholder_id)
+#             # for contact in contact_details:
+#             #     contact.is_deleted = "yes"
+#             #     contact.deleted_by = user_id
+#             #     contact.deleted_on = datetime.now()
+
+#             # # Delete related StakeHolderAddress with customer_id filter
+#             # addresses = db.query(StakeHolderAddress).filter_by(stake_holder_id=stakeholder_id)
+#             # for address in addresses:
+#             #     address.is_deleted = "yes"
+#             #     address.deleted_by = user_id
+#             #     address.deleted_on = datetime.now()
+
+#             # Delete related CustomerStakeHolder with customer_id filter
+#             customer_stakeholders = db.query(CustomerStakeHolder).filter_by(stake_holder_master_id=stakeholder_id, customer_id=customer_id,service_task_id=service_task_id)
+#             for customer_sh in customer_stakeholders:
+#                 customer_sh.is_deleted = "yes"
+#                 customer_sh.deleted_by = user_id
+#                 customer_sh.deleted_on = datetime.now()
+
+#         elif business_place_id:
+#             # Delete Business Place records with customer_id filter
+#             business_place = db.query(CustomerBusinessPlace).filter_by(id=business_place_id, customer_id=customer_id,service_task_id=service_task_id).first()
+#             if not business_place:
+#                 return []
+            
+#             business_place.is_deleted = "yes"
+#             business_place.deleted_by = user_id
+#             business_place.deleted_on = datetime.now()
+
+#             # Delete related CustomerBusinessPlaceActivity with customer_id filter
+#             activities = db.query(CustomerBusinessPlaceActivity).filter_by(business_place_id=business_place_id,customer_id=customer_id,service_task_id=service_task_id)
+#             for activity in activities:
+#                 activity.is_deleted = "yes"
+#                 activity.deleted_by = user_id
+#                 activity.deleted_on = datetime.now()
+
+#             # Delete related CustomerBusinessPlaceActivityType with customer_id filter
+#             activity_types = db.query(CustomerBusinessPlaceActivityType).filter_by(business_place_id=business_place_id, customer_id=customer_id,service_task_id=service_task_id)
+#             for activity_type in activity_types:
+#                 activity_type.is_deleted = "yes"
+#                 activity_type.deleted_by = user_id
+#                 activity_type.deleted_on = datetime.now()
+
+#             # Delete related CustomerBusinessPlaceCoreActivity with customer_id filter
+#             core_activities = db.query(CustomerBusinessPlaceCoreActivity).filter_by(business_place_id=business_place_id, customer_id=customer_id,service_task_id=service_task_id)
+#             for core_activity in core_activities:
+#                 core_activity.is_deleted = "yes"
+#                 core_activity.deleted_by = user_id
+#                 core_activity.deleted_on = datetime.now()
+
+#         db.commit()
+#         return {"success": True, "message": "Data deleted successfully."}
+
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=500, detail=str(e))
+
 def delete_gst_registration_record(
     db: Session,
     user_id: int,
@@ -1606,13 +1810,29 @@ def delete_gst_registration_record(
                 core_activity.is_deleted = "yes"
                 core_activity.deleted_by = user_id
                 core_activity.deleted_on = datetime.now()
+        if service_task_id:
+            service_task_master = db.query(OffServiceTaskMaster).filter(OffServiceTaskMaster.id == service_task_id).first()
+            if not service_task_master:
+                return []
 
+
+            history_description = (
+                f"Gst Registration Record Deleted by user {user_id}"
+            )
+            history_entry = OffServiceTaskHistory(
+                service_task_master_id=service_task_master.id,
+                history_updated_on=datetime.now(),
+                history_update_by=user_id,
+                history_description=history_description,
+            )
+            db.add(history_entry)
         db.commit()
         return {"success": True, "message": "Data deleted successfully."}
 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 #----------------------------------------------------------------------------------------------------------------
 
@@ -1726,7 +1946,6 @@ def duplicate_customer_data(db: Session, customer_id: int, service_task_id: int,
         print(f"Error duplicating customer: {str(e)}")
         return {"success": False, "message": f"Error duplicating customer: {str(e)}"}
 
-
 #------------------Amendment---------------------------------------------------------------------
 def amend_customer_data(
     db: Session, 
@@ -1771,8 +1990,6 @@ def amend_customer_data(
     except SQLAlchemyError as e:
         db.rollback()
         return {"success": False, "message": f"Error amending customer: {str(e)}"}
-
-
 #-----------------------------------------------------------------------------------------------------------------------
 # def save_amended_data(db: Session, id: int, model_name: str, field_name: str, new_value, date: datetime, remarks: str):
 #     # Map model names to actual model classes
@@ -2679,7 +2896,6 @@ def get_stakeholder_master_for_amndement(db: Session,
 #         original_business_place_id = None
 
 #         # Step 1: Check if service_task_id is present
-#         print(f"Checking for existing task with customer_id: {customer_id} and service_task_id: {service_task_id}")
 #         existing_task = db.query(CustomerBusinessPlace).filter_by(
 #             customer_id=customer_id,
 #             service_task_id=service_task_id
@@ -2687,72 +2903,15 @@ def get_stakeholder_master_for_amndement(db: Session,
 
 #         if existing_task:
 #             print(f"Task already started for customer_id: {customer_id} and service_task_id: {service_task_id}")
-
-#             # Log the ID before any updates
+#             new_business_place = existing_task
 #             original_business_place_id = existing_task.amended_parent_id or existing_task.id
-#             print(f"Original business place ID before update: {original_business_place_id}")
-
-#             if existing_task.effective_from_date:
-#                 # Duplicate the existing task to a new record
-#                 print("Existing task has an effective_from_date. Duplicating to create new record.")
-#                 business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(existing_task)
-#                 new_business_place = CustomerBusinessPlace(
-#                     customer_id=existing_task.customer_id,
-#                     **business_place_data.dict(exclude_unset=True)
-#                 )
-
-#                 # Set effective dates to NULL and update status
-#                 print("Setting effective dates to NULL and updating status.")
-#                 new_business_place.effective_from_date = None
-#                 new_business_place.effective_to_date = None
-#                 new_business_place.amended_parent_id = existing_task.id
-             
-#                 new_business_place.is_amendment = 'yes'
-#                 new_business_place.amendment_date = datetime.now()
-#                 new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-#                 new_business_place.amendment_status = "CREATED"
-#                 new_business_place.amendment_action = "EDITED"
-#                 new_business_place.service_task_id = service_task_id
-
-#                 # Apply amendments
-#                 for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-#                     if hasattr(new_business_place, key):
-#                         setattr(new_business_place, key, value)
-
-#                 # Add to the session and commit
-#                 db.add(new_business_place)
-#                 db.commit()
-#                 db.refresh(new_business_place)
-
-#                 print(f"New business place created with ID: {new_business_place.id}")
-
-#             else:
-#                 # Update the existing task directly
-#                 print("No effective_from_date found. Updating the existing task.")
-#                 new_business_place = existing_task
-#                 for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-#                     if hasattr(new_business_place, key):
-#                         setattr(new_business_place, key, value)
-
-#                 new_business_place.amendment_date = datetime.now()
-#                 new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-#                 new_business_place.amendment_status = "CREATED"
-#                 new_business_place.amendment_action = "EDITED"
-#                 new_business_place.service_task_id = service_task_id
-
-#                 db.commit()
-#                 db.refresh(new_business_place)
-
-#                 print(f"Existing business place updated with ID: {new_business_place.id}")
-
 #         else:
 #             # Fetch active business place with is_principal_place=no
-#             print("No existing task found. Fetching active business place with is_principal_place='no'.")
 #             current_date = datetime.now().date()
 #             original_business_place = db.query(CustomerBusinessPlace).filter(
 #                 CustomerBusinessPlace.customer_id == customer_id,
 #                 CustomerBusinessPlace.effective_from_date <= current_date,
-#                 CustomerBusinessPlace.is_principal_place == 'yes',
+#                 CustomerBusinessPlace.is_principal_place == 'no',
 #                 ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
 #                  (CustomerBusinessPlace.effective_to_date >= current_date))
 #             ).first()
@@ -2762,10 +2921,9 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 return {"success": False, "message": "Active business place not found"}
 
 #             original_business_place_id = original_business_place.id
-#             print(f"Fetched original business place ID: {original_business_place_id}")
+#             print(f"Fetched original business place: {original_business_place}")
 
 #             # Step 2: Duplicate and create new business place
-#             print("Duplicating original business place to create a new one.")
 #             business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
 #             print(f"Business place data from ORM: {business_place_data}")
 
@@ -2775,7 +2933,6 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             )
 
 #             # Setting effective dates and amendment info
-#             print("Setting effective dates and amendment information.")
 #             new_business_place.effective_from_date = None
 #             new_business_place.effective_to_date = None
 #             new_business_place.amended_parent_id = original_business_place.id
@@ -2783,7 +2940,7 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             new_business_place.amendment_date = datetime.now()
 #             new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
 #             new_business_place.amendment_status = "CREATED"
-#             new_business_place.amendment_action = "EDITED"
+#             new_business_place.amendment_action = action.value
 #             new_business_place.service_task_id = service_task_id
 
 #             # Apply amendments
@@ -2791,38 +2948,44 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 if hasattr(new_business_place, key):
 #                     setattr(new_business_place, key, value)
 
+#             print(f"New business place data: {new_business_place}")
+
 #             db.add(new_business_place)
 #             db.commit()
 #             db.refresh(new_business_place)
-
-#             print(f"New business place created with ID: {new_business_place.id}")
+#             print(f"New business place saved with ID: {new_business_place.id}")
 
 #         # Step 3: Fetch and handle customer_business_place_activity using original_business_place_id
-#         print(f"Using original business place ID for fetching activities: {original_business_place_id}")
+#         business_place_id = new_business_place.id
+#         print(f"Original business place ID for fetching activities: {original_business_place_id}")
 #         current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
 #         print(f"Current activity IDs from amendment details: {current_activity_ids}")
 
-#         # Fetch existing activities for the original business place
-#         existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(
-#             business_place_id=original_business_place_id,
-#             customer_id=customer_id
+#         # Fetch activities with the original business_place_id using a JOIN
+#         existing_activities = db.query(CustomerBusinessPlaceActivity).join(
+#             CustomerBusinessPlace, 
+#             CustomerBusinessPlaceActivity.business_place_id == CustomerBusinessPlace.id
+#         ).filter(
+#             CustomerBusinessPlaceActivity.business_place_id == original_business_place_id,
+#             CustomerBusinessPlace.customer_id == customer_id
 #         ).all()
-#         print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")
+#         print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")  # Print IDs of existing activities
+#         print(f"Details of fetched existing activities: {existing_activities}")  # Print details of existing activities
 
 #         existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
 #         print(f"Existing activity IDs: {existing_activity_ids}")
 
+#         # Step 3a: Duplicate existing activities
 #         duplicated_activities = []
-        
-#         # Case 1 and Case 2: Duplicate existing activities
 #         for activity in existing_activities:
+#             print(f"Duplicating activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}")
 #             new_entry = CustomerBusinessPlaceActivity(
 #                 customer_id=activity.customer_id,
-#                 business_place_id=new_business_place.id,
+#                 business_place_id=business_place_id,
 #                 business_activity_id=activity.business_activity_id,
-#                 amended_parent_id=activity.id,
+#                 amended_parent_id=activity.id,  # Set amended parent ID
 #                 is_amendment='yes',
-#                 amendment_action="EDITED",  # Set to EDITED when duplicating
+#                 amendment_action="EDITED",  # Use correct ENUM value
 #                 amendment_date=datetime.now(),
 #                 amendment_reason=activity.amendment_reason,
 #                 service_task_id=service_task_id
@@ -2833,16 +2996,17 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             duplicated_activities.append(new_entry)
 #             print(f"Duplicated entry with new ID: {new_entry.id}")
 
-#         # Case 3: Add new activities from the amendment details
+#         # Step 3b: Compare with JSON data and add new rows for new business activities
 #         for nature in amendment_details.nature_of_business:
 #             if nature.business_activity_id not in existing_activity_ids:
+#                 print(f"Adding new activity for business_activity_id: {nature.business_activity_id}")
 #                 new_entry = CustomerBusinessPlaceActivity(
 #                     customer_id=customer_id,
-#                     business_place_id=new_business_place.id,
+#                     business_place_id=business_place_id,
 #                     business_activity_id=nature.business_activity_id,
 #                     amended_parent_id=None,
 #                     is_amendment='yes',
-#                     amendment_action="ADDED",  # Set to ADDED for new activities
+#                     amendment_action="ADDED",  # Use correct ENUM value
 #                     amendment_date=nature.amendment_date or datetime.now(),
 #                     amendment_reason=nature.amendment_reason or "Not provided",
 #                     service_task_id=service_task_id
@@ -2850,39 +3014,34 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 db.add(new_entry)
 #                 db.commit()
 #                 db.refresh(new_entry)
-#                 new_entry.amended_parent_id = new_entry.id  # Set amended_parent_id to the new entry's ID
+#                 duplicated_activities.append(new_entry)
+#                 print(f"Added new entry for business_activity_id: {nature.business_activity_id}")
+
+#         # Step 3c: Mark unchecked items as DELETED
+#         for activity in existing_activities:
+#             if activity.business_activity_id not in current_activity_ids:
+#                 print(f"Marking activity as DELETED for business_activity_id: {activity.business_activity_id}")
+#                 new_entry = CustomerBusinessPlaceActivity(
+#                     customer_id=activity.customer_id,
+#                     business_place_id=business_place_id,
+#                     business_activity_id=activity.business_activity_id,
+#                     amended_parent_id=activity.id,
+#                     is_amendment='yes',
+#                     amendment_action="DELETED",  # Use correct ENUM value
+#                     amendment_date=datetime.now(),
+#                     service_task_id=service_task_id
+#                 )
+#                 db.add(new_entry)
 #                 db.commit()
 #                 db.refresh(new_entry)
-#                 duplicated_activities.append(new_entry)
-#                 print(f"Added new entry for business_activity_id: {nature.business_activity_id} with amended_parent_id: {new_entry.amended_parent_id}")
-
-#         # Case 4: Mark activities as deleted if not present in the amendment details
-#         for activity in existing_activities:
-#             print("1111##############################")
-#             if activity.business_activity_id not in current_activity_ids:
-#                 if activity.id == activity.amended_parent_id:
-#                     activity.is_deleted = 'yes'
-#                     db.commit()
-#                     print(f"Marked activity with ID: {activity.id} as deleted (is_deleted set to 'yes')")
-
-#                 else:
-#                     print("2222#################################")
-#                     activity.amendment_action = "DELETED"
-#                     db.commit()
-#                     print(f"Marked activity with ID: {activity.id} as deleted (amendment_action set to 'DELETED')")
-
-#             else:
-#                 print(f"Activity with ID: {activity.id} is still present in the amendment details, not marked for deletion.")        
-#         db.commit()
-               
-#         print(f"Marked activity with ID: {activity.id} as deleted")
+#                 print(f"Marked activity entry as DELETED for business_activity_id: {activity.business_activity_id}")
 
 #         return {"success": True, "id": new_business_place.id}
 
 #     except SQLAlchemyError as e:
 #         db.rollback()
-#         print(f"Error occurred during amendment process: {e}")
-#         return {"success": False, "message": str(e)}
+#         print(f"SQLAlchemy error: {str(e)}")
+#         return {"success": False, "message": "Internal Server Error"}
 
 
 # def amend_business_place_data(db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int):
@@ -2893,7 +3052,6 @@ def get_stakeholder_master_for_amndement(db: Session,
 #         original_business_place_id = None
 
 #         # Step 1: Check if service_task_id is present
-#         print(f"Checking for existing task with customer_id: {customer_id} and service_task_id: {service_task_id}")
 #         existing_task = db.query(CustomerBusinessPlace).filter_by(
 #             customer_id=customer_id,
 #             service_task_id=service_task_id
@@ -2901,72 +3059,15 @@ def get_stakeholder_master_for_amndement(db: Session,
 
 #         if existing_task:
 #             print(f"Task already started for customer_id: {customer_id} and service_task_id: {service_task_id}")
-
-#             # Log the ID before any updates
+#             new_business_place = existing_task
 #             original_business_place_id = existing_task.amended_parent_id or existing_task.id
-#             print(f"Original business place ID before update: {original_business_place_id}")
-
-#             if existing_task.effective_from_date:
-#                 # Duplicate the existing task to a new record
-#                 print("Existing task has an effective_from_date. Duplicating to create new record.")
-#                 business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(existing_task)
-#                 new_business_place = CustomerBusinessPlace(
-#                     customer_id=existing_task.customer_id,
-#                     **business_place_data.dict(exclude_unset=True)
-#                 )
-
-#                 # Set effective dates to NULL and update status
-#                 print("Setting effective dates to NULL and updating status.")
-#                 new_business_place.effective_from_date = None
-#                 new_business_place.effective_to_date = None
-#                 new_business_place.amended_parent_id = existing_task.id
-             
-#                 new_business_place.is_amendment = 'yes'
-#                 new_business_place.amendment_date = datetime.now()
-#                 new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-#                 new_business_place.amendment_status = "CREATED"
-#                 new_business_place.amendment_action = "EDITED"
-#                 new_business_place.service_task_id = service_task_id
-
-#                 # Apply amendments
-#                 for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-#                     if hasattr(new_business_place, key):
-#                         setattr(new_business_place, key, value)
-
-#                 # Add to the session and commit
-#                 db.add(new_business_place)
-#                 db.commit()
-#                 db.refresh(new_business_place)
-
-#                 print(f"New business place created with ID: {new_business_place.id}")
-
-#             else:
-#                 # Update the existing task directly
-#                 print("No effective_from_date found. Updating the existing task.")
-#                 new_business_place = existing_task
-#                 for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-#                     if hasattr(new_business_place, key):
-#                         setattr(new_business_place, key, value)
-
-#                 new_business_place.amendment_date = datetime.now()
-#                 new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-#                 new_business_place.amendment_status = "CREATED"
-#                 new_business_place.amendment_action = "EDITED"
-#                 new_business_place.service_task_id = service_task_id
-
-#                 db.commit()
-#                 db.refresh(new_business_place)
-
-#                 print(f"Existing business place updated with ID: {new_business_place.id}")
-
 #         else:
 #             # Fetch active business place with is_principal_place=no
-#             print("No existing task found. Fetching active business place with is_principal_place='no'.")
 #             current_date = datetime.now().date()
 #             original_business_place = db.query(CustomerBusinessPlace).filter(
 #                 CustomerBusinessPlace.customer_id == customer_id,
 #                 CustomerBusinessPlace.effective_from_date <= current_date,
-#                 CustomerBusinessPlace.is_principal_place == 'yes',
+#                 CustomerBusinessPlace.is_principal_place == 'no',
 #                 ((CustomerBusinessPlace.effective_to_date.is_(None)) | 
 #                  (CustomerBusinessPlace.effective_to_date >= current_date))
 #             ).first()
@@ -2976,10 +3077,10 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 return {"success": False, "message": "Active business place not found"}
 
 #             original_business_place_id = original_business_place.id
-#             print(f"Fetched original business place ID: {original_business_place_id}")
+
+#             print(f"Fetched original business place: {original_business_place}")
 
 #             # Step 2: Duplicate and create new business place
-#             print("Duplicating original business place to create a new one.")
 #             business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_business_place)
 #             print(f"Business place data from ORM: {business_place_data}")
 
@@ -2989,7 +3090,6 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             )
 
 #             # Setting effective dates and amendment info
-#             print("Setting effective dates and amendment information.")
 #             new_business_place.effective_from_date = None
 #             new_business_place.effective_to_date = None
 #             new_business_place.amended_parent_id = original_business_place.id
@@ -2997,7 +3097,7 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             new_business_place.amendment_date = datetime.now()
 #             new_business_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
 #             new_business_place.amendment_status = "CREATED"
-#             new_business_place.amendment_action = "EDITED"
+#             new_business_place.amendment_action = action.value
 #             new_business_place.service_task_id = service_task_id
 
 #             # Apply amendments
@@ -3005,38 +3105,45 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 if hasattr(new_business_place, key):
 #                     setattr(new_business_place, key, value)
 
+#             print(f"New business place data: {new_business_place}")
+
 #             db.add(new_business_place)
 #             db.commit()
 #             db.refresh(new_business_place)
 
-#             print(f"New business place created with ID: {new_business_place.id}")
+#             print(f"New business place saved with ID: {new_business_place.id}")
 
 #         # Step 3: Fetch and handle customer_business_place_activity using original_business_place_id
-#         print(f"Using original business place ID for fetching activities: {original_business_place_id}")
+#         business_place_id = new_business_place.id
+#         print(f"Original business place ID for fetching activities: {original_business_place_id}")
 #         current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
 #         print(f"Current activity IDs from amendment details: {current_activity_ids}")
 
-#         # Fetch existing activities for the original business place
-#         existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(
-#             business_place_id=original_business_place_id,
-#             customer_id=customer_id
+#         # Fetch activities with the original business_place_id using a JOIN
+#         existing_activities = db.query(CustomerBusinessPlaceActivity).join(
+#             CustomerBusinessPlace, 
+#             CustomerBusinessPlaceActivity.business_place_id == CustomerBusinessPlace.id
+#         ).filter(
+#             CustomerBusinessPlaceActivity.business_place_id == original_business_place_id,
+#             CustomerBusinessPlace.customer_id == customer_id
 #         ).all()
-#         print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")
+#         print(f"Fetched existing activities: {[activity.id for activity in existing_activities]}")  # Print IDs of existing activities
+#         print(f"Details of fetched existing activities: {existing_activities}")  # Print details of existing activities
 
 #         existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
 #         print(f"Existing activity IDs: {existing_activity_ids}")
 
+#         # Step 3a: Duplicate existing activities
 #         duplicated_activities = []
-        
-#         # Case 1 and Case 2: Duplicate existing activities
 #         for activity in existing_activities:
+#             print(f"Duplicating activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}")
 #             new_entry = CustomerBusinessPlaceActivity(
 #                 customer_id=activity.customer_id,
-#                 business_place_id=new_business_place.id,
+#                 business_place_id=business_place_id,
 #                 business_activity_id=activity.business_activity_id,
-#                 amended_parent_id=activity.id,
+#                 amended_parent_id=activity.id,  # Set amended parent ID
 #                 is_amendment='yes',
-#                 amendment_action="EDITED",  # Set to EDITED when duplicating
+#                 amendment_action="EDITED" if activity.business_activity_id in current_activity_ids else "DELETED",  # Use correct ENUM value based on existence in current activity IDs
 #                 amendment_date=datetime.now(),
 #                 amendment_reason=activity.amendment_reason,
 #                 service_task_id=service_task_id
@@ -3047,16 +3154,17 @@ def get_stakeholder_master_for_amndement(db: Session,
 #             duplicated_activities.append(new_entry)
 #             print(f"Duplicated entry with new ID: {new_entry.id}")
 
-#         # Case 3: Add new activities from the amendment details
+#         # Step 3b: Compare with JSON data and add new rows for new business activities
 #         for nature in amendment_details.nature_of_business:
 #             if nature.business_activity_id not in existing_activity_ids:
+#                 print(f"Adding new activity for business_activity_id: {nature.business_activity_id}")
 #                 new_entry = CustomerBusinessPlaceActivity(
 #                     customer_id=customer_id,
-#                     business_place_id=new_business_place.id,
+#                     business_place_id=business_place_id,
 #                     business_activity_id=nature.business_activity_id,
 #                     amended_parent_id=None,
 #                     is_amendment='yes',
-#                     amendment_action="ADDED",  # Set to ADDED for new activities
+#                     amendment_action="ADDED",  # Use correct ENUM value
 #                     amendment_date=nature.amendment_date or datetime.now(),
 #                     amendment_reason=nature.amendment_reason or "Not provided",
 #                     service_task_id=service_task_id
@@ -3064,283 +3172,21 @@ def get_stakeholder_master_for_amndement(db: Session,
 #                 db.add(new_entry)
 #                 db.commit()
 #                 db.refresh(new_entry)
-#                 new_entry.amended_parent_id = new_entry.id  # Set amended_parent_id to the new entry's ID
+#                 # Set the amended_parent_id to the new entry's ID
+#                 new_entry.amended_parent_id = new_entry.id
 #                 db.commit()
 #                 db.refresh(new_entry)
 #                 duplicated_activities.append(new_entry)
 #                 print(f"Added new entry for business_activity_id: {nature.business_activity_id} with amended_parent_id: {new_entry.amended_parent_id}")
 
-#         # Case 4: Mark activities as deleted if not present in the amendment details
-       
-
-       
-       
-#         # Case 4: Mark activities as deleted if not present in the amendment details
-#         for activity in existing_activities:
-#             print("##############################")
-            
-#             print(f"Checking activity with ID: {activity.id}, amended_parent_id: {activity.amended_parent_id}, business_activity_id: {activity.business_activity_id}")
-
-#             # Case when activity should be deleted
-#             if activity.business_activity_id not in current_activity_ids:
-#                 print(f"Activity with ID {activity.id} (business_activity_id: {activity.business_activity_id}) is not in current_activity_ids and should be marked for deletion.")
-                
-#                 # If it's a duplicated/amended activity, mark it as deleted
-#                 if activity.id != activity.amended_parent_id:
-#                     print("*********************************")
-#                     activity.amendment_action = "DELETED"
-#                     print(f"Marked amended activity with ID: {activity.id} as deleted (amendment_action set to 'DELETED')")
-
-#                 # If it's the original activity (amended parent), mark it as deleted
-#                 elif activity.id == activity.amended_parent_id and activity.is_amendment == 'yes':
-#                     print("222222222222222222222222222222")
-#                     activity.is_deleted = 'yes'
-#                     print(f"Marked original activity with ID: {activity.id} as deleted (is_deleted set to 'yes')")
-#             else:
-#                 # Activity is still present in the amendment details, not marked for deletion
-#                 print(f"Activity with ID: {activity.id} is still present in the amendment details, not marked for deletion.")
-            
-#             db.commit()
-
-#         print("Successfully marked activities for deletion where needed.")
 #         return {"success": True, "id": new_business_place.id}
 
 #     except SQLAlchemyError as e:
 #         db.rollback()
-#         print(f"Error occurred during amendment process: {e}")
-#         return {"success": False, "message": str(e)}
-    
-def amend_business_place_data(
-    db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int
-):
-    try:
-        print(f"Processing amendment for customer_id: {customer_id}, user_id: {user_id}, action: {action}")
-
-        # Step 1: Validate and initialize
-        existing_task = db.query(CustomerBusinessPlace).filter_by(
-            customer_id=customer_id, service_task_id=service_task_id
-        ).first()
-
-        if existing_task:
-            print(f"Found existing task with ID: {existing_task.id}")
-            original_business_place_id = existing_task.amended_parent_id or existing_task.id
-            print(f"original_business_place_id: {original_business_place_id}")
-
-            if existing_task.effective_from_date:
-                print("Existing task has an effective_from_date. Checking for changes...")
-
-                # Check if there are changes between the existing task and amendment details
-                has_changes = any(
-                    getattr(existing_task, key) != value
-                    for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items()
-                )
-
-                if has_changes:
-                    print("Changes detected. Creating a duplicate record...")
-                    new_business_place = create_duplicate_business_place(
-                        db, existing_task, amendment_details, service_task_id
-                    )
-                else:
-                    print("No changes detected. Skipping duplication and keeping the existing record.")
-                    new_business_place = existing_task
-            else:
-                print("Existing task has no effective_from_date. Updating the existing record.")
-                update_business_place(existing_task, amendment_details, service_task_id)
-                new_business_place = existing_task
-        else:
-            print("No task found. Fetching original business place.")
-            original_business_place = get_active_business_place(db, customer_id)
-            if not original_business_place:
-                return {"success": False, "message": "Active business place not found"}
-
-            # Create a duplicate of the original business place if no existing task
-            new_business_place = create_duplicate_business_place(db, original_business_place, amendment_details, service_task_id)
-            original_business_place_id = original_business_place.id
-
-        # Step 2: Handle business activities
-        handle_business_activities(
-            db, customer_id, original_business_place_id, new_business_place.id, amendment_details, service_task_id
-        )
-
-        print("Amendment process completed successfully.")
-        return {"success": True, "id": new_business_place.id}
-
-    except SQLAlchemyError as e:
-        db.rollback()
-        print(f"Error during amendment: {e}")
-        return {"success": False, "message": str(e)}
-
-# Helper functions
-def get_active_business_place(db: Session, customer_id: int) -> CustomerBusinessPlace:
-    current_date = datetime.now().date()
-    return db.query(CustomerBusinessPlace).filter(
-        CustomerBusinessPlace.customer_id == customer_id,
-        CustomerBusinessPlace.effective_from_date <= current_date,
-        CustomerBusinessPlace.is_principal_place == 'yes',
-        ((CustomerBusinessPlace.effective_to_date.is_(None)) |
-         (CustomerBusinessPlace.effective_to_date >= current_date))
-    ).first()
+#         print(f"SQLAlchemy error: {str(e)}")
+#         return {"success": False, "message": "Internal Server Error"}
 
 
-
-
-def update_business_place(existing_place: CustomerBusinessPlace, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, service_task_id: int):
-    for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-        setattr(existing_place, key, value)
-    existing_place.amendment_date = datetime.now()
-    existing_place.amendment_reason = amendment_details.business_place[0].amendment_reason or "Not provided"
-    existing_place.amendment_status = "CREATED"
-    existing_place.amendment_action = "EDITED"
-    existing_place.service_task_id = service_task_id
-
-
-def create_duplicate_business_place(db: Session, original_place: CustomerBusinessPlace, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, service_task_id: int) -> CustomerBusinessPlace:
-    # Convert the original place to a schema
-    business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_place)
-
-    # Prepare the data for the new business place
-    new_place_data = business_place_data.dict(exclude_unset=True)
-
-    # Remove 'amendment_date' and 'amendment_reason' from new_place_data to avoid conflicts
-    new_place_data.pop('amendment_date', None)
-    new_place_data.pop('amendment_reason', None)
-
-    # Create a new business place
-    new_place = CustomerBusinessPlace(
-        customer_id=original_place.customer_id,
-        **new_place_data,  # Use the remaining attributes from the original place
-        effective_from_date=None,
-        effective_to_date=None,
-        amended_parent_id=original_place.id,
-        is_amendment='yes',
-        amendment_date=datetime.now(),  # Set the amendment date explicitly
-        amendment_reason=amendment_details.business_place[0].amendment_reason or "Not provided",
-        amendment_status="CREATED",
-        amendment_action="EDITED",
-        service_task_id=service_task_id
-    )
-
-    # Set additional fields from amendment details
-    for key, value in amendment_details.business_place[0].dict(exclude_unset=True).items():
-        setattr(new_place, key, value)
-
-    # Commit the new business place to the database
-    db.add(new_place)
-    db.commit()
-    db.refresh(new_place)
-
-    return new_place
-
-
-def mark_activities_as_deleted(db: Session, existing_activities: List[CustomerBusinessPlaceActivity], current_activity_ids: Set[int]) -> None:
-    for activity in existing_activities:
-        if activity.business_activity_id not in current_activity_ids:
-            if activity.id != activity.amended_parent_id:
-                activity.amendment_action = "DELETED"
-            elif activity.id == activity.amended_parent_id and activity.is_amendment == 'yes':
-                activity.is_deleted = 'yes'
-            db.commit()
-
-
-
-def handle_business_activities(db: Session, customer_id: int, original_place_id: int, new_place_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, service_task_id: int):
-    current_activity_ids = {nature.business_activity_id for nature in amendment_details.nature_of_business}
-
-    # Fetch existing activities
-    existing_activities = get_existing_activities(db, customer_id, original_place_id)
-    existing_activity_ids = {activity.business_activity_id for activity in existing_activities}
-
-    # Duplicate existing activities
-    duplicated_activities = duplicate_existing_activities(db, existing_activities, new_place_id, service_task_id)
-
-    # Add new activities
-    add_new_activities(db, customer_id, new_place_id, amendment_details, existing_activity_ids, service_task_id)
-
-    # Mark duplicated activities as deleted
-    mark_activities_as_deleted(db, duplicated_activities, current_activity_ids)
-
-def get_existing_activities(db: Session, customer_id: int, original_place_id: int) -> List[CustomerBusinessPlaceActivity]:
-    print(f"Fetching existing activities for customer_id: {customer_id}, original_place_id: {original_place_id}")
-    existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(
-        business_place_id=original_place_id, customer_id=customer_id
-    ).all()
-    print(f"Fetched existing activities: {existing_activities}")
-    return existing_activities
-
-def duplicate_existing_activities(db: Session, existing_activities: List[CustomerBusinessPlaceActivity], new_place_id: int, service_task_id: int) -> List[CustomerBusinessPlaceActivity]:
-    duplicated_activities = []
-    for activity in existing_activities:
-        print(f"Duplicating activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}")
-        
-        new_entry = CustomerBusinessPlaceActivity(
-            customer_id=activity.customer_id,
-            business_place_id=new_place_id,
-            business_activity_id=activity.business_activity_id,
-            amended_parent_id=activity.id,
-            is_amendment='yes',
-            amendment_action="EDITED",
-            amendment_date=datetime.now(),
-            amendment_reason=activity.amendment_reason,
-            service_task_id=service_task_id
-        )
-        
-        db.add(new_entry)
-        db.commit()
-        db.refresh(new_entry)
-        
-        print(f"Created new duplicated entry with ID: {new_entry.id}, business_activity_id: {new_entry.business_activity_id}")
-        duplicated_activities.append(new_entry)
-    
-    return duplicated_activities
-
-def add_new_activities(db: Session, customer_id: int, new_place_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, existing_activity_ids: Set[int], service_task_id: int) -> None:
-    for nature in amendment_details.nature_of_business:
-        if nature.business_activity_id not in existing_activity_ids:
-            print(f"Adding new activity with business_activity_id: {nature.business_activity_id}")
-            
-            new_entry = CustomerBusinessPlaceActivity(
-                customer_id=customer_id,
-                business_place_id=new_place_id,
-                business_activity_id=nature.business_activity_id,
-                is_amendment='yes',
-                amendment_action="ADDED",
-                amendment_date=datetime.now(),
-                amendment_reason=nature.amendment_reason or "Not provided",
-                service_task_id=service_task_id
-            )
-            
-            db.add(new_entry)
-            db.commit()
-            db.refresh(new_entry)
-
-            # Set amended_parent_id to the new entry's ID
-            new_entry.amended_parent_id = new_entry.id
-            db.commit()
-            db.refresh(new_entry)
-            
-            print(f"Added new entry with ID: {new_entry.id}, business_activity_id: {new_entry.business_activity_id}, amended_parent_id: {new_entry.amended_parent_id}")
-
-def mark_activities_as_deleted(db: Session, duplicated_activities: List[CustomerBusinessPlaceActivity], current_activity_ids: Set[int]) -> None:
-    for activity in duplicated_activities:
-        print("#####################")
-        print(f"Checking duplicated activity with ID: {activity.id}, business_activity_id: {activity.business_activity_id}, amended_parent_id: {activity.amended_parent_id}")
-
-        if activity.business_activity_id not in current_activity_ids:
-            print(f"Activity with business_activity_id: {activity.business_activity_id} not in current_activity_ids. Marking for deletion.")
-
-            if activity.id == activity.amended_parent_id:
-                # Mark the original activity as deleted
-                activity.is_deleted = 'yes'
-                print(f"Marked original activity with ID: {activity.id} as deleted (is_deleted set to 'yes')")
-            elif activity.id != activity.amended_parent_id:
-                print("$$$$$$$$$$$$$$$$$$$$$$$$")
-                # Mark the duplicated/amended activity with amendment_action = DELETED
-                activity.amendment_action = "DELETED"
-                print(f"Marked duplicated activity with ID: {activity.id} as deleted (amendment_action set to 'DELETED')")
-            
-            db.commit()
-        else:
-            print(f"Activity with business_activity_id: {activity.business_activity_id} is present in current_activity_ids. Not marking for deletion.")
 
 #----------------------------------------------------------------------------------------------
 
@@ -3641,7 +3487,7 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 
 #             for business_place_data in parsed_data["business_place"]:
 #                 print(f"Processing business place data for editing: {business_place_data}")
-
+                
 #                 # Extract and remove nature_of_business to handle it separately
 #                 nature_of_business_data = business_place_data.pop("nature_of_business", [])
 
@@ -3683,8 +3529,6 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 #                         business_place_id=existing_place.id
 #                     ).all()
 #                     print(f"Found existing activities: {existing_activities}")
-                    
-#                     duplicated_activities = []
 #                     for activity in existing_activities:
 #                         # Duplicate the existing activity
 #                         activity_dict = activity.__dict__.copy()
@@ -3716,24 +3560,20 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 #                         db.commit()
 #                         db.refresh(duplicated_activity)
 
-#                         duplicated_activities.append(duplicated_activity)
 #                         print(f"Duplicated activity saved: {duplicated_activity.id}")
 
 #                     # Compare duplicated activities with the amendment JSON
-#                     amendment_activity_ids = {activity_data["business_activity_id"] for activity_data in nature_of_business_data}
-#                     existing_activity_ids = {activity.business_activity_id for activity in duplicated_activities}
-
-#                     # Handle activities in the JSON
 #                     for activity_data in nature_of_business_data:
 #                         print(f"Processing activity data: {activity_data} for amended_place_id: {amended_place.id}")
 
-#                         if activity_data["business_activity_id"] in existing_activity_ids:
+#                         # Check if the activity already exists
+#                         existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
+#                             business_place_id=amended_place.id,
+#                             business_activity_id=activity_data["business_activity_id"]
+#                         ).first()
+
+#                         if existing_activity:
 #                             # If activity exists and remains unchanged, no action needed
-#                             existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
-#                                 business_place_id=amended_place.id,
-#                                 business_activity_id=activity_data["business_activity_id"]
-#                             ).first()
-                            
 #                             if existing_activity.amendment_reason == activity_data["amendment_reason"]:
 #                                 print(f"Activity {existing_activity.business_activity_id} remains unchanged.")
 #                                 continue
@@ -3768,13 +3608,13 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 #                             print(f"New business activity saved: {new_activity.id}")
 
 #                     # Marking activities as DELETED if not in JSON
-#                     for duplicated_activity in duplicated_activities:
-#                         if duplicated_activity.business_activity_id not in amendment_activity_ids:
-#                             print(f"Marking activity as DELETED: {duplicated_activity.id}")
-#                             duplicated_activity.is_deleted = "yes"
-#                             duplicated_activity.amendment_action = "DELETED"
+#                     for existing_activity in existing_activities:
+#                         if not any(activity["business_activity_id"] == existing_activity.business_activity_id for activity in nature_of_business_data):
+#                             print(f"Marking activity as DELETED: {existing_activity.id}")
+#                             existing_activity.is_deleted = "yes"
+#                             existing_activity.amendment_action = "DELETED"
 #                             db.commit()
-#                             print(f"Business activity marked as DELETED: {duplicated_activity.id}")
+#                             print(f"Business activity marked as DELETED: {existing_activity.id}")
 
 #         return {"success": True, "message": "Business places and activities saved successfully"}
 
@@ -3791,474 +3631,459 @@ def fetch_combined_data(db: Session, customer_id: Optional[int] = None, service_
 #         db.rollback()
 #         print(f"Error: {str(e)}")
 #         return {"success": False, "message": "An unexpected error occurred"}
-
-#---------------------------------------------------------------------------------------------------------------
-def add_additional_business_places_and_activities(
-    db: Session, customer_id: int, service_task_id: int, parsed_data: Dict, user_id: int
-) -> Dict[str, Any]:
-    business_place_ids = []
-
-    print("Adding additional business places and activities")
-
-    for business_place_data in parsed_data["business_place"]:
-        print(f"Processing business place data: {business_place_data}")
-
-        nature_of_business_data = business_place_data.pop("nature_of_business", [])
-
-        existing_business_place = db.query(CustomerBusinessPlace).filter_by(
-            customer_id=customer_id,
-            service_task_id=service_task_id,
-            pin_code=business_place_data["pin_code"],
-            country_id=business_place_data["country_id"],
-            state_id=business_place_data["state_id"],
-            district_id=business_place_data["district_id"],
-            city_id=business_place_data["city_id"],
-            village_id=business_place_data["village_id"],
-            taluk_id=business_place_data["taluk_id"],
-            post_office_id=business_place_data["post_office_id"],
-            lsg_type_id=business_place_data["lsg_type_id"],
-            lsg_id=business_place_data["lsg_id"],
-            locality=business_place_data["locality"],
-            road_street_name=business_place_data["road_street_name"],
-            premises_building_name=business_place_data["premises_building_name"],
-            building_flat_number=business_place_data["building_flat_number"],
-            floor_number=business_place_data["floor_number"],
-            landmark=business_place_data["landmark"],
-            latitude=business_place_data["latitude"],
-            longitude=business_place_data["longitude"],
-            office_email_address=business_place_data["office_email_address"],
-            office_mobile_number=business_place_data["office_mobile_number"],
-            office_phone_std_code=business_place_data["office_phone_std_code"],
-            office_phone_number=business_place_data["office_phone_number"],
-            office_fax_std_code=business_place_data["office_fax_std_code"],
-            office_fax_number=business_place_data["office_fax_number"],
-        ).first()
-
-        if existing_business_place:
-            print(f"Using existing business place with ID: {existing_business_place.id}")
-            new_business_place = existing_business_place
-        else:
-            print(f"Creating new business place for service_task_id: {service_task_id}")
-            new_business_place = CustomerBusinessPlace(
-                **business_place_data,
-                customer_id=customer_id,
-                service_task_id=service_task_id,
-                is_principal_place="yes",
-                is_amendment="yes",
-                amendment_action="ADDED",
-                amendment_status="CREATED",
-                created_by=user_id,
-                created_on=datetime.now(),
-            )
-            db.add(new_business_place)
-            db.commit()
-            db.refresh(new_business_place)
-
-            new_business_place.amended_parent_id = new_business_place.id
-            db.commit()
-            db.refresh(new_business_place)
-
-        business_place_ids.append(new_business_place.id)
-        print(f"Business place processed with ID: {new_business_place.id}")
-
-        for activity_data in nature_of_business_data:
-            print(f"Processing activity data: {activity_data} for business_place_id: {new_business_place.id}")
-
-            existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
-                customer_id=customer_id,
-                service_task_id=service_task_id,
-                business_activity_id=activity_data["business_activity_id"],
-            ).first()
-
-            if existing_activity:
-                print(f"Using existing activity with ID: {existing_activity.id}")
-                new_activity = existing_activity
-            else:
-                print(f"Creating new activity for service_task_id: {service_task_id}")
-                new_activity = CustomerBusinessPlaceActivity(
-                    **activity_data,
-                    customer_id=customer_id,
-                    business_place_id=new_business_place.id,
-                    service_task_id=service_task_id,
-                    is_amendment="yes",
-                    amendment_action="ADDED",
-                    amendment_status="CREATED",
-                    created_by=user_id,
-                    created_on=datetime.now(),
-                )
-                db.add(new_activity)
-                db.commit()
-                db.refresh(new_activity)
-
-                new_activity.amended_parent_id = new_activity.id
-                db.commit()
-                db.refresh(new_activity)
-
-            print(f"Business activity processed with ID: {new_activity.id}")
-
-    return {"success": True, "ids": business_place_ids}
-
-########################################################################################################
-                            # update_additional_business_place
-#########################################################################################################
-def fetch_existing_place(db: Session, row_id: int) -> CustomerBusinessPlace:
-    existing_place = db.query(CustomerBusinessPlace).filter_by(id=row_id).first()
-    if not existing_place:
-        raise ValueError(f"Business place with ID {row_id} not found")
-    return existing_place
-
-
-def has_changes(existing_place: CustomerBusinessPlace, new_data: dict) -> bool:
-    for key, value in new_data.items():
-        if getattr(existing_place, key) != value:
-            return True
-    return False
-
-def duplicate_if_needed(db: Session, existing_place: CustomerBusinessPlace, business_place_data: dict, user_id: int) -> CustomerBusinessPlace:
-    # Logging incoming data for debugging
-    print(f"Incoming business place data: {business_place_data}")
-    
-    valid_keys = {c.name for c in CustomerBusinessPlace.__table__.columns}
-    filtered_business_place_data = {k: v for k, v in business_place_data.items() if k in valid_keys}
-    
-    # Logging filtered data for debugging
-    print(f"Filtered business place data: {filtered_business_place_data}")
-
-    # Ensure all required fields are present
-    required_fields = [
-        'pin_code', 'country_id', 'state_id', 'district_id', 'taluk_id', 'city_id',
-        'post_office_id', 'lsg_type_id', 'lsg_id', 'village_id', 'locality', 'road_street_name',
-        'premises_building_name', 'building_flat_number', 'floor_number', 'landmark',
-        'latitude', 'longitude', 'office_email_address', 'office_mobile_number',
-        'office_phone_std_code', 'office_phone_number', 'office_fax_std_code', 'office_fax_number'
-    ]
-    
-    for field in required_fields:
-        if field not in filtered_business_place_data:
-            raise ValueError(f"Missing required field: {field}")
-
-    # Check if there are changes
-    if not has_changes(existing_place, filtered_business_place_data):
-        print(f"No changes detected for business place ID: {existing_place.id}. No update or duplication needed.")
-        return existing_place
-
-    # Duplicate if there's an effective_from_date
-    if existing_place.effective_from_date:
-        print(f"Duplicating existing place with ID: {existing_place.id}")
-        amended_place = CustomerBusinessPlace(
-            amended_parent_id=existing_place.id,
-            customer_id=existing_place.customer_id,
-            service_task_id=existing_place.service_task_id,
-            pin_code=filtered_business_place_data.get('pin_code'),
-            country_id=filtered_business_place_data.get('country_id'),
-            state_id=filtered_business_place_data.get('state_id'),
-            district_id=filtered_business_place_data.get('district_id'),
-            taluk_id=filtered_business_place_data.get('taluk_id'),
-            city_id=filtered_business_place_data.get('city_id'),
-            post_office_id=filtered_business_place_data.get('post_office_id'),
-            lsg_type_id=filtered_business_place_data.get('lsg_type_id'),
-            lsg_id=filtered_business_place_data.get('lsg_id'),
-            village_id=filtered_business_place_data.get('village_id'),
-            locality=filtered_business_place_data.get('locality'),
-            road_street_name=filtered_business_place_data.get('road_street_name'),
-            premises_building_name=filtered_business_place_data.get('premises_building_name'),
-            building_flat_number=filtered_business_place_data.get('building_flat_number'),
-            floor_number=filtered_business_place_data.get('floor_number'),
-            landmark=filtered_business_place_data.get('landmark'),
-            latitude=filtered_business_place_data.get('latitude'),
-            longitude=filtered_business_place_data.get('longitude'),
-            office_email_address=filtered_business_place_data.get('office_email_address'),
-            office_mobile_number=filtered_business_place_data.get('office_mobile_number'),
-            office_phone_std_code=filtered_business_place_data.get('office_phone_std_code'),
-            office_phone_number=filtered_business_place_data.get('office_phone_number'),
-            office_fax_std_code=filtered_business_place_data.get('office_fax_std_code'),
-            office_fax_number=filtered_business_place_data.get('office_fax_number'),
-            is_principal_place="yes",
-            business_place_type=filtered_business_place_data.get('business_place_type', "HEAD OFFICE"),  # Defaulting to HEAD OFFICE
-            nature_of_possession_id=filtered_business_place_data.get('nature_of_possession_id'),
-            is_amendment="yes",
-            amendment_action="EDITED",
-            amendment_status="CREATED",
-            created_by=user_id,
-            created_on=datetime.now()
-        )
-        db.add(amended_place)
-        db.commit()
-        db.refresh(amended_place)
-        return amended_place
-    else:
-        return update_existing_place(db, existing_place, filtered_business_place_data, user_id)
-
-
-def update_existing_place(db: Session, existing_place: CustomerBusinessPlace, business_place_data: dict, user_id: int) -> CustomerBusinessPlace:
-    valid_keys = {c.name for c in CustomerBusinessPlace.__table__.columns}
-    filtered_business_place_data = {k: v for k, v in business_place_data.items() if k in valid_keys}
-
-    # Logging filtered data for debugging
-    print(f"Filtered business place data: {filtered_business_place_data}")
-
-    # Ensure all required fields are present
-    required_fields = [
-        'pin_code', 'country_id', 'state_id', 'district_id', 'taluk_id', 'city_id',
-        'post_office_id', 'lsg_type_id', 'lsg_id', 'village_id', 'locality', 'road_street_name',
-        'premises_building_name', 'building_flat_number', 'floor_number', 'landmark',
-        'latitude', 'longitude', 'office_email_address', 'office_mobile_number',
-        'office_phone_std_code', 'office_phone_number', 'office_fax_std_code', 'office_fax_number'
-    ]
-    
-    for field in required_fields:
-        if field not in filtered_business_place_data:
-            raise ValueError(f"Missing required field: {field}")
-
-    print(f"Updating existing place with ID: {existing_place.id}")
-    for key, value in filtered_business_place_data.items():
-        setattr(existing_place, key, value)
-    
-    # Set amendment details
-    existing_place.amendment_action = "EDITED"
-    existing_place.amendment_status = "CREATED"
-    existing_place.modified_by = user_id
-    existing_place.modified_on = datetime.now()
-    
-    # Commit and refresh
-    db.commit()
-    db.refresh(existing_place)
-    return existing_place
+#         return {"success": True, "message": "Business places and activities saved successfully"}
 
 
 
-def get_existing_activitiess(db: Session, customer_id: int, original_place_id: int) -> List[CustomerBusinessPlaceActivity]:
-    print(f"Fetching existing activities for customer_id: {customer_id}, original_place_id: {original_place_id}")
-    existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(
-        business_place_id=original_place_id, customer_id=customer_id
-    ).all()
-    print(f"Fetched existing activities: {existing_activities}")
-    return existing_activities
 
-
-def fetch_and_duplicate_activities(db: Session, customer_id: int, original_place_id: int, amended_place_id: int, user_id: int) -> List[CustomerBusinessPlaceActivity]:
-    existing_activities = get_existing_activities(db, customer_id, original_place_id)
-    print(f"Found existing activities: {existing_activities}")
-
-    duplicated_activities = []
-    for activity in existing_activities:
-        print(f"Duplicating activity with ID: {activity.id}")
-        activity_dict = activity.__dict__.copy()
-        activity_dict.pop('_sa_instance_state', None)
-        activity_dict.pop('id', None)
-
-        activity_dict['business_place_id'] = amended_place_id
-        activity_dict['amended_parent_id'] = activity.id
-        activity_dict['customer_id'] = customer_id
-        activity_dict['is_amendment'] = 'yes'
-        activity_dict['amendment_action'] = 'EDITED'
-        activity_dict['created_by'] = user_id
-        activity_dict['created_on'] = datetime.now()
-
-        duplicated_activity = CustomerBusinessPlaceActivity(**activity_dict)
-        db.add(duplicated_activity)
-        db.commit()
-        db.refresh(duplicated_activity)
-
-        duplicated_activities.append(duplicated_activity)
-        print(f"Duplicated activity saved: {duplicated_activity.id}")
-
-    print(f"Total duplicated activities: {len(duplicated_activities)}")
-    return duplicated_activities
-
-
-def process_activities(db: Session, duplicated_activities: List[CustomerBusinessPlaceActivity], nature_of_business_data: list, user_id: int, amended_place_id: int, customer_id: int, service_task_id: int):
-    # Logging inputs
-    print(f"Duplicated Activities: {duplicated_activities}")
-    print(f"Nature of Business Data: {nature_of_business_data}")
-    print(f"User ID: {user_id}")
-    print(f"Amended Place ID: {amended_place_id}")
-    print(f"Customer ID: {customer_id}")
-    print(f"Service Task ID: {service_task_id}")
-
-    # Extract current activity IDs and print them
-    current_activity_ids = {activity_data["business_activity_id"] for activity_data in nature_of_business_data}
-    print(f"Current Activity IDs: {current_activity_ids}")
-
-    for duplicated_activity in duplicated_activities:
-        if duplicated_activity.business_activity_id not in current_activity_ids:
-            if duplicated_activity.id == duplicated_activity.amended_parent_id:
-                duplicated_activity.is_deleted = "yes"
-                duplicated_activity.modified_by = user_id
-                duplicated_activity.modified_on = datetime.now()
-                db.commit()
-                print(f"Marked activity as DELETED with is_deleted=yes: {duplicated_activity.id}")
-            else:
-                duplicated_activity.amendment_action = "DELETED"
-                duplicated_activity.modified_by = user_id
-                duplicated_activity.modified_on = datetime.now()
-                db.commit()
-                print(f"Marked activity as DELETED with amendment_action=DELETED: {duplicated_activity.id}")
-        else:
-            nature_of_business_data_item = next(item for item in nature_of_business_data if item["business_activity_id"] == duplicated_activity.business_activity_id)
-            if duplicated_activity.amendment_reason == nature_of_business_data_item["amendment_reason"]:
-                print(f"Activity {duplicated_activity.business_activity_id} remains unchanged.")
-            else:
-                duplicated_activity.amendment_action = 'EDITED'
-                duplicated_activity.amendment_reason = nature_of_business_data_item["amendment_reason"]
-                duplicated_activity.modified_by = user_id
-                duplicated_activity.modified_on = datetime.now()
-                db.commit()
-                print(f"Updated activity {duplicated_activity.business_activity_id} to EDITED.")
-
-    for activity_data in nature_of_business_data:
-        if not activity_data.get("business_activity_id"):
-            raise ValueError("Missing required field: business_activity_id")
-
-        if activity_data.get("id", 0) == 0:
-            add_new_activity(db, activity_data, customer_id, amended_place_id, service_task_id, user_id)
-        else:
-            print(f"Updating existing activity: {activity_data['business_activity_id']}")
-            existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(id=activity_data["id"]).first()
-            if existing_activity:
-                for key, value in activity_data.items():
-                    if key != 'id':
-                        setattr(existing_activity, key, value)
-                existing_activity.customer_id = customer_id
-                existing_activity.is_amendment = "no"  # Ensure original activity is not marked as amendment
-                existing_activity.amendment_action = "EDITED"
-                existing_activity.modified_by = user_id
-                existing_activity.modified_on = datetime.now()
-                db.commit()
-                print(f"Updated existing activity: {existing_activity.id}")
-
-
-def add_new_activity(db: Session, activity_data: dict, customer_id: int, amended_place_id: int, service_task_id: int, user_id: int):
-    print(f"Adding new activity: {activity_data['business_activity_id']}")
-    new_activity = CustomerBusinessPlaceActivity(
-        **activity_data,
-        customer_id=customer_id,
-        business_place_id=amended_place_id,
-        service_task_id=service_task_id,
-        is_amendment="yes",
-        amendment_action="ADDED",
-        amendment_status="CREATED",
-        created_by=user_id,
-        created_on=datetime.now()
-    )
+def save_additional_business_places_and_activities(db: Session, customer_id: int, service_task_id: int, amendment_details: dict, action: AmendmentAction, user_id: int):
     try:
-        print("Activity data to be inserted:", new_activity)
-        db.add(new_activity)
-        db.commit()
-        print("After commit")
+        parsed_data = amendment_details
+        business_place_ids = []
 
-        # Directly query the database to verify the new activity exists
-        inserted_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
-            customer_id=customer_id,
-            business_place_id=amended_place_id,
-            service_task_id=service_task_id,
-            business_activity_id=activity_data['business_activity_id'],
-            created_by=user_id
-        ).order_by(CustomerBusinessPlaceActivity.id.desc()).first()
+        if action == AmendmentAction.ADDED:
+            # Case: Adding new business places and activities
+            print("Adding new business places and activities")
+            for business_place_data in parsed_data["business_place"]:
+                print(f"Processing business place data: {business_place_data}")
 
-        if not inserted_activity:
-            raise Exception("Inserted activity not found in the database")
-        
-        new_id = inserted_activity.id
-        print(f"New ID is: {new_id}")
+                # Extract and remove nature_of_business to handle it separately
+                nature_of_business_data = business_place_data.pop("nature_of_business", [])
 
-        # Use a fresh transaction to update amended_parent_id
-        db.query(CustomerBusinessPlaceActivity).filter(CustomerBusinessPlaceActivity.id == new_id).update({"amended_parent_id": new_id})
-        db.commit()
-        print("After updating amended_parent_id")
+                # Check if service_task_id already exists for this customer in CustomerBusinessPlace
+                existing_business_place = db.query(CustomerBusinessPlace).filter_by(
+                    customer_id=customer_id,
+                    service_task_id=service_task_id,
+                    pin_code=business_place_data["pin_code"],
+                    country_id=business_place_data["country_id"],
+                    state_id=business_place_data["state_id"],
+                    district_id=business_place_data["district_id"],
+                    taluk_id=business_place_data["taluk_id"],
+                    city_id=business_place_data["city_id"]
+                ).first()
 
-        # Fetch and print the updated activity for verification
-        updated_activity = db.query(CustomerBusinessPlaceActivity).filter(CustomerBusinessPlaceActivity.id == new_id).first()
-        if updated_activity is None:
-            raise Exception("Failed to update amended_parent_id")
-        print(f"Updated business activity: {updated_activity.id}, amended_parent_id set to {updated_activity.amended_parent_id}")
+                if existing_business_place:
+                    print(f"Using existing business place with ID: {existing_business_place.id}")
+                    new_business_place = existing_business_place
+                else:
+                    print(f"Creating new business place for service_task_id: {service_task_id}")
+                    new_business_place = CustomerBusinessPlace(
+                        **business_place_data,
+                        customer_id=customer_id,
+                        service_task_id=service_task_id,
+                        is_principal_place="no",
+                        is_amendment="yes",
+                        amendment_action="ADDED",
+                        amendment_status="CREATED",
+                        created_by=user_id,
+                        created_on=datetime.now()
+                    )
+                    db.add(new_business_place)
+                    db.commit()
+                    db.refresh(new_business_place)
+
+                    # Set amended_parent_id to the same value as id
+                    new_business_place.amended_parent_id = new_business_place.id
+                    db.commit()
+                    db.refresh(new_business_place)
+
+                business_place_ids.append(new_business_place.id)
+                print(f"Business place processed with ID: {new_business_place.id}")
+
+                # Saving nature of business for the current business place
+                for activity_data in nature_of_business_data:
+                    print(f"Processing activity data: {activity_data} for business_place_id: {new_business_place.id}")
+
+                    # Check if service_task_id already exists for this customer and business activity
+                    existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
+                        customer_id=customer_id,
+                        service_task_id=service_task_id,
+                        business_activity_id=activity_data["business_activity_id"]
+                    ).first()
+
+                    if existing_activity:
+                        print(f"Using existing activity with ID: {existing_activity.id}")
+                        new_activity = existing_activity
+                    else:
+                        print(f"Creating new activity for service_task_id: {service_task_id}")
+                        new_activity = CustomerBusinessPlaceActivity(
+                            **activity_data,
+                            customer_id=customer_id,
+                            business_place_id=new_business_place.id,
+                            service_task_id=service_task_id,  # Ensure service_task_id is set
+                            is_amendment="yes",
+                            amendment_action="ADDED",
+                            amendment_status="CREATED",
+                            created_by=user_id,
+                            created_on=datetime.now()
+                        )
+                        db.add(new_activity)
+                        db.commit()
+                        db.refresh(new_activity)
+
+                        # Set amended_parent_id to the same value as id for the new activity
+                        new_activity.amended_parent_id = new_activity.id
+                        db.commit()
+                        db.refresh(new_activity)
+
+                    print(f"Business activity processed with ID: {new_activity.id}")
+
+
+        elif action == AmendmentAction.EDITED:
+            # Case: Editing existing business places and activities
+            print("Editing existing business places and activities")
+
+            for business_place_data in parsed_data["business_place"]:
+                print(f"Processing business place data for editing: {business_place_data}")
+
+                # Extract and remove nature_of_business to handle it separately
+                nature_of_business_data = business_place_data.pop("nature_of_business", [])
+
+                existing_place = db.query(CustomerBusinessPlace).filter_by(
+                    customer_id=customer_id,
+                    service_task_id=service_task_id,
+                    pin_code=business_place_data["pin_code"],
+                    country_id=business_place_data["country_id"],
+                    state_id=business_place_data["state_id"],
+                    district_id=business_place_data["district_id"],
+                    taluk_id=business_place_data["taluk_id"],
+                    city_id=business_place_data["city_id"]
+                ).first()
+                print("Existing Place:", existing_place)
+
+                if existing_place:
+                    print(f"Found existing place: {existing_place.id}")
+                    # Duplicate the existing place with is_amendment = 'yes'
+                    amended_place = CustomerBusinessPlace(
+                        **business_place_data,
+                        customer_id=customer_id,
+                        service_task_id=service_task_id,
+                        amended_parent_id=existing_place.id,  # Set amended_parent_id to the ID of the place being amended
+                        is_principal_place="no",
+                        is_amendment="yes",
+                        amendment_action="EDITED",
+                        created_by=user_id,
+                        created_on=datetime.now()
+                    )
+                    db.add(amended_place)
+                    db.commit()
+                    db.refresh(amended_place)
+
+                    business_place_ids.append(amended_place.id)
+                    print(f"Amended business place saved: {amended_place.id}")
+
+                    # Fetch and duplicate existing activities for the amended place
+                    existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(
+                        business_place_id=existing_place.id
+                    ).all()
+                    print(f"Found existing activities: {existing_activities}")
+                    
+                    duplicated_activities = []
+                    for activity in existing_activities:
+                        # Duplicate the existing activity
+                        activity_dict = activity.__dict__.copy()
+                        activity_dict.pop('_sa_instance_state', None)  # Remove SQLAlchemy state
+                        activity_dict.pop('id', None)  # Remove ID to avoid conflicts
+
+                        # Ensure all required fields are set
+                        activity_dict['business_place_id'] = amended_place.id  # Update to new business place ID
+                        activity_dict['is_amendment'] = 'yes'
+                        activity_dict['amendment_action'] = 'EDITED'
+                        activity_dict['created_by'] = user_id  # Ensure created_by is set correctly
+                        activity_dict['created_on'] = datetime.now()  # Ensure created_on is set correctly
+                        activity_dict['customer_id'] = customer_id  # Ensure customer_id is set correctly
+                        activity_dict['service_task_id'] = service_task_id  # Ensure service_task_id is set correctly
+                        activity_dict['amended_parent_id'] = activity.id  # Link back to the original activity
+
+                        # Set missing fields to default values if necessary
+                        activity_dict.setdefault('business_activity_id', activity.business_activity_id)
+                        activity_dict.setdefault('amendment_date', activity.amendment_date)
+                        activity_dict.setdefault('amendment_reason', activity.amendment_reason)
+                        activity_dict.setdefault('amendment_status', activity.amendment_status)
+                        activity_dict.setdefault('is_deleted', 'no')
+
+                        # Create a new duplicated activity
+                        duplicated_activity = CustomerBusinessPlaceActivity(
+                            **activity_dict
+                        )
+                        db.add(duplicated_activity)
+                        db.commit()
+                        db.refresh(duplicated_activity)
+
+                        duplicated_activities.append(duplicated_activity)
+                        print(f"Duplicated activity saved: {duplicated_activity.id}")
+
+                    # Compare duplicated activities with the amendment JSON
+                    amendment_activity_ids = {activity_data["business_activity_id"] for activity_data in nature_of_business_data}
+                    existing_activity_ids = {activity.business_activity_id for activity in duplicated_activities}
+
+                    # Handle activities in the JSON
+                    for activity_data in nature_of_business_data:
+                        print(f"Processing activity data: {activity_data} for amended_place_id: {amended_place.id}")
+
+                        if activity_data["business_activity_id"] in existing_activity_ids:
+                            # If activity exists and remains unchanged, no action needed
+                            existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(
+                                business_place_id=amended_place.id,
+                                business_activity_id=activity_data["business_activity_id"]
+                            ).first()
+                            
+                            if existing_activity.amendment_reason == activity_data["amendment_reason"]:
+                                print(f"Activity {existing_activity.business_activity_id} remains unchanged.")
+                                continue
+                            else:
+                                # Mark as EDITED if activity details have changed
+                                existing_activity.amendment_action = 'EDITED'
+                                existing_activity.amendment_reason = activity_data["amendment_reason"]
+                                db.commit()
+                                print(f"Updated activity {existing_activity.business_activity_id} to EDITED.")
+                        else:
+                            # Add new activities
+                            print(f"Adding new activity: {activity_data['business_activity_id']}")
+                            new_activity = CustomerBusinessPlaceActivity(
+                                **activity_data,
+                                customer_id=customer_id,
+                                business_place_id=amended_place.id,
+                                service_task_id=service_task_id,
+                                is_amendment="yes",
+                                amendment_action="ADDED",
+                                created_by=user_id,
+                                created_on=datetime.now()
+                            )
+                            db.add(new_activity)
+                            db.commit()
+                            db.refresh(new_activity)
+
+                            # Set amended_parent_id to the same value as id for the new activity
+                            new_activity.amended_parent_id = new_activity.id
+                            db.commit()
+                            db.refresh(new_activity)
+
+                            print(f"New business activity saved: {new_activity.id}")
+
+                    # Marking activities as DELETED if not in JSON
+                    for duplicated_activity in duplicated_activities:
+                        if duplicated_activity.business_activity_id not in amendment_activity_ids:
+                            print(f"Marking activity as DELETED: {duplicated_activity.id}")
+                            duplicated_activity.is_deleted = "yes"
+                            duplicated_activity.amendment_action = "DELETED"
+                            db.commit()
+                            print(f"Business activity marked as DELETED: {duplicated_activity.id}")
+
+        return {"success": True, "message": "Business places and activities saved successfully"}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"SQLAlchemy error: {str(e)}")
+        return {"success": False, "message": "Failed to save business places and activities"}
+
+    except ValueError as e:
+        print(f"Validation error: {str(e)}")
+        return {"success": False, "message": str(e)}
 
     except Exception as e:
         db.rollback()
-        print(f"Error adding new activity: {e}")
-
-def edit_existing_business_places_and_activities(
-    db: Session, customer_id: int, service_task_id: int, row_id: int, parsed_data: Dict, user_id: int
-) -> Dict[str, Any]:
-    business_place_data_list = parsed_data.get("business_place", [])
-    if not business_place_data_list:
-        raise ValueError("No business place data provided")
-
-    business_place_data = business_place_data_list[0]  # Assuming there is only one business place to process
-    nature_of_business_data = business_place_data.pop("nature_of_business", [])
-
-    existing_place = fetch_existing_place(db, row_id)
-    amended_place = duplicate_if_needed(db, existing_place, business_place_data, user_id)
-
-    duplicated_activities = fetch_and_duplicate_activities(db, customer_id, existing_place.id, amended_place.id, user_id)
-    print(f"Duplicated activities: {duplicated_activities}")
-    process_activities(db, duplicated_activities, nature_of_business_data, user_id, amended_place.id, customer_id, service_task_id)
-
-    return {"success": True, "id": amended_place.id}
+        print(f"Error: {str(e)}")
+        return {"success": False, "message": "An unexpected error occurred"}
 
 
-# def add_new_activity(db: Session, activity_data: dict, customer_id: int, amended_place_id: int, service_task_id: int, user_id: int):
-#     print(f"Adding new activity: {activity_data['business_activity_id']}")
-#     new_activity = CustomerBusinessPlaceActivity(
-#         **activity_data,
-#         customer_id=customer_id,
-#         business_place_id=amended_place_id,
-#         service_task_id=service_task_id,
-#         is_amendment="yes",
-#         amendment_action="ADDED",
-#         amendment_status="CREATED",
-#         created_by=user_id,
-#         created_on=datetime.now()
-#     )
-#     try:
-#         print("Activity data to be inserted:", new_activity)
-#         db.add(new_activity)
-#         db.commit()
-#         print("After commit")
 
-#         # Refresh the session to ensure the instance is in sync
-#         db.refresh(new_activity)
-#         new_id = new_activity.id
-#         print(f"New ID is: {new_id}")
+#-------------------
 
-#         if new_id is None:
-#             raise Exception("Failed to insert new activity")
-        
-#         # Verifying if the new activity actually exists
-#         inserted_activity = db.query(CustomerBusinessPlaceActivity).filter(CustomerBusinessPlaceActivity.id == new_id).first()
-#         if inserted_activity is None:
-#             raise Exception("Inserted activity not found in the database")
+def create_duplicate_business_place(db: Session, original_place: CustomerBusinessPlace, amendment_details: CustomerBusinessPlaceAmendmentSchema, service_task_id: int) -> CustomerBusinessPlace:
+    # Convert the original place to a schema
+    business_place_data = CustomerBusinessPlaceAmendmentSchema.from_orm(original_place)
 
-#         # Update the amended_parent_id
-#         db.query(CustomerBusinessPlaceActivity).filter(CustomerBusinessPlaceActivity.id == new_id).update({"amended_parent_id": new_id})
-#         db.commit()
-#         print("After updating amended_parent_id")
+    # Prepare the data for the new business place
+    new_place_data = business_place_data.dict(exclude_unset=True)
+    
+    # # Remove 'id', 'amendment_date', and 'amendment_reason' from new_place_data to avoid conflicts
+    # new_place_data.pop('id', None)
+    # new_place_data.pop('amendment_date', None)
+    # new_place_data.pop('amendment_reason', None)
+    new_place_data = business_place_data.dict(exclude={"id", "amendment_date", "amendment_reason"})
 
-#         # Fetch and print the updated activity for verification
-#         updated_activity = db.query(CustomerBusinessPlaceActivity).filter(CustomerBusinessPlaceActivity.id == new_id).first()
-#         if updated_activity is None:
-#             raise Exception("Failed to update amended_parent_id")
-#         print(f"Updated business activity: {updated_activity.id}, amended_parent_id set to {updated_activity.amended_parent_id}")
+    # Create a new business place without manually setting the 'id'
+    new_place = CustomerBusinessPlace(
+        customer_id=original_place.customer_id,
+        **new_place_data,
+        effective_from_date=None,
+        effective_to_date=None,
+        amended_parent_id=original_place.id,
+        is_amendment='yes',
+        amendment_date=datetime.now(),
+        amendment_reason=amendment_details.amendment_reason or "Not provided",
+        amendment_status="CREATED",
+        amendment_action="EDITED",
+        service_task_id=service_task_id
+    )
 
-#     except Exception as e:
-#         db.rollback()
-#         print(f"Error adding new activity: {e}")
+    # Set additional fields from amendment details
+    for key, value in amendment_details.dict(exclude_unset=True).items():
+        setattr(new_place, key, value)
+    
+    db.add(new_place)
+    db.commit()
+    db.refresh(new_place)
 
-# def edit_existing_business_places_and_activities(
-#     db: Session, customer_id: int, service_task_id: int, row_id: int, parsed_data: Dict, user_id: int
-# ) -> Dict[str, Any]:
-#     business_place_data_list = parsed_data.get("business_place", [])
-#     if not business_place_data_list:
-#         raise ValueError("No business place data provided")
+    return new_place
 
-#     business_place_data = business_place_data_list[0]  # Assuming there is only one business place to process
-#     nature_of_business_data = business_place_data.pop("nature_of_business", [])
 
-#     existing_place = fetch_existing_place(db, row_id)
-#     amended_place = duplicate_if_needed(db, existing_place, business_place_data, user_id)
+def amend_business_place_data(
+    db: Session, customer_id: int, service_task_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, action: AmendmentAction, user_id: int
+):
+    try:
+        print(f"Processing amendment for customer_id: {customer_id}, user_id: {user_id}, action: {action}")
 
-#     duplicated_activities = fetch_and_duplicate_activities(db, customer_id, existing_place.id, amended_place.id, user_id)
-#     print(f"Duplicated activities: {duplicated_activities}")
-#     process_activities(db, duplicated_activities, nature_of_business_data, user_id, amended_place.id, customer_id, service_task_id)
+        for business_place in amendment_details.business_place:
+            place_id = business_place.id
+            if not place_id:
+                raise HTTPException(status_code=400, detail="Business place ID is required for updates")
 
-#     return {"success": True, "id": amended_place.id}
+            existing_place = fetch_existing_business_place(db, place_id)
+
+            # Check if there are changes between the existing place and amendment details
+            has_changes = any(
+                getattr(existing_place, key) != value
+                for key, value in business_place.dict(exclude_unset=True).items()
+            )
+
+            if has_changes:
+                if existing_place.effective_from_date:
+                    print("Changes detected and effective_from_date is present. Creating a duplicate record...")
+                    new_business_place = create_duplicate_business_place(
+                        db, existing_place, business_place, service_task_id
+                    )
+                    description = f"Business place duplicated and updated for customer ID {customer_id} by user ID {user_id}."
+                else:
+                    print("Changes detected but no effective_from_date. Updating the existing record.")
+                    new_business_place = update_business_place(
+                        db, place_id, business_place
+                    )
+                    description = f"Business place updated for customer ID {customer_id} by user ID {user_id}."
+            else:
+                print("No changes detected. Keeping the existing record.")
+                new_business_place = existing_place
+                description = f"No changes made to business place for customer ID {customer_id} by user ID {user_id}."
+
+            log_history(db, service_task_id, user_id, description)
+
+            # Handle business activities
+            handle_business_activities(db, customer_id, place_id, new_business_place.id, amendment_details, service_task_id)
+
+        print("Amendment process completed successfully.")
+        return {"success": True, "id": new_business_place.id}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"Error during amendment: {e}")
+        return {"success": False, "message": str(e)}
+
+# Fetch existing business place
+def fetch_existing_business_place(db: Session, place_id: int) -> CustomerBusinessPlace:
+    existing_place = db.query(CustomerBusinessPlace).filter_by(id=place_id).first()
+    if not existing_place:
+        raise HTTPException(status_code=404, detail="Business place not found")
+    return existing_place
+
+# Update existing business place
+def update_business_place(db: Session, place_id: int, amendment_details: CustomerBusinessPlaceAmendmentSchema):
+    existing_place = fetch_existing_business_place(db, place_id)
+    
+    for key, value in amendment_details.dict(exclude_unset=True).items():
+        setattr(existing_place, key, value)
+    
+    existing_place.amendment_date = datetime.now()
+    existing_place.amendment_reason = amendment_details.amendment_reason or "Not provided"
+    existing_place.amendment_status = "CREATED"
+    existing_place.amendment_action = "EDITED"
+    
+    db.commit()
+    return existing_place
+
+# Log history
+def log_history(db: Session, service_task_id: int, user_id: int, description: str):
+    db.execute(
+        text("""
+            INSERT INTO off_service_task_history 
+            (service_task_master_id, history_updated_on, history_update_by, history_description)
+            VALUES (:service_task_master_id, :history_updated_on, :history_update_by, :history_description)
+        """),
+        {
+            "service_task_master_id": service_task_id,
+            "history_updated_on": datetime.now(),
+            "history_update_by": user_id,
+            "history_description": description
+        }
+    )
+    db.commit()
+
+# Handle business activities
+def handle_business_activities(db: Session, customer_id: int, original_place_id: int, new_place_id: int, amendment_details: CustomerBusinessPlaceFullAmendmentSchema, service_task_id: int):
+    existing_activities = db.query(CustomerBusinessPlaceActivity).filter_by(business_place_id=original_place_id, customer_id=customer_id).all()
+    
+    # Step 1: Duplicate existing activities
+    duplicated_activities = []
+    for activity in existing_activities:
+        new_activity = CustomerBusinessPlaceActivity(
+            customer_id=activity.customer_id,
+            business_place_id=new_place_id,
+            business_activity_id=activity.business_activity_id,
+            is_amendment='yes',
+            amendment_action="NONE",
+            amendment_date=datetime.now(),
+            amendment_reason=activity.amendment_reason,
+            effective_from_date=activity.effective_from_date,
+            effective_to_date=activity.effective_to_date,
+            amended_parent_id=activity.id,  # Ensures original activity id is linked as amended parent
+            service_task_id=service_task_id
+        )
+        db.add(new_activity)
+        db.commit()
+        db.refresh(new_activity)
+        duplicated_activities.append(new_activity)
+
+    # Step 2: Process each activity in the JSON
+    activity_ids_in_json = [activity.id for activity in amendment_details.nature_of_business]
+    
+    for activity in amendment_details.nature_of_business:
+        if activity.id == 0:
+            # New activity
+            new_activity = CustomerBusinessPlaceActivity(
+                customer_id=customer_id,
+                business_place_id=new_place_id,
+                business_activity_id=activity.business_activity_id,
+                is_amendment='yes',
+                amendment_action="ADDED",
+                amendment_date=activity.amendment_date,
+                amendment_reason=activity.amendment_reason,
+                service_task_id=service_task_id
+            )
+            db.add(new_activity)
+            db.commit()
+        else:
+            existing_activity = db.query(CustomerBusinessPlaceActivity).filter_by(id=activity.id, business_place_id=original_place_id, customer_id=customer_id).first()
+            if existing_activity:
+                if activity.id in activity_ids_in_json:
+                    # Duplicate the existing activity
+                    new_activity = CustomerBusinessPlaceActivity(
+                        customer_id=customer_id,
+                        business_place_id=new_place_id,
+                        business_activity_id=activity.business_activity_id,
+                        is_amendment='yes',
+                        amendment_action="NONE",
+                        amendment_date=activity.amendment_date,
+                        amendment_reason=activity.amendment_reason,
+                        service_task_id=service_task_id,
+                        amended_parent_id=existing_activity.id  # Link to the original activity's id
+                    )
+                    db.add(new_activity)
+                    db.commit()
+                    db.refresh(new_activity)
+                else:
+                    # Mark activity as deleted
+                    if existing_activity.id == existing_activity.amended_parent_id:
+                        existing_activity.is_deleted = 'yes'
+                    else:
+                        existing_activity.amendment_action = "DELETED"
+                    db.commit()
