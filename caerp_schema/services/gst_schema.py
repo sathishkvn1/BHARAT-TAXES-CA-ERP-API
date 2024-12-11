@@ -368,11 +368,15 @@ class CustomerAmendmentSchema(BaseModel):
         orm_mode = True
 
 
-class AdditionalTradeNameAmendment(BaseModel):
-    id: Optional[int] = 0
+class AdditionalTradeNameRequest(BaseModel):
+    id                      : Optional[int] = 0
     new_trade_name          : str
     request_date            : datetime
-    remarks                 : str
+   
+
+class AdditionalTradeNameAmendment(BaseModel):
+    amendments: List[AdditionalTradeNameRequest]
+    remarks: str 
 
 
 
@@ -442,6 +446,7 @@ class AmendmentDetailsSchema(BaseModel):
 
 
 class CustomerBusinessPlaceAmendmentSchema(BaseModel):
+   
     pin_code: str
     country_id: int
     state_id: int
@@ -479,6 +484,7 @@ class CustomerBusinessPlaceAmendmentSchema(BaseModel):
 
 
 class NatureOfBusinessSchema(BaseModel):
+    id: Optional[int] = None
     business_activity_id: int
     amendment_date: Optional[date] = None
     amendment_reason: Optional[str] = None
