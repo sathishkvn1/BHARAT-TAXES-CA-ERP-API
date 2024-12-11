@@ -343,4 +343,39 @@ def get_amended_business_place(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+#--------------------------------------------------------------------------------------------------------
+
+@router.post("/amended_additional_business_places")
+def amended_additional_business_places(
+    customer_id: int, 
+    service_task_id: int,
+    amendment_details: CustomerBusinessPlacesFullAmendmentSchema,
+    action: AmendmentAction,
+    db: Session = Depends(get_db),
+    id: Optional[int] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    amendment_details_dict = amendment_details.dict()
+
+    if action == AmendmentAction.ADDED:
+        result = db_gst_amendment.add_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, user_id)
+
+    elif action == AmendmentAction.EDITED and id:
+        result = db_gst_amendment.edit_existing_business_places_and_activities(db, customer_id, service_task_id, id, amendment_details_dict, user_id)
+
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    return {"success": True, "message": "Amendment saved successfully"}
 

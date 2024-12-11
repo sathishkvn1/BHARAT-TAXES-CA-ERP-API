@@ -880,8 +880,6 @@ def save_service_task_details(
         raise HTTPException(status_code=500, detail=str(e))
    
 #----------------------------------------------------------------------------------------------
-
-
 def save_customer_data_document_master(
     db: Session,
     task_id: int,
@@ -978,7 +976,7 @@ def save_customer_data_document_master(
             counters[business_place.business_place_type] += 1
 
         add_customer_document(
-            category_id=3,
+            category_id=4,
             master_id=business_place.utility_document_id,
             is_business_place='yes',
             place_name=place_name
@@ -992,6 +990,7 @@ def save_customer_data_document_master(
 
     db.commit()
     return {'message': 'success'}
+
 
 
 def save_service_requirement_status(
