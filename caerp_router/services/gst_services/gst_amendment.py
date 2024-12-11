@@ -57,6 +57,98 @@ def duplicate_customer(customer_id: int,
 
 #----------------------------------------------------------------------------------------------------------
 
+@router.get("/get_amended_customer_details", response_model=Optional[CustomerDuplicateSchemaForGet])
+def get_customer(
+    id: int, 
+    service_task_id: Optional[int] = None,  
+    db: Session = Depends(get_db), 
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=401, detail="Token is missing")
+
+    # Query to join CustomerMaster, CustomerAmendmentHistory, app_business_constitution, app_states, and app_districts
+    query = db.query(
+        CustomerMaster,
+        CustomerAmendmentHistory,
+        AppBusinessConstitution.business_constitution_name.label("business_constitution_name"),
+        StateDB.state_name.label("state_name"),
+        DistrictDB.district_name.label("district_name")
+    ).join(
+        CustomerAmendmentHistory, CustomerMaster.id == CustomerAmendmentHistory.amendment_id, isouter=True
+    ).join(
+        AppBusinessConstitution, CustomerMaster.constitution_id == AppBusinessConstitution.id, isouter=True
+    ).join(
+        StateDB, CustomerMaster.state_id == StateDB.id, isouter=True
+    ).join(
+        DistrictDB, CustomerMaster.district_id == DistrictDB.id, isouter=True
+    ).filter(
+        CustomerMaster.id == id,
+        CustomerMaster.is_deleted == 'no'
+    )
+
+    if service_task_id is not None:
+        query = query.filter(CustomerMaster.service_task_id == service_task_id)
+
+    # Fetch data
+    result = query.first()
+
+    if not result:
+        return None  # This will return a 200 response with `null` as the body in JSON format
+
+    # Unpacking the result tuple
+    customer_master, amendment_history, business_constitution_name, state_name, district_name = result
+
+    # Prepare the response data to match the schema
+    response_data = CustomerDuplicateSchemaForGet(
+        id=customer_master.id,
+        customer_id=customer_master.customer_id,
+        customer_number=customer_master.customer_number,
+        legal_name=customer_master.legal_name,
+        customer_name=customer_master.customer_name,
+        service_task_id=customer_master.service_task_id,
+        
+        pan_number=customer_master.pan_number,
+        pan_creation_date=customer_master.pan_creation_date,
+        tan_number=customer_master.tan_number,
+        passport_number=customer_master.passport_number,
+        tin_number=customer_master.tin_number,
+        authorized_signatory_name_as_in_pan=customer_master.authorized_signatory_name_as_in_pan,
+        authorized_signatory_pan_number=customer_master.authorized_signatory_pan_number,
+        email_address=customer_master.email_address,
+        mobile_number=customer_master.mobile_number,
+        constitution_id=customer_master.constitution_id,
+        business_constitution_name=business_constitution_name,
+        state_id=customer_master.state_id,
+        state_name=state_name,
+        district_id=customer_master.district_id,
+        district_name=district_name,
+        is_mother_customer=customer_master.is_mother_customer,
+        is_amendment=customer_master.is_amendment,
+        amendment_date=customer_master.amendment_date,
+        amendment_reason=customer_master.amendment_reason,
+        amendment_status=customer_master.amendment_status,
+        amendment_history=customer_master.amendment_history,
+        effective_from_date=customer_master.effective_from_date,
+        effective_to_date=customer_master.effective_to_date,
+        has_authorized_signatory=customer_master.has_authorized_signatory,
+        has_authorized_representative=customer_master.has_authorized_representative,
+        amendment_request_date=amendment_history.amendment_request_date if amendment_history else None,
+        amendment_remarks=amendment_history.amendment_remarks if amendment_history else None,
+        created_by=customer_master.created_by,
+        created_on=customer_master.created_on,
+        modified_by=customer_master.modified_by,
+        modified_on=customer_master.modified_on,
+        is_deleted=customer_master.is_deleted,
+        deleted_by=customer_master.deleted_by,
+        deleted_on=customer_master.deleted_on,
+      
+    )
+
+    # Return the validated response
+    return response_data
+
+#----------------------------------------------------------------------------------------------------------------------
 @router.post("/save_amended_data")
 def save_amendment(
     id: int,
