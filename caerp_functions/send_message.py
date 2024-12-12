@@ -7,6 +7,7 @@ from caerp_db.common.models import MobileCredentials
 from urllib.parse import urlparse
 
 
+
 def send_sms_otp(mobile_no, message, temp_id,db):
 
     config_res = get_sms_credentials(db)
@@ -17,12 +18,12 @@ def send_sms_otp(mobile_no, message, temp_id,db):
     sms_sender_id = config_res["sender"]
     sms_url = config_res["api_url"]    
     entity_id = config_res["entity_id"]
-    
+    tm_id       ="1601111162669580244,1602720162668444740"
     parsed_url = urlparse(sms_url)
     hostname = parsed_url.netloc
    
     temp_id = temp_id
-    payload = f"username={sms_username}&password={sms_password}&type=0&dlr=0&destination={mobile_no}&source={sms_sender_id}&message={message}&entityid={entity_id}&tempid={temp_id}"
+    payload = f"username={sms_username}&password={sms_password}&type=0&dlr=0&destination={mobile_no}&source={sms_sender_id}&message={message}&entityid={entity_id}&tempid={temp_id}&tmid={tm_id}"
     
     headers = {'Content-type': 'application/x-www-form-urlencoded'}
 
@@ -39,6 +40,7 @@ def send_sms_otp(mobile_no, message, temp_id,db):
         raise HTTPException(status_code=500, detail=f"Failed to send SMS: {str(e)}")
     finally:
         conn.close()
+
 
 
 
