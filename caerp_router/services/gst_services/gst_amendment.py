@@ -459,6 +459,8 @@ def amended_additional_business_places(
         raise HTTPException(status_code=401, detail="Invalid token")
 
     amendment_details_dict = amendment_details.dict()
+    print(f"Amendment Details Dict: {amendment_details_dict}")
+
 
     if action == AmendmentAction.ADDED:
         result = db_gst_amendment.add_additional_business_places_and_activities(db, customer_id, service_task_id, amendment_details_dict, user_id)
@@ -471,3 +473,82 @@ def amended_additional_business_places(
 
     return {"success": True, "message": "Amendment saved successfully"}
 
+
+#-----------------------------------------------------------------------------------------------------------------
+
+
+@router.get("/get_additional_business_places_and_activities")
+def get_business_places_and_activities(customer_id: int, service_task_id: int, db: Session = Depends(get_db)):
+    try:
+        # Fetch all business places for the given customer and service task
+        business_places = db.query(CustomerBusinessPlace).filter_by(
+            customer_id=customer_id,
+            service_task_id=service_task_id
+        ).all()
+
+        if not business_places:
+            raise HTTPException(status_code=404, detail="Business places not found")
+
+        # Prepare the result dictionary
+        result = {
+            "customer_id": customer_id,
+            "service_task_id": service_task_id,
+            "business_places": []
+        }
+
+        # Iterate through each business place and fetch their activities
+        for business_place in business_places:
+            business_place_data = {
+                "business_place_id": business_place.id,
+                "pin_code": business_place.pin_code,
+                "country_id": business_place.country_id,
+                "state_id": business_place.state_id,
+                "district_id": business_place.district_id,
+                "taluk_id": business_place.taluk_id,
+                "city_id": business_place.city_id,
+                "post_office_id": business_place.post_office_id,
+                "lsg_type_id": business_place.lsg_type_id,
+                "lsg_id": business_place.lsg_id,
+                "village_id": business_place.village_id,
+                "locality": business_place.locality,
+                "road_street_name": business_place.road_street_name,
+                "premises_building_name": business_place.premises_building_name,
+                "building_flat_number": business_place.building_flat_number,
+                "floor_number": business_place.floor_number,
+                "landmark": business_place.landmark,
+                "latitude": business_place.latitude,
+                "longitude": business_place.longitude,
+                "office_email_address": business_place.office_email_address,
+                "office_mobile_number": business_place.office_mobile_number,
+                "office_phone_std_code": business_place.office_phone_std_code,
+                "office_phone_number": business_place.office_phone_number,
+                "office_fax_std_code": business_place.office_fax_std_code,
+                "office_fax_number": business_place.office_fax_number,
+                "amendment_date": business_place.amendment_date,
+                "amendment_reason": business_place.amendment_reason,
+                "nature_of_business": []
+            }
+
+            # Fetch all activities for the current business place
+            activities = db.query(CustomerBusinessPlaceActivity).filter_by(
+                business_place_id=business_place.id
+            ).all()
+
+            # Add activities to the business place data
+            for activity in activities:
+                activity_data = {
+                    "business_activity_id": activity.business_activity_id,
+                    "amendment_date": activity.amendment_date,
+                    "amendment_reason": activity.amendment_reason,
+                    "amendment_status": activity.amendment_status,
+                    "amendment_action": activity.amendment_action,
+                    "is_deleted": activity.is_deleted
+                }
+                business_place_data["nature_of_business"].append(activity_data)
+
+            result["business_places"].append(business_place_data)
+
+        return result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch business places and activities: {str(e)}")
