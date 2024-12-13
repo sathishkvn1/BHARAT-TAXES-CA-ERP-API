@@ -1602,4 +1602,33 @@ class OffViewCustomerEnquiryAppointmentDetails(caerp_base):
     state_id = Column(Integer, nullable=True)
     state_name = Column(String(50), nullable=True)
 
-  
+
+
+
+class OffViewCustomerDataDocumentMaster(caerp_base):
+    __tablename__ = 'off_view_customer_data_document_master'
+
+    customer_data_document_master_id         = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_master_id                = Column(Integer, nullable=False)
+    work_order_details_id               = Column(Integer, nullable=False)
+    service_task_id                     = Column(Integer, nullable=False)
+    document_data_category_id           = Column(Integer, nullable=False)
+    document_data_category_name         = Column(String,nullable = False)
+    document_data_master_id = Column(Integer, nullable=False)
+    document_data_name      = Column(String,nullable = False)
+    customer_id             = Column(Integer, nullable=True)
+    stake_holder_master_id  = Column(Integer, nullable=True)
+    is_partner_director_proprietor  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    is_authorised_sigantory         = Column(Enum('yes', 'no'), nullable=False, default='no')
+    is_business_place               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    business_place_type_and_name    = Column(String(100), nullable=True)
+    stake_holder_role               = Column(String(100), nullable=True)
+    signatory_serial_number         = Column(String(100), nullable=True)
+    display_order = Column(Integer, nullable=False, default=1)
+    is_document_uploded = Column(Enum('yes', 'no'), nullable=False, default='no')
+    
+    valid_from_date = Column(Date, nullable=True)
+    valid_to_date = Column(Date, nullable=True)
+    remarks = Column(String(1000), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+

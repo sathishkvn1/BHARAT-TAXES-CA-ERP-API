@@ -11,7 +11,7 @@ from caerp_db.hash import Hash
 from typing import Any, Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm.session import Session
-from caerp_db.office.models import AppDayOfWeek, AppViewHsnSacMaster, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
+from caerp_db.office.models import AppDayOfWeek, AppViewHsnSacMaster, CustomerDataDocumentMaster, OffAppointmentMaster, OffAppointmentStatus, OffAppointmentVisitMaster,OffAppointmentVisitDetails,OffAppointmentVisitMasterView,OffAppointmentVisitDetailsView,OffAppointmentCancellationReason, OffConsultantSchedule, OffConsultantServiceDetails, OffConsultationMode, OffConsultationTaskDetails, OffConsultationTaskMaster, OffConsultationTool, OffDocumentDataMaster, OffDocumentDataType, OffEnquiryDetails, OffEnquiryMaster, OffOfferDetails, OffOfferMaster, OffServiceDocumentDataDetails, OffServiceDocumentDataMaster, OffServiceGoodsCategory, OffServiceGoodsDetails, OffServiceGoodsGroup, OffServiceGoodsMaster, OffServiceGoodsPriceMaster, OffServiceGoodsSubCategory, OffServiceGoodsSubGroup, OffServiceTaskHistory, OffServiceTaskMaster,OffViewConsultantServiceDetails, OffViewConsultationTaskMaster, OffViewCustomerDataDocumentMaster, OffViewEnquiryDetails, OffViewEnquiryMaster, OffViewServiceDocumentsDataDetails, OffViewServiceDocumentsDataMaster, OffViewServiceGoodsDetails, OffViewServiceGoodsMaster, OffViewServiceGoodsPriceMaster, OffViewServiceTaskMaster, OffViewWorkOrderBusinessPlaceDetails, OffWorkOrderDetails, OffWorkOrderMaster, WorkOrderBusinessPlaceDetails, WorkOrderDependancy, WorkOrderDetailsView, WorkOrderMasterView
 from caerp_functions.generate_book_number import generate_book_number
 
 from caerp_router.common.common_functions import update_column_value
@@ -25,6 +25,8 @@ from fastapi import logger
 from sqlalchemy.exc import IntegrityError,OperationalError
 from sqlalchemy.exc import IntegrityError
 from typing import Tuple, Optional
+
+from settings import BASE_URL
 
 
 UPLOAD_WORK_ORDER_DOCUMENTS         ="uploads/work_order_documents"
@@ -5219,3 +5221,72 @@ def get_all_hsn_sac_master_details(
     return query.all()
 
  #-----------------------------------------------------------------------------------
+def get_uploaded_document_by_service_id(
+        db: Session ,
+        service_id : int,
+        doc_type : Optional[str] = "ALL",
+        business_place_name: Optional[str] =None,
+        stake_holder_role : Optional[str]= None,
+        signatory_serial_number : Optional[str]= None
+         ):
+    query = db.query(OffViewCustomerDataDocumentMaster).filter(
+        OffViewCustomerDataDocumentMaster.service_task_id == service_id,
+        OffViewCustomerDataDocumentMaster.is_document_uploded == 'yes',
+        or_(
+            # Case where valid_to_date is NULL or greater than today
+            OffViewCustomerDataDocumentMaster.valid_to_date.is_(None),
+            OffViewCustomerDataDocumentMaster.valid_to_date > date.today()
+        ),
+        or_(
+            # Case where valid_from_date is NULL or less than today
+            OffViewCustomerDataDocumentMaster.valid_from_date.is_(None),
+            OffViewCustomerDataDocumentMaster.valid_from_date <= date.today()
+        )
+        # OffViewCustomerDataDocumentMaster.valid_to_date > date.today(),
+        # OffViewCustomerDataDocumentMaster.valid_from_date < date.today()
+
+    )
+    
+    # Apply document type filter if specified
+    if doc_type != "ALL":
+        query = query.filter(
+            OffViewCustomerDataDocumentMaster.document_data_category_name == doc_type
+        )    
+    if business_place_name : 
+        query = query.filter(OffViewCustomerDataDocumentMaster.business_place_type_and_name == business_place_name)
+    if stake_holder_role:
+        query = query.filter(OffViewCustomerDataDocumentMaster.stake_holder_role == stake_holder_role)
+    # Execute the query and fetch results
+    data = query.all()
+    
+    # Handle case when no data is found
+    if not data:
+        raise HTTPException(status_code=404, detail="Document data not found")
+    response =[]
+    for item in data:
+        file_path = None
+        id= item.customer_data_document_master_id
+        for file in Path(UPLOAD_WORK_ORDER_DOCUMENTS).glob(f"{id}.*"):
+            if file.is_file():
+                file_path = file
+                break
+
+        if not file_path:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        response.append({
+            "customer_data_document_master_id": item.customer_data_document_master_id,
+            "customer_id" : item.customer_id,
+            "work_order_details_id": item.work_order_details_id,
+            "stake_holder_master_id":item.stake_holder_master_id,
+            "service_task_id": item.service_task_id,
+            "document_type": item.document_data_category_name,
+            "business_place_name": item.business_place_type_and_name,
+            "stake_holder_role": item.stake_holder_role,
+            "signatory_serial_number": item.signatory_serial_number,
+            "document_data_name": item.document_data_name,
+            "document_file_path": f"{BASE_URL}/office/upload_document/{file_path.name}"
+        })
+    
+    return response
+    

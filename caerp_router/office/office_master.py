@@ -3991,3 +3991,31 @@ def download_csv_templates(file_name: str = Query(...)):
 
 
 #--------------------------------------------------------------------------------------------------------------
+
+@router.get("/get_uploaded_document_by service_id")
+def get_uploaded_document_by_service_id(
+    service_id: int,
+    doc_type : Optional[str] = Query("ALL", description="Filter by type: 'PERSONAL DOC', 'CONSTITUTION DOC','BUSINESS_PLACE DOC','UTILITY DOC'"),
+    business_place_name: Optional[str] =None,
+    stake_holder_role : Optional[str]= None,
+    signatory_serial_number : Optional[str] = None,
+    db : Session = Depends(get_db)):
+    """
+    Retrieve uploaded documents by service ID with optional filtering by document type,
+    effective date range, and uploaded status.
+
+    Args:
+        id (int): The service task ID.
+        doc_type (Optional[str]): Document type to filter by. Defaults to "ALL".
+        business_place_name (Optional[str]) :business place type and name to filter
+        stake_holder_role : Optional[str] : designation 
+        db (Session): Database session dependency.
+
+    Returns:
+        List: A list of matching documents.
+
+    Raises:
+        HTTPException: If no documents are found for the given filters.
+    """
+    result = db_office_master.get_uploaded_document_by_service_id(db,service_id , doc_type,business_place_name,stake_holder_role, signatory_serial_number)
+    return result

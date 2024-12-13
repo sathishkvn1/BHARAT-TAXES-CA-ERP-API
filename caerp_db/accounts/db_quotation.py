@@ -880,6 +880,7 @@ def save_service_task_details(
         raise HTTPException(status_code=500, detail=str(e))
    
 #----------------------------------------------------------------------------------------------
+
 def save_customer_data_document_master(
     db: Session,
     task_id: int,
@@ -889,7 +890,7 @@ def save_customer_data_document_master(
     consultation_id: int,
     details: WorkOrderDetailsView
 ):
-    def add_customer_document(category_id, master_id, is_stakeholder='no', stakeholder_role=None, is_signatory='no', is_business_place='no', place_name=None):
+    def add_customer_document(category_id, master_id, is_stakeholder='no', stakeholder_role=None, is_signatory='no', is_business_place='no', place_name=None, signatory_serial_number =None):
         document = CustomerDataDocumentMaster(
             work_order_master_id=work_order_master_id,
             work_order_details_id=work_order_details_id,
@@ -901,6 +902,7 @@ def save_customer_data_document_master(
             is_authorised_sigantory=is_signatory,
             is_business_place=is_business_place,
             business_place_type_and_name=place_name,
+            signatory_serial_number = signatory_serial_number,
             is_deleted='no'
         )
         db.add(document)
@@ -950,13 +952,15 @@ def save_customer_data_document_master(
 
     # Add authorized signatories
     if details.number_of_authorized_signatory:
-        for _ in range(details.number_of_authorized_signatory):
+        for i in range(details.number_of_authorized_signatory):
+            signatory_role = f"auth_{i+1}"
             for row in result:
                 if row['document_data_category_id'] == 1:
                     add_customer_document(
                         category_id=1,
                         master_id=row['id'],
-                        is_signatory='yes'
+                        is_signatory='yes',
+                        signatory_serial_number= signatory_role
                     )
 
     # Add non-stakeholder documents
