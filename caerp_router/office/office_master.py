@@ -3991,8 +3991,7 @@ def download_csv_templates(file_name: str = Query(...)):
 
 
 #--------------------------------------------------------------------------------------------------------------
-
-@router.get("/get_uploaded_document_by service_id")
+@router.post("/get_uploaded_document_by service_id")
 def get_uploaded_document_by_service_id(
     service_id: int,
     doc_type : Optional[str] = Query("ALL", description="Filter by type: 'PERSONAL DOC', 'CONSTITUTION DOC','BUSINESS_PLACE DOC','UTILITY DOC'"),
@@ -4019,3 +4018,6 @@ def get_uploaded_document_by_service_id(
     """
     result = db_office_master.get_uploaded_document_by_service_id(db,service_id , doc_type,business_place_name,stake_holder_role, signatory_serial_number)
     return result
+
+
+#-------------------------------------------------------------------------------------------------------
