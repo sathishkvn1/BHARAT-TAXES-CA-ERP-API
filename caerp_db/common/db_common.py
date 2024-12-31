@@ -1,11 +1,15 @@
 
 
 
+import random
+from typing import Optional
 from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
+from caerp_db.common import db_otp, db_user
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
 from fastapi import HTTPException ,status
 
+from caerp_functions import send_message
 from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
@@ -567,6 +571,57 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
         country="India"
     )
 
+
+#-------------------------------------------------------------------------------------------------
+def send_query_manager_otp(
+        db : Session,
+        mobile_no: Optional[str]=None,
+        email_id : Optional[str]=None,
+        user_name : Optional[str]=None,
+        ):
+# if email_id: 
+
+    # else:
+    if user_name :
+        user = db.query(UserBase).filter(UserBase.user_name == user_name).first()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        employee_id = user.employee_id
+        official_mobile_no = db.query(EmployeeContactDetails.official_mobile_number).filter(EmployeeContactDetails.employee_id==user.employee_id).scalar()
+        # official_mobile_no = official_mobile_no[0]
+    if mobile_no:
+        official_mobile_no = mobile_no 
+        employee_id = db.query(EmployeeContactDetails.employee_id).filter(EmployeeContactDetails.official_mobile_number == mobile_no).scalar()
+        # employee_id = employee_id[0]
+        if employee_id is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+     
+    mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
+    new_otp = db_otp.create_otp(db, mobile_otp_value,employee_id)
+    mobile_otp_id = new_otp.id    
+    
+    sms_type= 'OTP'
+    template_data = db_user.get_templates_by_type(db,sms_type)
+    temp_id= template_data.template_id
+    template_message = template_data.message_template
+    replace_values = [ mobile_otp_value, 'mobile registration']
+    placeholder = "{#var#}"
+    for value in replace_values:
+        template_message = template_message.replace(placeholder, str(value),1)
+                    
+    
+    try:
+       
+        result = send_message.send_sms_otp(official_mobile_no,template_message,temp_id,db)
+        return {
+        "success" :True,
+        'mobile_otp_id' : mobile_otp_id,
+        'user_id' : employee_id
+            }
+    except Exception as e:
+                # Handle sms sending failure
+                print(f"Failed to send message: {str(e)}")
+    
 
 
 

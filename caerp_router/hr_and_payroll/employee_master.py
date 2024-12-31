@@ -2063,78 +2063,74 @@ async def save_applicant(
 
 #------------------------------------------------------------------------------------------
 
-@router.get("/applicant_details/", response_model=List[ApplicantDetails])
-def get_applicant_details(db: Session = Depends(get_db)):
-    # Query the view
-    applicant_details = db.query(ViewApplicantDetails).all()
+# @router.get("/applicant_details/", response_model=List[ApplicantDetails])
+# def get_applicant_details(db: Session = Depends(get_db)):
+#     # Query the view
+#     applicant_details = db.query(ViewApplicantDetails).all()
     
-    return applicant_details
+#     return applicant_details
 
 
 
 
 
 
-# @router.get("/test/applicant_details/", response_model=Dict[str, List[ApplicantDetailsView]])  # Using Dict for flexibility
-# def get_applicant_details(
-#     applicant_id: Optional[int] = None,  # Optional parameter to filter by applicant_id
-#     profile_component: Optional[str] = None,
 
-#     db: Session = Depends(get_db)  # Dependency for DB session
-# ):
-#     # Initialize an empty dictionary to hold the profile data
-#     profile_data = {}
-
-#     print("Profile component received:", profile_component)  # Debugging print
-#     print("Applicant ID received:", applicant_id)  # Debugging print
-
-#     # Check if both applicant_id and profile_component are provided
-#     if applicant_id is not None and profile_component is not None:
-#         print("Both applicant_id and profile_component provided. Fetching all applicant details...")  # Debugging print
-#         applicant_details = db.query(ViewApplicantDetails).all()  # Fetching all applicant details
-#         if not applicant_details:
-#             raise HTTPException(status_code=404, detail="No data found for applicant details")
-#         profile_data["applicant_details"] = applicant_details  # Add to the profile data
-#     # Get data based on the profile_component only
-#     elif profile_component == "applicant_master":
-#         print("Fetching applicant master data...")  # Debugging print
-#         profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
-#     elif profile_component == "address":
-#         print("Fetching address data...")  # Debugging print
-#         profile_data["address"] = db_employee_master.get_address(db, applicant_id)
-#     elif profile_component == "contact":
-#         print("Fetching contact data...")  # Debugging print
-#         profile_data["contact"] = db_employee_master.get_contact(db, applicant_id)
-#     else:
-#         print("Fetching all applicant details...")  # Debugging print
-#         applicant_details = db.query(ViewApplicantDetails).all()  # Fetching all applicant details
-#         if not applicant_details:
-#             raise HTTPException(status_code=404, detail="No data found for applicant details")
-#         profile_data["applicant_details"] = applicant_details  # Add to the profile data
-
-#     # If no data found for the profile_component, return a 404 error
-#     if not profile_data:
-#         print("No profile data found for the given component")  # Debugging print
-#         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
-
-#     print("Returning profile data:", profile_data)  # Debugging print
-#     return profile_data
-
-
-@router.get("/test/applicant_details/", response_model=Dict[str, Any])
+@router.get("/get_applicant_details/", response_model=Dict[str, Any])
 def get_applicant_details(
     applicant_id: Optional[int] = None,
     profile_component: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
+    """
+    Retrieves detailed information about an applicant.
+
+    - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+    - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+      - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+      - `applicant_login_details`: Login information for the applicant.
+      - `applicant_present_address`: Current address of the applicant.
+      - `applicant_permanent_address`: Permanent address of the applicant.
+      - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+      - `applicant_educational_qualification`: Educational qualifications of the applicant.
+      - `applicant_professional_qualification`: Professional qualifications of the applicant.
+      - `applicant_experience`: Employment or work experience details of the applicant.
+      - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+      - `applicant_hobby`: Hobbies and interests of the applicant.
+      - `applicant_skill`: Skills of the applicant.
+      - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+
+    - **db**: The database session used for querying the relevant data.
+
+    **Response**:
+    Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+
+    - If **applicant_id** is provided, it returns the details for that specific applicant.
+    - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+
+    **Example Request**:
+    - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+    - `GET /get_applicant_details/` (Fetch all details for the applicant)
+
+
+    ```
+
+    **Notes**:
+    - If no data is found for the given `applicant_id`, a 404 error will be raised.
+    - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     profile_data = {}
 
     # If neither applicant_id nor profile_component is provided, fetch all applicant details
     if applicant_id is None and profile_component is None:
-        print("Fetching all applicant details...")  # Debugging print
+        
         applicant_details = db_employee_master.get_all_applicant_detals(db)
         
-        print("Fetched applicant details:", applicant_details)  # Debugging print
+       
 
         if not applicant_details:
             raise HTTPException(status_code=404, detail="No data found for applicant details")
@@ -2145,17 +2141,44 @@ def get_applicant_details(
     # If applicant_id is provided and profile_component is also provided, handle those cases
     elif applicant_id is not None and profile_component is not None:
         if profile_component == "applicant_master":
-            print("Fetching applicant master data...")
+            
             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
         elif profile_component == "applicant_present_address":
-            print("Fetching address data...")
-            profile_data["address"] = db_employee_master.applicant_present_address(db, applicant_id)
+            
+            profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
         elif profile_component == "applicant_permanent_address":
-            print("Fetching address data...")
-            profile_data["address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
-        elif profile_component == "contact":
-            print("Fetching contact data...")
-            profile_data["contact"] = db_employee_master.get_contact(db, applicant_id)
+            
+            profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+        elif profile_component == "applicant_contact_details":
+            
+            profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
+        elif profile_component == "applicant_educational_qualification":
+            
+            profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
+        elif profile_component == "applicant_professional_qualifications":
+            
+            profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
+        elif profile_component == "applicant_experience":
+           
+            profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
+
+        elif profile_component == "applicant_language_proficiency":
+           
+            profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
+      
+        elif profile_component == "applicant_hobby":
+           
+            profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
+
+        elif profile_component == "applicant_skill":
+           
+            profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
+
+        elif profile_component == "applicant_social_media_profile":
+           
+            profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
+      
+      
         else:
             raise HTTPException(status_code=400, detail="Invalid profile component")
 

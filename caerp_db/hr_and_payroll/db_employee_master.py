@@ -6,7 +6,7 @@ from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantDetails, ApplicantDetailsView, ApplicantMasterResponse, ApplicantPresentAddressResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -2777,4 +2777,552 @@ def applicant_present_address(
     return applicants_address
 
 #---------------------------------------------------------------------------------------------------
+# def applicant_permanent_address(
+#     db: Session, applicant_id: Optional[int] = None
+# ) -> List[ApplicantPermanentAddressResponse]:
+#     # SQL query to fetch the data
+#     sql_query = text("""
+#         SELECT 
+#             -- Table f: applicant_permanent_address (Permanent Address)
+#             f.id AS permanent_address_id,
+#             f.permanent_house_or_flat_name,
+#             f.permanent_house_flat_or_door_number,
+#             f.permanent_road_name,
+#             f.permanent_street_name,
+#             f.permanent_land_mark,
+#             f.permanent_pin_code,
+            
+#             -- Table g: app_post_offices (Permanent Address - Post office details)
+#             g.id AS permanent_post_office_id,
+#             g.post_office_name AS permanent_post_office_name,
+#             g.pin_code AS permanent_post_office_pin_code,
+#             g.contact_number AS permanent_post_office_contact,
+
+#             -- Table h: app_cities (Permanent Address - City details)
+#             h.id AS permanent_city_id,
+#             h.city_name AS permanent_city_name,
+
+#             -- Table i: app_taluks (Permanent Address - Taluk details)
+#             i.id AS permanent_taluk_id,
+#             i.taluk_name AS permanent_taluk_name,
+
+#             -- Table j: app_districts (Permanent Address - District details)
+#             j.id AS permanent_district_id,
+#             j.district_name AS permanent_district_name,
+
+#             -- Table k: app_states (Permanent Address - State details)
+#             k.id AS permanent_state_id,
+#             k.state_name AS permanent_state_name,
+
+#             -- Table l: app_countries (Permanent Address - Country details)
+#             l.id AS permanent_country_id,
+#             l.country_name_english AS permanent_country_name,
+
+#             -- Table a: applicant_master (Applicant details)
+#             a.applicant_id,
+#             a.first_name AS applicant_first_name,
+#             a.middle_name AS applicant_middle_name,
+#             a.last_name AS applicant_last_name
+#         FROM 
+#             applicant_permanent_address f
+#         LEFT JOIN
+#             applicant_master a ON f.applicant_id = a.applicant_id
+#         LEFT JOIN
+#             app_post_offices g ON f.permanent_post_office_id = g.id
+#         LEFT JOIN
+#             app_cities h ON f.permanent_city_id = h.id
+#         LEFT JOIN
+#             app_taluks i ON f.permanent_taluk_id = i.id
+#         LEFT JOIN
+#             app_districts j ON f.permanent_district_id = j.id
+#         LEFT JOIN
+#             app_states k ON f.permanent_state_id = k.id
+#         LEFT JOIN
+#             app_countries l ON f.permanent_country_id = l.id
+#     """)
+
+#     # Add filtering for applicant_id if provided
+#     if applicant_id:
+#         sql_query = text(f"{sql_query} WHERE a.applicant_id = :applicant_id")
+
+#     # Execute the query with parameters
+#     params = {"applicant_id": applicant_id} if applicant_id else {}
+#     result = db.execute(sql_query, params)
+
+#     rows = result.fetchall()
+
+#     if not rows:
+#         raise HTTPException(status_code=404, detail="No applicant permanent address data found")
+
+#     # Convert SQL result rows to Pydantic response models
+#     applicants_address = [ApplicantPermanentAddressResponse(**dict(row._asdict())) for row in rows]
+
+#     return applicants_address
+
+
+def applicant_permanent_address(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantPermanentAddressResponse]:
+    sql_query = text("""
+    SELECT 
+        -- Table f: applicant_permanent_address (Permanent Address)
+        f.id AS permanent_address_id,
+        f.permanent_house_or_flat_name,
+        f.permanent_house_flat_or_door_number,
+        f.permanent_road_name,
+        f.permanent_street_name,
+        f.permanent_land_mark,
+        f.permanent_pin_code,
+        
+        -- Table g: app_post_offices (Permanent Address - Post office details)
+        g.id AS permanent_post_office_id,
+        g.post_office_name AS permanent_post_office_name,
+        g.pin_code AS permanent_post_office_pin_code,
+        g.contact_number AS permanent_post_office_contact,
+
+        -- Table h: app_cities (Permanent Address - City details)
+        h.id AS permanent_city_id,
+        h.city_name AS permanent_city_name,
+
+        -- Table i: app_taluks (Permanent Address - Taluk details)
+        i.id AS permanent_taluk_id,
+        i.taluk_name AS permanent_taluk_name,
+
+        -- Table j: app_districts (Permanent Address - District details)
+        j.id AS permanent_district_id,
+        j.district_name AS permanent_district_name,
+
+        -- Table k: app_states (Permanent Address - State details)
+        k.id AS permanent_state_id,
+        k.state_name AS permanent_state_name,
+
+        -- Table l: app_countries (Permanent Address - Country details)
+        l.id AS permanent_country_id,
+        l.country_name_english AS permanent_country_name,
+
+        -- Table a: applicant_master (Applicant details)
+        a.applicant_id,
+        a.first_name AS first_name,
+        a.middle_name AS middle_name,
+        a.last_name AS last_name
+
+    FROM 
+        applicant_permanent_address f
+
+    -- Join applicant_master to get applicant details
+    LEFT JOIN
+        applicant_master a ON f.applicant_id = a.applicant_id
+
+    -- Join other related tables to fetch permanent address information
+    LEFT JOIN
+        app_post_offices g ON f.permanent_post_office_id = g.id
+    LEFT JOIN
+        app_cities h ON f.permanent_city_id = h.id
+    LEFT JOIN
+        app_taluks i ON f.permanent_taluk_id = i.id
+    LEFT JOIN
+        app_districts j ON f.permanent_district_id = j.id
+    LEFT JOIN
+        app_states k ON f.permanent_state_id = k.id
+    LEFT JOIN
+        app_countries l ON f.permanent_country_id = l.id
+    """)
+
+    # Add filtering for applicant_id if provided
+    if applicant_id:
+        sql_query = text(f"{sql_query} WHERE a.applicant_id = :applicant_id")
+    
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No permanent address data found")
+
+    # Convert SQLAlchemy row objects to Pydantic models
+    permanent_addresses = [
+        ApplicantPermanentAddressResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return permanent_addresses
+
+
+#---------------------------------------------------------------------------------------------------
+
+
+def get_applicant_contact_details(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantContactDetailsResponse]:
+    sql_query = text("""
+        SELECT 
+            -- Table a: applicant_contact_details
+            a.id AS contact_details_id,
+            a.personal_mobile_number,
+            a.personal_whatsapp_number,
+            a.personal_email_id,
+            a.is_deleted AS contact_deleted,
+
+            -- Table b: applicant_master
+            b.applicant_id,
+            b.first_name AS first_name,
+            b.middle_name AS middle_name,
+            b.last_name AS last_name
+
+        FROM 
+            applicant_contact_details a
+
+        -- Join applicant_master to get applicant details
+        LEFT JOIN
+            applicant_master b ON b.applicant_id = a.applicant_id
+    """)
+
+    # Add filtering for applicant_id if provided
+    if applicant_id:
+        sql_query = text(f"{sql_query} WHERE b.applicant_id = :applicant_id")
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No contact details found for the applicant")
+
+    # Convert rows to response schema
+    contact_details = [
+        ApplicantContactDetailsResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return contact_details
+#--------------------------------------------------------------------------------
+
+def get_applicant_educational_qualifications(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantEducationalQualificationResponse]:
+    sql_query = text("""
+        SELECT
+            eq.id AS qualification_id,
+            eq.institution,
+            eq.percentage_of_score,
+            eq.month_and_year_of_completion,
+            eq.status AS qualification_status,
+            eq.is_deleted AS qualification_deleted,
+            el.id AS education_level_id,
+            el.education_level,
+            es.id AS education_stream_id,
+            es.education_stream,
+            sc.id AS education_subject_or_course_id,
+            sc.subject_or_course_name,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_educational_qualification eq
+        LEFT JOIN
+            app_education_level el ON eq.education_level_id = el.id
+        LEFT JOIN
+            app_education_stream es ON eq.education_stream_id = es.id
+        LEFT JOIN
+            app_education_subject_or_course sc ON eq.education_subject_or_course_id = sc.id
+        LEFT JOIN
+            applicant_master am ON eq.applicant_id = am.applicant_id
+        WHERE
+            eq.is_deleted = 'no'
+    """)
+
+    # Add filtering for applicant_id if provided
+    if applicant_id:
+        sql_query = text(f"{sql_query} AND eq.applicant_id = :applicant_id")
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No educational qualifications found for the applicant")
+
+    # Convert rows to response schema
+    educational_details = [
+        ApplicantEducationalQualificationResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return educational_details
+
+#---------------------------------------------------------------------------------------------------
+
+def get_applicant_professional_qualifications(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantProfessionalQualificationResponse]:
+    sql_query = text("""
+        SELECT
+            apq.id,
+            apq.applicant_id,
+            apq.qualification_id,
+            apq.institution,
+            apq.membership_number,
+            apq.enrollment_date,
+            apq.percentage_of_score,
+            apq.month_and_year_of_completion,
+            apq.status,
+            apq.is_deleted,
+            ap.profession_name,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_professional_qualifications apq
+        LEFT JOIN
+            app_profession ap ON apq.qualification_id = ap.id
+        LEFT JOIN
+            applicant_master am ON apq.applicant_id = am.applicant_id
+        WHERE
+            apq.applicant_id = :applicant_id AND apq.is_deleted = 'no';
+    """)
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No professional qualifications found for the applicant")
+
+    # Convert rows to response schema
+    qualifications = [
+        ApplicantProfessionalQualificationResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return qualifications
+
+#-----------------------------------------------------------------------------------------------
+
+
+
+def get_applicant_experience(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantExperienceResponse]:
+    sql_query = text("""
+        SELECT
+            ae.id,
+            ae.applicant_id,
+            ae.company_name,
+            ae.company_address,
+            ae.company_contact_number,
+            ae.company_email,
+            ae.position_held,
+            ae.responsibility,
+            ae.start_date,
+            ae.end_date,
+            ae.last_salary,
+            ae.reason_for_leaving,
+            ae.is_deleted,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_experience ae
+        LEFT JOIN
+            applicant_master am ON ae.applicant_id = am.applicant_id
+        WHERE
+            ae.applicant_id = :applicant_id AND ae.is_deleted = 'no';
+    """)
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No experience found for the applicant")
+
+    # Convert rows to response schema
+    experience_data = [
+        ApplicantExperienceResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return experience_data
+
+#-------------------------------------------------------------------------------------------------------
+
+
+def get_applicant_language_proficiency(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantLanguageProficiencyResponse]:
+    sql_query = text("""
+        SELECT
+            alp.id,
+            alp.applicant_id,
+            al.language,
+            r_proficiency.proficiency_level AS read_proficiency,
+            w_proficiency.proficiency_level AS write_proficiency,
+            s_proficiency.proficiency_level AS speak_proficiency,
+            alp.is_deleted,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_language_proficiency alp
+        LEFT JOIN
+            app_languages al ON alp.language_id = al.id
+        LEFT JOIN
+            app_language_proficiency r_proficiency ON alp.read_proficiency_id = r_proficiency.id
+        LEFT JOIN
+            app_language_proficiency w_proficiency ON alp.write_proficiency_id = w_proficiency.id
+        LEFT JOIN
+            app_language_proficiency s_proficiency ON alp.speak_proficiency_id = s_proficiency.id
+        LEFT JOIN
+            applicant_master am ON alp.applicant_id = am.applicant_id
+        WHERE
+            alp.applicant_id = :applicant_id AND alp.is_deleted = 'no';
+    """)
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No language proficiency data found for the applicant")
+
+    # Convert rows to response schema
+    language_proficiency_data = [
+        ApplicantLanguageProficiencyResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return language_proficiency_data
+
+#-----------------------------------------------------------------------------------------------
+
+
+def get_applicant_hobbies(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantHobbyResponse]:
+    sql_query = text("""
+        SELECT
+            ah.id,
+            ah.applicant_id,
+            ah.applicant_hobby,
+            ah.remarks,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_hobby ah
+        LEFT JOIN
+            applicant_master am ON ah.applicant_id = am.applicant_id
+        WHERE
+            ah.applicant_id = :applicant_id;
+    """)
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No hobbies found for the applicant")
+
+    # Convert rows to response schema
+    hobbies = [
+        ApplicantHobbyResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return hobbies
+
+#----------------------------------------------------------------------------------------------
+
+
+def get_applicant_skills(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantSkillResponse]:
+    # SQL query to fetch skills along with applicant data
+    sql_query = text("""
+       SELECT
+            app_skill.id,
+            app_skill.applicant_id,
+            app_skill.skill_id,
+            s.skill,
+            app_skill.remarks,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_skill app_skill
+        LEFT JOIN
+            app_skills s ON app_skill.skill_id = s.id
+        LEFT JOIN
+            applicant_master am ON app_skill.applicant_id = am.applicant_id
+        WHERE
+            app_skill.is_deleted = 'no'
+            AND (app_skill.applicant_id = :applicant_id);  
+    """)
+
+    # Execute query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No skills found for the applicant")
+
+    # Convert rows to response schema
+    skills = [
+        ApplicantSkillResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return skills
+
+#---------------------------------------------------------------------------------------------
+
+def get_applicant_social_media_profiles(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantSocialMediaResponse]:
+    
+    sql_query = text("""
+       SELECT
+            asm.id,
+            asm.applicant_id,
+            asm.facebook,
+            asm.youtube,
+            asm.xhandle,
+            asm.linked_in,
+            am.first_name,
+            am.middle_name,
+            am.last_name
+        FROM
+            applicant_social_media_profile asm
+        LEFT JOIN
+            applicant_master am ON asm.applicant_id = am.applicant_id
+        WHERE
+            asm.is_deleted = 'no'
+            AND ( asm.applicant_id = :applicant_id);  
+    """)
+
+    # Parameters for the query
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+
+    # Execute the query
+    result = db.execute(sql_query, params)
+
+    # Fetch all results
+    rows = result.fetchall()
+
+    # Check if no results were found
+    if not rows:
+        raise HTTPException(status_code=404, detail="No social media profiles found for the applicant")
+
+    # Convert query results into response schema
+    social_media_profiles = [
+        ApplicantSocialMediaResponse(**dict(row._asdict())) for row in rows
+    ]
+
+    return social_media_profiles
 

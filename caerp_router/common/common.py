@@ -2,8 +2,8 @@ from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
 import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import   AppBankMaster, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase
-from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, VillageResponse
+from caerp_db.common.models import   AppBankMaster, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase, UserRegistration
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
@@ -11,7 +11,7 @@ from caerp_db.database import get_db
 from sqlalchemy.orm import Session
 from caerp_db.common import db_common
 from caerp_constants.caerp_constants import CRUD, ActionType,  DeletedStatus
-from typing import List
+from typing import List, Optional
 from caerp_auth import oauth2
 from datetime import datetime
 from sqlalchemy import text
@@ -266,6 +266,8 @@ def get_cities_by_country_and_state(country_id: int,
     return {"country_id": country_id, "state_id": state_id, "cities": city_details}
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/city/{city_id}", response_model=CityDetail)
 def get_city_by_id(city_id: int,
                     db: Session = Depends(get_db),
@@ -297,6 +299,9 @@ def get_city_by_id(city_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No city found with ID {city_id}")
 
     return city
+
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 @router.get("/get_taluks/{state_id}", response_model=TalukResponse)
@@ -338,6 +343,8 @@ def get_taluks_by_state(state_id: int,
 
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_taluks/by_district/{district_id}", response_model=TalukResponseByDistrict)
 def get_taluks_by_district(district_id: int,
                            db: Session = Depends(get_db),
@@ -375,6 +382,8 @@ def get_taluks_by_district(district_id: int,
     return TalukResponseByDistrict(district_id=district_id, taluks=taluk_details)
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_taluks/by_taluk/{taluk_id}", response_model=TalukDetail)
 def get_taluk_by_id(taluk_id: int,
                     db: Session = Depends(get_db),
@@ -407,6 +416,8 @@ def get_taluk_by_id(taluk_id: int,
 
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_currencies", response_model=List[CurrencyDetail])
 async def get_currencies(db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)
@@ -432,7 +443,7 @@ async def get_currencies(db: Session = Depends(get_db),
     currencies = db_common.get_all_currencies(db)
     return currencies
 
-
+#--------------------------------------------------------------------------------------------------------------
 @router.get("/get_currencies/{currency_id}", response_model=CurrencyDetail)
 def get_currency_by_id(currency_id: int,
                        db: Session = Depends(get_db),
@@ -463,6 +474,7 @@ def get_currency_by_id(currency_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No currency found with ID {currency_id}")
     return currency
 
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_nationality", response_model=List[NationalityDetail])
 async def get_all_nationalities(db: Session = Depends(get_db),
@@ -489,6 +501,8 @@ async def get_all_nationalities(db: Session = Depends(get_db),
     return nationalities
 
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_nationality/{nationality_id}", response_model=NationalityDetail)
 async def get_nationality_by_id(nationality_id: int,
@@ -521,6 +535,8 @@ async def get_nationality_by_id(nationality_id: int,
     return nationality
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_post_office_types", response_model=List[PostOfficeTypeDetail])
 async def get_all_post_office_types(db: Session = Depends(get_db),
                                     token: str = Depends(oauth2.oauth2_scheme)):
@@ -544,6 +560,8 @@ async def get_all_post_office_types(db: Session = Depends(get_db),
     
     post_office_types = db_common.get_all_post_office_types(db)
     return post_office_types
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 @router.get("/get_post_office_type/{id}", response_model=PostOfficeTypeDetail)
@@ -574,6 +592,8 @@ async def get_post_office_type(id: int, db: Session = Depends(get_db),
     return post_office_type
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_postal_delivery_status", response_model=List[PostalDeliveryStatusDetail])
 async def get_all_postal_delivery_status(db: Session = Depends(get_db),
                                          token: str = Depends(oauth2.oauth2_scheme)
@@ -599,6 +619,8 @@ async def get_all_postal_delivery_status(db: Session = Depends(get_db),
     delivery_statuses = db_common.get_all_postal_delivery_statuses(db)
     return delivery_statuses
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_postal_delivery_status/{id}", response_model=PostalDeliveryStatusDetail)
 async def get_postal_delivery_status_by_id(id: int, db: Session = Depends(get_db),
@@ -629,6 +651,8 @@ async def get_postal_delivery_status_by_id(id: int, db: Session = Depends(get_db
     return delivery_status
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_postal_circles", response_model=List[PostalCircleDetail])
 async def get_all_postal_circles(db: Session = Depends(get_db),
                                   token: str = Depends(oauth2.oauth2_scheme)):
@@ -651,6 +675,10 @@ async def get_all_postal_circles(db: Session = Depends(get_db),
     
     postal_circles = db_common.get_all_postal_circles(db)
     return postal_circles
+
+
+#--------------------------------------------------------------------------------------------------------------
+
 
 @router.get("/get_postal_circles/{id}", response_model=PostalCircleDetail)
 async def get_postal_circle(id: int, db: Session = Depends(get_db),
@@ -681,6 +709,8 @@ async def get_postal_circle(id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail=f"Postal Circle with {id} not found")
     return postal_circle
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_postal_regions", response_model=List[PostalRegionDetail])
 async def get_all_postal_regions(db: Session = Depends(get_db),
@@ -1662,4 +1692,75 @@ def get_bank_details_by_ifsc_code(
 
 #-----------------------------------------------------------------------
 
+@router.post('/save/send_query_manager_otp')
+def send_query_manager_otp(
+    mobile_no : Optional[str] = None,
+    email_id : Optional[str] = None,
+    user_name : Optional[str] = None,
+    db: Session = Depends(get_db)
+):  
+    result = db_common.send_query_manager_otp(db,mobile_no,email_id,user_name)
+    return result
 
+#-----------------------------------------------------------------------
+@router.post("/save/query_manager/")
+def save_query_manager(
+    data: QueryManagerSchema,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+
+
+    # Retrieve the user_id based on the provided username
+    # user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
+    # if user is None:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Create a new QueryManager record
+    new_query_manager = QueryManager(
+        query_id=data.query_id,
+        queried_by=data.user_id, 
+        query_on=datetime.now(),
+        query_description=data.query_description 
+      
+    )
+
+    # Save the new record
+    db.add(new_query_manager)
+    db.commit()
+    db.refresh(new_query_manager)
+
+    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
+
+
+
+#-----------------------------------------------------------------------
+# from passlib.context import CryptContext
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# @router.post("/register")
+# async def register(user: UserRegistrationCreate, db: Session = Depends(get_db)):
+#     # Check if user already exists
+#     db_user = db.query(UserRegistration).filter(UserRegistration.username == user.username).first()
+#     if db_user:
+#         raise HTTPException(status_code=400, detail="Username already registered")
+    
+#     # Hash the password
+#     hashed_password = pwd_context.hash(user.password)
+
+#     # Create a new user object
+#     new_user = UserRegistration(
+#         username=user.username,
+#         password=hashed_password,
+#         latitude=user.latitude,
+#         longitude=user.longitude
+#     )
+
+#     # Add the new user to the session and commit
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+
+#     return {"message": "User registered successfully!", "user_id": new_user.id}

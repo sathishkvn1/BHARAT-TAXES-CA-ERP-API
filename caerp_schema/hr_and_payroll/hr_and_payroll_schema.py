@@ -1035,3 +1035,188 @@ class ApplicantPresentAddressResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+
+
+class ApplicantPermanentAddressResponse(BaseModel):
+    permanent_address_id: Optional[int]
+    permanent_house_or_flat_name: Optional[str] = None
+    permanent_house_flat_or_door_number: Optional[str] = None
+    permanent_road_name: Optional[str] = None
+    permanent_street_name: Optional[str] = None
+    permanent_land_mark: Optional[str] = None
+    permanent_pin_code: Optional[str] = None
+
+    permanent_post_office_id: Optional[int] = None
+    permanent_post_office_name: Optional[str] = None
+    permanent_post_office_pin_code: Optional[str] = None
+    permanent_post_office_contact: Optional[str] = None
+    applicant_id: Optional[int]
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+    permanent_city_id: Optional[int] = None
+    permanent_city_name: Optional[str] = None
+
+    permanent_taluk_id: Optional[int] = None
+    permanent_taluk_name: Optional[str] = None
+
+    permanent_district_id: Optional[int] = None
+    permanent_district_name: Optional[str] = None
+
+    permanent_state_id: Optional[int] = None
+    permanent_state_name: Optional[str] = None
+    # present_state_code: Optional[str] = None
+
+    permanent_country_id: Optional[int] = None
+    permanent_country_name: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+
+class ApplicantContactDetailsResponse(BaseModel):
+    contact_details_id: int
+    personal_mobile_number: Optional[str]
+    personal_whatsapp_number: Optional[str]
+    personal_email_id: Optional[str]
+    contact_deleted: str  # Assuming it's an ENUM('yes', 'no')
+
+    applicant_id: int
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+
+
+
+
+class ApplicantEducationalQualificationResponse(BaseModel):
+    qualification_id: int
+    institution: str
+    percentage_of_score: float
+    month_and_year_of_completion: str
+    qualification_status: str
+    qualification_deleted: str
+    education_level_id: int
+    education_level: str
+    education_stream_id: Optional[int]  # Optional if it can be None
+    education_stream: Optional[str]  # Optional if it can be None
+    education_subject_or_course_id: Optional[int]  # Optional if it can be None
+    subject_or_course_name: Optional[str]  # Optional if it can be None
+    first_name: str
+    middle_name: Optional[str]  # Optional if it can be None
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+class ApplicantProfessionalQualificationResponse(BaseModel):
+    id: int
+    applicant_id: int
+    qualification_id: int
+    institution: Optional[str] = None
+    membership_number: Optional[str] = None
+    enrollment_date:  Optional[date] = None
+    percentage_of_score: Optional[float] = None
+    month_and_year_of_completion: Optional[str] = None
+    status: str
+    is_deleted: str
+    profession_name: str 
+    applicant_id: int 
+    first_name: str
+    middle_name: Optional[str]  # Optional if it can be None
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+class ApplicantExperienceResponse(BaseModel):
+    id: int
+    applicant_id: int
+    company_name: str
+    company_address: str
+    company_contact_number: str
+    company_email: Optional[str] = None
+    position_held: str
+    responsibility: str
+    start_date: date
+    end_date: Optional[date] = None
+    last_salary: float
+    reason_for_leaving: str
+    is_deleted: str
+    first_name: str
+    middle_name: Optional[str]
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+
+class ApplicantLanguageProficiencyResponse(BaseModel):
+    id: int
+    language: str
+    read_proficiency: Optional[str] = None
+    write_proficiency: Optional[str] = None
+    speak_proficiency: Optional[str] = None
+    is_deleted: str
+    applicant_id: int
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+class ApplicantHobbyResponse(BaseModel):
+    id: int
+    
+    applicant_hobby: str
+    remarks: Optional[str] = None
+    applicant_id: int
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+
+class ApplicantSkillResponse(BaseModel):
+    id: int
+    
+    skill_id: int
+    skill: str
+    remarks: Optional[str] = None
+    applicant_id: int
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
+
+    class Config:
+        orm_mode = True
+
+
+
+class ApplicantSocialMediaResponse(BaseModel):
+    id: int
+    applicant_id: int
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    xhandle: Optional[str] = None
+    linked_in: Optional[str] = None
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
