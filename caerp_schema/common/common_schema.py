@@ -1810,3 +1810,11 @@ class BankMasterBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+
+class UserRegistrationCreate(BaseModel):
+    username: str
+    password: str
+    latitude: float
+    longitude: float
