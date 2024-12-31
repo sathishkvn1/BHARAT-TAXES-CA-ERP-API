@@ -1,13 +1,13 @@
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 
-from typing import List, Optional, Type, Union
+from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
@@ -222,7 +222,7 @@ def delete_employee_details_by_id(
 
   
 #---------------------------------------------------------------------------------------------------------
-from sqlalchemy import func
+from sqlalchemy import and_, func
 
 
 
@@ -1779,3 +1779,389 @@ def save_employee_language_proficiency(
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+#------------------------------------------------------------------------------------------------
+
+# @router.post("/vacancy/create", response_model=dict)
+# async def create_vacancy(vacancy_data: VacancyCreateSchema, 
+#                          db: Session = Depends(get_db),
+#                          token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Create a new vacancy record and its associated data.
+#     Inserts data into vacancy_master and related tables like VacancyExperience, VacancySkills, etc.
+#     """
+#     # Check if token is provided
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     # Authenticate and get user_id from token
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+#     if not user_id:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+#     try:
+#         # Pass user_id (as created_by) along with vacancy data to the save function
+#         result = db_employee_master.save_vacancy_data(vacancy_data, db, user_id)
+        
+#         # Return the response with success message and the generated vacancy_master_id
+#         return {"message": "Vacancy created successfully", "vacancy_master_id": result['vacancy_master_id']}
+    
+#     except Exception as e:
+#         # Handle any exceptions and return an HTTP error if something goes wrong
+#         raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
+
+
+@router.post("/save_vacancy_data", response_model=dict)
+async def create_vacancy(vacancy_data: VacancyCreateSchema, 
+                         db: Session = Depends(get_db),
+                         token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Create a new vacancy record and its associated data.
+    Inserts data into vacancy_master and related tables like VacancyExperience, VacancySkills, etc.
+    """
+    # Check if token is provided
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Authenticate and get user_id from token
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+    try:
+        # Pass user_id (as created_by) along with vacancy data to the save function
+        result = db_employee_master.save_vacancy_data(vacancy_data, db, user_id)
+        
+        # Return the response with success message and the generated vacancy_master_id
+        return result  # Returning the result which includes success, message, and vacancy_master_id
+    
+    except Exception as e:
+        # Handle any exceptions and return an HTTP error if something goes wrong
+        raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
+
+#------------------------------------------------------------------------------------------------------
+@router.get("/vacancy_details")
+def get_vacancies(
+    department_id: int = Query(None, description="Filter by department ID"),
+    designation_id: int = Query(None, description="Filter by designation ID"),
+    status: str = Query(None, description="Filter by vacancy status (OPEN, CLOSED)"),
+    announcement_date: str = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+    closing_date: str = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+    db: Session = Depends(get_db,),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    filters = []
+    
+    # Build filters based on query parameters
+    if department_id:
+        filters.append(VacancyDetailsView.department_id == department_id)
+    
+    if designation_id:
+        filters.append(VacancyDetailsView.designation_id == designation_id)
+    
+    if status:
+        filters.append(VacancyDetailsView.vacancy_status == status)
+    
+    if announcement_date:
+        filters.append(VacancyDetailsView.announcement_date == announcement_date)
+    
+    if closing_date:
+        filters.append(VacancyDetailsView.closing_date == closing_date)
+    
+    # Apply filters and query the database
+    vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
+
+    # Fetch results
+    vacancies = vacancies_query.all()
+
+    # Return the results in a structured format including all fields
+    return {
+        "vacancies": [
+            {
+                "vacancy_master_id": vacancy.vacancy_master_id,
+                "department_id": vacancy.department_id,
+                "department_name": vacancy.department_name,
+                "designation_id": vacancy.designation_id,
+                "designation_name": vacancy.designation_name,
+                "vacancy_count": vacancy.vacancy_count,
+                "job_description": vacancy.job_description,
+                "job_location": vacancy.job_location,
+                "reported_date": vacancy.reported_date,
+                "announcement_date": vacancy.announcement_date,
+                "closing_date": vacancy.closing_date,
+                "vacancy_status": vacancy.vacancy_status,
+                "experience_required": vacancy.experience_required,
+                "skill_id": vacancy.skill_id,
+                "skill_name": vacancy.skill_name,
+                "skill_weightage": vacancy.skill_weightage,
+                "language_id": vacancy.language_id,
+                "language_name": vacancy.language_name,
+                "language_proficiency_id": vacancy.language_proficiency_id,
+                "proficiency_level": vacancy.proficiency_level,
+                "is_read_required": vacancy.is_read_required,
+                "read_weightage": vacancy.read_weightage,
+                "is_write_required": vacancy.is_write_required,
+                "write_weightage": vacancy.write_weightage,
+                "is_speak_required": vacancy.is_speak_required,
+                "speak_weightage": vacancy.speak_weightage,
+                "education_level_id": vacancy.education_level_id,
+                "is_any_education_level": vacancy.is_any_education_level,
+                "education_stream_id": vacancy.education_stream_id,
+                "is_any_education_stream": vacancy.is_any_education_stream,
+                "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+                "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+                "education_level_name": vacancy.education_level_name,
+                "education_stream_name": vacancy.education_stream_name,
+                "subject_or_course_name": vacancy.subject_or_course_name,
+                "min_years": vacancy.min_years,
+                "max_years": vacancy.max_years,
+                "experience_weightage": vacancy.experience_weightage,
+            }
+            for vacancy in vacancies
+        ]
+    }
+
+#------------------------------------------------------------------------------------------
+@router.post("/save_vacancy_announcements/")
+async def save_vacancy_announcements(
+    data: VacancyAnnouncements,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    # Step 1: Validate the token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    # Step 2: Authenticate the user (you can modify as per your authentication mechanism)
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    # Step 3: Save the vacancy announcements to the DB
+    result = db_employee_master.save_vacancy_announcements_to_db(data, db, user_id)
+
+    # Step 4: Return the result based on success or failure
+    if result["success"]:
+        return {"success": True, "message": "Vacancy announcements saved successfully"}
+    else:
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+#---------------------------------------------------------------------------------------------
+@router.get("/announcements_list", response_model=AnnouncementsListResponse)
+async def get_announcements(
+    announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
+    announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
+    status: Optional[str] = None,  # Filter by status like "OPEN" or "CLOSED"
+    announcement_date: Optional[date] = None,
+    closing_date: Optional[date] = None,
+    db: Session = Depends(get_db)
+):
+    filters = []
+
+    # Apply filters based on the query parameters
+    if announcement_type != "ALL":
+        filters.append(VacancyAnnouncementMaster.announcement_type == announcement_type)
+    
+    if announcement_status != "ALL":
+        filters.append(VacancyAnnouncementMaster.announcement_status == announcement_status)
+
+    if status:
+        filters.append(VacancyAnnouncementMaster.is_deleted == status)  # assuming status refers to deletion status ("yes" or "no")
+
+    if closing_date:
+        filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
+
+    # Build the query with filters
+    query = db.query(VacancyAnnouncementMaster).filter(*filters)
+
+    # Get all results that match the filters
+    announcements = query.all()
+
+    # Filter by announcement_date after fetching the results (if provided)
+    if announcement_date:
+        announcements = [announcement for announcement in announcements if announcement.created_on.date() == announcement_date]
+
+    # Format the results as a list of dictionaries
+    result = []
+    for announcement in announcements:
+        result.append({
+            "id": announcement.id,
+            "title": announcement.title,
+            "announcement_type": announcement.announcement_type,
+            "announcement_status": announcement.announcement_status,
+            "created_by": str(announcement.created_by),  # Ensure it's a string
+            "created_on": announcement.created_on.date() if announcement.created_on else None,  # Convert datetime to date
+            "closing_date": announcement.closing_date if announcement.closing_date else None
+        })
+
+    return {"announcements": result}
+
+#---------------------------------------------------------------------------------------------
+# @router.post("/save_applicant/")
+# async def save_applicant(
+#     data: ApplicantDetails, 
+#     profile_component: List[str] = Query(...),  # Receiving the list of components to save
+#     db: Session = Depends(get_db),  # Dependency for the DB session
+#     token: str = Depends(oauth2.oauth2_scheme)  # OAuth2 token for authentication
+# ):
+#     # Step 1: Validate the token
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     # Step 2: Authenticate the user
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     if not user_id:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+#     # Step 3: Save the applicant data to the DB by passing profile_component
+#     result = db_employee_master.save_applicant(data, db, user_id, profile_component)
+
+#     # Step 4: Return the result based on success or failure
+#     if result["success"]:
+#         return {"success": True, "message": "Applicant details saved successfully"}
+#     else:
+#         raise HTTPException(status_code=500, detail=result["message"])
+
+
+@router.post("/save_applicant/")
+async def save_applicant(
+
+    data: ApplicantDetails, 
+    profile_component: List[str] = Query(...),  # Receiving the list of components to save
+    db: Session = Depends(get_db),  # Dependency for the DB session
+    token: str = Depends(oauth2.oauth2_scheme)  # OAuth2 token for authentication
+):
+    # Step 1: Validate the token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    # Step 2: Authenticate the user
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+    # Step 3: Save the applicant data to the DB by passing profile_component
+    result = db_employee_master.save_applicant(data, db, user_id, profile_component)
+
+    # Step 4: Return the result based on success or failure
+    if result["success"]:
+        return {
+            "success": True,
+            "message": "Saved successfully",
+            "applicant_id": result.get("applicant_id")  
+        }
+    else:
+        raise HTTPException(status_code=500, detail=result["message"])
+
+
+#------------------------------------------------------------------------------------------
+
+@router.get("/applicant_details/", response_model=List[ApplicantDetails])
+def get_applicant_details(db: Session = Depends(get_db)):
+    # Query the view
+    applicant_details = db.query(ViewApplicantDetails).all()
+    
+    return applicant_details
+
+
+
+
+
+
+# @router.get("/test/applicant_details/", response_model=Dict[str, List[ApplicantDetailsView]])  # Using Dict for flexibility
+# def get_applicant_details(
+#     applicant_id: Optional[int] = None,  # Optional parameter to filter by applicant_id
+#     profile_component: Optional[str] = None,
+
+#     db: Session = Depends(get_db)  # Dependency for DB session
+# ):
+#     # Initialize an empty dictionary to hold the profile data
+#     profile_data = {}
+
+#     print("Profile component received:", profile_component)  # Debugging print
+#     print("Applicant ID received:", applicant_id)  # Debugging print
+
+#     # Check if both applicant_id and profile_component are provided
+#     if applicant_id is not None and profile_component is not None:
+#         print("Both applicant_id and profile_component provided. Fetching all applicant details...")  # Debugging print
+#         applicant_details = db.query(ViewApplicantDetails).all()  # Fetching all applicant details
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+#         profile_data["applicant_details"] = applicant_details  # Add to the profile data
+#     # Get data based on the profile_component only
+#     elif profile_component == "applicant_master":
+#         print("Fetching applicant master data...")  # Debugging print
+#         profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+#     elif profile_component == "address":
+#         print("Fetching address data...")  # Debugging print
+#         profile_data["address"] = db_employee_master.get_address(db, applicant_id)
+#     elif profile_component == "contact":
+#         print("Fetching contact data...")  # Debugging print
+#         profile_data["contact"] = db_employee_master.get_contact(db, applicant_id)
+#     else:
+#         print("Fetching all applicant details...")  # Debugging print
+#         applicant_details = db.query(ViewApplicantDetails).all()  # Fetching all applicant details
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+#         profile_data["applicant_details"] = applicant_details  # Add to the profile data
+
+#     # If no data found for the profile_component, return a 404 error
+#     if not profile_data:
+#         print("No profile data found for the given component")  # Debugging print
+#         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
+
+#     print("Returning profile data:", profile_data)  # Debugging print
+#     return profile_data
+
+
+@router.get("/test/applicant_details/", response_model=Dict[str, Any])
+def get_applicant_details(
+    applicant_id: Optional[int] = None,
+    profile_component: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    profile_data = {}
+
+    # If neither applicant_id nor profile_component is provided, fetch all applicant details
+    if applicant_id is None and profile_component is None:
+        print("Fetching all applicant details...")  # Debugging print
+        applicant_details = db_employee_master.get_all_applicant_detals(db)
+        
+        print("Fetched applicant details:", applicant_details)  # Debugging print
+
+        if not applicant_details:
+            raise HTTPException(status_code=404, detail="No data found for applicant details")
+
+        # Ensure proper mapping to ApplicantDetailsView
+        profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
+    # If applicant_id is provided and profile_component is also provided, handle those cases
+    elif applicant_id is not None and profile_component is not None:
+        if profile_component == "applicant_master":
+            print("Fetching applicant master data...")
+            profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+        elif profile_component == "applicant_present_address":
+            print("Fetching address data...")
+            profile_data["address"] = db_employee_master.applicant_present_address(db, applicant_id)
+        elif profile_component == "applicant_permanent_address":
+            print("Fetching address data...")
+            profile_data["address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+        elif profile_component == "contact":
+            print("Fetching contact data...")
+            profile_data["contact"] = db_employee_master.get_contact(db, applicant_id)
+        else:
+            raise HTTPException(status_code=400, detail="Invalid profile component")
+
+    # If no profile_data found for the given component, raise 404
+    if not profile_data:
+        print("No profile data found for the given component")  # Debugging print
+        raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
+
+    return profile_data

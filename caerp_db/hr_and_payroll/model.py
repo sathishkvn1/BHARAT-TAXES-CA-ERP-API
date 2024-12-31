@@ -1,4 +1,4 @@
-from sqlalchemy import Date
+from sqlalchemy import Boolean, Date
 from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
@@ -141,6 +141,7 @@ class HrViewEmployeeTeamMaster(caerp_base):
     description           = Column(String(1000), nullable=False)
     effective_from_date   = Column(Date, nullable=False)
     effective_to_date     = Column(Date)
+
     created_by            = Column(Integer, nullable=False)
     created_on            = Column(DateTime, nullable=False)
     modified_by           = Column(Integer)
@@ -209,4 +210,502 @@ class HrEmployeeCategory(caerp_base):
     category_name = Column(String(200), nullable=False)
     is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
     
+
+
+#------------------------------------------------------------------------------------
+
+
+class VacancyMaster(caerp_base):
+    __tablename__ = 'vacancy_master'
+
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    designation_id           = Column(Integer,nullable=False)
+    department_id            = Column(Integer,  nullable=False, default=0)
+    created_by              = Column(Integer,  nullable=False, default=0)  
+    modified_by             = Column(Integer, nullable=True)
+    deleted_by              = Column(Integer,  nullable=True)
+    job_description         = Column(String(2000), nullable=False)
+    vacancy_count           = Column(Integer, nullable=True, default=None)
+    reported_date           = Column(Date, nullable=False)
+    announcement_date      = Column(Date, nullable=True, default=None)
+    closing_date            = Column(Date, nullable=True, default=None)
+    vacancy_status          = Column(Enum('OPEN', 'CLOSED', 'ON HOLD', 'PROCESSED', 'CANCELLED'), nullable=False, default='ON HOLD')
+    job_location            = Column(String(200), nullable=True, default=None)
+    experience_required     = Column(Enum('yes', 'no'), nullable=True, default='no')
+    created_on               = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    created_by               = Column(Integer, nullable=False)
+    modified_on             = Column(DateTime, nullable=True, default=None)
+    modified_by             = Column(String, nullable=False)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_on              = Column(DateTime, nullable=True, default=None)
+
+
+
+class VacancySkills(caerp_base):
+    __tablename__ = 'vacancy_skills'
+
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id       = Column(Integer, nullable=False)
+    skill_id                = Column(Integer, nullable=False)
+    weightage               = Column(Float, nullable=False, default=0.0)
+    created_by              = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by             = Column(Integer, nullable=True)
+    modified_on             = Column(DateTime, nullable=True, default=None)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by              = Column(Integer, nullable=True)
+    deleted_on             = Column(DateTime, nullable=True, default=None)
+
+
+
+class VacancyLanguageProficiency(caerp_base):
+    __tablename__ = 'vacancy_language_proficiency'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id           = Column(Integer, nullable=False)
+    language_id                 = Column(Integer, nullable=False)
+    language_proficiency_id     = Column(Integer, nullable=False)
+    is_read_required            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    read_weightage              = Column(Float, nullable=False, default=0.0)
+    is_write_required           = Column(Enum('yes', 'no'), nullable=False, default='no')
+    write_weightage             = Column(Float, nullable=False, default=0.0)
+    is_speak_required           = Column(Enum('yes', 'no'), nullable=False, default='no')
+    speak_weightage             = Column(Float, nullable=False, default=0.0)
+    created_by                  = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by                 = Column(Integer, nullable=True)
+    modified_on                 = Column(DateTime, nullable=True, default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, nullable=True)
+    deleted_on                  = Column(DateTime, nullable=True, default=None)
+
+
+
+
+class VacancyEducationalQualification(caerp_base):
+    __tablename__ = 'vacancy_educational_qualification'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id           = Column(Integer, nullable=False)
+    education_level_id          = Column(Integer, nullable=True, default=None)
+    is_any_level                = Column(Enum('yes', 'no'), nullable=False, default='no')
+    education_stream_id         = Column(Integer, nullable=True, default=None)
+    is_any_stream               = Column(Enum('yes', 'no'), nullable=False, default='no')
+    education_subject_or_course_id = Column(Integer, nullable=True, default=None)
+    is_any_subject_or_course    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    created_by                  = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by                 = Column(Integer, nullable=True)
+    modified_on                 = Column(DateTime, nullable=True, default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, nullable=True)
+    deleted_on                  = Column(DateTime, nullable=True, default=None)
+
+
+class VacancyEducationalLevel(caerp_base):
+    __tablename__ = 'vacancy_educational_level'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id           = Column(Integer, nullable=False)
+    education_level_id          = Column(Integer, nullable=True, default=None)
+    weightage                   = Column(Float, nullable=False, default=0.0)
+    created_by                  = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by                 = Column(Integer, nullable=True)
+    modified_on                 = Column(DateTime, nullable=True, default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, nullable=True)
+    deleted_on                  = Column(DateTime, nullable=True, default=None)
+
+
+
+class VacancyEducationalStream(caerp_base):
+    __tablename__ = 'vacancy_educational_stream'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id           = Column(Integer, nullable=False)
+    education_stream_id         = Column(Integer, nullable=True, default=None)
+    weightage                   = Column(Float, nullable=False, default=0.0)
+    created_by                  = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by                 = Column(Integer, nullable=True)
+    modified_on                 = Column(DateTime, nullable=True, default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, nullable=True)
+    deleted_on                  = Column(DateTime, nullable=True, default=None)
+
+
+class VacancyEducationalSubjectOrCourse(caerp_base):
+    __tablename__ = 'vacancy_educational_subject_or_course'
+
+    id                            = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id             = Column(Integer, nullable=False)
+    education_subject_or_course_id = Column(Integer, nullable=True, default=None)
+    weightage                     = Column(Float, nullable=False, default=0.0)
+    created_by                    = Column(Integer, nullable=False, default=0)
+    created_on              = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by                   = Column(Integer, nullable=True)
+    modified_on                   = Column(DateTime, nullable=True, default=None)
+    is_deleted                    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                    = Column(Integer, nullable=True)
+    deleted_on                    = Column(DateTime, nullable=True, default=None)
+
+
+# Assuming caerp_base is a subclass of SQLAlchemy's declarative base
+class VacancyExperience(caerp_base):
+    __tablename__ = 'vacancy_experience'
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_master_id = Column(Integer, nullable=False)
+    min_years         = Column(Integer, nullable=False, default=0)
+    max_years         = Column(Integer, nullable=False, default=0)
+    weightage         = Column(Float, nullable=False, default=0.0)
+    created_by        = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow)  # Set default to current timestamp
+    modified_by       = Column(Integer, nullable=True)
+    modified_on       = Column(DateTime, nullable=True, default=None)
+    is_deleted        = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by        = Column(Integer, nullable=True)
+    deleted_on        = Column(DateTime, nullable=True, default=None)
+
+
+
+
+class VacancyDetailsView(caerp_base):
+    __tablename__ = 'view_vacancy_details'
+
+    vacancy_master_id = Column(Integer, primary_key=True)
+    department_id = Column(Integer)
+    department_name = Column(String)
+    designation_id = Column(Integer)
+    designation_name = Column(String)
+    vacancy_count = Column(Integer)
+    job_description = Column(String)
+    job_location = Column(String)
+    reported_date = Column(Date)
+    announcement_date = Column(Date)
+    closing_date = Column(Date)
+    vacancy_status = Column(String)
+    experience_required = Column(String)
+
+    skill_id = Column(Integer)
+    skill_name = Column(String)
+    skill_weightage = Column(Float)
+
+    language_id = Column(Integer)
+    language_name = Column(String)
+    language_proficiency_id = Column(Integer)
+    proficiency_level = Column(String)
+    is_read_required = Column(Enum('yes', 'no', name='yes_no'))
+    read_weightage = Column(Float)
+    is_write_required = Column(Enum('yes', 'no', name='yes_no'))
+    write_weightage = Column(Float)
+    is_speak_required = Column(Enum('yes', 'no', name='yes_no'))
+    speak_weightage = Column(Float)
+
+    education_level_id = Column(Integer)
+    is_any_education_level = Column(Enum('yes', 'no', name='yes_no'))
+    education_stream_id = Column(Integer)
+    is_any_education_stream = Column(Enum('yes', 'no', name='yes_no'))
+    education_subject_or_course_id = Column(Integer)
+    is_any_subject_or_course = Column(Enum('yes', 'no', name='yes_no'))
+
+    education_level_name = Column(String)
+    education_stream_name = Column(String)
+    subject_or_course_name = Column(String)
+
+    min_years = Column(Integer)
+    max_years = Column(Integer)
+    experience_weightage = Column(Float)
+
+#------------------------------------------------------------------------------------  
+
+
+class VacancyAnnouncementMaster(caerp_base):
+    __tablename__ = 'vacancy_announcement_master'
+
+    id                   = Column(Integer, primary_key=True, autoincrement=True)
+    title                = Column(String(2000), nullable=False)
+    description          = Column(String(2000), nullable=False)
+   
+    announcement_type    = Column(Enum('SPECIAL', 'GENERAL'), nullable=False, default='GENERAL')
+    announcement_status  = Column(Enum('ACTIVE', 'INACTIVE'), nullable=False, default='ACTIVE')
+    closing_date         = Column(Date, nullable=True, default=None)
+    created_by           = Column(Integer, nullable=False, default=0)
+    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    modified_by          = Column(Integer, nullable=True)
+    modified_on          = Column(DateTime, nullable=True, default=None)
+    is_deleted           = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by           = Column(Integer, nullable=True)
+    deleted_on           = Column(DateTime, nullable=True, default=None)
+
+
+#------------------------------------------------------------------------------------
+
+class VacancyAnnouncementDetails(caerp_base):
+    __tablename__ = 'vacancy_announcement_details'
+
+    id                     = Column(Integer, primary_key=True, autoincrement=True)
+    vacancy_announcement_master_id = Column(Integer, nullable=False)
+    vacancy_master_id       = Column(Integer, nullable=False)
+    created_by             = Column(Integer, nullable=False, default=0)
+    created_on             = Column(DateTime, nullable=False, default='CURRENT_TIMESTAMP')
+    modified_by            = Column(Integer, nullable=True)
+    modified_on            = Column(DateTime, nullable=True, default=None)
+    is_deleted             = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by             = Column(Integer, nullable=True)
+    deleted_on             = Column(DateTime, nullable=True, default=None)
+
+#-----------------------------------------------------------------------------------
+class ApplicantMaster(caerp_base):
+    __tablename__ = "applicant_master"
+
+    applicant_id = Column(Integer, primary_key=True, autoincrement=True)
+    login_id = Column(Integer, nullable=False)
+    first_name = Column(String(50), nullable=False)
+    middle_name = Column(String(50), nullable=True)
+    last_name = Column(String(50), nullable=False)
+    gender_id = Column(Integer, nullable=False)
+    blood_group = Column(String(5),  nullable=True)
+    marital_status_id = Column(Integer, nullable=False)
+    date_of_birth = Column(Date, nullable=False)
+    nationality_id = Column(Integer,  nullable=False)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#--------------------------------------------------------------------------------------------
+
+class ApplicantPresentAddress(caerp_base):
+    __tablename__ = "applicant_present_address"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    present_house_or_flat_name = Column(String(50), nullable=True)
+    present_house_flat_or_door_number = Column(String(50), nullable=True)
+    present_road_name = Column(String(50), nullable=True)
+    present_street_name = Column(String(50), nullable=True)
+    present_land_mark = Column(String(50), nullable=True)
+    present_pin_code = Column(String(50), nullable=True)
+    present_post_office_id = Column(Integer, nullable=False, default=0)
+    present_city_id = Column(Integer, nullable=False, default=0)
+    present_taluk_id = Column(Integer, nullable=False, default=0)
+    present_district_id = Column(Integer, nullable=False, default=0)
+    present_state_id = Column(Integer, nullable=False, default=0)
+    present_country_id = Column(Integer, nullable=False, default=0)
+    is_permenent_address_same_as_present = Column(Enum("yes", "no"), nullable=False, default="no")
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#--------------------------------------------------------------------------------------------
+class ApplicantPermanentAddress(caerp_base):
+    __tablename__ = "applicant_permanent_address"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    permanent_house_or_flat_name = Column(String(50), nullable=True)
+    permanent_house_flat_or_door_number = Column(String(50), nullable=True)
+    permanent_road_name = Column(String(50), nullable=True)
+    permanent_street_name = Column(String(50), nullable=True)
+    permanent_land_mark = Column(String(50), nullable=True)
+    permanent_pin_code = Column(String(50), nullable=True)
+    permanent_post_office_id = Column(Integer, nullable=False, default=0)
+    permanent_city_id = Column(Integer, nullable=False, default=0)
+    permanent_taluk_id = Column(Integer, nullable=False, default=0)
+    permanent_district_id = Column(Integer, nullable=False, default=0)
+    permanent_state_id = Column(Integer, nullable=False, default=0)
+    permanent_country_id = Column(Integer, nullable=False, default=0)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#--------------------------------------------------------------------------------------------
+
+class ApplicantContactDetails(caerp_base):
+    __tablename__ = "applicant_contact_details"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    personal_mobile_number = Column(String(15), nullable=True)
+    personal_whatsapp_number = Column(String(15), nullable=True)
+    personal_email_id = Column(String(50), nullable=True)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+#--------------------------------------------------------------------------------------------
+class ApplicantEducationalQualification(caerp_base):
+    __tablename__ = "applicant_educational_qualification"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    education_level_id = Column(Integer, nullable=False)
+    education_stream_id = Column(Integer, nullable=False)
+    education_subject_or_course_id = Column(Integer, nullable=False)
+    institution = Column(String(100), nullable=False)
+    percentage_of_score = Column(Float, nullable=False)
+    month_and_year_of_completion = Column(String(50), nullable=False)
+    status = Column(Enum("PURSUING", "COMPLETED", "RESULT AWAITING"), default="COMPLETED")
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+#------------------------------------------------------------------------------------------------
+
+class ApplicantProfessionalQualification(caerp_base):
+    __tablename__ = "applicant_professional_qualifications"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    qualification_id = Column(Integer, nullable=False)
+    institution = Column(String(100), nullable=True)
+    membership_number = Column(String(100), nullable=True)
+    enrollment_date = Column(Date, nullable=False)
+    percentage_of_score = Column(Float, nullable=False)
+    month_and_year_of_completion = Column(String(50), nullable=True)
+    status = Column(Enum("PURSUING", "COMPLETED", "RESULT AWAITING"), default="COMPLETED")
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#---------------------------------------------------------------------------------------------------
+class ApplicantExperience(caerp_base):
+    __tablename__ = "applicant_experience"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    company_name = Column(String(100), nullable=False)
+    company_address = Column(String(100), nullable=False)
+    company_contact_number = Column(String(100), nullable=False)
+    company_email = Column(String(100), nullable=True)
+    position_held = Column(String(100), nullable=False)
+    responsibility = Column(String(2000), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)
+    last_salary = Column(Float, nullable=False, default=0.0)
+    reason_for_leaving = Column(String(100), nullable=False)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#-----------------------------------------------------------------------------------------
+class ApplicantLanguageProficiency(caerp_base):
+    __tablename__ = "applicant_language_proficiency"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    language_id = Column(Integer, nullable=False)
+    read_proficiency_id = Column(Integer, nullable=False)
+    write_proficiency_id = Column(Integer, nullable=False)
+    speak_proficiency_id = Column(Integer, nullable=False)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+#-----------------------------------------------------------------------------------------
+class ApplicantHobby(caerp_base):
+    __tablename__ = "applicant_hobby"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    applicant_hobby = Column(String(50), nullable=False)
+    remarks = Column(String(500), nullable=True, default=None)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+#-----------------------------------------------------------------------------------------
+class ApplicantSkill(caerp_base):
+    __tablename__ = "applicant_skill"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    skill_id = Column(Integer, nullable=False)
+    remarks = Column(String(500), nullable=True, default=None)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+#-----------------------------------------------------------------------------------------
+class ApplicantSocialMediaProfile(caerp_base):
+    __tablename__ = "applicant_social_media_profile"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    facebook = Column(String(100), nullable=True, default=None)
+    youtube = Column(String(100), nullable=True, default=None)
+    xhandle = Column(String(100), nullable=True, default=None)
+    linked_in = Column(String(100), nullable=True, default=None)
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+#---------------------------------------------------------------------------------------------------
+
+class ViewApplicantDetails(caerp_base):
+    __tablename__ = 'view_applicant_details'
+
+    applicant_id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String)
+    middle_name = Column(String)
+    last_name = Column(String)
+    date_of_birth = Column(Date)
     
+    gender_id = Column(Integer)
+    gender_name = Column(String)
+    
+    blood_group_id = Column(Integer)
+    blood_group = Column(String)
+    
+    marital_status_id = Column(Integer)
+    marital_status = Column(String)
+    
+    nationality_id = Column(Integer)
+    nationality_name = Column(String)
+    
+    login_id = Column(Integer)
+    marital_status_id = Column(Integer)
+    nationality_id = Column(Integer)
+    applicant_deleted = Column(Boolean)
+    
+    present_address_id = Column(Integer)
+    present_house_or_flat_name = Column(String)
+    present_house_flat_or_door_number = Column(String)
+    present_road_name = Column(String)
+    present_street_name = Column(String)
+    present_land_mark = Column(String)
+    present_pin_code = Column(String)
+    
+    present_post_office_id = Column(Integer)
+    present_post_office_name = Column(String)
+    present_post_office_pin_code = Column(String)
+    present_post_office_contact = Column(String)
+    present_post_office_latitude = Column(String)
+    present_post_office_longitude = Column(String)
+
+    present_city_id = Column(Integer)
+    present_city_name = Column(String)
+    
+    present_taluk_id = Column(Integer)
+    present_taluk_name = Column(String)
+    
+    present_district_id = Column(Integer)
+    present_district_name = Column(String)
+    
+    present_state_id = Column(Integer)
+    present_state_name = Column(String)
+    present_state_code = Column(String, nullable=True)  
+    
+    present_country_id = Column(Integer)
+    present_country_name = Column(String)
+    
+    permanent_address_id = Column(Integer)
+    permanent_house_or_flat_name = Column(String)
+    permanent_house_flat_or_door_number = Column(String)
+    permanent_road_name = Column(String)
+    permanent_street_name = Column(String)
+    permanent_land_mark = Column(String)
+    permanent_pin_code = Column(String)
+    
+    permanent_post_office_id = Column(Integer)
+    permanent_post_office_name = Column(String)
+    permanent_post_office_pin_code = Column(String)
+    permanent_post_office_contact = Column(String)
+    permanent_post_office_latitude = Column(String)
+    permanent_post_office_longitude = Column(String)
+
+    permanent_city_id = Column(Integer)
+    permanent_city_name = Column(String)
+    
+    permanent_taluk_id = Column(Integer)
+    permanent_taluk_name = Column(String)
+    
+    permanent_district_id = Column(Integer)
+    permanent_district_name = Column(String)
+    
+    permanent_state_id = Column(Integer)
+    permanent_state_name = Column(String)
+    permanent_state_code = Column(String, nullable=True) 
+    
+    permanent_country_id = Column(Integer)
+    permanent_country_name = Column(String)
+
+    contact_details_id = Column(Integer)
+    personal_mobile_number = Column(String)
+    personal_whatsapp_number = Column(String)
+    personal_email_id = Column(String)
+    contact_deleted = Column(Boolean)

@@ -5,8 +5,8 @@ from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, Ap
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
-from caerp_db.hr_and_payroll.model import EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantDetails, ApplicantDetailsView, ApplicantMasterResponse, ApplicantPresentAddressResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -251,6 +251,7 @@ def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int
               raise HTTPException(status_code=400, detail="Please provide the ID to Update")
             
             if option == "present_address" and request.present_address:
+
               update_detail_record(db, EmployeePresentAddress, request.present_address, id, updated_entities, "present_address")
             if option == "permanent_address" and request.permanent_address:
               update_detail_record(db, EmployeePermanentAddress, request.permanent_address, id, updated_entities, "permanent_address")  
@@ -1937,3 +1938,843 @@ def save_employee_language_proficiency(
     except Exception as e:
         db.rollback()
         return {"success": False, "message": str(e)}
+    
+
+#---------------------------------------------------------------------------------------------------
+
+
+# def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by: int):
+#     try:
+#         print("Starting vacancy insert operation")
+
+#         # Prepare data excluding the ID (auto-incremented)
+#         vacancy_master_data = vacancy_data.dict(exclude={"vacancy_experience", "skills_required", "language_proficiency", "education", "id"})
+#         vacancy_master_data['created_by'] = created_by
+#         vacancy_master_data['created_on'] = datetime.utcnow()  # Ensure created_on is set dynamically
+
+#         print(f"Inserting vacancy master data: {vacancy_master_data}")
+
+#         # Insert into VacancyMaster and add it to the session
+#         vacancy_master = VacancyMaster(**vacancy_master_data)
+#         db.add(vacancy_master)
+
+#         # Flush to generate the ID and sync with the database
+#         db.flush()  
+#         print(f"Vacancy master inserted with ID: {vacancy_master.id}")
+
+#         # Insert related data (e.g., experience, skills) if they exist
+#         if vacancy_data.vacancy_experience:
+#             for experience in vacancy_data.vacancy_experience:
+#                 if experience.id == 0:  # Check if it's a new entry (id == 0 means new record)
+#                     vacancy_experience_data = experience.dict()
+#                     vacancy_experience_data['vacancy_master_id'] = vacancy_master.id
+#                     vacancy_experience = VacancyExperience(**vacancy_experience_data)
+#                     db.add(vacancy_experience)
+
+#         if vacancy_data.skills_required:
+#             for skill in vacancy_data.skills_required:
+#                 if skill.id == 0:  # Check if it's a new entry (id == 0 means new record)
+#                     vacancy_skill_data = skill.dict()
+#                     vacancy_skill_data['vacancy_master_id'] = vacancy_master.id
+#                     vacancy_skill = VacancySkills(**vacancy_skill_data)
+#                     db.add(vacancy_skill)
+
+#         if vacancy_data.language_proficiency:
+#             for language in vacancy_data.language_proficiency:
+#                 if language.id == 0:  # Check if it's a new entry (id == 0 means new record)
+#                     # Remove 'education_level_id' if not part of VacancyLanguageProficiency
+#                     language_proficiency_data = language.dict(exclude={"education_level_id"})
+#                     language_proficiency_data['vacancy_master_id'] = vacancy_master.id
+#                     language_proficiency = VacancyLanguageProficiency(**language_proficiency_data)
+#                     db.add(language_proficiency)
+
+#         if vacancy_data.education:
+#             for education in vacancy_data.education:
+#                 if education.id == 0:  # Check if it's a new entry (id == 0 means new record)
+#                     education_data = education.dict()
+#                     education_data['vacancy_master_id'] = vacancy_master.id
+#                     education = VacancyEducationalQualification(**education_data)
+#                     db.add(education)
+
+#         # Commit the session (explicit commit)
+#         db.commit()
+
+#         print(f"Vacancy created successfully with ID: {vacancy_master.id}")
+#         return {
+#             "success": True,  # Success flag
+#             "message": "Vacancy created successfully",  # Success message
+#             "vacancy_master_id": vacancy_master.id  # ID of the created vacancy
+#         }
+
+#     except Exception as e:
+#         print(f"Error during vacancy creation: {str(e)}")
+#         db.rollback()  # Rollback in case of error
+#         return {
+#             "success": False,  # Failure flag
+#             "message": f"Error while saving vacancy data: {str(e)}"  # Error message
+#         }
+
+
+from datetime import datetime
+from sqlalchemy.orm import Session
+
+def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by: int):
+    try:
+        print("Starting vacancy insert/update operation")
+
+        # Prepare data excluding the ID (auto-incremented)
+        vacancy_master_data = vacancy_data.dict(exclude={"vacancy_experience", "skills_required", "language_proficiency", "education", "id"})
+        vacancy_master_data['created_by'] = created_by
+        vacancy_master_data['created_on'] = datetime.utcnow()  # Ensure created_on is set dynamically
+
+        print(f"Inserting/updating vacancy master data: {vacancy_master_data}")
+
+        # Handle insert or update for VacancyMaster
+        if vacancy_data.id == 0:
+            # Insert new vacancy master
+            vacancy_master = VacancyMaster(**vacancy_master_data)
+            db.add(vacancy_master)
+            db.flush()  # Flush to generate the ID
+            print(f"Vacancy master inserted with ID: {vacancy_master.id}")
+        else:
+            # Update existing vacancy master by ID
+            vacancy_master = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_data.id).first()
+            if not vacancy_master:
+                raise Exception(f"Vacancy with ID {vacancy_data.id} not found")
+            for key, value in vacancy_master_data.items():
+                setattr(vacancy_master, key, value)
+
+        # Insert or update related data (e.g., experience, skills, language proficiency, education)
+        
+        # Update or insert vacancy experience
+        if vacancy_data.vacancy_experience:
+            for experience in vacancy_data.vacancy_experience:
+                if experience.id == 0:  # New record, insert
+                    vacancy_experience_data = experience.dict()
+                    vacancy_experience_data['vacancy_master_id'] = vacancy_master.id
+                    vacancy_experience = VacancyExperience(**vacancy_experience_data)
+                    db.add(vacancy_experience)
+                else:  # Existing record, update
+                    vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.id == experience.id).first()
+                    if vacancy_experience:
+                        for key, value in experience.dict().items():
+                            setattr(vacancy_experience, key, value)
+
+        # Update or insert skills required
+        if vacancy_data.skills_required:
+            for skill in vacancy_data.skills_required:
+                if skill.id == 0:  # New record, insert
+                    vacancy_skill_data = skill.dict()
+                    vacancy_skill_data['vacancy_master_id'] = vacancy_master.id
+                    vacancy_skill = VacancySkills(**vacancy_skill_data)
+                    db.add(vacancy_skill)
+                else:  # Existing record, update
+                    vacancy_skill = db.query(VacancySkills).filter(VacancySkills.id == skill.id).first()
+                    if vacancy_skill:
+                        for key, value in skill.dict().items():
+                            setattr(vacancy_skill, key, value)
+
+        # Update or insert language proficiency
+        if vacancy_data.language_proficiency:
+            for language in vacancy_data.language_proficiency:
+                if language.id == 0:  # New record, insert
+                    language_proficiency_data = language.dict(exclude={"education_level_id"})
+                    language_proficiency_data['vacancy_master_id'] = vacancy_master.id
+                    language_proficiency = VacancyLanguageProficiency(**language_proficiency_data)
+                    db.add(language_proficiency)
+                else:  # Existing record, update
+                    language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.id == language.id).first()
+                    if language_proficiency:
+                        for key, value in language.dict().items():
+                            setattr(language_proficiency, key, value)
+
+        # Update or insert education qualifications
+        if vacancy_data.education:
+            for education in vacancy_data.education:
+                if education.id == 0:  # New record, insert
+                    education_data = education.dict()
+                    education_data['vacancy_master_id'] = vacancy_master.id
+                    education = VacancyEducationalQualification(**education_data)
+                    db.add(education)
+                else:  # Existing record, update
+                    education_record = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.id == education.id).first()
+                    if education_record:
+                        for key, value in education.dict().items():
+                            setattr(education_record, key, value)
+
+        # Commit the session (explicit commit)
+        db.commit()
+
+        print(f"Vacancy {'updated' if vacancy_data.id else 'created'} successfully with ID: {vacancy_master.id}")
+        return {
+            "success": True,  # Success flag
+            "message": f"Vacancy {'updated' if vacancy_data.id else 'created'} successfully",  # Success message
+            "vacancy_master_id": vacancy_master.id  # ID of the created or updated vacancy
+        }
+
+    except Exception as e:
+        print(f"Error during vacancy creation/update: {str(e)}")
+        db.rollback()  # Rollback in case of error
+        return {
+            "success": False,  # Failure flag
+            "message": f"Error while saving vacancy data: {str(e)}"  # Error message
+        }
+
+#---------------------------------------------------------------------------------------------------
+# def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
+#     try:
+#         for master in data.vacancy_announcement_master:
+#             # Insert/update VacancyAnnouncementMaster record
+#             master_record = VacancyAnnouncementMaster(
+#                 id=master.id if master.id > 0 else None,
+#                 title=master.title,
+#                 description=master.description,
+#                 announcement_type=master.announcement_type,
+#                 closing_date=master.closing_date,
+#                 created_by=user_id,
+#                 created_on=datetime.utcnow(),
+#                 is_deleted='no'
+#             )
+#             db.add(master_record)
+#             db.flush()  # Flush to get the master record's ID
+
+#             # Insert/update VacancyAnnouncementDetails records
+#             if master.announcement_details:  # Check if announcement_details is not None
+#                 for detail in master.announcement_details:
+#                     detail_record = VacancyAnnouncementDetails(
+#                         id=detail.id if detail.id > 0 else None,
+#                         vacancy_announcement_master_id=master_record.id,
+#                         vacancy_master_id=detail.vacancy_master_id,
+#                         created_by=user_id,
+#                         created_on=datetime.utcnow(),
+#                         is_deleted='no'
+#                     )
+#                     db.add(detail_record)
+
+#         db.commit()  # Commit the transaction
+#         return {"success": True, "message": "Vacancy announcements saved successfully"}
+    
+#     except Exception as e:
+#         db.rollback()  # Rollback if any error occurs
+#         return {"success": False, "message": f"Unexpected error: {str(e)}"}
+
+
+
+def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
+    try:
+        for master in data.vacancy_announcement_master:
+            if master.id == 0:  # If id is 0, insert new VacancyAnnouncementMaster record
+                master_record = VacancyAnnouncementMaster(
+                    title=master.title,
+                    description=master.description,
+                    announcement_type=master.announcement_type,
+                    closing_date=master.closing_date,
+                    created_by=user_id,
+                    created_on=datetime.utcnow(),
+                    is_deleted='no'
+                )
+                db.add(master_record)
+                db.flush()  # Ensure ID is generated for the inserted record
+
+            else:  # If id is not 0, update existing VacancyAnnouncementMaster record
+                master_record = db.query(VacancyAnnouncementMaster).filter(VacancyAnnouncementMaster.id == master.id).first()
+                if master_record:
+                    # Update existing record fields
+                    master_record.title = master.title
+                    master_record.description = master.description
+                    master_record.announcement_type = master.announcement_type
+                    master_record.closing_date = master.closing_date
+                else:
+                    raise ValueError(f"VacancyAnnouncementMaster with id {master.id} not found for update.")
+
+            # Handle VacancyAnnouncementDetails insert or update
+            if master.announcement_details:
+                for detail in master.announcement_details:
+                    if detail.id == 0:  # If id is 0, insert new VacancyAnnouncementDetails record
+                        detail_record = VacancyAnnouncementDetails(
+                            vacancy_announcement_master_id=master_record.id,
+                            vacancy_master_id=detail.vacancy_master_id,
+                            created_by=user_id,
+                            created_on=datetime.utcnow(),
+                            is_deleted='no'
+                        )
+                        db.add(detail_record)
+
+                    else:  # If id is not 0, update existing VacancyAnnouncementDetails record
+                        detail_record = db.query(VacancyAnnouncementDetails).filter(VacancyAnnouncementDetails.id == detail.id).first()
+                        if detail_record:
+                            # Update existing detail record fields
+                            detail_record.vacancy_master_id = detail.vacancy_master_id
+                        else:
+                            raise ValueError(f"VacancyAnnouncementDetails with id {detail.id} not found for update.")
+
+        db.commit()  # Commit the transaction
+        return {"success": True, "message": "Vacancy announcements saved successfully"}
+
+    except Exception as e:
+        db.rollback()  # Rollback if any error occurs
+        return {"success": False, "message": f"Unexpected error: {str(e)}"}
+
+#---------------------------------------------------------------------------------
+# def save_applicant(data: ApplicantDetails, db: Session, user_id: int, profile_component: str):
+#     try:
+#         applicant_id = None
+        
+#         # Iterate through each profile component and save or update the respective data
+#         for component in data.profile_component:
+#             if component == "applicant_master":
+#                 applicant_data = data.applicant_master.dict()
+#                 if applicant_data["id"] == 0:  # Insert new record
+#                     new_applicant = ApplicantMaster(
+#                         **applicant_data,
+#                         # created_by=user_id,
+                    
+#                     )
+#                     db.add(new_applicant)
+#                     db.commit()
+#                     db.refresh(new_applicant)
+#                     applicant_id = new_applicant.id
+#                 else:  # Update existing record
+#                     # Find existing applicant
+#                     existing_applicant = db.query(ApplicantMaster).filter(
+#                         ApplicantMaster.id == applicant_data["id"]
+#                     ).first()
+                    
+#                     if existing_applicant:
+#                         # Update fields only if present in applicant_data
+#                         for key, value in applicant_data.items():
+#                             if hasattr(existing_applicant, key) and value is not None:
+#                                 setattr(existing_applicant, key, value)
+#                         db.commit()
+#                         db.refresh(existing_applicant)
+#                         applicant_id = existing_applicant.id
+#                     else:
+#                         raise HTTPException(status_code=404, detail="Applicant master not found for update.")
+
+#             elif component == "applicant_present_address":
+#                 if not applicant_id:
+#                     raise HTTPException(status_code=400, detail="Applicant master must be saved first.")
+#                 address_data = data.applicant_present_address.dict()
+#                 if address_data["id"] == 0:  # Insert new record
+#                     new_address = ApplicantPresentAddress(
+#                         **address_data,
+#                         applicant_id=applicant_id,
+#                         created_by=user_id,
+#                         updated_by=user_id
+#                     )
+#                     db.add(new_address)
+#                     db.commit()
+#                     db.refresh(new_address)
+#                 else:  # Update existing record
+#                     existing_address = db.query(ApplicantPresentAddress).filter(ApplicantPresentAddress.id == address_data["id"]).first()
+#                     if existing_address:
+#                         for key, value in address_data.items():
+#                             setattr(existing_address, key, value)
+#                         existing_address.updated_by = user_id
+#                         db.commit()
+#                         db.refresh(existing_address)
+
+#             elif component == "applicant_permanent_address":
+#                 if not applicant_id:
+#                     raise HTTPException(status_code=400, detail="Applicant master must be saved first.")
+#                 permanent_address_data = data.applicant_permanent_address.dict()
+#                 if permanent_address_data["id"] == 0:  # Insert new record
+#                     new_permanent_address = ApplicantPermenentAddress(
+#                         **permanent_address_data,
+#                         applicant_id=applicant_id,
+#                         created_by=user_id,
+#                         updated_by=user_id
+#                     )
+#                     db.add(new_permanent_address)
+#                     db.commit()
+#                     db.refresh(new_permanent_address)
+#                 else:  # Update existing record
+#                     existing_permanent_address = db.query(ApplicantPermenentAddress).filter(ApplicantPermenentAddress.id == permanent_address_data["id"]).first()
+#                     if existing_permanent_address:
+#                         for key, value in permanent_address_data.items():
+#                             setattr(existing_permanent_address, key, value)
+#                         existing_permanent_address.updated_by = user_id
+#                         db.commit()
+#                         db.refresh(existing_permanent_address)
+
+#             # You can add more components like this
+
+#             else:
+#                 raise HTTPException(status_code=400, detail=f"Invalid component: {component}")
+
+#         return {"success": True, "message": "Applicant details saved successfully"}
+
+#     except Exception as e:
+#         db.rollback()  # Rollback the transaction in case of failure
+#         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+def save_applicant(data: ApplicantDetails, db: Session, user_id: int, profile_component: List[str]):
+    result = {"success": False, "message": "An error occurred while saving applicant details."}
+    
+    # Step 1: Process each profile_component
+    for component in profile_component:
+        if component == "applicant_master":
+            # Handling applicant_master component
+            applicant_data = data.applicant_master.dict()
+            login_id = 1  
+            if applicant_data["id"] == 0:  # Insert new record
+                applicant_data.pop("id", None)
+                applicant_data["login_id"] = login_id
+                new_applicant = ApplicantMaster(**applicant_data)
+                db.add(new_applicant)
+                db.commit()
+                db.refresh(new_applicant)
+                applicant_id = new_applicant.applicant_id
+            else:  # Update existing record
+                existing_applicant = db.query(ApplicantMaster).filter(ApplicantMaster.applicant_id == applicant_data["id"]).first()
+                if existing_applicant:
+                    for key, value in applicant_data.items():
+                        if hasattr(existing_applicant, key) and value is not None:
+                            setattr(existing_applicant, key, value)
+                    db.commit()
+                    db.refresh(existing_applicant)
+                    applicant_id = existing_applicant.applicant_id  
+                else:
+                    raise HTTPException(status_code=404, detail="Applicant master not found for update.")
+            return {"success": True, "message": "Applicant details saved successfully", "applicant_id": applicant_id}
+        
+        elif component == "applicant_present_address":
+            # Handling applicant_present_address component
+            present_address_data = data.applicant_present_address.dict()
+
+            if present_address_data["id"] == 0:  # Insert new record
+                present_address_data.pop("id", None)
+                # Create new address object
+                new_address = ApplicantPresentAddress(**present_address_data)
+                db.add(new_address)
+
+                try:
+                    print("New Address to be inserted:", new_address)  # Log the address object
+                    db.commit()  # Commit changes to the database
+                    db.refresh(new_address)  # Refresh the instance to reflect the inserted data
+                    # return {"success": True, "message": "Saved successfully!"} 
+                except Exception as e:
+                    db.rollback()  
+                    raise HTTPException(status_code=500, detail="Error saving new address: " + str(e))
+
+            else:  # Update existing record
+                existing_address = db.query(ApplicantPresentAddress).filter(ApplicantPresentAddress.id == present_address_data["id"]).first()
+
+                if existing_address:
+                    for key, value in present_address_data.items():
+                        if hasattr(existing_address, key) and value is not None:
+                            setattr(existing_address, key, value)
+
+                    try:
+                        db.commit()  # Commit changes to the database
+                        db.refresh(existing_address)  # Refresh the instance to reflect the updated data
+                    except Exception as e:
+                        db.rollback()  # Rollback in case of any error during commit
+                        raise HTTPException(status_code=500, detail="Error updating address: " + str(e))
+
+                else:
+                    raise HTTPException(status_code=404, detail="Applicant present address not found for update.")
+
+
+
+        elif component == "applicant_permanent_address":
+            # Handling applicant_permanent_address component
+            permanent_address_data = data.applicant_permanent_address.dict()
+
+            if permanent_address_data["id"] == 0:  # Insert new record
+                permanent_address_data.pop("id", None)
+                # Create a new address object with the provided data
+                new_address = ApplicantPermanentAddress(**permanent_address_data)
+                db.add(new_address)
+                
+                try:
+                    db.commit()
+                    db.refresh(new_address)  # Refresh the instance to reflect the inserted data
+                    return {"success": True, "message": "Permanent address saved successfully!", "address_id": new_address.id}
+                except Exception as e:
+                    db.rollback()  # Rollback in case of any error during commit
+                    raise HTTPException(status_code=500, detail="Error saving permanent address: " + str(e))
+
+            else:  # Update existing record
+                existing_address = db.query(ApplicantPermanentAddress).filter(ApplicantPermanentAddress.id == permanent_address_data["id"]).first()
+
+                if existing_address:
+                    # Update the existing address with the new data
+                    for key, value in permanent_address_data.items():
+                        if hasattr(existing_address, key) and value is not None:
+                            setattr(existing_address, key, value)
+
+                    try:
+                        db.commit()  # Commit changes to the database
+                        db.refresh(existing_address)  # Refresh the instance to reflect the updated data
+                        return {"success": True, "message": "Permanent address updated successfully!"}
+                    except Exception as e:
+                        db.rollback()  # Rollback in case of any error during commit
+                        raise HTTPException(status_code=500, detail="Error updating permanent address: " + str(e))
+
+                else:
+                    raise HTTPException(status_code=404, detail="Applicant permanent address not found for update.")
+
+        elif component == "applicant_contact_details":
+            # Handling applicant_contact_details component
+            contact_data = data.applicant_contact_details.dict()
+            if contact_data["id"] == 0:  # Insert new record
+                contact_data.pop("id", None)
+                new_contact = ApplicantContactDetails(**contact_data)
+                db.add(new_contact)
+                db.commit()
+                db.refresh(new_contact)
+            else:  # Update existing record
+                existing_contact = db.query(ApplicantContactDetails).filter(ApplicantContactDetails.id == contact_data["id"]).first()
+                if existing_contact:
+                    for key, value in contact_data.items():
+                        if hasattr(existing_contact, key) and value is not None:
+                            setattr(existing_contact, key, value)
+                    db.commit()
+                    db.refresh(existing_contact)
+                else:
+                    raise HTTPException(status_code=404, detail="Applicant contact details not found for update.")
+        
+        # Continue similarly for other components like 'applicant_educational_qualification', 'applicant_experience', etc.
+        elif component == "applicant_educational_qualification":
+            for education in data.applicant_educational_qualification:
+                education_data = education.dict()
+                
+                if education_data["id"] == 0:  # Insert new record
+                    education_data.pop("id", None)
+                    new_education = ApplicantEducationalQualification(**education_data)
+                    db.add(new_education)
+                    db.commit()  # Commit the changes to the database
+                    db.refresh(new_education)  # Refresh to get the latest data after commit
+                else:  # Update existing record
+                    existing_education = db.query(ApplicantEducationalQualification).filter(ApplicantEducationalQualification.id == education_data["id"]).first()
+                    if existing_education:
+                        for key, value in education_data.items():
+                            if hasattr(existing_education, key) and value is not None:
+                                setattr(existing_education, key, value)
+                        db.commit()  # Commit the changes to the database
+                        db.refresh(existing_education)  # Refresh the updated record
+                    else:
+                        raise HTTPException(status_code=404, detail="Applicant educational qualification not found for update.")
+
+        elif component == "applicant_professional_qualification":
+           # Save or update the applicant's professional qualifications
+            for qualification in data.applicant_professional_qualification:
+                qualification_data = qualification.dict()
+
+                if qualification_data["id"] == 0:  # Insert new record
+                    qualification_data.pop("id", None)
+                    new_qualification = ApplicantProfessionalQualification(**qualification_data)
+                    db.add(new_qualification)
+                    db.commit()
+                    db.refresh(new_qualification)  # Refresh the new object to get any default values (e.g., auto-generated fields)
+                else:  # Update existing record
+                    existing_qualification = db.query(ApplicantProfessionalQualification).filter(
+                        ApplicantProfessionalQualification.id == qualification_data["id"]
+                    ).first()
+
+                    if existing_qualification:
+                        for key, value in qualification_data.items():
+                            if hasattr(existing_qualification, key) and value is not None:
+                                setattr(existing_qualification, key, value)
+                        db.commit()
+                        db.refresh(existing_qualification)  # Refresh the updated object
+                    else:
+                        raise HTTPException(status_code=404, detail="Applicant professional qualification not found for update.")
+        
+        elif component == "applicant_experience":
+            # Save or update the applicant's experience
+            for experience in data.applicant_experience:
+                experience_data = experience.dict()
+
+                if experience_data["id"] == 0:  # Insert new record
+                    experience_data.pop("id", None)
+                    new_experience = ApplicantExperience(**experience_data)
+                    db.add(new_experience)
+                    db.commit()
+                    db.refresh(new_experience)  # Refresh the new object to get any default values (e.g., auto-generated fields)
+                else:  # Update existing record
+                    existing_experience = db.query(ApplicantExperience).filter(
+                        ApplicantExperience.id == experience_data["id"]
+                    ).first()
+
+                    if existing_experience:
+                        for key, value in experience_data.items():
+                            if hasattr(existing_experience, key) and value is not None:
+                                setattr(existing_experience, key, value)
+                        db.commit()
+                        db.refresh(existing_experience)  # Refresh the updated object
+                    else:
+                        raise HTTPException(status_code=404, detail="Applicant experience not found for update.")
+
+
+        elif component == "applicant_language_proficiency":
+            # Save or update the applicant's language proficiency
+            for language_proficiency in data.applicant_language_proficiency:
+                language_proficiency_data = language_proficiency.dict()
+
+                if language_proficiency_data["id"] == 0:  # Insert new record
+                    language_proficiency_data.pop("id", None)
+                    new_language_proficiency = ApplicantLanguageProficiency(**language_proficiency_data)
+                    db.add(new_language_proficiency)
+                    db.commit()
+                    db.refresh(new_language_proficiency)  # Refresh the new object to get any default values (e.g., auto-generated fields)
+                else:  # Update existing record
+                    existing_language_proficiency = db.query(ApplicantLanguageProficiency).filter(
+                        ApplicantLanguageProficiency.id == language_proficiency_data["id"]
+                    ).first()
+
+                    if existing_language_proficiency:
+                        for key, value in language_proficiency_data.items():
+                            if hasattr(existing_language_proficiency, key) and value is not None:
+                                setattr(existing_language_proficiency, key, value)
+                        db.commit()
+                        db.refresh(existing_language_proficiency)  # Refresh the updated object
+                    else:
+                        raise HTTPException(status_code=404, detail="Applicant language proficiency not found for update.")
+
+     
+        elif component == "applicant_hobby":
+            # Save or update the applicant's hobbies
+            for hobby in data.applicant_hobby:
+                hobby_data = hobby.dict()
+
+                if hobby_data["id"] == 0:  # Insert new record
+                    hobby_data.pop("id", None)  # Remove id field from hobby data
+                    new_hobby = ApplicantHobby(**hobby_data)
+                    db.add(new_hobby)
+                    db.commit()
+                    db.refresh(new_hobby)  # Refresh the new object to get any default values (e.g., auto-generated fields)
+                else:  # Update existing record
+                    existing_hobby = db.query(ApplicantHobby).filter(
+                        ApplicantHobby.id == hobby_data["id"]
+                    ).first()
+
+                    if existing_hobby:
+                        for key, value in hobby_data.items():
+                            if hasattr(existing_hobby, key) and value is not None:
+                                setattr(existing_hobby, key, value)
+                        db.commit()
+                        db.refresh(existing_hobby)  # Refresh the updated object
+                    else:
+                        raise HTTPException(status_code=404, detail="Applicant hobby not found for update.")
+        elif component == "applicant_skill":
+            # Save or update the applicant's hobbies
+            for skill in data.applicant_skill:
+                skill_data = skill.dict()
+
+                if skill_data["id"] == 0:  # Insert new record
+                    skill_data.pop("id", None)  # Remove id field from hobby data
+                    new_skill = ApplicantSkill(**skill_data)
+                    db.add(new_skill)
+                    db.commit()
+                    db.refresh(new_skill)  # Refresh the new object to get auto-generated fields like ID
+                else:  # Update existing record
+                    existing_skill = db.query(ApplicantSkill).filter(
+                        ApplicantSkill.id == skill_data["id"]
+                    ).first()
+
+                    if existing_skill:
+                        # Update only fields that are present and not None
+                        for key, value in skill_data.items():
+                            if hasattr(existing_skill, key) and value is not None:
+                                setattr(existing_skill, key, value)
+                        db.commit()
+                        db.refresh(existing_skill)  # Refresh the updated object
+                    else:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Applicant skill with ID {skill_data['id']} not found for update."
+                        )
+                    
+        elif component == "applicant_social_media_profile":
+            # Save or update the applicant's social media profiles
+            for profile in data.applicant_social_media_profile:
+                profile_data = profile.dict()
+
+                if profile_data["id"] == 0:  # Insert new record
+                    profile_data.pop("id", None)  # Remove id field for a new record
+                    new_profile = ApplicantSocialMediaProfile(**profile_data)
+                    db.add(new_profile)
+                    db.commit()
+                    db.refresh(new_profile)  # Refresh to fetch auto-generated fields like ID
+                else:  # Update existing record
+                    existing_profile = db.query(ApplicantSocialMediaProfile).filter(
+                        ApplicantSocialMediaProfile.id == profile_data["id"]
+                    ).first()
+
+                    if existing_profile:
+                        # Update fields only if they exist and are not None
+                        for key, value in profile_data.items():
+                            if hasattr(existing_profile, key) and value is not None:
+                                setattr(existing_profile, key, value)
+                        db.commit()
+                        db.refresh(existing_profile)  # Refresh to fetch updated values
+                    else:
+                        raise HTTPException(
+                            status_code=404,
+                            detail=f"Applicant social media profile with ID {profile_data['id']} not found for update."
+                        )
+        
+
+
+    result["success"] = True
+    result["message"] = "Saved successfully."
+    return result
+
+
+
+#-----------------------------------------------------------------------------------------------------
+
+def get_all_applicant_detals(db: Session) -> List[ApplicantDetailsView]:
+    # Fetch all applicant details from the ViewApplicantDetails view
+    applicant_details = db.query(ViewApplicantDetails).all()
+
+    # If no applicant details are found, raise an exception
+    if not applicant_details:
+        raise HTTPException(status_code=404, detail="No applicant details found")
+
+    # Map the fetched data to the ApplicantDetailsView schema
+    return [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
+
+def get_applicant_master(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantMasterResponse]:
+    # Base SQL query to fetch data
+    sql_query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        a.date_of_birth,
+        b.id AS gender_id,
+        b.gender AS gender_name,
+        c.id AS blood_group_id,
+        c.blood_group,
+        d.id AS marital_status_id,
+        d.marital_status,
+        e.id AS nationality_id,
+        e.nationality_name
+    FROM
+        applicant_master a
+    LEFT JOIN
+        app_gender b ON a.gender_id = b.id
+    LEFT JOIN
+        app_blood_group c ON a.blood_group = c.id
+    LEFT JOIN
+        app_marital_status d ON a.marital_status_id = d.id
+    LEFT JOIN
+        app_nationality e ON a.nationality_id = e.id
+    """)
+
+    # Add filtering for applicant_id if provided
+    if applicant_id:
+        sql_query = text(f"{sql_query} WHERE a.applicant_id = :applicant_id")
+
+    # Execute the query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No applicant master data found")
+
+    # Convert SQL result rows to Pydantic response models
+    applicants = [ApplicantMasterResponse(**dict(row._asdict())) for row in rows]
+
+    return applicants
+
+
+
+#----------------------------------------------------------------------------------------
+
+def applicant_present_address(
+    db: Session, applicant_id: Optional[int] = None
+) -> List[ApplicantPresentAddressResponse]:
+    
+    sql_query = text("""
+        SELECT 
+        -- Table f: applicant_present_address
+        f.id AS present_address_id,
+        f.present_house_or_flat_name,
+        f.present_house_flat_or_door_number,
+        f.present_road_name,
+        f.present_street_name,
+        f.present_land_mark,
+        f.present_pin_code,
+    
+        -- Table g: app_post_offices (Present Address)
+        g.id AS present_post_office_id,
+        g.post_office_name AS present_post_office_name,
+        g.pin_code AS present_post_office_pin_code,
+        g.contact_number AS present_post_office_contact,
+        g.latitude AS present_post_office_latitude,
+        g.longitude AS present_post_office_longitude,
+
+        -- Table h: app_cities (Present Address)
+        h.id AS present_city_id,
+        h.city_name AS present_city_name,
+
+        -- Table i: app_taluks (Present Address)
+        i.id AS present_taluk_id,
+        i.taluk_name AS present_taluk_name,
+
+        -- Table j: app_districts (Present Address)
+        j.id AS present_district_id,
+        j.district_name AS present_district_name,
+
+        -- Table k: app_states (Present Address)
+        k.id AS present_state_id,
+        k.state_name AS present_state_name,
+        
+
+        -- Table l: app_countries (Present Address)
+        l.id AS present_country_id,
+        l.country_name_english AS present_country_name
+    FROM 
+        applicant_master a
+    -- Join applicant_present_address to get the present address details
+    LEFT JOIN
+        applicant_present_address f ON a.applicant_id = f.applicant_id  
+
+    -- Join other related tables to fetch present address information
+    LEFT JOIN
+        app_post_offices g ON f.present_post_office_id = g.id
+    LEFT JOIN
+        app_cities h ON f.present_city_id = h.id
+    LEFT JOIN
+        app_taluks i ON f.present_taluk_id = i.id
+    LEFT JOIN
+        app_districts j ON f.present_district_id = j.id
+    LEFT JOIN
+        app_states k ON f.present_state_id = k.id
+    LEFT JOIN
+        app_countries l ON f.present_country_id = l.id
+
+
+    """)
+
+    # Add filtering for applicant_id if provided
+    if applicant_id:
+        sql_query = text(f"{sql_query} WHERE a.applicant_id = :applicant_id")
+
+    # Execute the query with parameters
+    params = {"applicant_id": applicant_id} if applicant_id else {}
+    result = db.execute(sql_query, params)
+
+    rows = result.fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No applicant master data found")
+
+    # Convert SQL result rows to Pydantic response models
+    applicants_address = [ApplicantPresentAddressResponse(**dict(row._asdict())) for row in rows]
+
+    return applicants_address
+
+#---------------------------------------------------------------------------------------------------
+

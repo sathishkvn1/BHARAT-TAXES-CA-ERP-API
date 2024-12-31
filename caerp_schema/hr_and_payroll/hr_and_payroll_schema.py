@@ -660,3 +660,378 @@ class EmployeeLanguageProficiencyBase(BaseModel):
     class Config:
         orm_mode = True
 
+#-------------------------------------------------------------------------------
+# Schema for Vacancy Experience
+
+class VacancyExperienceSchema(BaseModel):
+    id: int = 0
+    min_years: int
+    max_years: int
+    weightage: float
+
+# Schema for Vacancy Skills
+class VacancySkillsSchema(BaseModel):
+    id: int = 0
+    skill_id: int
+    weightage: float
+
+class LanguageProficiencySchema(BaseModel):
+    id: int = 0 
+   
+    language_id: int 
+    language_proficiency_id: int 
+    is_read_required: str = 'no' 
+    read_weightage: float = 0.0  
+    is_write_required: str = 'no'  
+    write_weightage: float = 0.0 
+    is_speak_required: str = 'no'  
+    speak_weightage: float = 0.0 
+
+    class Config:
+        orm_mode = True  
+
+
+# Main Education Schema
+class VacancyEducationSchema(BaseModel):
+    id: int = 0
+    education_level_id:int
+    is_any_level:str
+    education_stream_id:int
+    is_any_stream:str
+    education_subject_or_course_id:int
+    is_any_subject_or_course:str
+# Main Vacancy Create Schema
+
+class VacancyCreateSchema(BaseModel):
+    id: int = 0  
+    department_id: int
+    designation_id: int
+    vacancy_count: int
+    job_description: str
+    job_location: str
+    reported_date: date  # Use date type for date fields
+    announcement_date: date
+    closing_date: date
+    vacancy_status: str
+    experience_required: str
+    vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
+    skills_required: List[VacancySkillsSchema]
+    language_proficiency: List[LanguageProficiencySchema]
+    education: Optional[List[VacancyEducationSchema]] = None 
+ 
+ #---------------------------------------------------------------------------------
+class AnnouncementDetail(BaseModel):
+    id: int = 0
+    vacancy_master_id: int
+
+class VacancyAnnouncementMaster(BaseModel):
+    id: int = 0
+    title: str
+    description: str
+    announcement_type: str
+    closing_date: Optional[date] = None
+    announcement_details: Optional[List[AnnouncementDetail]] = None  # Optional and no default empty list
+
+class VacancyAnnouncements(BaseModel):
+    vacancy_announcement_master: List[VacancyAnnouncementMaster]
+
+
+class AnnouncementDetail(BaseModel):
+    id: int
+    title: str
+    announcement_type: str
+    announcement_status: str
+    created_by: str
+    created_on: date
+    closing_date: Optional[date] = None
+
+class AnnouncementsListResponse(BaseModel):
+    announcements: List[AnnouncementDetail]
+
+#------------------------------------------------------------------------------------
+
+
+class ApplicantMasterSchema(BaseModel):
+    id: int
+    first_name: str
+    middle_name: Optional[str] = None
+    last_name: str
+    date_of_birth: str
+    gender_id: int
+    blood_group: Optional[str] = None
+    marital_status_id: int
+    nationality_id: str
+
+class ApplicantPresentAddressSchema(BaseModel):
+    id: int
+    applicant_id:int
+    present_house_or_flat_name: Optional[str] = None
+    present_house_flat_or_door_number: Optional[str] = None
+    present_road_name: Optional[str] = None
+    present_street_name: Optional[str] = None
+    present_land_mark: Optional[str] = None
+    present_pin_code: Optional[str] = None
+    present_post_office_id: Optional[int] = None
+    present_city_id: Optional[int] = None
+    present_taluk_id: Optional[int] = None
+    present_district_id: Optional[int] = None
+    present_state_id: Optional[int] = None
+    present_country_id: Optional[int] = None
+    is_permenent_address_same_as_present: Optional[str] = None
+
+class ApplicantPermanentAddressSchema(BaseModel):
+    id: int
+    applicant_id:int
+    permanent_house_or_flat_name: Optional[str] = None
+    permanent_house_flat_or_door_number: Optional[str] = None
+    permanent_road_name: Optional[str] = None
+    permanent_street_name: Optional[str] = None
+    permanent_land_mark: Optional[str] = None
+    permanent_pin_code: Optional[str] = None
+    permanent_post_office_id: Optional[int] = None
+    permanent_city_id: Optional[int] = None
+    permanent_taluk_id: Optional[int] = None
+    permanent_district_id: Optional[int] = None
+    permanent_state_id: Optional[int] = None
+    permanent_country_id: Optional[int] = None
+
+class ApplicantContactSchema(BaseModel):
+    id: int
+    applicant_id:int
+    personal_mobile_number: Optional[str] = None
+    personal_whatsapp_number: Optional[str] = None
+    personal_email_id: Optional[str] = None
+
+class ApplicantEducationalQualficationSchema(BaseModel):
+    id: int
+    applicant_id:int
+    education_level_id: int
+    education_stream_id: int
+    education_subject_or_course_id: int
+    institution: str
+    percentage_of_score: float
+    month_and_year_of_completion: str
+    status: str
+
+class ApplicantProfessionalQualificationSchema(BaseModel):
+    id: int
+    applicant_id:int
+    qualification_id: int
+    institution: str
+    membership_number: str
+    enrollment_date: str
+    percentage_of_score: float
+    month_and_year_of_completion: str
+    status: str
+
+class ApplicantExperienceSchema(BaseModel):
+    id: int
+    applicant_id:int
+    company_name: str
+    company_address: str
+    company_contact_number: str
+    company_email: str
+    position_held: str
+    responsibility: str
+    start_date: str
+    end_date: str
+    last_salary: float
+    reason_for_leaving: str
+
+class ApplicantLanguageProficiencySchema(BaseModel):
+    id: int
+    applicant_id:int
+    applicant_id: int
+    language_id: int
+    read_proficiency_id: int
+    write_proficiency_id: int
+    speak_proficiency_id: int
+
+class ApplicantHobbySchema(BaseModel):
+    id: int
+    applicant_id:int
+    applicant_hobby: str
+    remarks: Optional[str] = None
+
+class ApplicantSkillSchema(BaseModel):
+    id: int
+    applicant_id:int
+    skill_id: int
+    remarks: Optional[str] = None
+
+class ApplicantSocialMediaProfileSchema(BaseModel):
+    id: int
+    applicant_id:int
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    xhandle: Optional[str] = None
+    linked_in: Optional[str] = None
+
+# Combined Applicant Details Schema
+
+# announcement_details: Optional[List[AnnouncementDetail]] = None
+class ApplicantDetails(BaseModel):
+    applicant_master: Optional[ApplicantMasterSchema] = None
+    applicant_present_address: Optional[ApplicantPresentAddressSchema] = None
+    applicant_permanent_address: Optional[ApplicantPermanentAddressSchema] = None
+    applicant_contact_details: Optional[ApplicantContactSchema] = None
+    applicant_educational_qualification: Optional[List[ApplicantEducationalQualficationSchema]] = None
+    applicant_professional_qualification:Optional[List[ApplicantProfessionalQualificationSchema]] = None
+    applicant_experience: Optional[List[ApplicantExperienceSchema]] = None
+    applicant_language_proficiency: Optional[List[ApplicantLanguageProficiencySchema]]= None
+    applicant_hobby: Optional[List[ApplicantHobbySchema]] = None
+    applicant_skill: Optional[List[ApplicantSkillSchema]]= None
+    applicant_social_media_profile: Optional[List[ApplicantSocialMediaProfileSchema]]= None
+
+#--------------------------------------------------------------------------------------------------
+class ApplicantDetailsView(BaseModel):
+    applicant_id: int
+    first_name: Optional[str]
+    middle_name: Optional[str]
+    last_name: Optional[str]
+    date_of_birth: Optional[date]
+    
+    gender_id: Optional[int]
+    gender_name: Optional[str]
+    
+    blood_group_id: Optional[int]
+    blood_group: Optional[str]
+    
+    marital_status_id: Optional[int]
+    marital_status: Optional[str]
+    
+    nationality_id: Optional[int]
+    nationality_name: Optional[str]
+    
+    login_id: Optional[int]
+    marital_status_id: Optional[int]
+    nationality_id: Optional[int]
+    applicant_deleted: Optional[bool]
+    
+    present_address_id: Optional[int]
+    present_house_or_flat_name: Optional[str]
+    present_house_flat_or_door_number: Optional[str]
+    present_road_name: Optional[str]
+    present_street_name: Optional[str]
+    present_land_mark: Optional[str]
+    present_pin_code: Optional[str]
+    
+    present_post_office_id: Optional[int]
+    present_post_office_name: Optional[str]
+    present_post_office_pin_code: Optional[str]
+    present_post_office_contact: Optional[str]
+    present_post_office_latitude: Optional[str]
+    present_post_office_longitude: Optional[str]
+
+    present_city_id: Optional[int]
+    present_city_name: Optional[str]
+    
+    present_taluk_id: Optional[int]
+    present_taluk_name: Optional[str]
+    
+    present_district_id: Optional[int]
+    present_district_name: Optional[str]
+    
+    present_state_id: Optional[int]
+    present_state_name: Optional[str]
+    # present_state_code: Optional[str]
+    
+    present_country_id: Optional[int]
+    present_country_name: Optional[str]
+    
+    permanent_address_id: Optional[int]
+    permanent_house_or_flat_name: Optional[str]
+    permanent_house_flat_or_door_number: Optional[str]
+    permanent_road_name: Optional[str]
+    permanent_street_name: Optional[str]
+    permanent_land_mark: Optional[str]
+    permanent_pin_code: Optional[str]
+    
+    permanent_post_office_id: Optional[int]
+    permanent_post_office_name: Optional[str]
+    permanent_post_office_pin_code: Optional[str]
+    permanent_post_office_contact: Optional[str]
+    permanent_post_office_latitude: Optional[str]
+    permanent_post_office_longitude: Optional[str]
+
+    permanent_city_id: Optional[int]
+    permanent_city_name: Optional[str]
+    
+    permanent_taluk_id: Optional[int]
+    permanent_taluk_name: Optional[str]
+    
+    permanent_district_id: Optional[int]
+    permanent_district_name: Optional[str]
+    
+    permanent_state_id: Optional[int]
+    permanent_state_name: Optional[str]
+    # permanent_state_code: Optional[str]
+    
+    permanent_country_id: Optional[int]
+    permanent_country_name: Optional[str]
+
+    contact_details_id: Optional[int]
+    personal_mobile_number: Optional[str]
+    personal_whatsapp_number: Optional[str]
+    personal_email_id: Optional[str]
+    contact_deleted: Optional[bool]
+
+    
+    class Config:
+        orm_mode = True 
+
+
+class ApplicantMasterResponse(BaseModel):
+    applicant_id: Optional[int] = None
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender_id: Optional[int] = None
+    gender_name: Optional[str] = None
+    blood_group_id: Optional[int] = None
+    blood_group: Optional[str] = None
+    marital_status_id: Optional[int] = None
+    marital_status: Optional[str] = None
+    nationality_id: Optional[int] = None
+    nationality_name: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+#--------------------------------------------------------------------------
+
+class ApplicantPresentAddressResponse(BaseModel):
+    present_address_id: Optional[int]
+    present_house_or_flat_name: Optional[str] = None
+    present_house_flat_or_door_number: Optional[str] = None
+    present_road_name: Optional[str] = None
+    present_street_name: Optional[str] = None
+    present_land_mark: Optional[str] = None
+    present_pin_code: Optional[str] = None
+
+    present_post_office_id: Optional[int] = None
+    present_post_office_name: Optional[str] = None
+    present_post_office_pin_code: Optional[str] = None
+    present_post_office_contact: Optional[str] = None
+   
+
+    present_city_id: Optional[int] = None
+    present_city_name: Optional[str] = None
+
+    present_taluk_id: Optional[int] = None
+    present_taluk_name: Optional[str] = None
+
+    present_district_id: Optional[int] = None
+    present_district_name: Optional[str] = None
+
+    present_state_id: Optional[int] = None
+    present_state_name: Optional[str] = None
+    # present_state_code: Optional[str] = None
+
+    present_country_id: Optional[int] = None
+    present_country_name: Optional[str] = None
+
+    class Config:
+        orm_mode = True
