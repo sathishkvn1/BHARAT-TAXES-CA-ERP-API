@@ -1694,13 +1694,38 @@ def get_bank_details_by_ifsc_code(
 
 @router.post('/save/send_query_manager_otp')
 def send_query_manager_otp(
-    mobile_no : Optional[str] = None,
-    email_id : Optional[str] = None,
-    user_name : Optional[str] = None,
+    input_value: str,  # Single input parameter
     db: Session = Depends(get_db)
 ):  
-    result = db_common.send_query_manager_otp(db,mobile_no,email_id,user_name)
-    return result
+    # Determine the type of input
+    if re.match(r'^\S+@\S+\.\S+$', input_value):  # Simple email regex
+        input_type = "email"
+        mobile_no = None
+        email_id = input_value
+        user_name = None
+    elif input_value.isdigit() and len(input_value) in [10, 12]:  # Mobile number
+        input_type = "mobile"
+        mobile_no = input_value
+        email_id = None
+        user_name = None
+    else:  # Assume it's a username
+        input_type = "username"
+        mobile_no = None
+        email_id = None
+        user_name = input_value
+
+    # Call the database function with the determined input type
+    result = db_common.send_query_manager_otp(
+        db, 
+        mobile_no=mobile_no, 
+        email_id=email_id, 
+        user_name=user_name
+    )
+
+    return {
+        "input_type": input_type,
+        "result": result
+    }
 
 #-----------------------------------------------------------------------
 @router.post("/save/query_manager/")
