@@ -1727,6 +1727,7 @@ def send_query_manager_otp(
         "input_type": input_type,
         "result": result
     }
+    
 
 #-----------------------------------------------------------------------
 @router.post("/save/query_manager/")

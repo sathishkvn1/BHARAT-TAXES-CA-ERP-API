@@ -587,15 +587,14 @@ def send_query_manager_otp(
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
         employee_id = user.employee_id
-        official_mobile_no = db.query(EmployeeContactDetails.official_mobile_number).filter(EmployeeContactDetails.employee_id==user.employee_id).scalar()
+        official_mobile_no = db.query(EmployeeContactDetails.personal_mobile_number).filter(EmployeeContactDetails.employee_id==user.employee_id).scalar()
         # official_mobile_no = official_mobile_no[0]
     if mobile_no:
         official_mobile_no = mobile_no 
-        employee_id = db.query(EmployeeContactDetails.employee_id).filter(EmployeeContactDetails.official_mobile_number == mobile_no).scalar()
+        employee_id = db.query(EmployeeContactDetails.employee_id).filter(EmployeeContactDetails.personal_mobile_number == mobile_no).scalar()
         # employee_id = employee_id[0]
         if employee_id is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-     
     mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
     new_otp = db_otp.create_otp(db, mobile_otp_value,employee_id)
     mobile_otp_id = new_otp.id    
@@ -611,7 +610,6 @@ def send_query_manager_otp(
                     
     
     try:
-       
         result = send_message.send_sms_otp(official_mobile_no,template_message,temp_id,db)
         return {
         "success" :True,
@@ -622,7 +620,6 @@ def send_query_manager_otp(
                 # Handle sms sending failure
                 print(f"Failed to send message: {str(e)}")
     
-
 
 
 

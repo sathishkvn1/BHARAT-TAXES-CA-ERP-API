@@ -1,3 +1,4 @@
+from fastapi import HTTPException,status
 from sqlalchemy.orm import Session
 from caerp_db.common.models import OtpGeneration
 from datetime import datetime,timedelta
@@ -29,6 +30,7 @@ def create_otp(db: Session, otp_value: str, user_id: int):
 
     # Return the newly created OTP object
     return new_otp
+
 
 
 
