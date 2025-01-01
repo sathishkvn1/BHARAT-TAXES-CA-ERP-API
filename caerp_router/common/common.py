@@ -1182,41 +1182,6 @@ def get_all_query_manager_queries(db: Session, deleted_status: DeletedStatus):
         raise ValueError("Invalid deleted_status")
     
     
-    
-@router.post("/save/query_manager/")
-def save_query_manager(
-    data: QueryManagerSchema,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-
-
-    # Retrieve the user_id based on the provided username
-    user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    # Create a new QueryManager record
-    new_query_manager = QueryManager(
-        query_id=data.query_id,
-        queried_by=user.id, 
-        query_on=datetime.now(),
-        query_description=data.query_description 
-      
-    )
-
-    # Save the new record
-    db.add(new_query_manager)
-    db.commit()
-    db.refresh(new_query_manager)
-
-    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
-
-
-
 @router.post("/resolve/query_manager/{query_manager_id}")
 def resolve_query_manager(
     query_manager_id: int,
