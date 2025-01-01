@@ -1644,15 +1644,18 @@ class QueryManagerQuerySchemaForGet(BaseModel):
 
 
 
+
 class QueryManagerSchema(BaseModel):
     query_id: int
-    queried_by: str
+    user_id : int
+    # queried_by: str
     query_description: Optional[str]
 
 
     class Config:
         orm_mode = True
         
+
         
 class QueryStatus(str, Enum):
     ALL = "ALL"
