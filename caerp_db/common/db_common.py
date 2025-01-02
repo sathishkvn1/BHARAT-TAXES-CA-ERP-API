@@ -2,6 +2,7 @@
 
 
 from datetime import datetime
+import json
 import random
 from typing import List, Optional
 
@@ -10,10 +11,11 @@ from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
 from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException ,status
+from fastapi import Depends, HTTPException, requests ,status
 
 from caerp_db.database import get_db
 from caerp_functions import send_message
+from caerp_router.common.common_functions import token_generate
 from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
@@ -743,6 +745,37 @@ def get_queries_by_id(
     results = query.all()
     return [QueryManagerViewSchema.from_orm(result) for result in results]
     
+
+
+
+def send_query_resolved_notification(phone, template_name: str, placeholders: list)->dict:
+    token = token_generate()
+    url = "https://apis.rmlconnect.net/wba/v1/messages"
+    payload = {
+            "phone": phone,
+            "media": {
+                "type": "media_template",
+                "template_name": template_name,
+                "lang_code": "en",
+                "body": [{"text": value} for value in placeholders]
+            }
+        }
+    headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': f"{token}"  # Ensure token is prefixed with Bearer
+        }
+
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        # print("Request Headers:", headers)
+        # print("Request Payload:", json.dumps(payload, indent=4))
+        # print('/response ..............',response)
+        # response.raise_for_status()  # Raise HTTPError for bad responses
+        return {"success": True, "response": response.json()}
+    except requests.exceptions.RequestException as e:        
+        return {"success": False, "error": str(e), "response": response.text}
+
 
 
 
