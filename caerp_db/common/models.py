@@ -927,26 +927,6 @@ class Notification(caerp_base):
     deleted_by                  = Column(Integer, default=None)
     deleted_on                 = Column(String(50), default=None)
 
-
-
-class Notification(caerp_base):
-    __tablename__ = 'notification'
-
-    id                          = Column(Integer, primary_key=True, autoincrement=True)
-    tittle                      = Column(String(50), default=None)
-    message                     = Column(String(500), default=None)
-    notification_link           = Column(String(100), default=None)
-    display_location            = Column(Enum('HOME','DASHBOARD','BOTH'), default='BOTH')
-    notification_date           = Column(Date, default=None)
-    is_active                   = Column(Enum('yes', 'no'), nullable=False, default='yes')
-    created_by                  = Column(String(50), default=None)
-    created_on                  = Column(DateTime, default=None)
-    modified_by                 = Column(Integer, default=None)
-    modified_on                 = Column(Date,default=None)
-    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by                  = Column(Integer, default=None)
-    deleted_on                 = Column(String(50), default=None)
-
 class QueryView(caerp_base):
     __tablename__ = 'query_view'
 
