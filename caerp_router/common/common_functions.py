@@ -1,11 +1,12 @@
 from enum import Enum
 import json
-from fastapi import APIRouter, Body, Depends, HTTPException, requests
+from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi import HTTPException, status
 
 
 from pydantic import BaseModel
+import requests
 from sqlalchemy.orm import Session
 
 from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
