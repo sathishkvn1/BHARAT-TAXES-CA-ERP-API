@@ -1,16 +1,17 @@
+import random
 import re
 from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
 import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
 from caerp_db.common.models import   AppBankMaster, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase, UserRegistration
-from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
-from caerp_db.common import db_common
+from caerp_db.common import db_common, db_user
 from caerp_constants.caerp_constants import CRUD, ActionType,  DeletedStatus
 from typing import List, Optional
 from caerp_auth import oauth2
@@ -1756,3 +1757,139 @@ def save_query_manager(
 #     db.refresh(new_user)
 
 #     return {"message": "User registered successfully!", "user_id": new_user.id}
+
+
+
+@router.post('/send_resolved_notification')
+def send_resolved_notification(
+    query_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    quer_details = db_common.get_query_details(db, query_id)
+    
+    if not quer_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query details not found")
+
+    mobile_no = quer_details["mobile_number"]
+    employee_name = quer_details["employee_name"]
+    user_name = quer_details["user_name"]
+    user_id     = quer_details["user_id"]
+    employee_id = quer_details["employee_id"]
+
+    if not mobile_no:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mobile number is missing for the resolved employee")
+    random_no = random.randint(pow(10,4), pow(10,4+1)-1)
+    password = f'{user_name}@{random_no}'
+    phone_number = f'+91{mobile_no}'
+    template = "query1"
+    placeholders = [employee_name, user_name, password]
+    
+    password_reset_result = db_user.user_password_reset(db, user_id, password)  
+    if password_reset_result:
+        result = db_common.send_query_resolved_notification(phone_number, template, placeholders)
+
+    if result["success"]:
+        return {
+            "success": True,
+            "response": result["response"]
+        }
+    else:
+        return {
+            "success": False,
+            "response": result["error"]
+        }
+
+#-------------------------------------------------------------------------------------
+@router.get("/notifications/", response_model=List[NotificationSchema])
+def get_notifications(
+    notification_id : Optional[int] = None,
+    display_location : Optional[str] = None,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # auth_info = authenticate_user(token)
+    # user_id = auth_info.get("user_id")
+    result = db_common.get_notifications(db,notification_id,display_location)
+    return result
+    
+
+#-------------------------------------------------------------------------------------
+
+@router.post("/notifications/")
+def add_notification(    
+    notification: NotificationSchema, 
+    db: Session = Depends(get_db) ,
+    notification_id: Optional[int] = None,
+    # display_location: Optional[int] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.add_notification(notification,db, notification_id)
+    return result
+
+
+
+
+@router.get("/queries", response_model=List[QueryManagerViewSchema])
+def get_queries_by_id(id: Optional[int] =None,
+                      search_value: Optional[str] = "ALL",
+                      is_resolved : Optional[str] = 'no',
+                      db: Session = Depends(get_db),
+                      token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Retrieve a list of queries based on the provided parameters.
+
+    Parameters:
+        id (Optional[int]): 
+            The unique identifier of a specific query. 
+            If provided, returns the query matching this ID.
+        
+        search_value (Optional[str], default="ALL"): 
+            A search term to filter queries (e.g., query description or content). 
+            Use "ALL" for no filtering.
+
+        is_resolved (Optional[str], default="no"): 
+            Filter queries by resolution status. 
+            "yes" for resolved queries and "no" for unresolved queries.
+
+        db (Session): 
+            The database session used to fetch query data. 
+            Injected automatically using FastAPI dependencies.
+
+        token (str): 
+            The authorization token required for authentication. 
+            Missing or invalid tokens will result in an HTTP 401 error.
+
+    Returns:
+        List[QueryManagerViewSchema]: 
+            A list of queries matching the specified filters.
+
+    Raises:
+        HTTPException: 
+            - 401 Unauthorized if the token is missing.
+            - 404 Not Found if no queries match the provided criteria.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    if is_resolved not in {"yes", "no"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid value for is_resolved. Allowed values are 'yes' or 'no'."
+        )
+
+    query = db_common.get_queries_by_id(db, id,is_resolved ,search_value)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return query

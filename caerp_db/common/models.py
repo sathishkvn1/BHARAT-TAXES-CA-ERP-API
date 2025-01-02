@@ -22,11 +22,6 @@ class LoginAttempt(caerp_base):
     ip          =  Column(String(20), nullable=True)
     when        =  Column(DateTime, nullable=True)
 
-    
-
-
-
-
 
 class EmailCredentials(caerp_base):
     __tablename__ = "app_email_api_settings"
@@ -912,4 +907,58 @@ class EmployeeLanguageProficiency(caerp_base):
     deleted_on          = Column(DateTime, nullable=True)
 
 
+
+
+class Notification(caerp_base):
+    __tablename__ = 'notification'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    tittle                      = Column(String(50), default=None)
+    message                     = Column(String(500), default=None)
+    notification_link           = Column(String(100), default=None)
+    display_location            = Column(Enum('HOME','DASHBOARD','BOTH'), default='BOTH')
+    notification_date           = Column(Date, default=None)
+    is_active                   = Column(Enum('yes', 'no'), nullable=False, default='yes')
+    created_by                  = Column(String(50), default=None)
+    created_on                  = Column(DateTime, default=None)
+    modified_by                 = Column(Integer, default=None)
+    modified_on                 = Column(Date,default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, default=None)
+    deleted_on                 = Column(String(50), default=None)
+
+
+
+class Notification(caerp_base):
+    __tablename__ = 'notification'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    tittle                      = Column(String(50), default=None)
+    message                     = Column(String(500), default=None)
+    notification_link           = Column(String(100), default=None)
+    display_location            = Column(Enum('HOME','DASHBOARD','BOTH'), default='BOTH')
+    notification_date           = Column(Date, default=None)
+    is_active                   = Column(Enum('yes', 'no'), nullable=False, default='yes')
+    created_by                  = Column(String(50), default=None)
+    created_on                  = Column(DateTime, default=None)
+    modified_by                 = Column(Integer, default=None)
+    modified_on                 = Column(Date,default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, default=None)
+    deleted_on                 = Column(String(50), default=None)
+
+class QueryView(caerp_base):
+    __tablename__ = 'query_view'
+
+    query_manager_id        = Column(Integer,primary_key=True, autoincrement=True)
+    query_id                = Column(Integer,nullable=False)
+    query                   = Column(Integer,nullable=False)
+    query_description       = Column(String,nullable=True)
+    queried_by              = Column(Integer,nullable=False)
+    query_on                = Column(DateTime, nullable=False, default=func.now())
+    is_resolved             = Column(Enum('yes','no'),nullable=False, default='no')
+    resolved_by             = Column(Integer,nullable=True)
+    resolved_on             = Column(DateTime, nullable=False, default=func.now())
+   
+    is_deleted              = Column(Enum('yes','no'),nullable=False, default='no')
 

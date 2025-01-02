@@ -1821,3 +1821,40 @@ class UserRegistrationCreate(BaseModel):
     password: str
     latitude: float
     longitude: float
+
+
+class NotificationSchema(BaseModel):
+
+    id                  : Optional[int] = None
+    tittle              : Optional[str] = None
+    message             : Optional[str] = None
+    notification_link   : Optional[str] = None
+    display_location    : Optional[str] = None
+    notification_date   : Optional[date] = None
+    is_active           : Optional[str] = 'yes'
+    created_by          : Optional[int] 
+    created_on          : Optional[date] 
+    modified_by         : Optional[int] = None
+    modified_on         : Optional[date] = None
+    is_deleted          : Optional[str] = 'no'
+    deleted_by          : Optional[int] = None
+    deleted_on          : Optional[date] = None
+    
+
+
+class QueryManagerViewSchema(BaseModel):
+    
+
+    query_manager_id       :Optional[int] = None
+    query_id               : Optional[int] = None
+    query                   : Optional[str] = None
+    query_description       : Optional[str] = None
+    queried_by              : Optional[int] = None
+    query_on                : Optional[datetime] = None
+    is_resolved             : Optional[str] = 'no'
+    resolved_by             : Optional[int] = None
+    resolved_on             : Optional[datetime] = None   
+    is_deleted              : Optional[str] = 'no'
+    class Config:
+        from_orm = True
+        from_attributes = True

@@ -1,16 +1,20 @@
 
 
 
+from datetime import datetime
 import random
-from typing import Optional
+from typing import List, Optional
+
+from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB, UserBase
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
-from fastapi import HTTPException ,status
+from fastapi import Depends, HTTPException ,status
 
+from caerp_db.database import get_db
 from caerp_functions import send_message
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, Village, VillageResponse     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -619,6 +623,125 @@ def send_query_manager_otp(
     except Exception as e:
                 # Handle sms sending failure
                 print(f"Failed to send message: {str(e)}")
+    
+
+#-----------------------------------------------------------------------------------------------
+
+def get_query_details(db: Session, id: int):
+    # Fetch the main query details
+    query_details = db.query(QueryView).filter(QueryView.query_manager_id == id).first()
+    
+    if not query_details:
+        return None
+
+    # Fetch the employee details if resolved_by is present
+    employee_details = None
+    if query_details.queried_by:
+        employee_details = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == query_details.queried_by).first()
+    # Fetch the employee contact details if employee_id is present
+    contact_details = None
+    if employee_details:
+        contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employee_details.employee_id).first()
+
+    # Fetch the user details if queried_by is present
+    user_details = None
+    if query_details.queried_by:
+        user_details = db.query(UserBase).filter(UserBase.employee_id == query_details.queried_by).first()
+
+    # Combine results
+    return {
+        "query_details": query_details,
+        "employee_name": employee_details.first_name if employee_details else None,
+        "employee_id": employee_details.employee_id if employee_details else None,
+        "mobile_number": contact_details.personal_mobile_number if contact_details else None,
+        "user_name": user_details.user_name if user_details else None,
+        "user_id"  : user_details.employee_id if user_details else None
+    }
+#-------------------------------------------------------------------------------------------
+
+def get_notifications(
+        db : Session,
+        notification_id : Optional[int] =None,
+        display_location : Optional[str] = None
+) : 
+    query = db.query(Notification).filter(Notification.is_deleted == "no")
+    if notification_id :
+        query = query.filter(Notification.id == notification_id)
+    if display_location:
+        query = query.filter(Notification.display_location == display_location)
+
+    # notifications = query.all()
+    notifications = query.order_by(desc(Notification.notification_date)).all()
+    return notifications
+
+
+#-------------------------------------------------------------------------------------------
+
+def add_notification(
+    notification: NotificationSchema, 
+    db: Session = Depends(get_db) ,
+    notification_id: Optional[int] = None
+    # display_location: Optional[int] = None,
+):
+
+    notification_obj = None
+    if notification_id :
+            notification_obj = db.query(Notification).filter(Notification.id == notification_id, 
+                                                          Notification.is_deleted == "no").first()
+            if not notification_obj:
+                raise HTTPException(status_code=404, detail="Notification not found.")
+            # for key, value in notification.dict(exclude_unset=True).items():
+            #   setattr(notifications, key, value)
+            # notifications.modified_on = datetime.utcnow()
+
+    # elif display_location :
+    #         notification_obj = db.query(Notification).filter(Notification.display_location == display_location, 
+    #                                                       Notification.is_deleted == "no").first()
+    #         if not notification_obj:
+    #             raise HTTPException(status_code=404, detail="Notification not found.")
+    if notification_obj : 
+        for key, value in notification.dict(exclude_unset=True).items():
+            setattr(notification_obj, key, value)
+        notification_obj.modified_on = datetime.utcnow()
+        db.commit()
+        db.refresh(notification_obj)
+        return  {'success' : True,
+                'notificationnid ': notification_obj.id
+        } 
+
+    else : 
+#     db.commit()
+#     db.refresh(db_notification)
+#     
+        new_notification = Notification(**notification.dict(exclude_unset=True))
+        db.add(new_notification)
+        db.commit()
+        db.refresh(new_notification)
+        return {'success' : True,
+                'new notificationnid ': new_notification.id
+        }
+
+
+
+
+
+def get_queries_by_id(
+        db: Session,         
+        id: Optional[int]= None, 
+        is_resolved : Optional[str] = 'no',
+        search_value: Optional[str] = "ALL") -> List[QueryManagerViewSchema]:
+    query = db.query(QueryView)
+    if id :
+        query.filter(QueryView.query_manager_id == id)
+    if search_value and search_value != "ALL":
+        query = query.filter(
+            or_(
+                QueryView.query.like(f"%{search_value}%"),
+                QueryView.query_on.like(f"%{search_value}%")
+            )
+        )
+    results = query.all()
+    return [QueryManagerViewSchema.from_orm(result) for result in results]
     
 
 
