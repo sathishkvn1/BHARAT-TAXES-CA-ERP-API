@@ -6,12 +6,13 @@ import json
 import random
 from typing import List, Optional
 
+import requests
 from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
 from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException, requests ,status
+from fastapi import Depends, HTTPException ,status
 
 from caerp_db.database import get_db
 from caerp_functions import send_message
