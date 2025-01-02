@@ -15,7 +15,7 @@ from caerp_db.common import db_common, db_user
 from caerp_constants.caerp_constants import CRUD, ActionType,  DeletedStatus
 from typing import List, Optional
 from caerp_auth import oauth2
-from datetime import datetime
+from datetime import date, datetime
 from sqlalchemy import text
 
 import io
@@ -1840,11 +1840,12 @@ def add_notification(
 
 
 
-
 @router.get("/queries", response_model=List[QueryManagerViewSchema])
-def get_queries_by_id(id: Optional[int] =None,
+def get_queries(id: Optional[int] =None,
                       search_value: Optional[str] = "ALL",
                       is_resolved : Optional[str] = 'no',
+                      from_date     : Optional[date] = None,
+                      to_date       : Optional[date] =None,
                       db: Session = Depends(get_db),
                       token: str = Depends(oauth2.oauth2_scheme)):
     """
@@ -1888,7 +1889,7 @@ def get_queries_by_id(id: Optional[int] =None,
             detail="Invalid value for is_resolved. Allowed values are 'yes' or 'no'."
         )
 
-    query = db_common.get_queries_by_id(db, id,is_resolved ,search_value)
+    query = db_common.get_queries_by_id(db, id,is_resolved ,search_value,from_date, to_date)
     if query is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 

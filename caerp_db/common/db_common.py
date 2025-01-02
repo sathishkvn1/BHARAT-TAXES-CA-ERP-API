@@ -1,7 +1,7 @@
 
 
 
-from datetime import datetime
+from datetime import date, datetime
 import json
 import random
 from typing import List, Optional
@@ -732,10 +732,23 @@ def get_queries_by_id(
         db: Session,         
         id: Optional[int]= None, 
         is_resolved : Optional[str] = 'no',
-        search_value: Optional[str] = "ALL") -> List[QueryManagerViewSchema]:
+        search_value: Optional[str] = "ALL",
+        from_date : Optional[date]= None,
+        to_date : Optional[date] = None) -> List[QueryManagerViewSchema]:
+    today = date.today()
+    from_date = from_date or today
+    to_date = to_date or today
+
     query = db.query(QueryView)
+    query = query.filter(
+        QueryView.query_on >= datetime.combine(from_date, datetime.min.time()),
+        QueryView.query_on <= datetime.combine(to_date, datetime.max.time())
+    )
     if id :
-        query.filter(QueryView.query_manager_id == id)
+        query = query.filter(QueryView.query_manager_id == id)
+    # if is_resolved != 'no':
+    query = query.filter(QueryView.is_resolved == is_resolved)
+   
     if search_value and search_value != "ALL":
         query = query.filter(
             or_(
