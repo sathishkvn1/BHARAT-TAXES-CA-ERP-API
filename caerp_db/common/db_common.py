@@ -231,13 +231,6 @@ def get_query_manager_query_by_id(db: Session, id: int):
 #     return db.query(QueryView).filter(QueryView.id == id).first()
 
 #-----------------------------------------------------------
-
-
-
-
-
-
-
 def save_payments_mode(db: Session,
                    payments_mode_data: PaymentModeSchema, 
                    id: int = 0):
@@ -731,7 +724,7 @@ def add_notification(
 def get_queries_by_id(
         db: Session,         
         id: Optional[int]= None, 
-        is_resolved : Optional[str] = 'no',
+        is_resolved : Optional[str] = 'ALL',
         search_value: Optional[str] = "ALL",
         from_date : Optional[date]= None,
         to_date : Optional[date] = None) -> List[QueryManagerViewSchema]:
@@ -746,8 +739,8 @@ def get_queries_by_id(
     )
     if id :
         query = query.filter(QueryView.query_manager_id == id)
-    # if is_resolved != 'no':
-    query = query.filter(QueryView.is_resolved == is_resolved)
+    if is_resolved != 'ALL':
+        query = query.filter(QueryView.is_resolved == is_resolved)
    
     if search_value and search_value != "ALL":
         query = query.filter(
@@ -759,7 +752,6 @@ def get_queries_by_id(
     results = query.all()
     return [QueryManagerViewSchema.from_orm(result) for result in results]
     
-
 
 
 def send_query_resolved_notification(phone, template_name: str, placeholders: list)->dict:
