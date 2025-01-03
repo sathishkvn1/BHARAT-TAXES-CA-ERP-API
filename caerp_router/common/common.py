@@ -1844,7 +1844,7 @@ def add_notification(
 @router.get("/queries", response_model=List[QueryManagerViewSchema])
 def get_queries(id: Optional[int] =None,
                       search_value: Optional[str] = "ALL",
-                      is_resolved : Optional[str] = 'ALl',
+                      is_resolved : Optional[str] = 'ALL',
                       from_date     : Optional[date] = None,
                       to_date       : Optional[date] =None,
                       db: Session = Depends(get_db),
@@ -1895,3 +1895,4 @@ def get_queries(id: Optional[int] =None,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     return query
+
