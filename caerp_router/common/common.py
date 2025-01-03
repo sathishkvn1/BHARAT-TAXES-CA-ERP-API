@@ -1861,7 +1861,7 @@ def get_queries(id: Optional[int] =None,
             A search term to filter queries (e.g., query description or content). 
             Use "ALL" for no filtering.
 
-        is_resolved (Optional[str], default="no"): 
+        is_resolved (Optional[str], default="ALL"): 
             Filter queries by resolution status. 
             "yes" for resolved queries and "no" for unresolved queries.
 
@@ -1884,12 +1884,7 @@ def get_queries(id: Optional[int] =None,
     """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    if is_resolved not in {"yes", "no"}:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid value for is_resolved. Allowed values are 'yes' or 'no'."
-        )
-
+    
     query = db_common.get_queries_by_id(db, id,is_resolved ,search_value,from_date, to_date)
     if query is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
