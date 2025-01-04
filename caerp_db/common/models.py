@@ -993,3 +993,14 @@ class RoleMenuMapping(caerp_base):
     deleted_by          = Column(Integer, default=None)
     deleted_on          = Column(DateTime, default=None)
 
+
+
+class AppSkills(caerp_base):
+    __tablename__ = 'app_skills'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    skill = Column(String(100), nullable=True, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
