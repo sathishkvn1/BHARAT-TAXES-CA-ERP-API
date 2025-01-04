@@ -709,3 +709,16 @@ class ViewApplicantDetails(caerp_base):
     personal_whatsapp_number = Column(String)
     personal_email_id = Column(String)
     contact_deleted = Column(Boolean)
+
+
+
+#------------------------------------------------------------------------------------------------
+class ApplicationMaster(caerp_base):
+    __tablename__ = "application_master"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer, nullable=False)
+    vacancy_master_id = Column(Integer, ForeignKey("vacancy_master.id"), nullable=False)
+    application_date = Column(Date, nullable=False)
+    application_status = Column(Enum("PENDING", "SHORT LISTED", "REJECTED"), nullable=False, default="PENDING")
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")

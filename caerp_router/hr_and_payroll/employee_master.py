@@ -1816,8 +1816,107 @@ async def create_vacancy(vacancy_data: VacancyCreateSchema,
                          db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)):
     """
-    Create a new vacancy record and its associated data.
-    Inserts data into vacancy_master and related tables like VacancyExperience, VacancySkills, etc.
+    ### Save Vacancy Announcements
+
+    This endpoint is used to **create or update vacancy announcements** in the system. 
+    It expects data in the form of a `VacancyAnnouncements` object and performs the following actions:
+    - **Creates** a new vacancy announcement if the `id` is set to `0`.
+    - **Updates** an existing vacancy announcement if the `id` is a non-zero value.
+    
+    The system also validates the provided token to authenticate the user making the request.
+
+    #### Parameters:
+    - **data (VacancyAnnouncements)**: The data object containing vacancy details to be created or updated.
+    - **db (Session)**: The database session to interact with the database.
+    - **token (str)**: The OAuth2 token used to authenticate the user making the request.
+
+    #### Request Body:
+    ```json
+    {
+        "id": 0,  # (integer) The ID of the vacancy. Use 0 for a new entry, or the actual ID for updates.
+        "department_id": 1,
+        "designation_id": 2,
+        "vacancy_count": 5,
+        "job_description": "Job details",
+        "job_location": "Location",
+        "reported_date": "2024-12-31",
+        "announcement_date": "2024-12-31",
+        "closing_date": "2025-01-15",
+        "vacancy_status": "Open",
+        "experience_required": "yes",
+        "vacancy_experience": [
+            {
+                "id": 0,
+                "min_years": 3,
+                "max_years": 5,
+                "weightage": 50
+            }
+        ],
+        "skills_required": [
+            {
+                "id": 0,
+                "skill_id": 301,
+                "weightage": 60
+            }
+        ],
+        "language_proficiency": [
+            {
+                "id": 0,
+                "language_id": 401,
+                "language_proficiency_id": 501,
+                "is_read_required": "yes",
+                "read_weightage": 25,
+                "is_write_required": "yes",
+                "write_weightage": 25,
+                "is_speak_required": "yes",
+                "speak_weightage": 25
+            }
+        ],
+        "education": [
+            {
+                "id": 0,
+                "education_level_id": 601,
+                "is_any_level": "no",
+                "education_stream_id": 701,
+                "is_any_stream": "no",
+                "education_subject_or_course_id": 801,
+                "is_any_subject_or_course": "no"
+            }
+        ]
+    }
+    ```
+
+    #### Response:
+    - **200 OK**: If the vacancy announcement is successfully created or updated, the system returns a success message.
+    - **500 Internal Server Error**: If there is an error in processing the request, an error message is returned.
+
+    #### Example Response:
+    ```json
+    {
+        "success": true,
+        "message": "Vacancy announcements saved successfully"
+    }
+    ```
+
+    #### Error Response:
+    If an error occurs (e.g., invalid input, server error), a response with a relevant error message is returned.
+
+    ```json
+    {
+        "success": false,
+        "message": "Unexpected error: [error message]"
+    }
+    ```
+
+    #### Notes:
+    - Ensure that the `id` field in the request is set to `0` when creating a new vacancy announcement.
+    - If the `id` field is non-zero, the system will attempt to update the existing record with that `id`.
+    - This endpoint requires a valid OAuth2 token for user authentication.
+    - The token should be passed in the `Authorization` header as a Bearer token.
+
+
+    ```
+
     """
     # Check if token is provided
     if not token:
@@ -1932,6 +2031,7 @@ async def save_vacancy_announcements(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
+    
     # Step 1: Validate the token
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
@@ -2032,6 +2132,7 @@ async def get_announcements(
 async def save_applicant(
 
     data: ApplicantDetails, 
+    vacancy_master_id: Optional[int] = None, 
     profile_component: List[str] = Query(...),  # Receiving the list of components to save
     db: Session = Depends(get_db),  # Dependency for the DB session
     token: str = Depends(oauth2.oauth2_scheme)  # OAuth2 token for authentication
@@ -2048,7 +2149,7 @@ async def save_applicant(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
 
     # Step 3: Save the applicant data to the DB by passing profile_component
-    result = db_employee_master.save_applicant(data, db, user_id, profile_component)
+    result = db_employee_master.save_applicant(data,vacancy_master_id, db, user_id, profile_component)
 
     # Step 4: Return the result based on success or failure
     if result["success"]:
@@ -2062,15 +2163,6 @@ async def save_applicant(
 
 
 #------------------------------------------------------------------------------------------
-
-# @router.get("/applicant_details/", response_model=List[ApplicantDetails])
-# def get_applicant_details(db: Session = Depends(get_db)):
-#     # Query the view
-#     applicant_details = db.query(ViewApplicantDetails).all()
-    
-#     return applicant_details
-
-
 
 
 

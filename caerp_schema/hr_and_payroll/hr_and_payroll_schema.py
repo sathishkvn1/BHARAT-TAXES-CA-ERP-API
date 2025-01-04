@@ -761,6 +761,22 @@ class ApplicantMasterSchema(BaseModel):
     blood_group: Optional[str] = None
     marital_status_id: int
     nationality_id: str
+    personal_mobile_number: Optional[str] = None
+    personal_whatsapp_number: Optional[str] = None
+    personal_email_id: Optional[str] = None
+
+
+class ApplicationMasterSchema(BaseModel):
+    id: int
+    applicant_id: int
+    vacancy_master_id: int
+    application_date: date
+    application_status: str  
+    is_deleted: str  
+
+    class Config:
+        orm_mode = True
+
 
 class ApplicantPresentAddressSchema(BaseModel):
     id: int

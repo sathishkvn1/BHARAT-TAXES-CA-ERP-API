@@ -5,7 +5,7 @@ from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, Ap
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
-from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
+from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
@@ -2309,36 +2309,127 @@ def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, us
 #         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
-def save_applicant(data: ApplicantDetails, db: Session, user_id: int, profile_component: List[str]):
+def save_applicant(data: ApplicantDetails,vacancy_master_id:int, db: Session, user_id: int, profile_component: List[str]):
     result = {"success": False, "message": "An error occurred while saving applicant details."}
     
+    # Step 1: Process each profile_component
     # Step 1: Process each profile_component
     for component in profile_component:
         if component == "applicant_master":
             # Handling applicant_master component
-            applicant_data = data.applicant_master.dict()
-            login_id = 1  
+            applicant_data = data.applicant_master.dict()  # Convert the applicant data to a dictionary
+            login_id = 1  # Assuming the login_id is 1 for now
+
             if applicant_data["id"] == 0:  # Insert new record
-                applicant_data.pop("id", None)
-                applicant_data["login_id"] = login_id
-                new_applicant = ApplicantMaster(**applicant_data)
-                db.add(new_applicant)
-                db.commit()
-                db.refresh(new_applicant)
-                applicant_id = new_applicant.applicant_id
+                new_applicant = ApplicantMaster(
+                    first_name=applicant_data["first_name"],
+                    middle_name=applicant_data["middle_name"],
+                    last_name=applicant_data["last_name"],
+                    date_of_birth=applicant_data["date_of_birth"],
+                    gender_id=applicant_data["gender_id"],
+                    blood_group=applicant_data["blood_group"],
+                    marital_status_id=applicant_data["marital_status_id"],
+                    nationality_id=applicant_data["nationality_id"],
+                    login_id=login_id 
+                    # personal_whatsapp_number=applicant_data["personal_whatsapp_number"],
+                    # personal_email_id=applicant_data["personal_email_id"],
+                    # login_id=login_id  # Assuming the login_id is 1 for now
+                )
+                try:
+                    db.add(new_applicant)
+                    db.commit()
+                    db.refresh(new_applicant)
+                    applicant_id = new_applicant.applicant_id
+
+                    # Insert into ApplicantContactDetails if data is available
+                    contact_data = {
+                        "applicant_id": applicant_id,
+                        "personal_mobile_number": applicant_data["personal_mobile_number"],
+                        "personal_whatsapp_number": applicant_data["personal_whatsapp_number"],
+                        "personal_email_id": applicant_data["personal_email_id"],
+                    }
+                    new_contact = ApplicantContactDetails(**contact_data)
+                    db.add(new_contact)
+                    db.commit()
+
+                    # If vacancy_master_id is provided, insert into ApplicationMaster
+                    if vacancy_master_id:
+                        application_data = {
+                            "applicant_id": applicant_id,
+                            "vacancy_master_id": vacancy_master_id,
+                            "application_date": datetime.now(),
+                            "application_status": "PENDING",
+                           
+                        }
+                        new_application = ApplicationMaster(**application_data)
+                        db.add(new_application)
+                        db.commit()
+
+                except Exception as e:
+                    db.rollback()  # Rollback if an error occurs
+                    raise HTTPException(status_code=500, detail="Error saving applicant: " + str(e))
+
             else:  # Update existing record
                 existing_applicant = db.query(ApplicantMaster).filter(ApplicantMaster.applicant_id == applicant_data["id"]).first()
+
                 if existing_applicant:
-                    for key, value in applicant_data.items():
-                        if hasattr(existing_applicant, key) and value is not None:
-                            setattr(existing_applicant, key, value)
-                    db.commit()
-                    db.refresh(existing_applicant)
-                    applicant_id = existing_applicant.applicant_id  
+                    # Update applicant_master data
+                    existing_applicant.first_name = applicant_data["first_name"]
+                    existing_applicant.middle_name = applicant_data["middle_name"]
+                    existing_applicant.last_name = applicant_data["last_name"]
+                    existing_applicant.date_of_birth = applicant_data["date_of_birth"]
+                    existing_applicant.gender_id = applicant_data["gender_id"]
+                    existing_applicant.blood_group = applicant_data["blood_group"]
+                    existing_applicant.marital_status_id = applicant_data["marital_status_id"]
+                    existing_applicant.nationality_id = applicant_data["nationality_id"]
+                    existing_applicant.personal_mobile_number = applicant_data["personal_mobile_number"]
+                    existing_applicant.personal_whatsapp_number = applicant_data["personal_whatsapp_number"]
+                    existing_applicant.personal_email_id = applicant_data["personal_email_id"]
+
+                    try:
+                        db.commit()
+                        db.refresh(existing_applicant)
+                        applicant_id = existing_applicant.applicant_id
+
+                        # Update ApplicantContactDetails
+                        existing_contact = db.query(ApplicantContactDetails).filter(ApplicantContactDetails.applicant_id == applicant_id).first()
+                        if existing_contact:
+                            existing_contact.personal_mobile_number = applicant_data["personal_mobile_number"]
+                            existing_contact.personal_whatsapp_number = applicant_data["personal_whatsapp_number"]
+                            existing_contact.personal_email_id = applicant_data["personal_email_id"]
+                            db.commit()
+                            db.refresh(existing_contact)
+
+                        # If vacancy_master_id is provided, insert or update ApplicationMaster
+                        if data.vacancy_master_id:
+                            existing_application = db.query(ApplicationMaster).filter(ApplicationMaster.applicant_id == applicant_id).first()
+                            if existing_application:
+                                existing_application.vacancy_master_id = data.vacancy_master_id
+                                existing_application.application_date = date.today()
+                                existing_application.application_status = "PENDING"
+                                db.commit()
+                                db.refresh(existing_application)
+                            else:
+                                application_data = {
+                                    "applicant_id": applicant_id,
+                                    "vacancy_master_id": data.vacancy_master_id,
+                                    "application_date": date.today(),
+                                    "application_status": "PENDING",
+                                    "is_deleted": "no",  # Assuming 'no' as default
+                                }
+                                new_application = ApplicationMaster(**application_data)
+                                db.add(new_application)
+                                db.commit()
+
+                    except Exception as e:
+                        db.rollback()  # Rollback if an error occurs
+                        raise HTTPException(status_code=500, detail="Error updating applicant: " + str(e))
+
                 else:
                     raise HTTPException(status_code=404, detail="Applicant master not found for update.")
+
             return {"success": True, "message": "Applicant details saved successfully", "applicant_id": applicant_id}
-        
+
         elif component == "applicant_present_address":
             # Handling applicant_present_address component
             present_address_data = data.applicant_present_address.dict()
