@@ -1964,6 +1964,7 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
                 "menu_name": item.menu_name,
                 "parent_id": item.parent_id,
                 "has_sub_menu" : item.has_sub_menu,
+                "display_order" : item.display_order,
                 "can_view": mapping.can_view if mapping else "no",
                 "can_edit": mapping.can_edit if mapping else "no",
                 "can_delete": mapping.can_delete if mapping else "no",
