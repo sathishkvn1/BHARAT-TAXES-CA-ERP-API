@@ -10,14 +10,14 @@ import requests
 from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException ,status
 
 from caerp_db.database import get_db
 from caerp_functions import send_message
 from caerp_router.common.common_functions import token_generate
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, Village, VillageResponse     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -782,6 +782,46 @@ def send_query_resolved_notification(phone, template_name: str, placeholders: li
     except requests.exceptions.RequestException as e:        
         return {"success": False, "error": str(e), "response": response.text}
 
+
+#----------------------------------------------------------------------------------------------------------
+
+
+def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = Depends(get_db)):
+    processed_menus = []
+
+    for menu in menus:
+        # Check if the menu already exists
+        existing_menu = db.query(MenuStructure).filter(MenuStructure.id == menu.id).first()
+
+        if existing_menu:
+            # Update existing menu
+            menu_data = menu.model_dump()  # Convert Pydantic object to dictionary
+            menu_data['modified_by'] = user_id
+            menu_data['modified_on'] = datetime.now()
+
+            for key, value in menu_data.items():
+                if hasattr(existing_menu, key):  # Update only fields that exist in the model
+                    setattr(existing_menu, key, value)
+
+            db.commit()
+            db.refresh(existing_menu)
+            processed_menus.append(existing_menu)  # Add updated menu to the list
+        else:
+            # Create new menu
+            new_menu = MenuStructure(
+                **menu.model_dump(),
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(new_menu)
+            db.commit()
+            db.refresh(new_menu)
+            processed_menus.append(new_menu)  # Add newly created menu to the list
+
+    # Serialize using MenuStructureSchema
+    response_menus = [MenuStructureSchema.from_orm(menu) for menu in processed_menus]
+
+    return {"success": True, "menus": response_menus}
 
 
 

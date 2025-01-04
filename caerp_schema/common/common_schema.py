@@ -1858,3 +1858,44 @@ class QueryManagerViewSchema(BaseModel):
     class Config:
         from_orm = True
         from_attributes = True
+
+
+
+
+class MenuStructureSchema(BaseModel):
+    
+    id                  : Optional[int] = None
+    parent_id           : int 
+    menu_name           : str
+    description         : str
+    has_sub_menu        : str
+    display_location_id    : int
+    display_order       : int
+    link                : str
+    has_view            : Optional[str] = 'no'
+    has_edit            : Optional[str] = 'no'
+    has_delete          : Optional[str] = 'no'
+    control_key         : Optional[str] = None
+    # modified_by         : Optional[int] = None
+    # modified_on         : Optional[datetime] = None
+    # created_by          : int
+    # created_on          : datetime
+    # is_deleted          : Optional[str] = 'no'
+    # deleted_by          : Optional[int] = None
+    # deleted_on          : Optional[datetime] =None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+class RoleMenuMappingSchema(BaseModel):
+
+    id          :Optional[int] = None
+    role_id     : Optional[int] = None
+    menu_id     : Optional[int] = None
+    can_view    : Optional[str] = 'no'
+    can_edit    : Optional[str] = 'no'
+    can_delete  : Optional[str] = 'no'
+    class Config:
+        orm_mode = True
+

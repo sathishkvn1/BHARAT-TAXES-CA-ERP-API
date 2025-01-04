@@ -942,3 +942,54 @@ class QueryView(caerp_base):
    
     is_deleted              = Column(Enum('yes','no'),nullable=False, default='no')
 
+
+
+
+class MenuLocation(caerp_base):
+      __tablename__ = 'app_menu_location'
+      
+      id                    = Column(Integer, primary_key=True, autoincrement=True)
+      menu_location_name    = Column(String(50), nullable=False)
+      is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class MenuStructure(caerp_base):
+    __tablename__ = 'app_menu_master'
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    parent_id       = Column(Integer, nullable=False)
+    menu_name       = Column(String(50), nullable= False)
+    description     = Column(String(500), nullable= False)
+    has_sub_menu    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    link            = Column(String(100), nullable=False)
+    control_key     = Column(String(50),nullable = True,default=None)
+    display_order   = Column(Integer, nullable=False)
+    display_location_id = Column(Integer , nullable= False)
+    has_view        = Column(Enum('yes','no'),nullable=False,default='no')
+    has_edit        = Column(Enum('yes','no'),nullable=False,default='no')
+    has_delete      = Column(Enum('yes','no'),nullable=False,default='no')
+    created_by          = Column(Integer, default=None)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, default=None)
+    modified_on         = Column(DateTime, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, default=None)
+    deleted_on          = Column(DateTime, default=None)
+
+
+class RoleMenuMapping(caerp_base):
+    __tablename__ = 'role_menu_mapping'
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    role_id             = Column(Integer, nullable=False)
+    menu_id             = Column(Integer, nullable=False)
+    can_view            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    can_edit            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    can_delete          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    created_by          = Column(Integer, default=None)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, default=None)
+    modified_on         = Column(DateTime, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, default=None)
+    deleted_on          = Column(DateTime, default=None)
+

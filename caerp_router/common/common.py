@@ -4,8 +4,8 @@ from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
 import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import   AppBankMaster, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase, UserRegistration
-from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
+from caerp_db.common.models import   AppBankMaster, CountryDB, MenuStructure,  NationalityDB, QueryManager, QueryManagerQuery, RoleMenuMapping,UserBase, UserRegistration
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
@@ -1840,6 +1840,7 @@ def add_notification(
 
 
 
+#-------------------------------------------------------------------------------------
 
 @router.get("/queries", response_model=List[QueryManagerViewSchema])
 def get_queries(id: Optional[int] =None,
@@ -1890,4 +1891,84 @@ def get_queries(id: Optional[int] =None,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
 
     return query
+
+
+
+#-------------------------------------------------------------------------------------
+
+
+@router.post('/create_menu')
+def create_menu(
+    menu: List[MenuStructureSchema],
+    db: Session = Depends(get_db),
+    token :str = Depends(oauth2.oauth2_scheme)
+):
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result  = db_common.create_menu(menu,user_id,db)
+    return result
+
+#===========================================================================
+
+
+@router.get("/get_menu_structure")
+def get_menu_structure(
+    role_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    API to fetch the menu structure as a tree, considering role-based assignments.
+
+    Args:
+        role_id: Optional role ID to filter assigned menus.
+        db: Database session.
+
+    Returns:
+        JSON structure with menus in a tree format.
+    """
+    # Fetch all menus
+    menus = db.query(MenuStructure).filter(MenuStructure.is_deleted == "no").order_by(MenuStructure.display_order).all()
+    
+    # Fetch role menu mappings if role_id is provided
+    role_menu_mapping = {}
+    if role_id:
+        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id).all()
+        role_menu_mapping = {mapping.menu_id: mapping for mapping in mappings}
+    
+    # Build the menu tree
+    menu_tree = build_menu_tree(menus, role_menu_mapping)
+
+    return {"menuData": menu_tree}
+#================================================================================================================
+
+
+def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
+    """
+    Recursively builds a tree structure for menus.
+
+    Args:
+        menu_items: List of all menu items.
+        role_menu_mapping: Dictionary with role-specific menu mappings.
+        parent_id: Parent menu ID for recursion.
+
+    Returns:
+        A list representing the menu tree.
+    """
+    menu_tree = []
+    for item in menu_items:
+        if item.parent_id == parent_id:
+            # Check if the menu is assigned to the role
+            mapping = role_menu_mapping.get(item.id)
+            menu_tree.append({
+                "id": item.id,
+                "menu_name": item.menu_name,
+                "parent_id": item.parent_id,
+                "has_sub_menu" : item.has_sub_menu,
+                "can_view": mapping.can_view if mapping else "no",
+                "can_edit": mapping.can_edit if mapping else "no",
+                "can_delete": mapping.can_delete if mapping else "no",
+                "is_assigned": "yes" if mapping else "no",  # Indicates role assignment
+                "sub_menus": build_menu_tree(menu_items, role_menu_mapping, item.id),  # Recursive call
+            })
+    return menu_tree
 
