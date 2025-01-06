@@ -847,6 +847,7 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
                 "has_sub_menu": item.has_sub_menu,
                 "display_order": item.display_order,
                 "link" : item.link,
+                "display_location_id" : item.display_location_id,
                 "is_assigned": "yes" if mapping else "no",
                 "has_view": item.has_view if hasattr(item, "has_view") else "no",
                 "has_edit": item.has_edit if hasattr(item, "has_edit") else "no",
@@ -858,7 +859,6 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
             # Add sub_menus as the last key
             menu_entry["sub_menus"] = build_menu_tree(menu_items, role_menu_mapping, item.id)
             menu_tree.append(menu_entry)
-            
     return menu_tree
 
 
