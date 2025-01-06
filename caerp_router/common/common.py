@@ -1910,7 +1910,6 @@ def create_menu(
 
 #===========================================================================
 
-
 @router.get("/get_menu_structure")
 def get_menu_structure(
     role_id: Optional[int] = None,
@@ -1926,50 +1925,12 @@ def get_menu_structure(
     Returns:
         JSON structure with menus in a tree format.
     """
+    result = db_common.get_menu_structure(role_id,db)
+    return result
     # Fetch all menus
-    menus = db.query(MenuStructure).filter(MenuStructure.is_deleted == "no").order_by(MenuStructure.display_order).all()
     
-    # Fetch role menu mappings if role_id is provided
-    role_menu_mapping = {}
-    if role_id:
-        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id).all()
-        role_menu_mapping = {mapping.menu_id: mapping for mapping in mappings}
-    
-    # Build the menu tree
-    menu_tree = build_menu_tree(menus, role_menu_mapping)
 
-    return {"menuData": menu_tree}
+
 #================================================================================================================
 
-
-def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
-    """
-    Recursively builds a tree structure for menus.
-
-    Args:
-        menu_items: List of all menu items.
-        role_menu_mapping: Dictionary with role-specific menu mappings.
-        parent_id: Parent menu ID for recursion.
-
-    Returns:
-        A list representing the menu tree.
-    """
-    menu_tree = []
-    for item in menu_items:
-        if item.parent_id == parent_id:
-            # Check if the menu is assigned to the role
-            mapping = role_menu_mapping.get(item.id)
-            menu_tree.append({
-                "id": item.id,
-                "menu_name": item.menu_name,
-                "parent_id": item.parent_id,
-                "has_sub_menu" : item.has_sub_menu,
-                "display_order" : item.display_order,
-                "can_view": mapping.can_view if mapping else "no",
-                "can_edit": mapping.can_edit if mapping else "no",
-                "can_delete": mapping.can_delete if mapping else "no",
-                "is_assigned": "yes" if mapping else "no",  # Indicates role assignment
-                "sub_menus": build_menu_tree(menu_items, role_menu_mapping, item.id),  # Recursive call
-            })
-    return menu_tree
 

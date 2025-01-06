@@ -10,7 +10,7 @@ import requests
 from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView,  StateDB, TalukDB, UserBase
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException ,status
 
@@ -824,6 +824,60 @@ def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = De
     return {"success": True, "menus": response_menus}
 
 
+
+
+def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
+    """
+    Recursively builds a tree structure for menus.
+
+    Args:
+        menu_items: List of all menu items.
+        role_menu_mapping: Dictionary with role-specific menu mappings.
+        parent_id: Parent menu ID for recursion.
+
+    Returns:
+        A list representing the menu tree.
+    """
+    menu_tree = []
+    for item in menu_items:
+        if item.parent_id == parent_id:
+            # Check if the menu is assigned to the role
+            mapping = role_menu_mapping.get(item.id)
+            # Build the menu entry
+            menu_entry = {
+                "id": item.id,
+                "menu_name": item.menu_name,
+                "parent_id": item.parent_id,
+                "has_sub_menu": item.has_sub_menu,
+                "display_order": item.display_order,
+                "is_assigned": "yes" if mapping else "no",
+                "has_view": item.has_view if hasattr(item, "has_view") else "no",
+                "has_edit": item.has_edit if hasattr(item, "has_edit") else "no",
+                "has_delete": item.has_delete if hasattr(item, "has_delete") else "no",
+                "can_view": mapping.can_view if mapping else "no",
+                "can_edit": mapping.can_edit if mapping else "no",
+                "can_delete": mapping.can_delete if mapping else "no",
+            }
+            # Add sub_menus as the last key
+            menu_entry["sub_menus"] = build_menu_tree(menu_items, role_menu_mapping, item.id)
+            menu_tree.append(menu_entry)
+    return menu_tree
+
+
+
+
+def get_menu_structure(role_id : int,
+                      db: Session):
+    menus = db.query(MenuStructure).filter(MenuStructure.is_deleted == "no").order_by(MenuStructure.display_order).all()
+    # Fetch role menu mappings if role_id is provided
+    role_menu_mapping = {}
+    if role_id:
+        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id).all()
+        role_menu_mapping = {mapping.menu_id: mapping for mapping in mappings}
+    # Build the menu tree
+    menu_tree = build_menu_tree(menus, role_menu_mapping)
+
+    return {"menuData": menu_tree}
 
 
 
