@@ -1913,7 +1913,8 @@ def create_menu(
 @router.get("/get_menu_structure")
 def get_menu_structure(
     role_id: Optional[int] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
     API to fetch the menu structure as a tree, considering role-based assignments.
@@ -1925,6 +1926,9 @@ def get_menu_structure(
     Returns:
         JSON structure with menus in a tree format.
     """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+   
     result = db_common.get_menu_structure(role_id,db)
     return result
     # Fetch all menus

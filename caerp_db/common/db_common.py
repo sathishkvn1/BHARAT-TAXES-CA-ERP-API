@@ -824,8 +824,6 @@ def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = De
     return {"success": True, "menus": response_menus}
 
 
-
-
 def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
     """
     Recursively builds a tree structure for menus.
@@ -862,7 +860,6 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
             menu_entry["sub_menus"] = build_menu_tree(menu_items, role_menu_mapping, item.id)
             menu_tree.append(menu_entry)
     return menu_tree
-
 
 
 
