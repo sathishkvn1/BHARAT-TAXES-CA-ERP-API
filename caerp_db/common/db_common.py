@@ -784,8 +784,6 @@ def send_query_resolved_notification(phone, template_name: str, placeholders: li
 
 
 #----------------------------------------------------------------------------------------------------------
-
-
 def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = Depends(get_db)):
     processed_menus = []
 
@@ -823,7 +821,7 @@ def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = De
 
     return {"success": True, "menus": response_menus}
 
-
+#----------------------------------------------------------------------------------------------------------
 def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
     """
     Recursively builds a tree structure for menus.
@@ -848,6 +846,7 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
                 "parent_id": item.parent_id,
                 "has_sub_menu": item.has_sub_menu,
                 "display_order": item.display_order,
+                "link" : item.link,
                 "is_assigned": "yes" if mapping else "no",
                 "has_view": item.has_view if hasattr(item, "has_view") else "no",
                 "has_edit": item.has_edit if hasattr(item, "has_edit") else "no",
@@ -859,9 +858,11 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
             # Add sub_menus as the last key
             menu_entry["sub_menus"] = build_menu_tree(menu_items, role_menu_mapping, item.id)
             menu_tree.append(menu_entry)
+            
     return menu_tree
 
 
+#----------------------------------------------------------------------------------------------------------
 
 def get_menu_structure(role_id : int,
                       db: Session):
@@ -876,10 +877,7 @@ def get_menu_structure(role_id : int,
 
     return {"menuData": menu_tree}
 
-
-
-
-
+#----------------------------------------------------------------------------------------------------------
 
 
 
