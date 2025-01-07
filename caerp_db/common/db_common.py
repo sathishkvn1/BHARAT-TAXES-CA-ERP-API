@@ -881,8 +881,6 @@ def get_menu_structure(role_id : int,
 
 #----------------------------------------------------------------------------------------------------------
 
-
-
 def save_role_menu_permission(
         db: Session,
         role_id : int,
@@ -903,6 +901,7 @@ def save_role_menu_permission(
             if existing_data:
                 # Update existing record
                 updating_data = data.model_dump()  # Convert Pydantic object to dictionary
+                updating_data['id']          = existing_data.id
                 updating_data['modified_by'] = user_id
                 updating_data['modified_on'] = datetime.now()
 
@@ -950,6 +949,7 @@ def save_role_menu_permission(
             "success": False,
             "error": f"An unexpected error occurred: {str(e)}"
         }
+
 
 #-----------------------------------------------------------------------------------------------
 
