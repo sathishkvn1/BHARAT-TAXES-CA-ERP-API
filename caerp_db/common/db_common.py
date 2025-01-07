@@ -5,6 +5,7 @@ from datetime import date, datetime
 import json
 import random
 from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError
 
 import requests
 from sqlalchemy import desc, or_
@@ -822,6 +823,7 @@ def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = De
     return {"success": True, "menus": response_menus}
 
 #----------------------------------------------------------------------------------------------------------
+
 def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
     """
     Recursively builds a tree structure for menus.
@@ -881,6 +883,111 @@ def get_menu_structure(role_id : int,
 
 
 
+def save_role_menu_permission(
+        db: Session,
+        role_id : int,
+        datas: List[RoleMenuMappingSchema],
+        user_id: int
+):
+    processed_data = []  # Initialize as a list
+
+    try:
+        for data in datas:
+            # Check if the record exists for the role and menu
+            existing_data = db.query(RoleMenuMapping).filter(
+                RoleMenuMapping.role_id == role_id,
+                RoleMenuMapping.menu_id == data.menu_id,
+                RoleMenuMapping.is_deleted == 'no'
+            ).first()
+
+            if existing_data:
+                # Update existing record
+                updating_data = data.model_dump()  # Convert Pydantic object to dictionary
+                updating_data['modified_by'] = user_id
+                updating_data['modified_on'] = datetime.now()
+
+                for key, value in updating_data.items():
+                    if hasattr(existing_data, key):  # Update only fields that exist in the model
+                        setattr(existing_data, key, value)
+
+                db.commit()
+                db.refresh(existing_data)
+                processed_data.append({
+                    "id": existing_data.id,
+                    "message": "Updated successfully"
+                })  # Add updated record ID and message to the list
+            else:
+                # Create a new record
+                new_mapping = RoleMenuMapping(
+                    **data.model_dump(),
+                    role_id = role_id,
+                    created_by=user_id,
+                    created_on=datetime.now()
+                )
+                db.add(new_mapping)
+                db.commit()
+                db.refresh(new_mapping)
+                processed_data.append({
+                    "id": new_mapping.id,
+                    "message": "Created successfully"
+                })  # Add newly created record ID and message to the list
+
+        return {"success": True, "data": processed_data}
+
+    except SQLAlchemyError as e:
+        # Rollback any uncommitted changes
+        db.rollback()
+        # Log the error if needed and return failure response
+        return {
+            "success": False,
+            "error": f"Database error occurred: {str(e)}"
+        }
+
+    except Exception as e:
+        # Handle any other unexpected exceptions
+        db.rollback()
+        return {
+            "success": False,
+            "error": f"An unexpected error occurred: {str(e)}"
+        }
+
+#-----------------------------------------------------------------------------------------------
+
+
+def delete_menu_recursively(db: Session, menu_id: int, user_id: int):
+    try:
+        # Fetch the menu by ID
+        menu = db.query(MenuStructure).filter(MenuStructure.id == menu_id, MenuStructure.is_deleted == 'no').first()
+
+        if not menu:
+            return {"success": False, "message": "Menu not found or already deleted"}
+
+        # Find all submenus (child menus)
+        submenus = db.query(MenuStructure).filter(MenuStructure.parent_id == menu_id, MenuStructure.is_deleted == 'no').all()
+
+        # Recursively delete all submenus
+        for submenu in submenus:
+            delete_menu_recursively(db, submenu.id, user_id)
+
+        # After all submenus are deleted, delete the menu itself
+        menu.is_deleted = 'yes'
+        menu.deleted_by = user_id
+        menu.deleted_on = datetime.now()
+
+        db.commit()
+
+        return {"success": True, "message": f"Menu with ID {menu_id} and all its submenus deleted successfully"}
+
+    except SQLAlchemyError as e:
+        # Rollback if there is a database error
+        db.rollback()
+        return {"success": False, "message": f"Database error occurred: {str(e)}"}
+
+    except Exception as e:
+        # Handle any other unexpected errors
+        db.rollback()
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
+  
 
 
 

@@ -5,7 +5,7 @@ import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
 from caerp_db.common.models import   AppBankMaster, CountryDB, MenuStructure,  NationalityDB, QueryManager, QueryManagerQuery, RoleMenuMapping,UserBase, UserRegistration
-from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, RoleMenuMappingSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, VillageResponse
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
@@ -1928,8 +1928,6 @@ def get_menu_structure(
     return result
     # Fetch all menus
  #================================================================================================================
-
-
 @router.get("/menu_by_user_id")
 def get_menu_by_user_id(
     parent_id: Optional[int] = 0,
@@ -2022,3 +2020,36 @@ def get_menu_by_user_id(
     }
 
     return response
+
+#-----------------------------------------------------------------------------------
+
+@router.post("/save_role_menu_permission")
+def save_role_menu_permission(
+    role_id : int,
+    data : List[RoleMenuMappingSchema],
+    db: Session = Depends(get_db),
+    token : str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.save_role_menu_permission(db,role_id,data,user_id)
+    return result
+
+#-----------------------------------------------------------------------------------
+
+@router.delete('/delete_menu_recursively')
+def delete_menu_recursively(
+    menu_id : int,
+    db: Session = Depends(get_db),
+    token : str =Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.delete_menu_recursively(db,menu_id, user_id)
+    return result
+
