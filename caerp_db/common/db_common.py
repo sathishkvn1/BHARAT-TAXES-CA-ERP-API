@@ -18,7 +18,7 @@ from fastapi import Depends, HTTPException ,status
 from caerp_db.database import get_db
 from caerp_functions import send_message
 from caerp_router.common.common_functions import token_generate
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, Village, VillageResponse     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
