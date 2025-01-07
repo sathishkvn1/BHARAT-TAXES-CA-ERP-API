@@ -23,7 +23,7 @@ import os
 import wave
 import json
 from vosk import Model, KaldiRecognizer
-from pydub import AudioSegment
+
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse

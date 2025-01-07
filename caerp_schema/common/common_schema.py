@@ -1891,7 +1891,7 @@ class MenuStructureSchema(BaseModel):
 class RoleMenuMappingSchema(BaseModel):
 
     id          :Optional[int] = None
-    role_id     : Optional[int] = None
+    # role_id     : Optional[int] = None
     menu_id     : Optional[int] = None
     can_view    : Optional[str] = 'no'
     can_edit    : Optional[str] = 'no'
