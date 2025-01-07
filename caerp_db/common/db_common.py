@@ -880,13 +880,22 @@ def get_menu_structure(role_id : int,
     return {"menuData": menu_tree}
 
 #----------------------------------------------------------------------------------------------------------
-
 def save_role_menu_permission(
-        db: Session,
-        role_id : int,
-        datas: List[RoleMenuMappingSchema],
-        user_id: int
+    db: Session,
+    role_id: int,
+    datas: List[RoleMenuMappingSchema],
+    user_id: int,
+    is_assigned: Optional[str] = 'yes'  # Fixed the default parameter typo
 ):
+    """
+    Saves or updates role-menu permissions.
+
+    :param db: Database session.
+    :param role_id: ID of the role.
+    :param datas: List of role-menu mappings.
+    :param user_id: ID of the user performing the operation.
+    :param is_assigned: Flag indicating whether the permissions are assigned.
+    """
     processed_data = []  # Initialize as a list
 
     try:
@@ -895,12 +904,21 @@ def save_role_menu_permission(
             existing_data = db.query(RoleMenuMapping).filter(
                 RoleMenuMapping.role_id == role_id,
                 RoleMenuMapping.menu_id == data.menu_id,
-                RoleMenuMapping.is_deleted == 'no'
+                # RoleMenuMapping.is_deleted == 'no'
             ).first()
 
             if existing_data:
-                # Update existing record
                 updating_data = data.model_dump()  # Convert Pydantic object to dictionary
+
+                if is_assigned == 'no':
+                    updating_data['is_deleted'] = 'yes'
+                    updating_data['deleted_by'] = user_id
+                    updating_data['deleted_on'] = datetime.now()
+                if is_assigned =='yes':
+                    updating_data['is_deleted'] = 'no'
+                    updating_data['deleted_by'] = None
+                    updating_data['deleted_on'] = None
+                    # Update existing record
                 updating_data['id']          = existing_data.id
                 updating_data['modified_by'] = user_id
                 updating_data['modified_on'] = datetime.now()
@@ -949,7 +967,6 @@ def save_role_menu_permission(
             "success": False,
             "error": f"An unexpected error occurred: {str(e)}"
         }
-
 
 #-----------------------------------------------------------------------------------------------
 

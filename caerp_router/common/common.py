@@ -2027,19 +2027,20 @@ def get_menu_by_user_id(
 
 
 #-----------------------------------------------------------------------------------
-
+c
 @router.post("/save_role_menu_permission")
 def save_role_menu_permission(
     role_id : int,
     data : List[RoleMenuMappingSchema],
     db: Session = Depends(get_db),
+    is_assigned: Optional[str] = 'yes',
     token : str = Depends(oauth2.oauth2_scheme)):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
     auth_info = authenticate_user(token)
     user_id = auth_info.get("user_id")
-    result = db_common.save_role_menu_permission(db,role_id,data,user_id)
+    result = db_common.save_role_menu_permission(db,role_id,data,user_id,is_assigned)
     return result
 
 #-----------------------------------------------------------------------------------
