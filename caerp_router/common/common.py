@@ -1928,6 +1928,7 @@ def get_menu_structure(
     return result
     # Fetch all menus
  #================================================================================================================
+
 @router.get("/menu_by_user_id")
 def get_menu_by_user_id(
     parent_id: Optional[int] = 0,
@@ -1983,6 +1984,9 @@ def get_menu_by_user_id(
                 consolidated_permissions[menu_id] = {
                     "menu_id": menu_id,
                     "menu_name": menu_master.menu_name,
+                    "link": menu_master.link,
+                    "display_order": menu_master.display_order,
+                    "display_location_id": menu_master.display_location_id,
                     "can_view": "no",
                     "can_edit": "no",
                     "can_delete": "no",
@@ -2020,6 +2024,7 @@ def get_menu_by_user_id(
     }
 
     return response
+
 
 #-----------------------------------------------------------------------------------
 
