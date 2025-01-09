@@ -865,14 +865,13 @@ def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
 
 
 #----------------------------------------------------------------------------------------------------------
-
 def get_menu_structure(role_id : int,
                       db: Session):
     menus = db.query(MenuStructure).filter(MenuStructure.is_deleted == "no").order_by(MenuStructure.display_order).all()
     # Fetch role menu mappings if role_id is provided
     role_menu_mapping = {}
     if role_id:
-        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id).all()
+        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id,RoleMenuMapping.is_deleted== 'no').all()
         role_menu_mapping = {mapping.menu_id: mapping for mapping in mappings}
     # Build the menu tree
     menu_tree = build_menu_tree(menus, role_menu_mapping)
