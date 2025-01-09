@@ -11,14 +11,14 @@ import requests
 from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase
+from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase, UsersRole
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException ,status
 
 from caerp_db.database import get_db
 from caerp_functions import send_message
 from caerp_router.common.common_functions import token_generate
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, Village, VillageResponse     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, UserRoleSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -1006,6 +1006,46 @@ def delete_menu_recursively(db: Session, menu_id: int, user_id: int):
   
 
 
+def create_role(roles : List[UserRoleSchema],
+                 user_id: int,
+                 db: Session,
+                #  role_id: Optional[int] = None
+                 ):
+    processed_roles = []
+
+    for role in roles:
+        # Check if the menu already exists
+        existing_role = db.query(UsersRole).filter(UsersRole.id == role.id).first()
+
+        if existing_role:
+            # Update existing menu
+            role_data = role.model_dump()  # Convert Pydantic object to dictionary
+            role_data['modified_by'] = user_id
+            role_data['modified_on'] = datetime.now()
+
+            for key, value in role_data.items():
+                if hasattr(existing_role, key):  # Update only fields that exist in the model
+                    setattr(existing_role, key, value)
+
+            db.commit()
+            db.refresh(existing_role)
+            processed_roles.append(existing_role)  # Add updated menu to the list
+        else:
+            # Create new menu
+            new_role = UsersRole(
+                **role.model_dump(),
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(new_role)
+            db.commit()
+            db.refresh(new_role)
+            processed_roles.append(new_role)  # Add newly created menu to the list
+
+    # Serialize using MenuStructureSchema
+    response_role = [UserRoleSchema.from_orm(role) for role in processed_roles]
+
+    return {"success": True, "menus": response_role}
 
 
 
