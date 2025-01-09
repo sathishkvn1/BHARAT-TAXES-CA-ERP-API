@@ -932,21 +932,21 @@ def save_role_menu_permission(
                     "id": existing_data.id,
                     "message": "Updated successfully"
                 })  # Add updated record ID and message to the list
-            else:
-                # Create a new record
-                new_mapping = RoleMenuMapping(
-                    **data.model_dump(),
-                    role_id = role_id,
-                    created_by=user_id,
-                    created_on=datetime.now()
-                )
-                db.add(new_mapping)
-                db.commit()
-                db.refresh(new_mapping)
-                processed_data.append({
-                    "id": new_mapping.id,
-                    "message": "Created successfully"
-                })  # Add newly created record ID and message to the list
+            # else:
+            #     # Create a new record
+            #     new_mapping = RoleMenuMapping(
+            #         **data.model_dump(),
+            #         role_id = role_id,
+            #         created_by=user_id,
+            #         created_on=datetime.now()
+            #     )
+            #     db.add(new_mapping)
+            #     db.commit()
+            #     db.refresh(new_mapping)
+            #     processed_data.append({
+            #         "id": new_mapping.id,
+            #         "message": "Created successfully"
+            #     })  # Add newly created record ID and message to the list
 
         return {"success": True, "data": processed_data}
 
@@ -966,6 +966,8 @@ def save_role_menu_permission(
             "success": False,
             "error": f"An unexpected error occurred: {str(e)}"
         }
+
+
 
 #-----------------------------------------------------------------------------------------------
 

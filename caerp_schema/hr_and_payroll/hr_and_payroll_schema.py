@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, validator
 from typing import List,Optional, Union,Dict
-from datetime import date, datetime
+from datetime import date, datetime, time
 from caerp_constants.caerp_constants import BooleanFlag
 
    
@@ -760,7 +760,7 @@ class ApplicantMasterSchema(BaseModel):
     gender_id: int
     blood_group: Optional[str] = None
     marital_status_id: int
-    nationality_id: str
+    nationality_id: int
     personal_mobile_number: Optional[str] = None
     personal_whatsapp_number: Optional[str] = None
     personal_email_id: Optional[str] = None
@@ -1236,3 +1236,20 @@ class ApplicantSocialMediaResponse(BaseModel):
     first_name: str
     middle_name: Optional[str] = None
     last_name: str
+
+
+
+class InterviewScheduleRequest(BaseModel):
+    id: Optional[int] = 0  # id is optional, and default is 0 for insert
+    applicant_id: int
+    vacancy_id: int
+    interview_panel_id: int
+    interview_date: date
+    interview_time: time
+    location: str
+    interview_status: str = "SCHEDULED"  # Default value for interview status
+    remarks: Optional[str] = None  # Optional field for remarks
+
+
+class InterviewSchedulesResponse(BaseModel):
+    schedules: List[InterviewScheduleRequest]

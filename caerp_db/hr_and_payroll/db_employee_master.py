@@ -5,7 +5,7 @@ from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, Ap
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
-from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
+from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
@@ -2371,7 +2371,7 @@ def save_applicant(data: ApplicantDetails,vacancy_master_id:int, db: Session, us
 
             else:  # Update existing record
                 existing_applicant = db.query(ApplicantMaster).filter(ApplicantMaster.applicant_id == applicant_data["id"]).first()
-
+                # existing_contact_applicant = db.query(ApplicantContactDetails).filter(ApplicantContactDetails.applicant_id == applicant_data["id"]).first()
                 if existing_applicant:
                     # Update applicant_master data
                     existing_applicant.first_name = applicant_data["first_name"]
@@ -2382,9 +2382,9 @@ def save_applicant(data: ApplicantDetails,vacancy_master_id:int, db: Session, us
                     existing_applicant.blood_group = applicant_data["blood_group"]
                     existing_applicant.marital_status_id = applicant_data["marital_status_id"]
                     existing_applicant.nationality_id = applicant_data["nationality_id"]
-                    existing_applicant.personal_mobile_number = applicant_data["personal_mobile_number"]
-                    existing_applicant.personal_whatsapp_number = applicant_data["personal_whatsapp_number"]
-                    existing_applicant.personal_email_id = applicant_data["personal_email_id"]
+                    # existing_contact_applicant.personal_mobile_number = applicant_data["personal_mobile_number"]
+                    # existing_contact_applicant.personal_whatsapp_number = applicant_data["personal_whatsapp_number"]
+                    # existing_contact_applicant.personal_email_id = applicant_data["personal_email_id"]
 
                     try:
                         db.commit()
@@ -2401,25 +2401,25 @@ def save_applicant(data: ApplicantDetails,vacancy_master_id:int, db: Session, us
                             db.refresh(existing_contact)
 
                         # If vacancy_master_id is provided, insert or update ApplicationMaster
-                        if data.vacancy_master_id:
-                            existing_application = db.query(ApplicationMaster).filter(ApplicationMaster.applicant_id == applicant_id).first()
-                            if existing_application:
-                                existing_application.vacancy_master_id = data.vacancy_master_id
-                                existing_application.application_date = date.today()
-                                existing_application.application_status = "PENDING"
-                                db.commit()
-                                db.refresh(existing_application)
-                            else:
-                                application_data = {
-                                    "applicant_id": applicant_id,
-                                    "vacancy_master_id": data.vacancy_master_id,
-                                    "application_date": date.today(),
-                                    "application_status": "PENDING",
-                                    "is_deleted": "no",  # Assuming 'no' as default
-                                }
-                                new_application = ApplicationMaster(**application_data)
-                                db.add(new_application)
-                                db.commit()
+                        # if data.vacancy_master_id:
+                        #     existing_application = db.query(ApplicationMaster).filter(ApplicationMaster.applicant_id == applicant_id).first()
+                        #     if existing_application:
+                        #         existing_application.vacancy_master_id = data.vacancy_master_id
+                        #         existing_application.application_date = date.today()
+                        #         existing_application.application_status = "PENDING"
+                        #         db.commit()
+                        #         db.refresh(existing_application)
+                        #     else:
+                        #         application_data = {
+                        #             "applicant_id": applicant_id,
+                        #             "vacancy_master_id": data.vacancy_master_id,
+                        #             "application_date": date.today(),
+                        #             "application_status": "PENDING",
+                        #             "is_deleted": "no",  # Assuming 'no' as default
+                        #         }
+                        #         new_application = ApplicationMaster(**application_data)
+                        #         db.add(new_application)
+                        #         db.commit()
 
                     except Exception as e:
                         db.rollback()  # Rollback if an error occurs
@@ -3417,3 +3417,51 @@ def get_applicant_social_media_profiles(
 
     return social_media_profiles
 
+
+#-------------------------------------------------------------------------
+from sqlalchemy.exc import SQLAlchemyError
+def save_schedule(schedule, db: Session):
+    try:
+        # Check if it's an insert or update
+        if schedule.id == 0:  # Insert new schedule
+            # Create a new InterviewSchedule instance without the id field (let DB auto-generate it)
+            new_schedule = InterviewSchedule(**schedule.dict(exclude_unset=True, exclude={"id"}))  # Exclude id field
+            
+            # Add the new schedule to the session
+            db.add(new_schedule)
+            
+            # Commit the session to save the new schedule
+            db.commit()
+            
+            # Refresh to get the updated instance with auto-generated fields like id
+            db.refresh(new_schedule)
+            
+            return new_schedule
+        
+        else:  # Update existing schedule
+            # Fetch the existing schedule by id
+            existing_schedule = db.query(InterviewSchedule).filter(InterviewSchedule.id == schedule.id).first()
+            
+            if existing_schedule:
+                # Update the fields with the new data
+                for key, value in schedule.dict(exclude_unset=True).items():
+                    if hasattr(existing_schedule, key) and value is not None:
+                        setattr(existing_schedule, key, value)
+                
+                # Commit the session to save the changes
+                db.commit()
+                
+                # Refresh to get the updated instance
+                db.refresh(existing_schedule)
+                
+                return existing_schedule
+            else:
+                # If no schedule is found, raise an exception
+                raise Exception(f"Interview schedule with id {schedule.id} not found.")
+    
+    except SQLAlchemyError as e:
+        db.rollback()  # Rollback in case of a database error
+        raise Exception(f"Error saving schedule: {str(e)}")
+    except Exception as e:
+        db.rollback()  # Rollback in case of a non-SQLAlchemy error
+        raise Exception(f"Error: {str(e)}")

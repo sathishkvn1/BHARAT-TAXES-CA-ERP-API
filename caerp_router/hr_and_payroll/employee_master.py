@@ -1,6 +1,6 @@
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -222,7 +222,7 @@ def delete_employee_details_by_id(
 
   
 #---------------------------------------------------------------------------------------------------------
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, text
 
 
 
@@ -2280,3 +2280,589 @@ def get_applicant_details(
         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
 
     return profile_data
+
+#----------------------------------------------------------------------------------------------------
+
+# def fetch_skills_scores(vacancy_id: int, db: Session):
+#     query = text("""
+#         SELECT 
+#             a.applicant_id,
+           
+#             SUM(DISTINCT vs.weightage) AS skill_score
+#         FROM 
+#             applicant_master a
+#         JOIN 
+#             applicant_skill aps ON a.applicant_id = aps.applicant_id
+#         JOIN 
+#             vacancy_skills vs ON aps.skill_id = vs.skill_id AND vs.vacancy_master_id = :vacancy_id
+#         WHERE 
+#             aps.is_deleted = 'no' AND vs.is_deleted = 'no'
+#         GROUP BY 
+#             a.applicant_id;
+#     """)
+#     return db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+
+
+
+# def fetch_experience_scores(vacancy_id: int, db: Session):
+#     query = text("""
+#     SELECT 
+#         a.applicant_id,
+#         SUM(CASE 
+#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 2 THEN 10
+#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 3 THEN 15
+#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 5 THEN 20
+#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 10 THEN 30
+#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) > 10 THEN 40
+#             ELSE 0 
+#         END) AS experience_score
+#     FROM 
+#         applicant_master a
+#     JOIN 
+#         application_master am ON a.applicant_id = am.applicant_id
+#     LEFT JOIN 
+#         applicant_experience ae ON a.applicant_id = ae.applicant_id
+#     WHERE 
+#         am.vacancy_master_id = :vacancy_id
+#         AND am.is_deleted = 'no'
+#         AND (ae.is_deleted = 'no' OR ae.is_deleted IS NULL)
+#     GROUP BY 
+#         a.applicant_id;
+#     """)
+#     try:
+#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+#         # Convert results into a dictionary for easier use
+#         experience_data = {
+#             row[0]: float(row[1]) if row[1] is not None else 0.0
+#             for row in result
+#         }
+#         return experience_data
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching experience scores: {str(e)}")
+
+# def fetch_qualification_scores(vacancy_id: int, db: Session):
+#     query = text("""
+#     SELECT 
+#         ae.applicant_id,
+#         SUM(
+#             CASE 
+#                 WHEN vel.education_level_id = ae.education_level_id THEN vel.weightage ELSE 0 
+#             END + 
+#             CASE 
+#                 WHEN ves.education_stream_id = ae.education_stream_id THEN ves.weightage ELSE 0 
+#             END + 
+#             CASE 
+#                 WHEN vesc.education_subject_or_course_id = ae.education_subject_or_course_id THEN vesc.weightage ELSE 0 
+#             END
+#         ) AS qualification_score
+#     FROM 
+#         applicant_educational_qualification ae
+#     LEFT JOIN 
+#         application_master am ON ae.applicant_id = am.applicant_id
+#     LEFT JOIN 
+#         vacancy_educational_level vel ON vel.vacancy_master_id = am.vacancy_master_id AND vel.education_level_id = ae.education_level_id
+#     LEFT JOIN 
+#         vacancy_educational_stream ves ON ves.vacancy_master_id = am.vacancy_master_id AND ves.education_stream_id = ae.education_stream_id
+#     LEFT JOIN 
+#         vacancy_educational_subject_or_course vesc ON vesc.vacancy_master_id = am.vacancy_master_id AND vesc.education_subject_or_course_id = ae.education_subject_or_course_id
+#     WHERE 
+#         ae.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+#     GROUP BY 
+#         ae.applicant_id;
+#     """)
+#     try:
+#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+#         # Convert results into a dictionary for easier use
+#         qualification_data = {
+#             row[0]: float(row[1]) if row[1] is not None else 0.0
+#             for row in result
+#         }
+#         return qualification_data
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching qualification scores: {str(e)}")
+
+
+
+# def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
+#     query = text("""
+#     SELECT 
+#         alp.applicant_id,
+#         SUM(
+#             CASE
+#                 WHEN vlp.is_read_required = 'yes' AND alp.read_proficiency_id = vlp.language_proficiency_id THEN vlp.read_weightage ELSE 0
+#             END +
+#             CASE
+#                 WHEN vlp.is_write_required = 'yes' AND alp.write_proficiency_id = vlp.language_proficiency_id THEN vlp.write_weightage ELSE 0
+#             END +
+#             CASE
+#                 WHEN vlp.is_speak_required = 'yes' AND alp.speak_proficiency_id = vlp.language_proficiency_id THEN vlp.speak_weightage ELSE 0
+#             END
+#         ) AS language_proficiency_score
+#     FROM 
+#         applicant_language_proficiency alp
+#     LEFT JOIN 
+#         application_master am ON alp.applicant_id = am.applicant_id
+#     LEFT JOIN 
+#         vacancy_language_proficiency vlp ON vlp.vacancy_master_id = am.vacancy_master_id AND vlp.language_id = alp.language_id
+#     WHERE 
+#         alp.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+#     GROUP BY 
+#         alp.applicant_id;
+#     """)
+#     try:
+#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+#         # Convert results into a dictionary for easier use
+#         language_proficiency_data = {
+#             row[0]: float(row[1]) if row[1] is not None else 0.0
+#             for row in result
+#         }
+#         return language_proficiency_data
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
+
+
+
+
+# def calculate_total_scores(vacancy_id: int, db: Session):
+#     # Fetch individual components
+#     skills = dict(fetch_skills_scores(vacancy_id, db))
+#     experience = dict(fetch_experience_scores(vacancy_id, db))
+#     qualification = dict(fetch_qualification_scores(vacancy_id, db))
+#     language_proficiency = dict(fetch_language_proficiency_scores(vacancy_id, db))
+
+#     # Combine data
+#     applicant_scores = {}
+
+#     # Merge skill scores
+
+#     for applicant_id, skill_score in skills.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
+#         applicant_scores[applicant_id]["skill_score"] = skill_score
+
+#     # Merge experience scores
+#     for applicant_id, experience_score in experience.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
+#         applicant_scores[applicant_id]["experience_score"] = experience_score
+
+#     # Merge qualification scores
+#     for applicant_id, qualification_score in qualification.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
+#         applicant_scores[applicant_id]["qualification_score"] = qualification_score
+
+#     # Merge language proficiency scores
+#     for applicant_id, language_proficiency_score in language_proficiency.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
+#         applicant_scores[applicant_id]["language_proficiency_score"] = language_proficiency_score
+
+#     # Calculate total scores
+#     for applicant_id, scores in applicant_scores.items():
+#         scores["total_score"] = (
+#             scores["skill_score"] + scores["experience_score"] + scores["qualification_score"] + scores["language_proficiency_score"]
+#         )
+
+#     # Sort by total score in descending order
+#     sorted_scores = sorted(applicant_scores.values(), key=lambda x: x["total_score"], reverse=True)
+
+#     # Format for output
+#     return {
+#         "success": "true",
+#         "data": sorted_scores
+#     }
+
+
+# @router.get("/ranked-applicants")
+# def get_ranked_applicants(vacancy_id: int, db: Session = Depends(get_db)):
+#     try:
+#         ranked_applicants = calculate_total_scores(vacancy_id, db)
+#         return {"success": "true", "data": ranked_applicants}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+def fetch_skills_scores(vacancy_id: int, db: Session):
+    query = text("""
+        SELECT 
+            a.applicant_id,
+            a.first_name,
+            a.middle_name,
+            a.last_name,
+            SUM(DISTINCT vs.weightage) AS skill_score
+        FROM 
+            applicant_master a
+        JOIN 
+            applicant_skill aps ON a.applicant_id = aps.applicant_id
+        JOIN 
+            vacancy_skills vs ON aps.skill_id = vs.skill_id AND vs.vacancy_master_id = :vacancy_id
+        WHERE 
+            aps.is_deleted = 'no' AND vs.is_deleted = 'no'
+        GROUP BY 
+            a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    return db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+
+
+def fetch_experience_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(CASE 
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 2 THEN 10
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 3 THEN 15
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 5 THEN 20
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 10 THEN 30
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) > 10 THEN 40
+            ELSE 0 
+        END) AS experience_score
+    FROM 
+        applicant_master a
+    JOIN 
+        application_master am ON a.applicant_id = am.applicant_id
+    LEFT JOIN 
+        applicant_experience ae ON a.applicant_id = ae.applicant_id
+    WHERE 
+        am.vacancy_master_id = :vacancy_id
+        AND am.is_deleted = 'no'
+        AND (ae.is_deleted = 'no' OR ae.is_deleted IS NULL)
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        experience_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return experience_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching experience scores: {str(e)}")
+
+
+def fetch_qualification_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(
+            CASE 
+                WHEN vel.education_level_id = ae.education_level_id THEN vel.weightage ELSE 0 
+            END + 
+            CASE 
+                WHEN ves.education_stream_id = ae.education_stream_id THEN ves.weightage ELSE 0 
+            END + 
+            CASE 
+                WHEN vesc.education_subject_or_course_id = ae.education_subject_or_course_id THEN vesc.weightage ELSE 0 
+            END
+        ) AS qualification_score
+    FROM 
+        applicant_educational_qualification ae
+    LEFT JOIN 
+        applicant_master a ON ae.applicant_id = a.applicant_id
+    LEFT JOIN 
+        application_master am ON a.applicant_id = am.applicant_id
+    LEFT JOIN 
+        vacancy_educational_level vel ON vel.vacancy_master_id = am.vacancy_master_id AND vel.education_level_id = ae.education_level_id
+    LEFT JOIN 
+        vacancy_educational_stream ves ON ves.vacancy_master_id = am.vacancy_master_id AND ves.education_stream_id = ae.education_stream_id
+    LEFT JOIN 
+        vacancy_educational_subject_or_course vesc ON vesc.vacancy_master_id = am.vacancy_master_id AND vesc.education_subject_or_course_id = ae.education_subject_or_course_id
+    WHERE 
+        ae.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        qualification_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return qualification_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching qualification scores: {str(e)}")
+
+
+def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(
+            CASE
+                WHEN vlp.is_read_required = 'yes' AND alp.read_proficiency_id = vlp.language_proficiency_id THEN vlp.read_weightage ELSE 0
+            END +
+            CASE
+                WHEN vlp.is_write_required = 'yes' AND alp.write_proficiency_id = vlp.language_proficiency_id THEN vlp.write_weightage ELSE 0
+            END +
+            CASE
+                WHEN vlp.is_speak_required = 'yes' AND alp.speak_proficiency_id = vlp.language_proficiency_id THEN vlp.speak_weightage ELSE 0
+            END
+        ) AS language_proficiency_score
+    FROM 
+        applicant_language_proficiency alp
+    LEFT JOIN 
+        applicant_master a ON alp.applicant_id = a.applicant_id
+    LEFT JOIN 
+        application_master am ON alp.applicant_id = am.applicant_id
+    LEFT JOIN 
+        vacancy_language_proficiency vlp ON vlp.vacancy_master_id = am.vacancy_master_id AND vlp.language_id = alp.language_id
+    WHERE 
+        alp.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        language_proficiency_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return language_proficiency_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
+
+
+# def calculate_total_scores(vacancy_id: int, db: Session):
+#     # Fetch individual components
+#     skills = fetch_skills_scores(vacancy_id, db)
+#     experience = fetch_experience_scores(vacancy_id, db)
+#     qualification = fetch_qualification_scores(vacancy_id, db)
+#     language_proficiency = fetch_language_proficiency_scores(vacancy_id, db)
+
+#     # Combine data
+#     applicant_scores = {}
+
+#     # Merge skill scores
+#     for row in skills:
+#         applicant_id, first_name, middle_name, last_name, skill_score = row
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {
+#                 "applicant_id": applicant_id, 
+#                 "first_name": first_name,
+#                 "middle_name": middle_name,
+#                 "last_name": last_name,
+#                 "skill_score": 0, 
+#                 "experience_score": 0, 
+#                 "qualification_score": 0, 
+#                 "language_proficiency_score": 0
+#             }
+#         applicant_scores[applicant_id]["skill_score"] = skill_score
+
+#     # Merge experience scores
+#     for (applicant_id, first_name, middle_name, last_name), experience_score in experience.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {
+#                 "applicant_id": applicant_id, 
+#                 "first_name": first_name,
+#                 "middle_name": middle_name,
+#                 "last_name": last_name,
+#                 "skill_score": 0, 
+#                 "experience_score": 0, 
+#                 "qualification_score": 0, 
+#                 "language_proficiency_score": 0
+#             }
+#         applicant_scores[applicant_id]["experience_score"] = experience_score
+
+#     # Merge qualification scores
+#     for (applicant_id, first_name, middle_name, last_name), qualification_score in qualification.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {
+#                 "applicant_id": applicant_id, 
+#                 "first_name": first_name,
+#                 "middle_name": middle_name,
+#                 "last_name": last_name,
+#                 "skill_score": 0, 
+#                 "experience_score": 0, 
+#                 "qualification_score": 0, 
+#                 "language_proficiency_score": 0
+#             }
+#         applicant_scores[applicant_id]["qualification_score"] = qualification_score
+
+#     # Merge language proficiency scores
+#     for (applicant_id, first_name, middle_name, last_name), language_proficiency_score in language_proficiency.items():
+#         if applicant_id not in applicant_scores:
+#             applicant_scores[applicant_id] = {
+#                 "applicant_id": applicant_id, 
+#                 "first_name": first_name,
+#                 "middle_name": middle_name,
+#                 "last_name": last_name,
+#                 "skill_score": 0, 
+#                 "experience_score": 0, 
+#                 "qualification_score": 0, 
+#                 "language_proficiency_score": 0
+#             }
+#         applicant_scores[applicant_id]["language_proficiency_score"] = language_proficiency_score
+
+#     # Calculate the total score
+#     for applicant_id, scores in applicant_scores.items():
+#         total_score = (scores["skill_score"] + scores["experience_score"] + 
+#                        scores["qualification_score"] + scores["language_proficiency_score"])
+#         scores["total_score"] = total_score
+
+#     return applicant_scores
+
+def calculate_total_scores(vacancy_id: int, db: Session):
+    # Fetch individual components
+    skills = fetch_skills_scores(vacancy_id, db)
+    experience = fetch_experience_scores(vacancy_id, db)
+    qualification = fetch_qualification_scores(vacancy_id, db)
+    language_proficiency = fetch_language_proficiency_scores(vacancy_id, db)
+
+    # Initialize a list to store applicant score objects
+    applicant_scores = []
+
+    # Merge skill scores
+    for row in skills:
+        applicant_id, first_name, middle_name, last_name, skill_score = row
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["skill_score"] = skill_score
+
+    # Merge experience scores
+    for (applicant_id, first_name, middle_name, last_name), experience_score in experience.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["experience_score"] = experience_score
+
+    # Merge qualification scores
+    for (applicant_id, first_name, middle_name, last_name), qualification_score in qualification.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["qualification_score"] = qualification_score
+
+    # Merge language proficiency scores
+    for (applicant_id, first_name, middle_name, last_name), language_proficiency_score in language_proficiency.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["language_proficiency_score"] = language_proficiency_score
+
+    # Calculate the total score for each applicant
+    for applicant in applicant_scores:
+        total_score = (applicant["skill_score"] + applicant["experience_score"] + 
+                       applicant["qualification_score"] + applicant["language_proficiency_score"])
+        applicant["total_score"] = total_score
+
+    # Filter out applicants with no score data (if needed)
+    applicant_scores = [applicant for applicant in applicant_scores if applicant["total_score"] > 0]
+
+    return {
+        "success": "true",
+        "data": applicant_scores  # Return data as a list, not a dictionary with IDs
+    }
+
+@router.get("/ranked-applicants")
+def get_ranked_applicants(vacancy_id: int, db: Session = Depends(get_db)):
+    try:
+        ranked_applicants = calculate_total_scores(vacancy_id, db)
+        return {"success": "true", "data": ranked_applicants}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+#--------------------------------------------------------------------------------------------
+# @router.post("/save_interview_schedule/")
+# async def save_interview_schedule(
+#     schedules: List[InterviewScheduleRequest],  # List of interview schedules to save
+#     db: Session = Depends(get_db),  # Database session dependency
+# ):
+#     try:
+#         saved_schedules = []
+#         for schedule in schedules:
+#             # Delegating insert or update logic to save_schedule function
+#             saved_schedule = db_employee_master.save_schedule(schedule, db)
+#             saved_schedules.append(saved_schedule)
+
+#         return InterviewSchedulesResponse(schedules=saved_schedules)
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/save_interview_schedule/")
+async def save_interview_schedule(
+    schedules: List[InterviewScheduleRequest],  # List of interview schedules to save
+    db: Session = Depends(get_db),  # Database session dependency
+):
+    try:
+        saved_schedules = []
+        for schedule in schedules:
+            # Delegating insert or update logic to save_schedule function
+            saved_schedule = db_employee_master.save_schedule(schedule, db)
+            
+            # Manually convert the SQLAlchemy object to a dictionary
+            saved_schedule_dict = {
+                # "id": saved_schedule.id,
+                "applicant_id": saved_schedule.applicant_id,
+                "vacancy_id": saved_schedule.vacancy_id,
+                "interview_panel_id": saved_schedule.interview_panel_id,
+                "interview_date": saved_schedule.interview_date,
+                "interview_time": saved_schedule.interview_time,
+                "location": saved_schedule.location,
+                "interview_status": saved_schedule.interview_status,
+                "remarks": saved_schedule.remarks
+            }
+            
+            # Convert dictionary to InterviewScheduleRequest
+            saved_schedules.append(InterviewScheduleRequest(**saved_schedule_dict))
+        
+        return InterviewSchedulesResponse(schedules=saved_schedules)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -722,3 +722,19 @@ class ApplicationMaster(caerp_base):
     application_date = Column(Date, nullable=False)
     application_status = Column(Enum("PENDING", "SHORT LISTED", "REJECTED"), nullable=False, default="PENDING")
     is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+
+
+
+class InterviewSchedule(caerp_base):
+    __tablename__ = 'interview_schedule'
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    applicant_id = Column(Integer,  nullable=False)
+    vacancy_id = Column(Integer, nullable=False)
+    interview_panel_id = Column(Integer,  nullable=False)
+    interview_date = Column(Date, nullable=False)
+    interview_time = Column(Time, nullable=False)
+    location = Column(String(100), nullable=False)
+    interview_status = Column(Enum('SCHEDULED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', name='status_enum'), default='SCHEDULED', nullable=False)
+    remarks = Column(String(1000), default=None)
+    is_deleted = Column(Enum('yes', 'no', name='yes_no_enum'), default='no', nullable=False)
