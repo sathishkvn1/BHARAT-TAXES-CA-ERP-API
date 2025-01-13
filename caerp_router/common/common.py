@@ -1928,6 +1928,102 @@ def get_menu_structure(
     return result
     # Fetch all menus
  #================================================================================================================
+# @router.get("/menu_by_user_id")
+# def get_menu_by_user_id(
+#     parent_id: Optional[int] = 0,
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     db: Session = Depends(get_db),
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     role_ids = auth_info.get("role_id")
+
+#     # Fetch RoleMenuMapping based on role_ids
+#     role_menu_mappings = db.query(RoleMenuMapping).filter(
+#         RoleMenuMapping.role_id.in_(role_ids),
+#         RoleMenuMapping.is_deleted == 'no'
+#     ).all()
+
+#     # Get menu IDs from the role mappings
+#     menu_ids = [menu_mapping.menu_id for menu_mapping in role_menu_mappings]
+
+#     # Fetch all menus from MenuStructure that match the menu_ids
+#     menu_query = db.query(MenuStructure).filter(MenuStructure.id.in_(menu_ids))
+
+#     # If parent_id is provided, filter by parent_id
+#     # if parent_id:
+#     menu_query = menu_query.filter(MenuStructure.parent_id == parent_id)
+        
+#     # Fetch the filtered menus
+#     menu_master_query = menu_query.all()
+#     menu_master_dict = {menu.id: menu for menu in menu_master_query}
+#     top_level_parent_id = parent_id
+#     top_level_grand_parent_id = 0
+#     if parent_id:
+#         parent_menu = menu_master_dict.get(parent_id)
+#         if parent_menu:
+#             top_level_grand_parent_id = (
+#                 menu_master_dict.get(parent_menu.parent_id).parent_id
+#                 if parent_menu.parent_id
+#                 else 0
+#             )
+
+
+#     # Consolidate permissions for each menu
+#     consolidated_permissions = {}
+
+#     for menu_mapping in role_menu_mappings:
+#         menu_id = menu_mapping.menu_id
+#         menu_master = menu_master_dict.get(menu_id)
+
+#         if menu_master:
+#             # Initialize menu permissions if not already present
+#             if menu_id not in consolidated_permissions:
+#                 consolidated_permissions[menu_id] = {
+#                     "menu_id": menu_id,
+#                     "menu_name": menu_master.menu_name,
+#                     "link": menu_master.link,
+#                     "display_order": menu_master.display_order,
+#                     "display_location_id": menu_master.display_location_id,
+#                     "can_view": "no",
+#                     "can_edit": "no",
+#                     "can_delete": "no",
+#                     "is_deleted": "no",
+#                     "created_on": menu_mapping.created_on,
+#                     "created_by": menu_mapping.created_by,
+#                     "modified_on": menu_mapping.modified_on,
+#                     "modified_by": menu_mapping.modified_by,
+#                     "deleted_by": menu_mapping.deleted_by,
+#                     "deleted_on": menu_mapping.deleted_on,
+#                 }
+
+#             # Update permissions based on the current role mapping
+#             consolidated_permissions[menu_id]["can_view"] = (
+#                 "yes" if menu_master.has_view == "yes" and menu_mapping.can_view == "yes" else consolidated_permissions[menu_id]["can_view"]
+#             )
+#             consolidated_permissions[menu_id]["can_edit"] = (
+#                 "yes" if menu_master.has_edit == "yes" and menu_mapping.can_edit == "yes" else consolidated_permissions[menu_id]["can_edit"]
+#             )
+#             consolidated_permissions[menu_id]["can_delete"] = (
+#                 "yes" if menu_master.has_delete == "yes" and menu_mapping.can_delete == "yes" else consolidated_permissions[menu_id]["can_delete"]
+#             )
+#             consolidated_permissions[menu_id]["is_deleted"] = (
+#                 "yes" if menu_mapping.is_deleted == "yes" or menu_master.is_deleted == "yes" else consolidated_permissions[menu_id]["is_deleted"]
+#             )
+
+#     # Convert consolidated permissions to a list
+#     consolidated_menus = list(consolidated_permissions.values())
+
+#     # Construct the response
+#     response = {
+#         "parent_id": parent_id,
+#         "grand_parent_id":top_level_grand_parent_id,
+#         "menus": consolidated_menus,
+#     }
+
+#     return response
 @router.get("/menu_by_user_id")
 def get_menu_by_user_id(
     parent_id: Optional[int] = 0,
@@ -1950,7 +2046,9 @@ def get_menu_by_user_id(
     menu_ids = [menu_mapping.menu_id for menu_mapping in role_menu_mappings]
 
     # Fetch all menus from MenuStructure that match the menu_ids
-    menu_query = db.query(MenuStructure).filter(MenuStructure.id.in_(menu_ids))
+    menu_query = db.query(MenuStructure).filter(MenuStructure.id.in_(menu_ids),
+                                                MenuStructure.is_deleted == 'no')
+
 
     # If parent_id is provided, filter by parent_id
     # if parent_id:
