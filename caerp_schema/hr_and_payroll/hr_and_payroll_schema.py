@@ -40,7 +40,6 @@ class EmployeeMasterDisplay(BaseModel):
     approved_by            : int
     approved_on            : datetime
 
-
     class Config:  # Corrected class name to 'Config'
         orm_mode = True
 
@@ -278,9 +277,6 @@ class EmployeeSalaryGet(BaseModel):
 
 
 
-
-
-
 class EmployeeExperienceGet(BaseModel):
     id                     : int
     employee_id            : int
@@ -298,6 +294,7 @@ class EmployeeExperienceGet(BaseModel):
     class Config:
         orm_mode           = True
 
+
 class EmployeeDocumentsSchema(BaseModel):
     document_id      : int
     document_number  : Optional[str] = None
@@ -306,7 +303,7 @@ class EmployeeDocumentsSchema(BaseModel):
     issued_by        : Optional[str] = None
     remarks          : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
+    class Config:  
         orm_mode = True
 
 
@@ -320,7 +317,7 @@ class EmployeeDocumentsGet(BaseModel):
     issued_by       : Optional[str] = None
     remarks         : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
+    class Config: 
         orm_mode = True
 
 
@@ -1005,7 +1002,7 @@ class ApplicantMasterResponse(BaseModel):
     date_of_birth: Optional[date] = None
     gender_id: Optional[int] = None
     gender_name: Optional[str] = None
-    blood_group_id: Optional[int] = None
+    # blood_group_id: Optional[int] = None
     blood_group: Optional[str] = None
     marital_status_id: Optional[int] = None
     marital_status: Optional[str] = None

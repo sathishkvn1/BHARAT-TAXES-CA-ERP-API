@@ -2743,8 +2743,8 @@ def get_applicant_master(
         a.date_of_birth,
         b.id AS gender_id,
         b.gender AS gender_name,
-        c.id AS blood_group_id,
-        c.blood_group,
+        
+        a.blood_group,
         d.id AS marital_status_id,
         d.marital_status,
         e.id AS nationality_id,
@@ -2753,8 +2753,7 @@ def get_applicant_master(
         applicant_master a
     LEFT JOIN
         app_gender b ON a.gender_id = b.id
-    LEFT JOIN
-        app_blood_group c ON a.blood_group = c.id
+    
     LEFT JOIN
         app_marital_status d ON a.marital_status_id = d.id
     LEFT JOIN
@@ -3372,7 +3371,6 @@ def get_applicant_skills(
     return skills
 
 #---------------------------------------------------------------------------------------------
-
 def get_applicant_social_media_profiles(
     db: Session, applicant_id: Optional[int] = None
 ) -> List[ApplicantSocialMediaResponse]:
@@ -3416,8 +3414,6 @@ def get_applicant_social_media_profiles(
     ]
 
     return social_media_profiles
-
-
 #-------------------------------------------------------------------------
 from sqlalchemy.exc import SQLAlchemyError
 def save_schedule(schedule, db: Session):
@@ -3465,3 +3461,4 @@ def save_schedule(schedule, db: Session):
     except Exception as e:
         db.rollback()  # Rollback in case of a non-SQLAlchemy error
         raise Exception(f"Error: {str(e)}")
+#----------------------------------------------------------------------------------------------------------
