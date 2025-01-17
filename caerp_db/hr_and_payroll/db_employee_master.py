@@ -2743,7 +2743,6 @@ def get_applicant_master(
         a.date_of_birth,
         b.id AS gender_id,
         b.gender AS gender_name,
-        
         a.blood_group,
         d.id AS marital_status_id,
         d.marital_status,
@@ -2796,6 +2795,7 @@ def applicant_present_address(
         f.present_street_name,
         f.present_land_mark,
         f.present_pin_code,
+       f.is_permenent_address_same_as_present,              
     
         -- Table g: app_post_offices (Present Address)
         g.id AS present_post_office_id,

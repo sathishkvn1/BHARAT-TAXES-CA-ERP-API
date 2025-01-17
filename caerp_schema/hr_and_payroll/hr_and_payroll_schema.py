@@ -909,13 +909,12 @@ class ApplicantDetailsView(BaseModel):
     
     blood_group_id: Optional[int]
     blood_group: Optional[str]
-    
+   
     marital_status_id: Optional[int]
     marital_status: Optional[str]
-    
+ 
     nationality_id: Optional[int]
     nationality_name: Optional[str]
-    
     login_id: Optional[int]
     marital_status_id: Optional[int]
     nationality_id: Optional[int]
@@ -1023,7 +1022,7 @@ class ApplicantPresentAddressResponse(BaseModel):
     present_street_name: Optional[str] = None
     present_land_mark: Optional[str] = None
     present_pin_code: Optional[str] = None
-
+    is_permenent_address_same_as_present:Optional[str] = None
     present_post_office_id: Optional[int] = None
     present_post_office_name: Optional[str] = None
     present_post_office_pin_code: Optional[str] = None
