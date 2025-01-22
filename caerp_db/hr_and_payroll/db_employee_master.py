@@ -3103,7 +3103,7 @@ def get_applicant_educational_qualifications(
             es.id AS education_stream_id,
             es.education_stream,
             sc.id AS education_subject_or_course_id,
-            sc.subject_or_course_name,
+            sc.subject_or_course_name AS education_subject_or_course,
             am.first_name,
             am.middle_name,
             am.last_name

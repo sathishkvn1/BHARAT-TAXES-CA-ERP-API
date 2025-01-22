@@ -1027,21 +1027,15 @@ class ApplicantPresentAddressResponse(BaseModel):
     present_post_office_name: Optional[str] = None
     present_post_office_pin_code: Optional[str] = None
     present_post_office_contact: Optional[str] = None
-   
-
     present_city_id: Optional[int] = None
     present_city_name: Optional[str] = None
-
     present_taluk_id: Optional[int] = None
     present_taluk_name: Optional[str] = None
-
     present_district_id: Optional[int] = None
     present_district_name: Optional[str] = None
-
     present_state_id: Optional[int] = None
     present_state_name: Optional[str] = None
     # present_state_code: Optional[str] = None
-
     present_country_id: Optional[int] = None
     present_country_name: Optional[str] = None
 
@@ -1117,7 +1111,8 @@ class ApplicantEducationalQualificationResponse(BaseModel):
     education_stream_id: Optional[int]  # Optional if it can be None
     education_stream: Optional[str]  # Optional if it can be None
     education_subject_or_course_id: Optional[int]  # Optional if it can be None
-    subject_or_course_name: Optional[str]  # Optional if it can be None
+    education_subject_or_course: Optional[str]
+    # subject_or_course_name: Optional[str]  # Optional if it can be None
     first_name: str
     middle_name: Optional[str]  # Optional if it can be None
     last_name: str
