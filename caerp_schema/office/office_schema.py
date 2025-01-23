@@ -1072,6 +1072,28 @@ class WorkOrderDetailsSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
+
+
+class SaveServicePriceMasterSchema(BaseModel):
+    id                               : Optional[int] =None
+    constitution_id                  : int
+    service_charge                   : Optional[float] = 0.0
+    govt_agency_fee                  : Optional[float] = 0.0
+    stamp_duty                       : Optional[float] = 0.0
+    stamp_fee                        : Optional[float] = 0.0
+    service_provider_percentage      : Optional[float] = 0.0
+    wish_to_provide_percentage       : Optional[float] = 0.0
+    employee_percentage              : Optional[float] = 0.0
+    urgency_percentage               : Optional[float] = 0.0
+    very_urgency_percentage          : Optional[float] = 0.0
+    effective_from_date              : date
+    effective_to_date                : Optional[date]= None
+    
+    class Config:
+        orm_mode = True
+
+        
 class WorkOrderDependancySchema(BaseModel):
     id : Optional[int]=None
     work_order_master_id    : int

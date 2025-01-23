@@ -20,7 +20,7 @@ from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMa
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, CustomerEnquiryAppointmentDetailsSchema, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, CustomerEnquiryAppointmentDetailsSchema, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicePriceMasterSchema, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
@@ -321,7 +321,7 @@ async def reschedule_or_cancel_appointment(
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
 
-
+#--------------------------------------------------------------------------------------
 
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
@@ -383,6 +383,7 @@ def get_and_search_appointments(
         search_value=search_value
     )
     return {"Appointments": result}
+
 #-------------------------swathy-------------------------------------------------------------------------------
 @router.get("/customer_enquiry_appointment_details", response_model=List[CustomerEnquiryAppointmentDetailsSchema])
 def get_customer_enquiry_appointment_details(
@@ -633,6 +634,8 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 #----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
@@ -1127,6 +1130,40 @@ def save_service_price_endpoint(price_data: List[PriceData],
         return {"detail": "Price data saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+#-----------------------------------------------------------------------------------------------------------  
+@router.post("/save_service_price_master/")
+def save_service_price_master(
+    price_data: List[SaveServicePriceMasterSchema],
+    service_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save or update service price master records.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        responses = []
+        for data in price_data:
+            result = db_office_master.save_service_price_master(data, service_id, db)
+            if result["success"]:
+                responses.append(result)
+            else:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+
+        return {"success": True, "message": "Price data processed successfully", "data": responses}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 #---------------------------------------------------------------------------------------------------------------
 import datetime
 @router.post("/add_price/", response_model=dict)
@@ -1222,10 +1259,7 @@ def get_service_documents_list_by_group_category(
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-#  #-------------------------------------------------------------------------------------------------------------   
-
-
-
+#-------------------------------------------------------------------------------------------------------------   
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
     service_document_data_master_id: Optional[int] = Query(None, title="Service Document Data Master ID"),
@@ -2441,9 +2475,6 @@ def get_consultant_employees_pdf(
     pdf_buffer = generate_consultant_employees_pdf(employee_list, file_path)
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
-
-
-
 #--------------------------------------------------------------------------------------
 from fpdf import FPDF
 from jinja2 import Environment, FileSystemLoader
