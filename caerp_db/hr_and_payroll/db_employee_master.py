@@ -3142,7 +3142,6 @@ def get_applicant_educational_qualifications(
     return educational_details
 
 #---------------------------------------------------------------------------------------------------
-
 def get_applicant_professional_qualifications(
     db: Session, applicant_id: Optional[int] = None
 ) -> List[ApplicantProfessionalQualificationResponse]:
@@ -3247,9 +3246,13 @@ def get_applicant_language_proficiency(
         SELECT
             alp.id,
             alp.applicant_id,
+            al.id AS language_id,
             al.language,
+            alp.read_proficiency_id,
             r_proficiency.proficiency_level AS read_proficiency,
+            alp.write_proficiency_id,
             w_proficiency.proficiency_level AS write_proficiency,
+            alp.speak_proficiency_id,
             s_proficiency.proficiency_level AS speak_proficiency,
             alp.is_deleted,
             am.first_name,

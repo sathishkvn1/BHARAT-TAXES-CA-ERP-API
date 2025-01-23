@@ -1170,9 +1170,13 @@ class ApplicantExperienceResponse(BaseModel):
 
 class ApplicantLanguageProficiencyResponse(BaseModel):
     id: int
+    language_id:int
     language: str
+    read_proficiency_id:int
     read_proficiency: Optional[str] = None
+    write_proficiency_id:int
     write_proficiency: Optional[str] = None
+    speak_proficiency_id:int
     speak_proficiency: Optional[str] = None
     is_deleted: str
     applicant_id: int
@@ -1244,3 +1248,27 @@ class InterviewScheduleRequest(BaseModel):
 
 class InterviewSchedulesResponse(BaseModel):
     schedules: List[InterviewScheduleRequest]
+
+
+#-----------offer letter schema----------------
+
+
+class Applicant(BaseModel):
+    applicant_id: int
+    first_name: str
+    middle_name: str
+    last_name: str
+    skill_score: int
+    experience_score: int
+    qualification_score: int
+    language_proficiency_score: int
+    total_score: int
+
+class RankListRequest(BaseModel):
+    vacancy_id: int
+    applicants: List[Applicant]
+
+class OfferLetterResponse(BaseModel):
+    applicant_id: int
+    rank: int
+    offer_letter: str

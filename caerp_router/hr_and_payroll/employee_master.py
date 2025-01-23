@@ -1,6 +1,6 @@
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse, OfferLetterResponse, RankListRequest, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -132,12 +132,7 @@ def save_employee_master(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
-
-
 #---------------------------------------------------------------------------------------------------------
-
 @router.post('/upload_document')
 def upload_document(
    employee_id: int,
@@ -172,10 +167,7 @@ def upload_document(
   except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
 
-
 #---------------------------------------------------------------------------------------------------------
-
-
 #delete employee details by id
 @router.delete("/delete_employee_details")
 def delete_employee_details_by_id(
@@ -220,8 +212,8 @@ def delete_employee_details_by_id(
     except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e)) 
 
-  
-#---------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+
 from sqlalchemy import and_, func, text
 
 
@@ -1809,6 +1801,7 @@ def save_employee_language_proficiency(
 #     except Exception as e:
 #         # Handle any exceptions and return an HTTP error if something goes wrong
 #         raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
+#-------------------------------------------------------------------------------------------------------
 
 
 @router.post("/save_vacancy_data", response_model=dict)
@@ -2024,7 +2017,7 @@ def get_vacancies(
         ]
     }
 
-#------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------
 @router.post("/save_vacancy_announcements/")
 async def save_vacancy_announcements(
     data: VacancyAnnouncements,
@@ -2049,7 +2042,7 @@ async def save_vacancy_announcements(
     else:
         raise HTTPException(status_code=500, detail=result["message"])
     
-#---------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------
 @router.get("/announcements_list", response_model=AnnouncementsListResponse)
 async def get_announcements(
     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
@@ -2099,7 +2092,7 @@ async def get_announcements(
 
     return {"announcements": result}
 
-#---------------------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------
 # @router.post("/save_applicant/")
 # async def save_applicant(
 #     data: ApplicantDetails, 
@@ -2483,8 +2476,7 @@ def get_applicant_details(
 #         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-
+#------------------------------------------------------------------------------------------------
 def fetch_skills_scores(vacancy_id: int, db: Session):
     query = text("""
         SELECT 
@@ -2545,7 +2537,7 @@ def fetch_experience_scores(vacancy_id: int, db: Session):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching experience scores: {str(e)}")
 
-
+#------------------------------------------------------------------------------------------------
 def fetch_qualification_scores(vacancy_id: int, db: Session):
     query = text("""
     SELECT 
@@ -2591,7 +2583,7 @@ def fetch_qualification_scores(vacancy_id: int, db: Session):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching qualification scores: {str(e)}")
 
-
+#----------------------------------------------------------------------------------------------------------
 def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
     query = text("""
     SELECT 
@@ -2632,7 +2624,7 @@ def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
         return language_proficiency_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
-
+#------------------------------------------------------------------------------------------------
 
 # def calculate_total_scores(vacancy_id: int, db: Session):
 #     # Fetch individual components
@@ -2712,6 +2704,7 @@ def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
 #         scores["total_score"] = total_score
 
 #     return applicant_scores
+#----------------------------------------------------------------------------------------------------------
 
 def calculate_total_scores(vacancy_id: int, db: Session):
     # Fetch individual components
@@ -2806,48 +2799,36 @@ def calculate_total_scores(vacancy_id: int, db: Session):
         "data": applicant_scores  # Return data as a list, not a dictionary with IDs
     }
 
+#------------------------------------------------------------------------------------------------
 @router.get("/ranked-applicants")
-def get_ranked_applicants(vacancy_id: int, db: Session = Depends(get_db)):
+def get_ranked_applicants(vacancy_id: int,
+                           db: Session = Depends(get_db),
+                           token: str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     try:
         ranked_applicants = calculate_total_scores(vacancy_id, db)
         return {"success": "true", "data": ranked_applicants}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-#--------------------------------------------------------------------------------------------
-# @router.post("/save_interview_schedule/")
-# async def save_interview_schedule(
-#     schedules: List[InterviewScheduleRequest],  # List of interview schedules to save
-#     db: Session = Depends(get_db),  # Database session dependency
-# ):
-#     try:
-#         saved_schedules = []
-#         for schedule in schedules:
-#             # Delegating insert or update logic to save_schedule function
-#             saved_schedule = db_employee_master.save_schedule(schedule, db)
-#             saved_schedules.append(saved_schedule)
-
-#         return InterviewSchedulesResponse(schedules=saved_schedules)
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
+#------------------------------------------------------------------------------------------------
 @router.post("/save_interview_schedule/")
 async def save_interview_schedule(
     schedules: List[InterviewScheduleRequest],  # List of interview schedules to save
     db: Session = Depends(get_db),  # Database session dependency
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     try:
         saved_schedules = []
         for schedule in schedules:
             # Delegating insert or update logic to save_schedule function
             saved_schedule = db_employee_master.save_schedule(schedule, db)
-            
             # Manually convert the SQLAlchemy object to a dictionary
             saved_schedule_dict = {
-                # "id": saved_schedule.id,
+                "id": saved_schedule.id,
                 "applicant_id": saved_schedule.applicant_id,
                 "vacancy_id": saved_schedule.vacancy_id,
                 "interview_panel_id": saved_schedule.interview_panel_id,
@@ -2861,8 +2842,116 @@ async def save_interview_schedule(
             # Convert dictionary to InterviewScheduleRequest
             saved_schedules.append(InterviewScheduleRequest(**saved_schedule_dict))
         
-        return InterviewSchedulesResponse(schedules=saved_schedules)
+        return {"success": "true", "message": "Schedules saved successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+#-----------------------------------------------------------------------------------------------------
+from datetime import datetime, timedelta
+
+
+@router.post("/generate-offer-letters", response_model=List[OfferLetterResponse])
+def generate_offer_letters_endpoint(request: RankListRequest):
+    try:
+        # Sort applicants by total_score in descending order
+        sorted_applicants = sorted(
+            request.applicants, 
+            key=lambda x: x.total_score, 
+            reverse=True
+        )
+
+        # Generate offer letters
+        offer_letters = []
+        for rank, applicant in enumerate(sorted_applicants, start=1):
+            start_date = (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d")
+            acceptance_deadline = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+            salary = "INR 8,00,000"
+
+            # Full name
+            full_name = f"{applicant.first_name} {applicant.middle_name} {applicant.last_name}"
+
+            # Offer letter template
+            offer_letter = f"""
+            Dear {full_name},
+
+            Congratulations! We are pleased to offer you the position you applied for, based on your excellent performance during the assessment process for vacancy ID {request.vacancy_id}. 
+
+            Your total score of {applicant.total_score} has placed you at rank {rank}.
+
+            Position: Software Engineer  
+            Location: Bangalore  
+            Start Date: {start_date}  
+            Salary: {salary}  
+
+            Please confirm your acceptance of this offer by {acceptance_deadline}.
+
+            Best regards,  
+            [Your Company Name]
+            """
+
+            offer_letters.append({
+                "applicant_id": applicant.applicant_id,
+                "rank": rank,
+                "offer_letter": offer_letter.strip()
+            })
+
+        return offer_letters
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def process_rank_list(vacancy_id, rank_list_data):
+    # Sort applicants by total_score in descending order to rank them
+    sorted_applicants = sorted(
+        rank_list_data, 
+        key=lambda x: x["total_score"], 
+        reverse=True
+    )
+
+    # Assign ranks to applicants
+    for index, applicant in enumerate(sorted_applicants, start=1):
+        applicant["rank"] = index
+        applicant["vacancy_id"] = vacancy_id
+
+    return sorted_applicants
+
+
+
+def generate_offer_letters(vacancy_id, processed_rank_list):
+    offer_letters = []
+    for applicant in processed_rank_list:
+        # Dynamic values
+        start_date = (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d")  # 15 days from now
+        acceptance_deadline = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")  # 7 days from now
+        salary = "INR 8,00,000"  # Example salary; adjust dynamically as needed
+
+        # Full name
+        full_name = f"{applicant['first_name']} {applicant['middle_name']} {applicant['last_name']}"
+
+        # Offer letter template
+        offer_letter = f"""
+        Dear {full_name},
+
+        Congratulations! We are pleased to offer you the position you applied for, based on your excellent performance during the assessment process for vacancy ID {vacancy_id}. 
+
+        Your total score of {applicant['total_score']} has placed you at rank {applicant['rank']}.
+
+        Position: Software Engineer  
+        Location: Bangalore  
+        Start Date: {start_date}  
+        Salary: {salary}  
+
+        Please confirm your acceptance of this offer by {acceptance_deadline}.
+
+        Best regards,  
+        [Your Company Name]
+        """
+
+        offer_letters.append({
+            "applicant_id": applicant["applicant_id"],
+            "offer_letter": offer_letter,
+            "rank": applicant["rank"]
+        })
+
+    return offer_letters
