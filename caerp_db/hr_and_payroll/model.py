@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Date
+from sqlalchemy import ARRAY, Boolean, Date
 from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
@@ -292,6 +292,7 @@ class VacancyEducationalQualification(caerp_base):
     education_stream_id         = Column(Integer, nullable=True, default=None)
     is_any_stream               = Column(Enum('yes', 'no'), nullable=False, default='no')
     education_subject_or_course_id = Column(Integer, nullable=True, default=None)
+    # education_subject_or_course_id = Column(ARRAY(Integer), nullable=False)
     is_any_subject_or_course    = Column(Enum('yes', 'no'), nullable=False, default='no')
     created_by                  = Column(Integer, nullable=False, default=0)
     created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
@@ -738,3 +739,30 @@ class InterviewSchedule(caerp_base):
     interview_status = Column(Enum('SCHEDULED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', name='status_enum'), default='SCHEDULED', nullable=False)
     remarks = Column(String(1000), default=None)
     is_deleted = Column(Enum('yes', 'no', name='yes_no_enum'), default='no', nullable=False)
+
+
+class InterviewPanelMaster(caerp_base):
+    __tablename__ = "interview_panel_master"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    interview_date_from = Column(Date, nullable=False)
+    interview_date_to = Column(Date, nullable=False)
+    interview_time_from = Column(Time, nullable=False)
+    interview_time_to = Column(Time, nullable=False)
+    panel_description = Column(String(1000), nullable=False)
+    location = Column(String(100), nullable=False)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+  
+
+
+class InterviewPanelMembers(caerp_base):
+    __tablename__ = "interview_panel_members"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    interview_panel_master_id = Column(Integer, nullable=False)
+    interviewer_id = Column(Integer,  nullable=False)
+    remarks = Column(String(250), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+ 
