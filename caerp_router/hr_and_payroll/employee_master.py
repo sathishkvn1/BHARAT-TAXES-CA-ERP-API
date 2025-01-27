@@ -1,6 +1,6 @@
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse, OfferLetterResponse, RankListRequest, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -1933,6 +1933,92 @@ async def create_vacancy(vacancy_data: VacancyCreateSchema,
         raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
 
 #------------------------------------------------------------------------------------------------------
+# @router.get("/vacancy_details")
+# def get_vacancies(
+#     department_id: int = Query(None, description="Filter by department ID"),
+#     designation_id: int = Query(None, description="Filter by designation ID"),
+#     status: str = Query(None, description="Filter by vacancy status (OPEN, CLOSED)"),
+#     announcement_date: str = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+#     closing_date: str = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+#     vacancy_id: int = Query(None, description="Filter by specific vacancy ID"),
+#     db: Session = Depends(get_db,),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+    
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     filters = []
+    
+#     # Build filters based on query parameters
+#     if department_id:
+#         filters.append(VacancyDetailsView.department_id == department_id)
+    
+#     if designation_id:
+#         filters.append(VacancyDetailsView.designation_id == designation_id)
+    
+#     if status:
+#         filters.append(VacancyDetailsView.vacancy_status == status)
+    
+#     if announcement_date:
+#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
+    
+#     if closing_date:
+#         filters.append(VacancyDetailsView.closing_date == closing_date)
+    
+#     # Apply filters and query the database
+#     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
+
+#     # Fetch results
+#     vacancies = vacancies_query.all()
+
+  
+#     # Return the results in a structured format including all fields
+#     return {
+#         "vacancies": [
+#             {
+#                 "vacancy_master_id": vacancy.vacancy_master_id,
+#                 "department_id": vacancy.department_id,
+#                 "department_name": vacancy.department_name,
+#                 "designation_id": vacancy.designation_id,
+#                 "designation_name": vacancy.designation_name,
+#                 "vacancy_count": vacancy.vacancy_count,
+#                 "job_description": vacancy.job_description,
+#                 "job_location": vacancy.job_location,
+#                 "reported_date": vacancy.reported_date,
+#                 "announcement_date": vacancy.announcement_date,
+#                 "closing_date": vacancy.closing_date,
+#                 "vacancy_status": vacancy.vacancy_status,
+#                 "experience_required": vacancy.experience_required,
+#                 "skill_id": vacancy.skill_id,
+#                 "skill_name": vacancy.skill_name,
+#                 "skill_weightage": vacancy.skill_weightage,
+#                 "language_id": vacancy.language_id,
+#                 "language_name": vacancy.language_name,
+#                 "language_proficiency_id": vacancy.language_proficiency_id,
+#                 "proficiency_level": vacancy.proficiency_level,
+#                 "is_read_required": vacancy.is_read_required,
+#                 "read_weightage": vacancy.read_weightage,
+#                 "is_write_required": vacancy.is_write_required,
+#                 "write_weightage": vacancy.write_weightage,
+#                 "is_speak_required": vacancy.is_speak_required,
+#                 "speak_weightage": vacancy.speak_weightage,
+#                 "education_level_id": vacancy.education_level_id,
+#                 "is_any_education_level": vacancy.is_any_education_level,
+#                 "education_stream_id": vacancy.education_stream_id,
+#                 "is_any_education_stream": vacancy.is_any_education_stream,
+#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+#                 "education_level_name": vacancy.education_level_name,
+#                 "education_stream_name": vacancy.education_stream_name,
+#                 "subject_or_course_name": vacancy.subject_or_course_name,
+#                 "min_years": vacancy.min_years,
+#                 "max_years": vacancy.max_years,
+#                 "experience_weightage": vacancy.experience_weightage,
+#             }
+#             for vacancy in vacancies
+#         ]
+#     }
+
 @router.get("/vacancy_details")
 def get_vacancies(
     department_id: int = Query(None, description="Filter by department ID"),
@@ -1940,12 +2026,13 @@ def get_vacancies(
     status: str = Query(None, description="Filter by vacancy status (OPEN, CLOSED)"),
     announcement_date: str = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
     closing_date: str = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-    db: Session = Depends(get_db,),
+    vacancy_id: int = Query(None, description="Filter by specific vacancy ID"),
+    db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
-    
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     filters = []
     
     # Build filters based on query parameters
@@ -1964,12 +2051,24 @@ def get_vacancies(
     if closing_date:
         filters.append(VacancyDetailsView.closing_date == closing_date)
     
-    # Apply filters and query the database
+    # Apply filters and query the database for vacancy details
     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
 
-    # Fetch results
+    # If vacancy_id is provided, fetch the details for that specific vacancy
+    if vacancy_id:
+        vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
+        if vacancy_details:
+            # Return the vacancy details in the schema format
+            return vacancy_details
+
+
+    # Fetch results for all vacancies if no vacancy_id filter is provided
     vacancies = vacancies_query.all()
 
+    # If no results found, raise an exception
+    if not vacancies:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacancy not found")
+    
     # Return the results in a structured format including all fields
     return {
         "vacancies": [
@@ -2017,6 +2116,7 @@ def get_vacancies(
         ]
     }
 
+
 #-------------------------------------------------------------------------------------------------------------
 @router.post("/save_vacancy_announcements/")
 async def save_vacancy_announcements(
@@ -2043,6 +2143,7 @@ async def save_vacancy_announcements(
         raise HTTPException(status_code=500, detail=result["message"])
     
 #-------------------------------------------------------------------------------------------------------
+
 @router.get("/announcements_list", response_model=AnnouncementsListResponse)
 async def get_announcements(
     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
@@ -2093,6 +2194,7 @@ async def get_announcements(
     return {"announcements": result}
 
 #-------------------------------------------------------------------------------------------------------------------
+
 # @router.post("/save_applicant/")
 # async def save_applicant(
 #     data: ApplicantDetails, 
@@ -2120,6 +2222,7 @@ async def get_announcements(
 #     else:
 #         raise HTTPException(status_code=500, detail=result["message"])
 
+#-------------------------------------------------------------------------------------------------------------------
 
 @router.post("/save_applicant/")
 async def save_applicant(
@@ -2156,11 +2259,6 @@ async def save_applicant(
 
 
 #------------------------------------------------------------------------------------------
-
-
-
-
-
 @router.get("/get_applicant_details/", response_model=Dict[str, Any])
 def get_applicant_details(
     applicant_id: Optional[int] = None,
@@ -2273,208 +2371,7 @@ def get_applicant_details(
         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
 
     return profile_data
-
 #----------------------------------------------------------------------------------------------------
-
-# def fetch_skills_scores(vacancy_id: int, db: Session):
-#     query = text("""
-#         SELECT 
-#             a.applicant_id,
-           
-#             SUM(DISTINCT vs.weightage) AS skill_score
-#         FROM 
-#             applicant_master a
-#         JOIN 
-#             applicant_skill aps ON a.applicant_id = aps.applicant_id
-#         JOIN 
-#             vacancy_skills vs ON aps.skill_id = vs.skill_id AND vs.vacancy_master_id = :vacancy_id
-#         WHERE 
-#             aps.is_deleted = 'no' AND vs.is_deleted = 'no'
-#         GROUP BY 
-#             a.applicant_id;
-#     """)
-#     return db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
-
-
-
-# def fetch_experience_scores(vacancy_id: int, db: Session):
-#     query = text("""
-#     SELECT 
-#         a.applicant_id,
-#         SUM(CASE 
-#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 2 THEN 10
-#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 3 THEN 15
-#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 5 THEN 20
-#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 10 THEN 30
-#             WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) > 10 THEN 40
-#             ELSE 0 
-#         END) AS experience_score
-#     FROM 
-#         applicant_master a
-#     JOIN 
-#         application_master am ON a.applicant_id = am.applicant_id
-#     LEFT JOIN 
-#         applicant_experience ae ON a.applicant_id = ae.applicant_id
-#     WHERE 
-#         am.vacancy_master_id = :vacancy_id
-#         AND am.is_deleted = 'no'
-#         AND (ae.is_deleted = 'no' OR ae.is_deleted IS NULL)
-#     GROUP BY 
-#         a.applicant_id;
-#     """)
-#     try:
-#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
-#         # Convert results into a dictionary for easier use
-#         experience_data = {
-#             row[0]: float(row[1]) if row[1] is not None else 0.0
-#             for row in result
-#         }
-#         return experience_data
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error fetching experience scores: {str(e)}")
-
-# def fetch_qualification_scores(vacancy_id: int, db: Session):
-#     query = text("""
-#     SELECT 
-#         ae.applicant_id,
-#         SUM(
-#             CASE 
-#                 WHEN vel.education_level_id = ae.education_level_id THEN vel.weightage ELSE 0 
-#             END + 
-#             CASE 
-#                 WHEN ves.education_stream_id = ae.education_stream_id THEN ves.weightage ELSE 0 
-#             END + 
-#             CASE 
-#                 WHEN vesc.education_subject_or_course_id = ae.education_subject_or_course_id THEN vesc.weightage ELSE 0 
-#             END
-#         ) AS qualification_score
-#     FROM 
-#         applicant_educational_qualification ae
-#     LEFT JOIN 
-#         application_master am ON ae.applicant_id = am.applicant_id
-#     LEFT JOIN 
-#         vacancy_educational_level vel ON vel.vacancy_master_id = am.vacancy_master_id AND vel.education_level_id = ae.education_level_id
-#     LEFT JOIN 
-#         vacancy_educational_stream ves ON ves.vacancy_master_id = am.vacancy_master_id AND ves.education_stream_id = ae.education_stream_id
-#     LEFT JOIN 
-#         vacancy_educational_subject_or_course vesc ON vesc.vacancy_master_id = am.vacancy_master_id AND vesc.education_subject_or_course_id = ae.education_subject_or_course_id
-#     WHERE 
-#         ae.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
-#     GROUP BY 
-#         ae.applicant_id;
-#     """)
-#     try:
-#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
-#         # Convert results into a dictionary for easier use
-#         qualification_data = {
-#             row[0]: float(row[1]) if row[1] is not None else 0.0
-#             for row in result
-#         }
-#         return qualification_data
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error fetching qualification scores: {str(e)}")
-
-
-
-# def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
-#     query = text("""
-#     SELECT 
-#         alp.applicant_id,
-#         SUM(
-#             CASE
-#                 WHEN vlp.is_read_required = 'yes' AND alp.read_proficiency_id = vlp.language_proficiency_id THEN vlp.read_weightage ELSE 0
-#             END +
-#             CASE
-#                 WHEN vlp.is_write_required = 'yes' AND alp.write_proficiency_id = vlp.language_proficiency_id THEN vlp.write_weightage ELSE 0
-#             END +
-#             CASE
-#                 WHEN vlp.is_speak_required = 'yes' AND alp.speak_proficiency_id = vlp.language_proficiency_id THEN vlp.speak_weightage ELSE 0
-#             END
-#         ) AS language_proficiency_score
-#     FROM 
-#         applicant_language_proficiency alp
-#     LEFT JOIN 
-#         application_master am ON alp.applicant_id = am.applicant_id
-#     LEFT JOIN 
-#         vacancy_language_proficiency vlp ON vlp.vacancy_master_id = am.vacancy_master_id AND vlp.language_id = alp.language_id
-#     WHERE 
-#         alp.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
-#     GROUP BY 
-#         alp.applicant_id;
-#     """)
-#     try:
-#         result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
-#         # Convert results into a dictionary for easier use
-#         language_proficiency_data = {
-#             row[0]: float(row[1]) if row[1] is not None else 0.0
-#             for row in result
-#         }
-#         return language_proficiency_data
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
-
-
-
-
-# def calculate_total_scores(vacancy_id: int, db: Session):
-#     # Fetch individual components
-#     skills = dict(fetch_skills_scores(vacancy_id, db))
-#     experience = dict(fetch_experience_scores(vacancy_id, db))
-#     qualification = dict(fetch_qualification_scores(vacancy_id, db))
-#     language_proficiency = dict(fetch_language_proficiency_scores(vacancy_id, db))
-
-#     # Combine data
-#     applicant_scores = {}
-
-#     # Merge skill scores
-
-#     for applicant_id, skill_score in skills.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
-#         applicant_scores[applicant_id]["skill_score"] = skill_score
-
-#     # Merge experience scores
-#     for applicant_id, experience_score in experience.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
-#         applicant_scores[applicant_id]["experience_score"] = experience_score
-
-#     # Merge qualification scores
-#     for applicant_id, qualification_score in qualification.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
-#         applicant_scores[applicant_id]["qualification_score"] = qualification_score
-
-#     # Merge language proficiency scores
-#     for applicant_id, language_proficiency_score in language_proficiency.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {"application_id": applicant_id, "skill_score": 0, "experience_score": 0, "qualification_score": 0, "language_proficiency_score": 0}
-#         applicant_scores[applicant_id]["language_proficiency_score"] = language_proficiency_score
-
-#     # Calculate total scores
-#     for applicant_id, scores in applicant_scores.items():
-#         scores["total_score"] = (
-#             scores["skill_score"] + scores["experience_score"] + scores["qualification_score"] + scores["language_proficiency_score"]
-#         )
-
-#     # Sort by total score in descending order
-#     sorted_scores = sorted(applicant_scores.values(), key=lambda x: x["total_score"], reverse=True)
-
-#     # Format for output
-#     return {
-#         "success": "true",
-#         "data": sorted_scores
-#     }
-
-
-# @router.get("/ranked-applicants")
-# def get_ranked_applicants(vacancy_id: int, db: Session = Depends(get_db)):
-#     try:
-#         ranked_applicants = calculate_total_scores(vacancy_id, db)
-#         return {"success": "true", "data": ranked_applicants}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
 
 #------------------------------------------------------------------------------------------------
 def fetch_skills_scores(vacancy_id: int, db: Session):
@@ -2848,110 +2745,23 @@ async def save_interview_schedule(
         raise HTTPException(status_code=500, detail=str(e))
     
 #-----------------------------------------------------------------------------------------------------
-from datetime import datetime, timedelta
 
 
-@router.post("/generate-offer-letters", response_model=List[OfferLetterResponse])
-def generate_offer_letters_endpoint(request: RankListRequest):
+@router.post("/save_interview_panel")
+def save_interview_panel_endpoint(
+    request: CreateInterviewPanelRequest, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     try:
-        # Sort applicants by total_score in descending order
-        sorted_applicants = sorted(
-            request.applicants, 
-            key=lambda x: x.total_score, 
-            reverse=True
-        )
-
-        # Generate offer letters
-        offer_letters = []
-        for rank, applicant in enumerate(sorted_applicants, start=1):
-            start_date = (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d")
-            acceptance_deadline = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
-            salary = "INR 8,00,000"
-
-            # Full name
-            full_name = f"{applicant.first_name} {applicant.middle_name} {applicant.last_name}"
-
-            # Offer letter template
-            offer_letter = f"""
-            Dear {full_name},
-
-            Congratulations! We are pleased to offer you the position you applied for, based on your excellent performance during the assessment process for vacancy ID {request.vacancy_id}. 
-
-            Your total score of {applicant.total_score} has placed you at rank {rank}.
-
-            Position: Software Engineer  
-            Location: Bangalore  
-            Start Date: {start_date}  
-            Salary: {salary}  
-
-            Please confirm your acceptance of this offer by {acceptance_deadline}.
-
-            Best regards,  
-            [Your Company Name]
-            """
-
-            offer_letters.append({
-                "applicant_id": applicant.applicant_id,
-                "rank": rank,
-                "offer_letter": offer_letter.strip()
-            })
-
-        return offer_letters
-
+        # Call the service to save the interview panel data
+        response = db_employee_master.save_interview_panel(db, request)
+        return response
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An error occurred while saving the data.")
 
-def process_rank_list(vacancy_id, rank_list_data):
-    # Sort applicants by total_score in descending order to rank them
-    sorted_applicants = sorted(
-        rank_list_data, 
-        key=lambda x: x["total_score"], 
-        reverse=True
-    )
-
-    # Assign ranks to applicants
-    for index, applicant in enumerate(sorted_applicants, start=1):
-        applicant["rank"] = index
-        applicant["vacancy_id"] = vacancy_id
-
-    return sorted_applicants
-
-
-
-def generate_offer_letters(vacancy_id, processed_rank_list):
-    offer_letters = []
-    for applicant in processed_rank_list:
-        # Dynamic values
-        start_date = (datetime.now() + timedelta(days=15)).strftime("%Y-%m-%d")  # 15 days from now
-        acceptance_deadline = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")  # 7 days from now
-        salary = "INR 8,00,000"  # Example salary; adjust dynamically as needed
-
-        # Full name
-        full_name = f"{applicant['first_name']} {applicant['middle_name']} {applicant['last_name']}"
-
-        # Offer letter template
-        offer_letter = f"""
-        Dear {full_name},
-
-        Congratulations! We are pleased to offer you the position you applied for, based on your excellent performance during the assessment process for vacancy ID {vacancy_id}. 
-
-        Your total score of {applicant['total_score']} has placed you at rank {applicant['rank']}.
-
-        Position: Software Engineer  
-        Location: Bangalore  
-        Start Date: {start_date}  
-        Salary: {salary}  
-
-        Please confirm your acceptance of this offer by {acceptance_deadline}.
-
-        Best regards,  
-        [Your Company Name]
-        """
-
-        offer_letters.append({
-            "applicant_id": applicant["applicant_id"],
-            "offer_letter": offer_letter,
-            "rank": applicant["rank"]
-        })
-
-    return offer_letters

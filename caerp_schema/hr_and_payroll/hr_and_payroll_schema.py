@@ -689,14 +689,35 @@ class LanguageProficiencySchema(BaseModel):
 
 
 # Main Education Schema
+# class VacancyEducationSchema(BaseModel):
+#     id: int = 0
+#     education_level_id:int
+#     is_any_level:str
+#     education_stream_id:int
+#     is_any_stream:str
+#     education_subject_or_course_id:int
+#     is_any_subject_or_course:str
+
+
+# class Course(BaseModel):
+#     education_subject_or_course_id: List[int]
+
+
+class Course(BaseModel):
+    education_subject_or_course_id: int
+
+
 class VacancyEducationSchema(BaseModel):
     id: int = 0
-    education_level_id:int
-    is_any_level:str
-    education_stream_id:int
-    is_any_stream:str
-    education_subject_or_course_id:int
-    is_any_subject_or_course:str
+    education_level_id: int
+    is_any_level: str
+    education_stream_id: int
+    is_any_stream: str
+    course: List[Course]
+    is_any_subject_or_course: str
+
+
+
 # Main Vacancy Create Schema
 
 class VacancyCreateSchema(BaseModel):
@@ -1252,23 +1273,20 @@ class InterviewSchedulesResponse(BaseModel):
 
 #-----------offer letter schema----------------
 
+class InterviewPanelMasterSchema(BaseModel):
+    id: Optional[int] = None
+    interview_date_from: date
+    interview_date_to: date
+    interview_time_from: time
+    interview_time_to: time
+    panel_description: str
+    location: str
 
-class Applicant(BaseModel):
-    applicant_id: int
-    first_name: str
-    middle_name: str
-    last_name: str
-    skill_score: int
-    experience_score: int
-    qualification_score: int
-    language_proficiency_score: int
-    total_score: int
+class InterviewPanelMemberSchema(BaseModel):
+    id: Optional[int] = None
+    interviewer_id: int
+    remarks: Optional[str] = None
 
-class RankListRequest(BaseModel):
-    vacancy_id: int
-    applicants: List[Applicant]
-
-class OfferLetterResponse(BaseModel):
-    applicant_id: int
-    rank: int
-    offer_letter: str
+class CreateInterviewPanelRequest(BaseModel):
+    master: InterviewPanelMasterSchema
+    members: List[InterviewPanelMemberSchema]

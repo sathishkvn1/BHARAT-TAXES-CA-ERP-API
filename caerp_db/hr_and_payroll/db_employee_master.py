@@ -5,8 +5,8 @@ from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, Ap
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
-from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewPanelMaster, InterviewPanelMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, LanguageProficiencySchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyEducationSchema, VacancyExperienceSchema, VacancySkillsSchema
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -2089,18 +2089,76 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
                             setattr(language_proficiency, key, value)
 
         # Update or insert education qualifications
+        # if vacancy_data.education:
+        #     for education in vacancy_data.education:
+        #         if education.id == 0:  # New record, insert
+        #             education_data = education.dict()
+        #             education_data['vacancy_master_id'] = vacancy_master.id
+        #             education = VacancyEducationalQualification(**education_data)
+        #             db.add(education)
+        #         else:  # Existing record, update
+        #             education_record = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.id == education.id).first()
+        #             if education_record:
+        #                 for key, value in education.dict().items():
+        #                     setattr(education_record, key, value)
+
+        # if vacancy_data.education:
+        #     for education in vacancy_data.education:
+        #         for course in education.course:
+        #             new_education = VacancyEducationalQualification(
+        #             vacancy_master_id=education.id,  # Directly link the vacancy ID
+        #             education_level_id=education.education_level_id,
+        #             is_any_level=education.is_any_level,
+        #             education_stream_id=education.education_stream_id,
+        #             is_any_stream=education.is_any_stream,
+        #             is_any_subject_or_course="yes",
+        #             education_subject_or_course_id=course.education_subject_or_course_id,
+        #             created_by=1,  # Replace with the actual user ID
+        #             created_on=datetime.utcnow()
+        #         )
+        #             db.add(new_education)
+        #     db.commit()
+        #     # return {"message": "Data inserted successfully!"}
+                
         if vacancy_data.education:
             for education in vacancy_data.education:
-                if education.id == 0:  # New record, insert
-                    education_data = education.dict()
-                    education_data['vacancy_master_id'] = vacancy_master.id
-                    education = VacancyEducationalQualification(**education_data)
-                    db.add(education)
-                else:  # Existing record, update
-                    education_record = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.id == education.id).first()
-                    if education_record:
-                        for key, value in education.dict().items():
-                            setattr(education_record, key, value)
+                for course in education.course:
+                    # Check if the education ID is 0 (new record)
+                    if education.id == 0:
+                        # New record - Insert logic
+                        new_education = VacancyEducationalQualification(
+                            vacancy_master_id=vacancy_master.id,  # Link to the main vacancy ID
+                           
+                            education_level_id=education.education_level_id,
+                            is_any_level=education.is_any_level,
+                            education_stream_id=education.education_stream_id,
+                            is_any_stream=education.is_any_stream,
+                            is_any_subject_or_course=education.is_any_subject_or_course,  # Ensure this is set
+                            education_subject_or_course_id=course.education_subject_or_course_id,  # Link course ID
+                            created_by=created_by,  # Replace with the actual user ID
+                            created_on=datetime.utcnow()  # Timestamp for creation
+                        )
+                        db.add(new_education)
+                    else:
+                        # Existing record - Update logic
+                        existing_education = db.query(VacancyEducationalQualification).filter(
+                            VacancyEducationalQualification.id == education.id).first()
+                        
+                        if existing_education:
+                            existing_education.education_level_id = education.education_level_id
+                            existing_education.is_any_level = education.is_any_level
+                            existing_education.education_stream_id = education.education_stream_id
+                            existing_education.is_any_stream = education.is_any_stream
+                            existing_education.is_any_subject_or_course = education.is_any_subject_or_course
+                            existing_education.education_subject_or_course_id = course.education_subject_or_course_id
+                            existing_education.modified_by = 1  # Replace with the actual user ID
+                            existing_education.modified_on = datetime.utcnow()  # Timestamp for update
+                            db.commit()  # Commit the update
+                        else:
+                            # Handle the case if the existing education record is not found
+                            raise ValueError(f"Education record with ID {education.id} not found.")
+                                
+                
 
         # Commit the session (explicit commit)
         db.commit()
@@ -2119,6 +2177,193 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
             "success": False,  # Failure flag
             "message": f"Error while saving vacancy data: {str(e)}"  # Error message
         }
+
+
+
+
+
+
+
+# def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchema]:
+#     """
+#     Function to fetch vacancy details by vacancy_id from the database.
+#     Returns the vacancy details in the schema format.
+#     """
+#     # Query main vacancy
+#     vacancy = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_id).first()
+
+#     if vacancy:
+#         # Query related data for vacancy_experience, skills_required, language_proficiency, education
+#         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
+#         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
+#         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
+#         vacancy_educational_qualification = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.vacancy_master_id == vacancy_id).all()
+
+#         # Map related data to corresponding schema
+#         vacancy_experience_data = [
+#             VacancyExperienceSchema(
+#                 id=exp.id,
+#                 min_years=exp.min_years,
+#                 max_years=exp.max_years,
+#                 weightage=exp.weightage
+#             ) for exp in vacancy_experience
+#         ]
+
+#         skills_required_data = [
+#             VacancySkillsSchema(
+#                 id=skill.id,
+#                 skill_id=skill.skill_id,
+#                 weightage=skill.weightage
+#             ) for skill in skills_required
+#         ]
+
+#         language_proficiency_data = [
+#             LanguageProficiencySchema(
+#                 id=lang.id,
+#                 language_id=lang.language_id,
+#                 language_proficiency_id=lang.language_proficiency_id,
+#                 is_read_required=lang.is_read_required,
+#                 read_weightage=lang.read_weightage,
+#                 is_write_required=lang.is_write_required,
+#                 write_weightage=lang.write_weightage,
+#                 is_speak_required=lang.is_speak_required,
+#                 speak_weightage=lang.speak_weightage
+#             ) for lang in language_proficiency
+#         ]
+
+#         education_data = [
+#             VacancyEducationSchema(
+#                 id=edu.id,
+#                 education_level_id=edu.education_level_id,
+#                 is_any_level=edu.is_any_level,
+#                 education_stream_id=edu.education_stream_id,
+#                 is_any_stream=edu.is_any_stream,
+#                 course=[Course(education_subject_or_course_ids=[edu.education_subject_or_course_id])] 
+#                     if edu.education_subject_or_course_id else [],  # Check for education subject/course ID
+#                 is_any_subject_or_course=edu.is_any_subject_or_course
+#             ) for edu in vacancy_educational_qualification
+#         ] if vacancy_educational_qualification else None  # Ensure None if no education data
+
+#         # Return the data in the structured format
+#         return VacancyCreateSchema(
+#             id=vacancy.id,
+#             department_id=vacancy.department_id,
+#             designation_id=vacancy.designation_id,
+#             vacancy_count=vacancy.vacancy_count,
+#             job_description=vacancy.job_description,
+#             job_location=vacancy.job_location,
+#             reported_date=vacancy.reported_date,
+#             announcement_date=vacancy.announcement_date,
+#             closing_date=vacancy.closing_date,
+#             vacancy_status=vacancy.vacancy_status,
+#             experience_required=vacancy.experience_required,
+#             vacancy_experience=vacancy_experience_data,
+#             skills_required=skills_required_data,
+#             language_proficiency=language_proficiency_data,
+#             education=education_data  # Education is either data or None
+#         )
+#     else:
+#         # If no vacancy is found, return None
+#         return None
+
+
+
+
+
+def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchema]:
+    """
+    Function to fetch vacancy details by vacancy_id from the database.
+    Returns the vacancy details in the schema format.
+    """
+    # Query main vacancy
+    # Query main vacancy with related tables
+    vacancy = db.query(
+        VacancyMaster,
+        HrDepartmentMaster,
+        HrDesignationMaster
+    ).join(
+        HrDepartmentMaster, HrDepartmentMaster.id == VacancyMaster.department_id
+    ).join(
+        HrDesignationMaster, HrDesignationMaster.id == VacancyMaster.designation_id
+    ).filter(
+        VacancyMaster.id == vacancy_id
+    ).first()
+
+    if vacancy:
+        # Query related data for vacancy_experience, skills_required, language_proficiency, education
+        vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
+        skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
+        language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
+        vacancy_educational_qualification = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.vacancy_master_id == vacancy_id).all()
+
+        # Map related data to corresponding schema
+        vacancy_experience_data = [
+            VacancyExperienceSchema(
+                id=exp.id,
+                min_years=exp.min_years,
+                max_years=exp.max_years,
+                weightage=exp.weightage
+            ) for exp in vacancy_experience
+        ]
+
+        skills_required_data = [
+            VacancySkillsSchema(
+                id=skill.id,
+                skill_id=skill.skill_id,
+                weightage=skill.weightage
+            ) for skill in skills_required
+        ]
+
+        language_proficiency_data = [
+            LanguageProficiencySchema(
+                id=lang.id,
+                language_id=lang.language_id,
+                language_proficiency_id=lang.language_proficiency_id,
+                is_read_required=lang.is_read_required,
+                read_weightage=lang.read_weightage,
+                is_write_required=lang.is_write_required,
+                write_weightage=lang.write_weightage,
+                is_speak_required=lang.is_speak_required,
+                speak_weightage=lang.speak_weightage
+            ) for lang in language_proficiency
+        ]
+
+        education_data = [
+            VacancyEducationSchema(
+                id=edu.id,
+                education_level_id=edu.education_level_id,
+                is_any_level=edu.is_any_level,
+                education_stream_id=edu.education_stream_id,
+                is_any_stream=edu.is_any_stream,
+                course=[Course(education_subject_or_course_ids=[edu.education_subject_or_course_id])] 
+                    if edu.education_subject_or_course_id else [],  # Check for education subject/course ID
+                is_any_subject_or_course=edu.is_any_subject_or_course
+            ) for edu in vacancy_educational_qualification
+        ] if vacancy_educational_qualification else None  # Ensure None if no education data
+
+        # Return the data in the structured format
+        return VacancyCreateSchema(
+            id=vacancy.id,
+            department_id=vacancy.department_id,
+            designation_id=vacancy.designation_id,
+            vacancy_count=vacancy.vacancy_count,
+            job_description=vacancy.job_description,
+            job_location=vacancy.job_location,
+            reported_date=vacancy.reported_date,
+            announcement_date=vacancy.announcement_date,
+            closing_date=vacancy.closing_date,
+            vacancy_status=vacancy.vacancy_status,
+            experience_required=vacancy.experience_required,
+            vacancy_experience=vacancy_experience_data,
+            skills_required=skills_required_data,
+            language_proficiency=language_proficiency_data,
+            education=education_data  # Education is either data or None
+        )
+    else:
+        # If no vacancy is found, return None
+        return None
+
+
 
 #---------------------------------------------------------------------------------------------------
 # def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
@@ -3287,12 +3532,9 @@ def get_applicant_language_proficiency(
     language_proficiency_data = [
         ApplicantLanguageProficiencyResponse(**dict(row._asdict())) for row in rows
     ]
-
     return language_proficiency_data
 
 #-----------------------------------------------------------------------------------------------
-
-
 def get_applicant_hobbies(
     db: Session, applicant_id: Optional[int] = None
 ) -> List[ApplicantHobbyResponse]:
@@ -3330,8 +3572,6 @@ def get_applicant_hobbies(
     return hobbies
 
 #----------------------------------------------------------------------------------------------
-
-
 def get_applicant_skills(
     db: Session, applicant_id: Optional[int] = None
 ) -> List[ApplicantSkillResponse]:
@@ -3370,7 +3610,6 @@ def get_applicant_skills(
     skills = [
         ApplicantSkillResponse(**dict(row._asdict())) for row in rows
     ]
-
     return skills
 
 #---------------------------------------------------------------------------------------------
@@ -3417,8 +3656,8 @@ def get_applicant_social_media_profiles(
     ]
 
     return social_media_profiles
-#-------------------------------------------------------------------------
-from sqlalchemy.exc import SQLAlchemyError
+#----------------------------------------------------------------------------------------------------------
+
 def save_schedule(schedule, db: Session):
     try:
         # Check if it's an insert or update
@@ -3464,4 +3703,79 @@ def save_schedule(schedule, db: Session):
     except Exception as e:
         db.rollback()  # Rollback in case of a non-SQLAlchemy error
         raise Exception(f"Error: {str(e)}")
+
 #----------------------------------------------------------------------------------------------------------
+def save_interview_panel(db: Session, request: CreateInterviewPanelRequest):
+    try:
+        # Handle the master record
+        if request.master.id == None:
+            # Insert new record for the master
+            print("Inserting new master record...")
+            new_master = InterviewPanelMaster(**request.master.dict())
+            db.add(new_master)
+            db.flush()  # Use flush instead of commit
+
+            # Re-fetch the master record after flush to get the generated ID
+            # db.refresh(new_master)  # This should work after flush
+            master_id = new_master.id
+            print(f"New master record inserted with ID: {master_id}")
+
+            # Handle the members
+            for member in request.members:
+                if member.id == None:
+                    print(f"Inserting new member: {member}")
+                    new_member_data = member.dict()
+                    new_member_data["interview_panel_master_id"] = master_id
+                    new_member = InterviewPanelMembers(**new_member_data)
+                    db.add(new_member)
+                else:
+                    print(f"Updating existing member: {member}")
+                    existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+                    if not existing_member:
+                        raise ValueError(f"Member record with ID {member.id} not found.")
+                    for key, value in member.dict().items():
+                        setattr(existing_member, key, value)
+
+        else:
+            print(f"Updating existing master record with ID: {request.master.id}")
+            # Update existing record for the master
+            master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+            if not master:
+                raise ValueError("Master record not found.")
+            
+            print(f"Master record found: {master}")
+            # Perform the update on the master record
+            for key, value in request.master.dict().items():
+                setattr(master, key, value)
+            db.commit()  # Commit the changes to save updates
+
+            # Re-fetch the master record after commit to ensure it's in sync
+            master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+            if not master:
+                raise ValueError("Master record not found after update.")
+            print(f"Master record successfully refreshed: {master}")
+
+            # Handle the members
+            for member in request.members:
+                if member.id == None:
+                    print(f"Inserting new member: {member}")
+                    new_member_data = member.dict()
+                    new_member_data["interview_panel_master_id"] = master.id
+                    new_member = InterviewPanelMembers(**new_member_data)
+                    db.add(new_member)
+                else:
+                    print(f"Updating existing member: {member}")
+                    existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+                    if not existing_member:
+                        raise ValueError(f"Member record with ID {member.id} not found.")
+                    for key, value in member.dict().items():
+                        setattr(existing_member, key, value)
+
+        db.commit()  # Commit the changes to the database
+        print("Transaction committed successfully.")
+        return {"success": True, "message": "Saved successfully"}
+
+    except Exception as e:
+        print(f"Error occurred while saving the data: {str(e)}")
+        db.rollback()  # Rollback the transaction if an error occurs
+        return {"success": False, "message": f"An error occurred while saving the data: {str(e)}"}
