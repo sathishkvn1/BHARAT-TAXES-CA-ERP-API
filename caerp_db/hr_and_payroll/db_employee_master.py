@@ -1,12 +1,12 @@
 
 from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
-from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, AppLanguageProficiency, AppLanguages, EmployeeLanguageProficiency, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
+from caerp_db.common.models import AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, AppLanguageProficiency, AppLanguages, AppSkills, EmployeeLanguageProficiency, EmployeeMaster, Gender, MaritalStatus, NationalityDB, Profession,UserBase,UserRole, EmployeeBankDetails, EmployeeContactDetails, EmployeePermanentAddress, EmployeePresentAddress, EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeDocuments, EmployeeDependentsDetails, EmployeeEmergencyContactDetails, EmployeeProfessionalQualification
 from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewPanelMaster, InterviewPanelMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, LanguageProficiencySchema, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyEducationSchema, VacancyExperienceSchema, VacancySkillsSchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, Courses, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, LanguageProficiencySchema, LanguageProficiencySchemaForGet, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancyEducationSchema, VacancyEducationSchemaForGet, VacancyExperienceSchema, VacancySkillsSchema, VacancySkillsSchemaForGet
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -2184,15 +2184,23 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 
 
 
-# def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchema]:
+# def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
 #     """
 #     Function to fetch vacancy details by vacancy_id from the database.
 #     Returns the vacancy details in the schema format.
 #     """
-#     # Query main vacancy
-#     vacancy = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_id).first()
+#     # Query main vacancy with joins to designation and department
+#     vacancy = (
+#         db.query(VacancyMaster, HrDesignationMaster.designation, HrDepartmentMaster.department_name)
+#         .join(HrDesignationMaster, VacancyMaster.designation_id == HrDesignationMaster.id)
+#         .join(HrDepartmentMaster, VacancyMaster.department_id == HrDepartmentMaster.id)
+#         .filter(VacancyMaster.id == vacancy_id)
+#         .first()
+#     )
 
 #     if vacancy:
+#         vacancy_master, designation_name, department_name = vacancy
+
 #         # Query related data for vacancy_experience, skills_required, language_proficiency, education
 #         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
 #         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
@@ -2210,18 +2218,21 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 #         ]
 
 #         skills_required_data = [
-#             VacancySkillsSchema(
+#             VacancySkillsSchemaForGet(
 #                 id=skill.id,
 #                 skill_id=skill.skill_id,
-#                 weightage=skill.weightage
+#                 weightage=skill.weightage,
+#                 skill_name=db.query(AppSkills.skill).filter(AppSkills.id == skill.skill_id).scalar()
 #             ) for skill in skills_required
 #         ]
 
 #         language_proficiency_data = [
-#             LanguageProficiencySchema(
+#             LanguageProficiencySchemaForGet(
 #                 id=lang.id,
 #                 language_id=lang.language_id,
+#                 language=db.query(AppLanguages.language).filter(AppLanguages.id == lang.language_id).scalar(),
 #                 language_proficiency_id=lang.language_proficiency_id,
+#                 proficiency_level=db.query(AppLanguageProficiency.proficiency_level).filter(AppLanguageProficiency.id == lang.language_proficiency_id).scalar(),
 #                 is_read_required=lang.is_read_required,
 #                 read_weightage=lang.read_weightage,
 #                 is_write_required=lang.is_write_required,
@@ -2232,35 +2243,37 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 #         ]
 
 #         education_data = [
-#             VacancyEducationSchema(
+#             VacancyEducationSchemaForGet(
 #                 id=edu.id,
 #                 education_level_id=edu.education_level_id,
 #                 is_any_level=edu.is_any_level,
 #                 education_stream_id=edu.education_stream_id,
 #                 is_any_stream=edu.is_any_stream,
-#                 course=[Course(education_subject_or_course_ids=[edu.education_subject_or_course_id])] 
-#                     if edu.education_subject_or_course_id else [],  # Check for education subject/course ID
+#                 course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id])]
+#                     if edu.education_subject_or_course_id else [],
 #                 is_any_subject_or_course=edu.is_any_subject_or_course
 #             ) for edu in vacancy_educational_qualification
-#         ] if vacancy_educational_qualification else None  # Ensure None if no education data
+#         ] if vacancy_educational_qualification else None
 
 #         # Return the data in the structured format
-#         return VacancyCreateSchema(
-#             id=vacancy.id,
-#             department_id=vacancy.department_id,
-#             designation_id=vacancy.designation_id,
-#             vacancy_count=vacancy.vacancy_count,
-#             job_description=vacancy.job_description,
-#             job_location=vacancy.job_location,
-#             reported_date=vacancy.reported_date,
-#             announcement_date=vacancy.announcement_date,
-#             closing_date=vacancy.closing_date,
-#             vacancy_status=vacancy.vacancy_status,
-#             experience_required=vacancy.experience_required,
+#         return VacancyCreateSchemaForGet(
+#             id=vacancy_master.id,
+#             department_id=vacancy_master.department_id,
+#             department_name=department_name,
+#             designation_id=vacancy_master.designation_id,
+#             designation_name=designation_name,
+#             vacancy_count=vacancy_master.vacancy_count,
+#             job_description=vacancy_master.job_description,
+#             job_location=vacancy_master.job_location,
+#             reported_date=vacancy_master.reported_date,
+#             announcement_date=vacancy_master.announcement_date,
+#             closing_date=vacancy_master.closing_date,
+#             vacancy_status=vacancy_master.vacancy_status,
+#             experience_required=vacancy_master.experience_required,
 #             vacancy_experience=vacancy_experience_data,
 #             skills_required=skills_required_data,
 #             language_proficiency=language_proficiency_data,
-#             education=education_data  # Education is either data or None
+#             education=education_data
 #         )
 #     else:
 #         # If no vacancy is found, return None
@@ -2268,28 +2281,23 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 
 
 
-
-
-def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchema]:
+def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
     """
     Function to fetch vacancy details by vacancy_id from the database.
     Returns the vacancy details in the schema format.
     """
-    # Query main vacancy
-    # Query main vacancy with related tables
-    vacancy = db.query(
-        VacancyMaster,
-        HrDepartmentMaster,
-        HrDesignationMaster
-    ).join(
-        HrDepartmentMaster, HrDepartmentMaster.id == VacancyMaster.department_id
-    ).join(
-        HrDesignationMaster, HrDesignationMaster.id == VacancyMaster.designation_id
-    ).filter(
-        VacancyMaster.id == vacancy_id
-    ).first()
+    # Query main vacancy with joins to designation and department
+    vacancy = (
+        db.query(VacancyMaster, HrDesignationMaster.designation, HrDepartmentMaster.department_name)
+        .join(HrDesignationMaster, VacancyMaster.designation_id == HrDesignationMaster.id)
+        .join(HrDepartmentMaster, VacancyMaster.department_id == HrDepartmentMaster.id)
+        .filter(VacancyMaster.id == vacancy_id)
+        .first()
+    )
 
     if vacancy:
+        vacancy_master, designation_name, department_name = vacancy
+
         # Query related data for vacancy_experience, skills_required, language_proficiency, education
         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
@@ -2307,18 +2315,21 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
         ]
 
         skills_required_data = [
-            VacancySkillsSchema(
+            VacancySkillsSchemaForGet(
                 id=skill.id,
                 skill_id=skill.skill_id,
-                weightage=skill.weightage
+                weightage=skill.weightage,
+                skill_name=db.query(AppSkills.skill).filter(AppSkills.id == skill.skill_id).scalar()
             ) for skill in skills_required
         ]
 
         language_proficiency_data = [
-            LanguageProficiencySchema(
+            LanguageProficiencySchemaForGet(
                 id=lang.id,
                 language_id=lang.language_id,
+                language=db.query(AppLanguages.language).filter(AppLanguages.id == lang.language_id).scalar(),
                 language_proficiency_id=lang.language_proficiency_id,
+                proficiency_level=db.query(AppLanguageProficiency.proficiency_level).filter(AppLanguageProficiency.id == lang.language_proficiency_id).scalar(),
                 is_read_required=lang.is_read_required,
                 read_weightage=lang.read_weightage,
                 is_write_required=lang.is_write_required,
@@ -2328,41 +2339,62 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
             ) for lang in language_proficiency
         ]
 
-        education_data = [
-            VacancyEducationSchema(
-                id=edu.id,
-                education_level_id=edu.education_level_id,
-                is_any_level=edu.is_any_level,
-                education_stream_id=edu.education_stream_id,
-                is_any_stream=edu.is_any_stream,
-                course=[Course(education_subject_or_course_ids=[edu.education_subject_or_course_id])] 
-                    if edu.education_subject_or_course_id else [],  # Check for education subject/course ID
-                is_any_subject_or_course=edu.is_any_subject_or_course
-            ) for edu in vacancy_educational_qualification
-        ] if vacancy_educational_qualification else None  # Ensure None if no education data
+        # Prepare education data with both ID and Name
+        education_data = []
+        for edu in vacancy_educational_qualification:
+            # Get education level and stream names
+            education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
+            education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
+
+            # If education_stream_name is None, set to default or "Unknown"
+            education_stream_name = education_stream_name if education_stream_name else "Unknown"
+
+            # Get subject/course name
+            subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
+
+            # If subject_or_course_name is None, set to default or "Unknown"
+            subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
+
+            # Add education details to the list
+            education_data.append(
+                VacancyEducationSchemaForGet(
+                    id=edu.id,
+                    education_level_id=edu.education_level_id,
+                    education_level=education_level_name,  # Name of education level
+                    is_any_level=edu.is_any_level,
+                    education_stream_id=edu.education_stream_id,
+                    education_stream=education_stream_name,  # Name of education stream (defaulted to "Unknown")
+                    is_any_stream=edu.is_any_stream,
+                    course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
+                                    subject_or_course_name=subject_or_course_name)]  # Ensure subject_or_course_name is not None
+                    if edu.education_subject_or_course_id else [],
+                    is_any_subject_or_course=edu.is_any_subject_or_course
+                )
+            )
 
         # Return the data in the structured format
-        return VacancyCreateSchema(
-            id=vacancy.id,
-            department_id=vacancy.department_id,
-            designation_id=vacancy.designation_id,
-            vacancy_count=vacancy.vacancy_count,
-            job_description=vacancy.job_description,
-            job_location=vacancy.job_location,
-            reported_date=vacancy.reported_date,
-            announcement_date=vacancy.announcement_date,
-            closing_date=vacancy.closing_date,
-            vacancy_status=vacancy.vacancy_status,
-            experience_required=vacancy.experience_required,
+        return VacancyCreateSchemaForGet(
+            id=vacancy_master.id,
+            department_id=vacancy_master.department_id,
+            department_name=department_name,
+            designation_id=vacancy_master.designation_id,
+            designation_name=designation_name,
+            vacancy_count=vacancy_master.vacancy_count,
+            job_description=vacancy_master.job_description,
+            job_location=vacancy_master.job_location,
+            reported_date=vacancy_master.reported_date,
+            announcement_date=vacancy_master.announcement_date,
+            closing_date=vacancy_master.closing_date,
+            vacancy_status=vacancy_master.vacancy_status,
+            experience_required=vacancy_master.experience_required,
             vacancy_experience=vacancy_experience_data,
             skills_required=skills_required_data,
             language_proficiency=language_proficiency_data,
-            education=education_data  # Education is either data or None
+            education=education_data
         )
     else:
         # If no vacancy is found, return None
         return None
-
 
 
 #---------------------------------------------------------------------------------------------------

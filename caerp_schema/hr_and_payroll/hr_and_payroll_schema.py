@@ -672,6 +672,12 @@ class VacancySkillsSchema(BaseModel):
     skill_id: int
     weightage: float
 
+class VacancySkillsSchemaForGet(BaseModel):
+    id: int = 0
+    skill_id: int
+    skill_name: Optional[str] = None
+    weightage: float
+
 class LanguageProficiencySchema(BaseModel):
     id: int = 0 
    
@@ -687,6 +693,21 @@ class LanguageProficiencySchema(BaseModel):
     class Config:
         orm_mode = True  
 
+class LanguageProficiencySchemaForGet(BaseModel):
+    id: int = 0 
+    language_id: int 
+    language:str
+    language_proficiency_id: int 
+    proficiency_level:str
+    is_read_required: str = 'no' 
+    read_weightage: float = 0.0  
+    is_write_required: str = 'no'  
+    write_weightage: float = 0.0 
+    is_speak_required: str = 'no'  
+    speak_weightage: float = 0.0 
+
+    class Config:
+        orm_mode = True  
 
 # Main Education Schema
 # class VacancyEducationSchema(BaseModel):
@@ -699,8 +720,9 @@ class LanguageProficiencySchema(BaseModel):
 #     is_any_subject_or_course:str
 
 
-# class Course(BaseModel):
-#     education_subject_or_course_id: List[int]
+class Courses(BaseModel):
+    education_subject_or_course_id: List[int]
+    subject_or_course_name:str
 
 
 class Course(BaseModel):
@@ -716,7 +738,16 @@ class VacancyEducationSchema(BaseModel):
     course: List[Course]
     is_any_subject_or_course: str
 
-
+class VacancyEducationSchemaForGet(BaseModel):
+    id: int = 0
+    education_level_id: int
+    education_level:str
+    is_any_level: str
+    education_stream_id: int
+    education_stream:str
+    is_any_stream: str
+    course: List[Courses]
+    is_any_subject_or_course: str
 
 # Main Vacancy Create Schema
 
@@ -736,6 +767,27 @@ class VacancyCreateSchema(BaseModel):
     skills_required: List[VacancySkillsSchema]
     language_proficiency: List[LanguageProficiencySchema]
     education: Optional[List[VacancyEducationSchema]] = None 
+
+
+
+class VacancyCreateSchemaForGet(BaseModel):
+    id: int = 0  
+    department_id: int
+    department_name:str
+    designation_id: int
+    designation_name:str
+    vacancy_count: int
+    job_description: str
+    job_location: str
+    reported_date: date  # Use date type for date fields
+    announcement_date: date
+    closing_date: date
+    vacancy_status: str
+    experience_required: str
+    vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
+    skills_required: List[VacancySkillsSchemaForGet]
+    language_proficiency: List[LanguageProficiencySchemaForGet]
+    education: Optional[List[VacancyEducationSchemaForGet]] = None 
  
  #---------------------------------------------------------------------------------
 class AnnouncementDetail(BaseModel):
