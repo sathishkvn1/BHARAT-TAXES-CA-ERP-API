@@ -751,6 +751,27 @@ class VacancyEducationSchemaForGet(BaseModel):
 
 # Main Vacancy Create Schema
 
+
+class CourseSchema(BaseModel):
+    id: int = 0
+    education_subject_or_course_id: int
+    weightage: float
+    is_any_subject_or_course: str  # Assuming "yes" or "no"
+
+class StreamSchema(BaseModel):
+    id: int = 0
+    education_stream_id: int
+    weightage: float
+    is_any_stream: str  # Assuming "yes" or "no"
+    courses: List[CourseSchema]  # List of courses under a stream
+
+class EducationRequirementSchema(BaseModel):
+    id: int = 0
+    education_level_id: int
+    weightage: float
+    is_any_level: str  # Assuming "yes" or "no"
+    streams: List[StreamSchema]  # List of streams under education
+
 class VacancyCreateSchema(BaseModel):
     id: int = 0  
     department_id: int
@@ -766,7 +787,8 @@ class VacancyCreateSchema(BaseModel):
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchema]
     language_proficiency: List[LanguageProficiencySchema]
-    education: Optional[List[VacancyEducationSchema]] = None 
+    education: Optional[List[EducationRequirementSchema]] = None
+    # education: Optional[List[VacancyEducationSchema]] = None 
 
 
 

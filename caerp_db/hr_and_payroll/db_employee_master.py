@@ -2088,78 +2088,169 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
                         for key, value in language.dict().items():
                             setattr(language_proficiency, key, value)
 
-        # Update or insert education qualifications
-        # if vacancy_data.education:
-        #     for education in vacancy_data.education:
-        #         if education.id == 0:  # New record, insert
-        #             education_data = education.dict()
-        #             education_data['vacancy_master_id'] = vacancy_master.id
-        #             education = VacancyEducationalQualification(**education_data)
-        #             db.add(education)
-        #         else:  # Existing record, update
-        #             education_record = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.id == education.id).first()
-        #             if education_record:
-        #                 for key, value in education.dict().items():
-        #                     setattr(education_record, key, value)
-
+       
         # if vacancy_data.education:
         #     for education in vacancy_data.education:
         #         for course in education.course:
-        #             new_education = VacancyEducationalQualification(
-        #             vacancy_master_id=education.id,  # Directly link the vacancy ID
-        #             education_level_id=education.education_level_id,
-        #             is_any_level=education.is_any_level,
-        #             education_stream_id=education.education_stream_id,
-        #             is_any_stream=education.is_any_stream,
-        #             is_any_subject_or_course="yes",
-        #             education_subject_or_course_id=course.education_subject_or_course_id,
-        #             created_by=1,  # Replace with the actual user ID
-        #             created_on=datetime.utcnow()
-        #         )
-        #             db.add(new_education)
-        #     db.commit()
-        #     # return {"message": "Data inserted successfully!"}
-                
+        #             # Check if the education ID is 0 (new record)
+        #             if education.id == 0:
+        #                 # New record - Insert logic
+        #                 new_education = VacancyEducationalQualification(
+        #                     vacancy_master_id=vacancy_master.id,  # Link to the main vacancy ID
+                           
+        #                     education_level_id=education.education_level_id,
+        #                     is_any_level=education.is_any_level,
+        #                     education_stream_id=education.education_stream_id,
+        #                     is_any_stream=education.is_any_stream,
+        #                     is_any_subject_or_course=education.is_any_subject_or_course,  # Ensure this is set
+        #                     education_subject_or_course_id=course.education_subject_or_course_id,  # Link course ID
+        #                     created_by=created_by,  # Replace with the actual user ID
+        #                     created_on=datetime.utcnow()  # Timestamp for creation
+        #                 )
+        #                 db.add(new_education)
+        #             else:
+        #                 # Existing record - Update logic
+        #                 existing_education = db.query(VacancyEducationalQualification).filter(
+        #                     VacancyEducationalQualification.id == education.id).first()
+                        
+        #                 if existing_education:
+        #                     existing_education.education_level_id = education.education_level_id
+        #                     existing_education.is_any_level = education.is_any_level
+        #                     existing_education.education_stream_id = education.education_stream_id
+        #                     existing_education.is_any_stream = education.is_any_stream
+        #                     existing_education.is_any_subject_or_course = education.is_any_subject_or_course
+        #                     existing_education.education_subject_or_course_id = course.education_subject_or_course_id
+        #                     existing_education.modified_by = 1  # Replace with the actual user ID
+        #                     existing_education.modified_on = datetime.utcnow()  # Timestamp for update
+        #                     db.commit()  # Commit the update
+        #                 else:
+        #                     # Handle the case if the existing education record is not found
+        #                     raise ValueError(f"Education record with ID {education.id} not found.")
+        
         if vacancy_data.education:
             for education in vacancy_data.education:
-                for course in education.course:
-                    # Check if the education ID is 0 (new record)
-                    if education.id == 0:
-                        # New record - Insert logic
-                        new_education = VacancyEducationalQualification(
-                            vacancy_master_id=vacancy_master.id,  # Link to the main vacancy ID
-                           
-                            education_level_id=education.education_level_id,
-                            is_any_level=education.is_any_level,
-                            education_stream_id=education.education_stream_id,
-                            is_any_stream=education.is_any_stream,
-                            is_any_subject_or_course=education.is_any_subject_or_course,  # Ensure this is set
-                            education_subject_or_course_id=course.education_subject_or_course_id,  # Link course ID
-                            created_by=created_by,  # Replace with the actual user ID
-                            created_on=datetime.utcnow()  # Timestamp for creation
-                        )
-                        db.add(new_education)
-                    else:
-                        # Existing record - Update logic
-                        existing_education = db.query(VacancyEducationalQualification).filter(
-                            VacancyEducationalQualification.id == education.id).first()
-                        
-                        if existing_education:
-                            existing_education.education_level_id = education.education_level_id
-                            existing_education.is_any_level = education.is_any_level
-                            existing_education.education_stream_id = education.education_stream_id
-                            existing_education.is_any_stream = education.is_any_stream
-                            existing_education.is_any_subject_or_course = education.is_any_subject_or_course
-                            existing_education.education_subject_or_course_id = course.education_subject_or_course_id
-                            existing_education.modified_by = 1  # Replace with the actual user ID
-                            existing_education.modified_on = datetime.utcnow()  # Timestamp for update
-                            db.commit()  # Commit the update
-                        else:
-                            # Handle the case if the existing education record is not found
-                            raise ValueError(f"Education record with ID {education.id} not found.")
-                                
-                
+                # Insert or Update VacancyEducationalLevel
+                if education.id == 0:  # Insert new record
+                    new_education_level = VacancyEducationalLevel(
+                        vacancy_master_id=vacancy_master.id,
+                        education_level_id=education.education_level_id,
+                        is_any_level=education.is_any_level,
+                        weightage=education.weightage,
+                        created_by=created_by,
+                        created_on=datetime.utcnow()
+                    )
+                    db.add(new_education_level)
+                    db.flush()  # Ensure the new record is inserted and ID is available for related tables
 
+                    # Now insert streams related to this education level
+                    for stream in education.streams:
+                        if stream.id == 0:  # Insert new record
+                            new_education_stream = VacancyEducationalStream(
+                                vacancy_master_id=vacancy_master.id,
+                                education_stream_id=stream.education_stream_id,
+                                is_any_stream=stream.is_any_stream,
+                                weightage=stream.weightage,
+                                created_by=created_by,
+                                created_on=datetime.utcnow()
+                            )
+                            db.add(new_education_stream)
+                            db.flush()  # Ensure the new record is inserted and ID is available for related courses
+
+                            # Now insert courses related to this stream
+                            for course in stream.courses:
+                                if course.id == 0:  # Insert new record
+                                    new_education_course = VacancyEducationalSubjectOrCourse(
+                                        vacancy_master_id=vacancy_master.id,
+                                        education_subject_or_course_id=course.education_subject_or_course_id,
+                                        is_any_subject_or_course=course.is_any_subject_or_course,
+                                        weightage=course.weightage,
+                                        created_by=created_by,
+                                        created_on=datetime.utcnow()
+                                    )
+                                    db.add(new_education_course)
+                    db.commit()  # Commit the transaction after all inserts
+                # update
+
+                else:  # Update existing education record if id is provided
+                    # Fetch existing education level record
+                    existing_education_level = db.query(VacancyEducationalLevel).filter(
+                        VacancyEducationalLevel.id == education.id
+                    ).first()
+
+                    if existing_education_level:
+                        # Update education level
+                        existing_education_level.education_level_id = education.education_level_id
+                        existing_education_level.is_any_level = education.is_any_level
+                        existing_education_level.weightage = education.weightage
+                        existing_education_level.modified_by = created_by
+                        existing_education_level.modified_on = datetime.utcnow()
+
+                        # Process streams
+                        for stream in education.streams:
+                            if stream.id == 0:  # Insert new stream
+                                new_education_stream = VacancyEducationalStream(
+                                    vacancy_master_id=vacancy_master.id,
+                                    education_stream_id=stream.education_stream_id,
+                                    is_any_stream=stream.is_any_stream,
+                                    weightage=stream.weightage,
+                                    created_by=created_by,
+                                    created_on=datetime.utcnow()
+                                )
+                                db.add(new_education_stream)
+                                db.flush()  # Ensure the new record is inserted
+
+                                # Insert courses for the new stream
+                                for course in stream.courses:
+                                    if course.id == 0:  # Insert new course
+                                        new_education_course = VacancyEducationalSubjectOrCourse(
+                                            vacancy_master_id=vacancy_master.id,
+                                            education_subject_or_course_id=course.education_subject_or_course_id,
+                                            is_any_subject_or_course=course.is_any_subject_or_course,
+                                            weightage=course.weightage,
+                                            created_by=created_by,
+                                            created_on=datetime.utcnow()
+                                        )
+                                        db.add(new_education_course)
+                            else:  # Update existing stream
+                                existing_stream = db.query(VacancyEducationalStream).filter(
+                                    VacancyEducationalStream.id == stream.id
+                                ).first()
+
+                                if existing_stream:
+                                    existing_stream.education_stream_id = stream.education_stream_id
+                                    existing_stream.is_any_stream = stream.is_any_stream
+                                    existing_stream.weightage = stream.weightage
+                                    existing_stream.modified_by = created_by
+                                    existing_stream.modified_on = datetime.utcnow()
+
+                                    # Process courses for the stream
+                                    for course in stream.courses:
+                                        if course.id == 0:  # Insert new course
+                                            new_education_course = VacancyEducationalSubjectOrCourse(
+                                                vacancy_master_id=vacancy_master.id,
+                                                education_subject_or_course_id=course.education_subject_or_course_id,
+                                                is_any_subject_or_course=course.is_any_subject_or_course,
+                                                weightage=course.weightage,
+                                                created_by=created_by,
+                                                created_on=datetime.utcnow()
+                                            )
+                                            db.add(new_education_course)
+                                        else:  # Update existing course
+                                            existing_course = db.query(VacancyEducationalSubjectOrCourse).filter(
+                                                VacancyEducationalSubjectOrCourse.id == course.id
+                                            ).first()
+
+                                            if existing_course:
+                                                existing_course.education_subject_or_course_id = course.education_subject_or_course_id
+                                                existing_course.is_any_subject_or_course = course.is_any_subject_or_course
+                                                existing_course.weightage = course.weightage
+                                                existing_course.modified_by = created_by
+                                                existing_course.modified_on = datetime.utcnow()
+
+                        db.commit()  # Commit the transaction after all updates and inserts
+               
+
+      
         # Commit the session (explicit commit)
         db.commit()
 
@@ -2184,6 +2275,7 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 
 
 
+
 # def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
 #     """
 #     Function to fetch vacancy details by vacancy_id from the database.
@@ -2201,7 +2293,7 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 #     if vacancy:
 #         vacancy_master, designation_name, department_name = vacancy
 
-#         # Query related data for vacancy_experience, skills_required, language_proficiency, education
+#         # Query related data for vacancy_experience, skills_required, language_proficiency, education 
 #         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
 #         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
 #         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
@@ -2242,18 +2334,38 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 #             ) for lang in language_proficiency
 #         ]
 
-#         education_data = [
-#             VacancyEducationSchemaForGet(
-#                 id=edu.id,
-#                 education_level_id=edu.education_level_id,
-#                 is_any_level=edu.is_any_level,
-#                 education_stream_id=edu.education_stream_id,
-#                 is_any_stream=edu.is_any_stream,
-#                 course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id])]
+#         # Prepare education data with both ID and Name
+#         education_data = []
+#         for edu in vacancy_educational_qualification:
+#             # Get education level and stream names
+#             education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
+#             education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
+
+#             # If education_stream_name is None, set to default or "Unknown"
+#             education_stream_name = education_stream_name if education_stream_name else "Unknown"
+
+#             # Get subject/course name
+#             subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
+
+#             # If subject_or_course_name is None, set to default or "Unknown"
+#             subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
+
+#             # Add education details to the list
+#             education_data.append(
+#                 VacancyEducationSchemaForGet(
+#                     id=edu.id,
+#                     education_level_id=edu.education_level_id,
+#                     education_level=education_level_name,  
+#                     is_any_level=edu.is_any_level,
+#                     education_stream_id=edu.education_stream_id,
+#                     education_stream=education_stream_name,  
+#                     is_any_stream=edu.is_any_stream,
+#                     course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
+#                                     subject_or_course_name=subject_or_course_name)]  
 #                     if edu.education_subject_or_course_id else [],
-#                 is_any_subject_or_course=edu.is_any_subject_or_course
-#             ) for edu in vacancy_educational_qualification
-#         ] if vacancy_educational_qualification else None
+#                     is_any_subject_or_course=edu.is_any_subject_or_course
+#                 )
+#             )
 
 #         # Return the data in the structured format
 #         return VacancyCreateSchemaForGet(
@@ -2281,6 +2393,8 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 
 
 
+
+
 def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
     """
     Function to fetch vacancy details by vacancy_id from the database.
@@ -2298,7 +2412,7 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
     if vacancy:
         vacancy_master, designation_name, department_name = vacancy
 
-        # Query related data for vacancy_experience, skills_required, language_proficiency, education
+        # Query related data for vacancy_experience, skills_required, language_proficiency, education 
         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
@@ -2360,13 +2474,13 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
                 VacancyEducationSchemaForGet(
                     id=edu.id,
                     education_level_id=edu.education_level_id,
-                    education_level=education_level_name,  # Name of education level
+                    education_level=education_level_name,  
                     is_any_level=edu.is_any_level,
                     education_stream_id=edu.education_stream_id,
-                    education_stream=education_stream_name,  # Name of education stream (defaulted to "Unknown")
+                    education_stream=education_stream_name,  
                     is_any_stream=edu.is_any_stream,
                     course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
-                                    subject_or_course_name=subject_or_course_name)]  # Ensure subject_or_course_name is not None
+                                    subject_or_course_name=subject_or_course_name)]  
                     if edu.education_subject_or_course_id else [],
                     is_any_subject_or_course=edu.is_any_subject_or_course
                 )
@@ -2395,7 +2509,6 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
     else:
         # If no vacancy is found, return None
         return None
-
 
 #---------------------------------------------------------------------------------------------------
 # def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
@@ -3811,3 +3924,6 @@ def save_interview_panel(db: Session, request: CreateInterviewPanelRequest):
         print(f"Error occurred while saving the data: {str(e)}")
         db.rollback()  # Rollback the transaction if an error occurs
         return {"success": False, "message": f"An error occurred while saving the data: {str(e)}"}
+
+
+#----------------------------------------------------------------------------------------------------------

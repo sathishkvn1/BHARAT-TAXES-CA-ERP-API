@@ -307,11 +307,12 @@ class VacancyEducationalLevel(caerp_base):
     __tablename__ = 'vacancy_educational_level'
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
-    vacancy_master_id           = Column(Integer, nullable=False)
-    education_level_id          = Column(Integer, nullable=True, default=None)
+    vacancy_master_id           = Column(Integer,  nullable=False)
+    education_level_id          = Column(Integer,  nullable=True, default=None)
+    is_any_level                = Column(Enum('yes', 'no'), nullable=False, default='no')
     weightage                   = Column(Float, nullable=False, default=0.0)
     created_by                  = Column(Integer, nullable=False, default=0)
-    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    created_on                  = Column(DateTime, nullable=False, default=datetime.utcnow)
     modified_by                 = Column(Integer, nullable=True)
     modified_on                 = Column(DateTime, nullable=True, default=None)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
@@ -325,10 +326,11 @@ class VacancyEducationalStream(caerp_base):
 
     id                          = Column(Integer, primary_key=True, autoincrement=True)
     vacancy_master_id           = Column(Integer, nullable=False)
-    education_stream_id         = Column(Integer, nullable=True, default=None)
+    education_stream_id         = Column(Integer,  nullable=True, default=None)
+    is_any_stream               = Column(Enum('yes', 'no'), nullable=False, default='no')
     weightage                   = Column(Float, nullable=False, default=0.0)
     created_by                  = Column(Integer, nullable=False, default=0)
-    created_on        = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    created_on                  = Column(DateTime, nullable=False, default=datetime.utcnow)
     modified_by                 = Column(Integer, nullable=True)
     modified_on                 = Column(DateTime, nullable=True, default=None)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
@@ -341,16 +343,16 @@ class VacancyEducationalSubjectOrCourse(caerp_base):
 
     id                            = Column(Integer, primary_key=True, autoincrement=True)
     vacancy_master_id             = Column(Integer, nullable=False)
-    education_subject_or_course_id = Column(Integer, nullable=True, default=None)
+    education_subject_or_course_id = Column(Integer,  nullable=True, default=None)
+    is_any_subject_or_course      = Column(Enum('yes', 'no'), nullable=False, default='no')
     weightage                     = Column(Float, nullable=False, default=0.0)
     created_by                    = Column(Integer, nullable=False, default=0)
-    created_on              = Column(DateTime, nullable=False, default=datetime.utcnow) 
+    created_on                    = Column(DateTime, nullable=False, default=datetime.utcnow)
     modified_by                   = Column(Integer, nullable=True)
     modified_on                   = Column(DateTime, nullable=True, default=None)
     is_deleted                    = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                    = Column(Integer, nullable=True)
     deleted_on                    = Column(DateTime, nullable=True, default=None)
-
 
 # Assuming caerp_base is a subclass of SQLAlchemy's declarative base
 class VacancyExperience(caerp_base):
@@ -753,7 +755,6 @@ class InterviewPanelMaster(caerp_base):
     location = Column(String(100), nullable=False)
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
-  
 
 
 class InterviewPanelMembers(caerp_base):
