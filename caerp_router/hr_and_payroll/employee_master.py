@@ -1,6 +1,7 @@
+from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema
+from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -1832,92 +1833,41 @@ async def create_vacancy(vacancy_data: VacancyCreateSchema,
         # Handle any exceptions and return an HTTP error if something goes wrong
         raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
 
-#------------------------------------------------------------------------------------------------------
-# @router.get("/vacancy_details")
-# def get_vacancies(
-#     department_id: int = Query(None, description="Filter by department ID"),
-#     designation_id: int = Query(None, description="Filter by designation ID"),
-#     status: str = Query(None, description="Filter by vacancy status (OPEN, CLOSED)"),
-#     announcement_date: str = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
-#     closing_date: str = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-#     vacancy_id: int = Query(None, description="Filter by specific vacancy ID"),
-#     db: Session = Depends(get_db,),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-    
+
+#-------------------------------------------------------------------------------------
+
+
+
+# @router.post("/vacancy/create_or_update/")
+# async def create_or_update_vacancy(vacancy_data: VacancySchema, 
+#                                    db: Session = Depends(get_db),
+#                                    token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Endpoint to create or update a vacancy.
+#     """
+#     # Check if token is provided
 #     if not token:
 #         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-#     filters = []
     
-#     # Build filters based on query parameters
-#     if department_id:
-#         filters.append(VacancyDetailsView.department_id == department_id)
-    
-#     if designation_id:
-#         filters.append(VacancyDetailsView.designation_id == designation_id)
-    
-#     if status:
-#         filters.append(VacancyDetailsView.vacancy_status == status)
-    
-#     if announcement_date:
-#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
-    
-#     if closing_date:
-#         filters.append(VacancyDetailsView.closing_date == closing_date)
-    
-#     # Apply filters and query the database
-#     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
+#     # Authenticate and get user_id from token
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+#     if not user_id:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
 
-#     # Fetch results
-#     vacancies = vacancies_query.all()
+#     try:
+#         # Save vacancy data (user_id will go to created_by, modified_by, and deleted_by)
+#         db_employee_master.create_or_update_vacancy(vacancy_data, db, user_id)
 
-  
-#     # Return the results in a structured format including all fields
-#     return {
-#         "vacancies": [
-#             {
-#                 "vacancy_master_id": vacancy.vacancy_master_id,
-#                 "department_id": vacancy.department_id,
-#                 "department_name": vacancy.department_name,
-#                 "designation_id": vacancy.designation_id,
-#                 "designation_name": vacancy.designation_name,
-#                 "vacancy_count": vacancy.vacancy_count,
-#                 "job_description": vacancy.job_description,
-#                 "job_location": vacancy.job_location,
-#                 "reported_date": vacancy.reported_date,
-#                 "announcement_date": vacancy.announcement_date,
-#                 "closing_date": vacancy.closing_date,
-#                 "vacancy_status": vacancy.vacancy_status,
-#                 "experience_required": vacancy.experience_required,
-#                 "skill_id": vacancy.skill_id,
-#                 "skill_name": vacancy.skill_name,
-#                 "skill_weightage": vacancy.skill_weightage,
-#                 "language_id": vacancy.language_id,
-#                 "language_name": vacancy.language_name,
-#                 "language_proficiency_id": vacancy.language_proficiency_id,
-#                 "proficiency_level": vacancy.proficiency_level,
-#                 "is_read_required": vacancy.is_read_required,
-#                 "read_weightage": vacancy.read_weightage,
-#                 "is_write_required": vacancy.is_write_required,
-#                 "write_weightage": vacancy.write_weightage,
-#                 "is_speak_required": vacancy.is_speak_required,
-#                 "speak_weightage": vacancy.speak_weightage,
-#                 "education_level_id": vacancy.education_level_id,
-#                 "is_any_education_level": vacancy.is_any_education_level,
-#                 "education_stream_id": vacancy.education_stream_id,
-#                 "is_any_education_stream": vacancy.is_any_education_stream,
-#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
-#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
-#                 "education_level_name": vacancy.education_level_name,
-#                 "education_stream_name": vacancy.education_stream_name,
-#                 "subject_or_course_name": vacancy.subject_or_course_name,
-#                 "min_years": vacancy.min_years,
-#                 "max_years": vacancy.max_years,
-#                 "experience_weightage": vacancy.experience_weightage,
-#             }
-#             for vacancy in vacancies
-#         ]
-#     }
+#         # Return success response
+#         return {"success": True, "message": "Vacancy created/updated successfully."}
+
+#     except Exception as e:
+#         # In case of error, rollback and raise HTTPException
+#         raise HTTPException(status_code=500, detail=f"Error while creating/updating vacancy: {str(e)}")
+
+    
+#------------------------------------------------------------------------------------------------------
 
 
 @router.get("/vacancy_details")
@@ -2665,3 +2615,98 @@ def save_interview_panel_endpoint(
     
     
 #-----------------------------------------------------------------------------------------------------
+# @router.get("/vacancy/{vacancy_id}", response_model=VacancyCreateSchemaForGet)
+# def get_vacancy_details(vacancy_id: int, db: Session = Depends(get_db)):
+#     # Fetch all education levels for the given vacancy_id
+#     education_levels = db.query(VacancyEducationalLevel).filter(
+#         VacancyEducationalLevel.vacancy_master_id == vacancy_id,
+#         VacancyEducationalLevel.is_deleted == "no"
+#     ).all()
+
+#     # Fetch all education streams for the given vacancy_id
+#     education_streams = db.query(VacancyEducationalStream).filter(
+#         VacancyEducationalStream.vacancy_master_id == vacancy_id,
+#         VacancyEducationalStream.is_deleted == "no"
+#     ).all()
+
+#     # Fetch all education subjects/courses for the given vacancy_id
+#     education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
+#         VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
+#         VacancyEducationalSubjectOrCourse.is_deleted == "no"
+#     ).all()
+
+#     # Dictionary to structure data
+#     education_data_dict = {}
+
+#     # Step 1: Populate education levels
+#     for level in education_levels:
+#         education_data_dict[level.id] = {
+#             "id": level.id,
+#             "education_level_id": level.education_level_id if level.education_level_id is not None else 0,  # Default to 0 if None
+#             "weightage": level.weightage if level.weightage is not None else 0.0,  # Default to 0.0 if None
+#             "streams": {}
+#         }
+
+#     # Step 2: Populate streams under respective education levels
+#     for stream in education_streams:
+#         if stream.vacancy_master_id not in education_data_dict:
+#             education_data_dict[stream.vacancy_master_id] = {
+#                 "id": 0,  # Placeholder if level doesn't exist
+#                 "education_level_id": None,
+#                 "weightage": None,
+#                 "streams": {}
+#             }
+
+#         education_data_dict[stream.vacancy_master_id]["streams"][stream.id] = {
+#             "id": stream.id,
+#             "education_stream_id": stream.education_stream_id,
+#             "weightage": stream.weightage if stream.weightage is not None else 0.0,  # Default to 0.0 if None
+#             "courses": []
+#         }
+
+#     # Step 3: Populate courses under respective streams
+#     for course in education_courses:
+#         # Ensure stream entry exists before adding courses
+#         if course.vacancy_master_id in education_data_dict:
+#             for stream in education_data_dict[course.vacancy_master_id]["streams"].values():
+#                 stream["courses"].append({
+#                     "id": course.id,
+#                     "education_subject_or_course_id": course.education_subject_or_course_id,
+#                     "weightage": course.weightage if course.weightage is not None else 0.0  # Default to 0.0 if None
+#                 })
+
+#     # Convert dictionary to list of schema objects
+#     education_data = [
+#         EducationLevelSchema(
+#             id=level["id"],
+#             education_level_id=level["education_level_id"],
+#             weightage=level["weightage"],
+#             streams=[
+#                 StreamSchema(
+#                     id=stream["id"],
+#                     education_stream_id=stream["education_stream_id"],
+#                     weightage=stream["weightage"],
+#                     courses=[
+#                         CourseSchema(
+#                             id=course["id"],
+#                             education_subject_or_course_id=course["education_subject_or_course_id"],
+#                             weightage=course["weightage"]
+#                         ) for course in stream["courses"]
+#                     ]
+#                 ) for stream in level["streams"].values()
+#             ]
+#         ) for level in education_data_dict.values()
+#     ]
+
+#     return VacancyCreateSchemaForGet(
+#         id=vacancy_id,
+#         education=EducationRequirementSchema(levels=education_data)
+#     )
+# ////////////////////////////////
+
+
+# ✔ Separate queries for levels, streams, and courses based on vacancy_master_id.
+# ✔ Nested dictionary approach to structure data.
+# ✔ Handles missing levels and streams gracefully.
+# ✔ Includes checks for is_deleted = 'no' to exclude soft-deleted entries.
+# ✔ Returns data as per the expected schema.

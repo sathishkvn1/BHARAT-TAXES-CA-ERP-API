@@ -749,29 +749,39 @@ class VacancyEducationSchemaForGet(BaseModel):
     course: List[Courses]
     is_any_subject_or_course: str
 
-# Main Vacancy Create Schema
+# Main Vacancy education  Schema for get
 
 
 class CourseSchema(BaseModel):
-    id: int = 0
+    id: Optional[int] = None  # Make the ID optional, since it can be 0 for new courses
     education_subject_or_course_id: int
     weightage: float
-    is_any_subject_or_course: str  # Assuming "yes" or "no"
 
 class StreamSchema(BaseModel):
-    id: int = 0
+    id: Optional[int] = None  # Make the ID optional, since it can be 0 for new streams
     education_stream_id: int
     weightage: float
-    is_any_stream: str  # Assuming "yes" or "no"
-    courses: List[CourseSchema]  # List of courses under a stream
+    # is_any_subject_or_course: Optional[str] = None  # Optional field for "yes"/"no"
+    courses: Optional[List[CourseSchema]] = None 
 
-class EducationRequirementSchema(BaseModel):
-    id: int = 0
+class EducationLevelSchema(BaseModel):
+    id: Optional[int] = None  # Make the ID optional, since it can be 0 for new levels
     education_level_id: int
     weightage: float
-    is_any_level: str  # Assuming "yes" or "no"
-    streams: List[StreamSchema]  # List of streams under education
+    # is_any_stream: Optional[str] = None  # Optional field for "yes"/"no"
+    streams: Optional[List[StreamSchema]] = None # Optional list of streams inside levels
 
+
+
+class EducationRequirementSchema(BaseModel):
+    # is_any_level: str  # "yes" or "no", required field
+    levels: Optional[List[EducationLevelSchema]] = None  # Optional list of levels
+
+
+class VacancySchema(BaseModel):
+    # id: Optional[int] = None  # Make the ID optional
+    education: Optional[EducationRequirementSchema] = None 
+    
 class VacancyCreateSchema(BaseModel):
     id: int = 0  
     department_id: int
@@ -787,7 +797,9 @@ class VacancyCreateSchema(BaseModel):
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchema]
     language_proficiency: List[LanguageProficiencySchema]
-    education: Optional[List[EducationRequirementSchema]] = None
+    education: Optional[EducationRequirementSchema] = None
+
+    # education: Optional[List[EducationRequirementSchema]] = None
     # education: Optional[List[VacancyEducationSchema]] = None 
 
 
@@ -809,7 +821,7 @@ class VacancyCreateSchemaForGet(BaseModel):
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchemaForGet]
     language_proficiency: List[LanguageProficiencySchemaForGet]
-    education: Optional[List[VacancyEducationSchemaForGet]] = None 
+    education: Optional[List[EducationRequirementSchema]] = None 
  
  #---------------------------------------------------------------------------------
 class AnnouncementDetail(BaseModel):
