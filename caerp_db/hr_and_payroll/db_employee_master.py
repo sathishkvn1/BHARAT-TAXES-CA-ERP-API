@@ -2462,127 +2462,6 @@ from sqlalchemy.orm import Session
 
 
 
-
-
-# def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
-#     """
-#     Function to fetch vacancy details by vacancy_id from the database.
-#     Returns the vacancy details in the schema format.
-#     """
-#     # Query main vacancy with joins to designation and department
-#     vacancy = (
-#         db.query(VacancyMaster, HrDesignationMaster.designation, HrDepartmentMaster.department_name)
-#         .join(HrDesignationMaster, VacancyMaster.designation_id == HrDesignationMaster.id)
-#         .join(HrDepartmentMaster, VacancyMaster.department_id == HrDepartmentMaster.id)
-#         .filter(VacancyMaster.id == vacancy_id)
-#         .first()
-#     )
-
-#     if vacancy:
-#         vacancy_master, designation_name, department_name = vacancy
-
-#         # Query related data for vacancy_experience, skills_required, language_proficiency, education 
-#         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
-#         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
-#         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
-#         vacancy_educational_qualification = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.vacancy_master_id == vacancy_id).all()
-
-#         # Map related data to corresponding schema
-#         vacancy_experience_data = [
-#             VacancyExperienceSchema(
-#                 id=exp.id,
-#                 min_years=exp.min_years,
-#                 max_years=exp.max_years,
-#                 weightage=exp.weightage
-#             ) for exp in vacancy_experience
-#         ]
-
-#         skills_required_data = [
-#             VacancySkillsSchemaForGet(
-#                 id=skill.id,
-#                 skill_id=skill.skill_id,
-#                 weightage=skill.weightage,
-#                 skill_name=db.query(AppSkills.skill).filter(AppSkills.id == skill.skill_id).scalar()
-#             ) for skill in skills_required
-#         ]
-
-#         language_proficiency_data = [
-#             LanguageProficiencySchemaForGet(
-#                 id=lang.id,
-#                 language_id=lang.language_id,
-#                 language=db.query(AppLanguages.language).filter(AppLanguages.id == lang.language_id).scalar(),
-#                 language_proficiency_id=lang.language_proficiency_id,
-#                 proficiency_level=db.query(AppLanguageProficiency.proficiency_level).filter(AppLanguageProficiency.id == lang.language_proficiency_id).scalar(),
-#                 is_read_required=lang.is_read_required,
-#                 read_weightage=lang.read_weightage,
-#                 is_write_required=lang.is_write_required,
-#                 write_weightage=lang.write_weightage,
-#                 is_speak_required=lang.is_speak_required,
-#                 speak_weightage=lang.speak_weightage
-#             ) for lang in language_proficiency
-#         ]
-
-#         # Prepare education data with both ID and Name
-#         education_data = []
-#         for edu in vacancy_educational_qualification:
-#             # Get education level and stream names
-#             education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
-#             education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
-
-#             # If education_stream_name is None, set to default or "Unknown"
-#             education_stream_name = education_stream_name if education_stream_name else "Unknown"
-
-#             # Get subject/course name
-#             subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
-
-#             # If subject_or_course_name is None, set to default or "Unknown"
-#             subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
-
-#             # Add education details to the list
-#             education_data.append(
-#                 VacancyEducationSchemaForGet(
-#                     id=edu.id,
-#                     education_level_id=edu.education_level_id,
-#                     education_level=education_level_name,  
-#                     is_any_level=edu.is_any_level,
-#                     education_stream_id=edu.education_stream_id,
-#                     education_stream=education_stream_name,  
-#                     is_any_stream=edu.is_any_stream,
-#                     course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
-#                                     subject_or_course_name=subject_or_course_name)]  
-#                     if edu.education_subject_or_course_id else [],
-#                     is_any_subject_or_course=edu.is_any_subject_or_course
-#                 )
-#             )
-
-#         # Return the data in the structured format
-#         return VacancyCreateSchemaForGet(
-#             id=vacancy_master.id,
-#             department_id=vacancy_master.department_id,
-#             department_name=department_name,
-#             designation_id=vacancy_master.designation_id,
-#             designation_name=designation_name,
-#             vacancy_count=vacancy_master.vacancy_count,
-#             job_description=vacancy_master.job_description,
-#             job_location=vacancy_master.job_location,
-#             reported_date=vacancy_master.reported_date,
-#             announcement_date=vacancy_master.announcement_date,
-#             closing_date=vacancy_master.closing_date,
-#             vacancy_status=vacancy_master.vacancy_status,
-#             experience_required=vacancy_master.experience_required,
-#             vacancy_experience=vacancy_experience_data,
-#             skills_required=skills_required_data,
-#             language_proficiency=language_proficiency_data,
-#             education=education_data
-#         )
-#     else:
-#         # If no vacancy is found, return None
-#         return None
-
-
-
-
-
 def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
     """
     Function to fetch vacancy details by vacancy_id from the database.
@@ -2697,6 +2576,136 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
     else:
         # If no vacancy is found, return None
         return None
+
+
+
+
+# def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyCreateSchemaForGet]:
+#     """
+#     Function to fetch vacancy details by vacancy_id from the database.
+#     Returns the vacancy details in the schema format.
+#     """
+#     # Query main vacancy with joins to designation and department
+#     vacancy = (
+#         db.query(VacancyMaster, HrDesignationMaster.designation, HrDepartmentMaster.department_name)
+#         .join(HrDesignationMaster, VacancyMaster.designation_id == HrDesignationMaster.id)
+#         .join(HrDepartmentMaster, VacancyMaster.department_id == HrDepartmentMaster.id)
+#         .filter(VacancyMaster.id == vacancy_id)
+#         .first()
+#     )
+
+#     if vacancy:
+#         vacancy_master, designation_name, department_name = vacancy
+
+#         # Query related data for vacancy_experience, skills_required, language_proficiency, education 
+#         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
+#         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
+#         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
+
+#         # Map related data to corresponding schema
+#         vacancy_experience_data = [
+#             VacancyExperienceSchema(
+#                 id=exp.id,
+#                 min_years=exp.min_years,
+#                 max_years=exp.max_years,
+#                 weightage=exp.weightage
+#             ) for exp in vacancy_experience
+#         ]
+
+#         skills_required_data = [
+#             VacancySkillsSchemaForGet(
+#                 id=skill.id,
+#                 skill_id=skill.skill_id,
+#                 weightage=skill.weightage,
+#                 skill_name=db.query(AppSkills.skill).filter(AppSkills.id == skill.skill_id).scalar()
+#             ) for skill in skills_required
+#         ]
+
+#         language_proficiency_data = [
+#             LanguageProficiencySchemaForGet(
+#                 id=lang.id,
+#                 language_id=lang.language_id,
+#                 language=db.query(AppLanguages.language).filter(AppLanguages.id == lang.language_id).scalar(),
+#                 language_proficiency_id=lang.language_proficiency_id,
+#                 proficiency_level=db.query(AppLanguageProficiency.proficiency_level).filter(AppLanguageProficiency.id == lang.language_proficiency_id).scalar(),
+#                 is_read_required=lang.is_read_required,
+#                 read_weightage=lang.read_weightage,
+#                 is_write_required=lang.is_write_required,
+#                 write_weightage=lang.write_weightage,
+#                 is_speak_required=lang.is_speak_required,
+#                 speak_weightage=lang.speak_weightage
+#             ) for lang in language_proficiency
+#         ]
+
+#         # Fetch education data (levels, streams, and courses)
+#         education_levels = db.query(VacancyEducationalLevel).filter(
+#                 VacancyEducationalLevel.vacancy_master_id == vacancy_id,
+#                 VacancyEducationalLevel.is_deleted == "no"
+#             ).all()
+
+#         education_streams = db.query(VacancyEducationalStream).filter(
+#             VacancyEducationalStream.vacancy_master_id == vacancy_id,
+#             VacancyEducationalStream.is_deleted == "no"
+#         ).all()
+
+#         education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
+#             VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
+#             VacancyEducationalSubjectOrCourse.is_deleted == "no"
+#         ).all()
+
+#         # Organize streams by vacancy_master_id
+#         stream_dict = {}
+#         for stream in education_streams:
+#             stream_dict.setdefault(stream.vacancy_master_id, []).append({
+#                 "id": stream.id,
+#                 "education_stream_id": stream.education_stream_id,
+#                 "weightage": stream.weightage or 0.0,
+#                 "courses": []
+#             })
+
+#         # Assign courses to the correct streams
+#         for course in education_courses:
+#             for stream_list in stream_dict.values():
+#                 for stream in stream_list:
+#                     stream["courses"].append({
+#                         "id": course.id,
+#                         "education_subject_or_course_id": course.education_subject_or_course_id or 0,
+#                         "weightage": course.weightage or 0.0
+#                     })
+
+#         # Organize education levels with nested streams
+#         education_data = []
+#         for level in education_levels:
+#             education_data.append({
+#                 "id": level.id,
+#                 "education_level_id": level.education_level_id,
+#                 "weightage": level.weightage or 0.0,
+#                 "streams": stream_dict.get(level.vacancy_master_id, [])
+#             })
+
+#         # Return the data in the structured format
+#         return VacancyCreateSchemaForGet(
+#             id=vacancy_master.id,
+#             department_id=vacancy_master.department_id,
+#             department_name=department_name,
+#             designation_id=vacancy_master.designation_id,
+#             designation_name=designation_name,
+#             vacancy_count=vacancy_master.vacancy_count,
+#             job_description=vacancy_master.job_description,
+#             job_location=vacancy_master.job_location,
+#             reported_date=vacancy_master.reported_date,
+#             announcement_date=vacancy_master.announcement_date,
+#             closing_date=vacancy_master.closing_date,
+#             vacancy_status=vacancy_master.vacancy_status,
+#             experience_required=vacancy_master.experience_required,
+#             vacancy_experience=vacancy_experience_data,
+#             skills_required=skills_required_data,
+#             language_proficiency=language_proficiency_data,
+#             education={"levels": education_data}
+#         )
+#     else:
+#         # If no vacancy is found, return None
+#         return None
 
 #---------------------------------------------------------------------------------------------------
 # def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):

@@ -821,8 +821,18 @@ class VacancyCreateSchemaForGet(BaseModel):
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchemaForGet]
     language_proficiency: List[LanguageProficiencySchemaForGet]
+    # education: List[EducationSchema]  
     education: Optional[List[EducationRequirementSchema]] = None 
  
+
+
+
+
+
+
+
+
+
  #---------------------------------------------------------------------------------
 class AnnouncementDetail(BaseModel):
     id: int = 0
