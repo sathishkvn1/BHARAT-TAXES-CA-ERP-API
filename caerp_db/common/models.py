@@ -90,9 +90,6 @@ class SmsTemplates(caerp_base):
      is_active               = Column(Enum('yes', 'no'), nullable=False, default='yes')
 
 
-
-
-
     
 # class UserBase(caerp_base):
 #     __tablename__ = "users"
@@ -107,6 +104,7 @@ class SmsTemplates(caerp_base):
 #     locked_upto   = Column(DateTime, default=None)
 #     modified_by   = Column(Integer, default=None)
 #     modified_on   = Column(DateTime, default=None)
+
 
 class UserBase(caerp_base):
     __tablename__ = "users"
@@ -1004,3 +1002,36 @@ class AppSkills(caerp_base):
 
 
 
+
+
+
+
+class CaerpLicenceMaster(caerp_base):
+    __tablename__ = 'caerp_licence_master'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    software_name = Column(String(100), nullable=True, default=None)
+    software_category = Column(Enum('GOLD', 'SILVER'), nullable=False)
+    software_description = Column(String(2000), nullable=False)
+    software_version = Column(String(20), nullable=False)
+    software_access_key = Column(String(20), nullable=False)
+    is_trial = Column(Enum('yes', 'no'), nullable=False, default='no')
+    trial_start_date = Column(DateTime, nullable=False)
+    trial_end_date = Column(DateTime, nullable=False)
+    licenced_from_date = Column(DateTime, nullable=False)
+    licenced_to_date = Column(DateTime, nullable=False)
+    is_active = Column(Enum('yes', 'no'), nullable=False, default='no')
+    number_of_users = Column(Integer, nullable=False)
+
+   
+
+class CaerpLicenceDetails(caerp_base):
+    __tablename__ = 'caerp_licence_details'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    licence_master_id = Column(Integer,  nullable=False)
+    module_name = Column(String(100), nullable=True, default=None)
+    module_description = Column(String(500), nullable=False, default='no')
+    is_default = Column(Enum('yes', 'no'), nullable=False, default='no')
+    has_purchased = Column(Enum('yes', 'no'), nullable=False, default='no')
+    licenced_from_date = Column(DateTime, nullable=False)
+    licenced_to_date = Column(DateTime, nullable=False)
+    is_active = Column(Enum('yes', 'no'), nullable=False, default='no')

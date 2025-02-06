@@ -1899,3 +1899,35 @@ class RoleMenuMappingSchema(BaseModel):
     class Config:
         orm_mode = True
 
+
+
+class LicenceDetailsSchema(BaseModel):
+    id: Optional[int] = None
+    module_name: Optional[str] 
+    module_description: str
+    is_default: str
+    has_purchased: str
+    licenced_from_date: datetime
+    licenced_to_date: datetime
+    is_active: str
+
+
+class LicenceMasterSchema(BaseModel):
+    id: Optional[int] = None
+    software_name: Optional[str] 
+    software_category: str
+    software_description: str
+    software_version: str
+    software_access_key: str
+    is_trial: str
+    trial_start_date: datetime
+    trial_end_date: datetime
+    licenced_from_date: datetime
+    licenced_to_date: datetime
+    is_active: str
+    number_of_users: int
+    details: List[LicenceDetailsSchema]
+
+
+
+# id: Optional[int] = None 

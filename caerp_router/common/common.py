@@ -4,9 +4,9 @@ from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
 import httpx
 from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import   AppBankMaster, CountryDB, MenuStructure,  NationalityDB, QueryManager, QueryManagerQuery, RoleMenuMapping,UserBase, UserRegistration
-from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, RoleMenuMappingSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, UserRoleSchema, VillageResponse
-
+from caerp_db.common.models import   AppBankMaster, CaerpLicenceDetails, CaerpLicenceMaster, CountryDB, MenuStructure,  NationalityDB, QueryManager, QueryManagerQuery, RoleMenuMapping,UserBase, UserRegistration
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, LicenceDetailsSchema, LicenceMasterSchema, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, RoleMenuMappingSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, UserRoleSchema, VillageResponse
+from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
 from caerp_db.database import get_db
@@ -1730,7 +1730,9 @@ def save_query_manager(
 
 
 
-#-----------------------------------------------------------------------
+#---------------------------------------------------------------------------------------
+
+
 # from passlib.context import CryptContext
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # @router.post("/register")
@@ -1821,7 +1823,6 @@ def get_notifications(
     
 
 #-------------------------------------------------------------------------------------
-
 @router.post("/notifications/")
 def add_notification(    
     notification: NotificationSchema, 
@@ -1837,9 +1838,6 @@ def add_notification(
     user_id = auth_info.get("user_id")
     result = db_common.add_notification(notification,db, notification_id)
     return result
-
-
-
 #-------------------------------------------------------------------------------------
 
 @router.get("/queries", response_model=List[QueryManagerViewSchema])
@@ -2123,9 +2121,7 @@ def get_menu_by_user_id(
 
     return response
 
-
-#-----------------------------------------------------------------------------------
-
+#----------------------------------------------------------------------------------------------------------------
 @router.post("/save_role_menu_permission")
 def save_role_menu_permission(
     role_id : int,
@@ -2141,7 +2137,7 @@ def save_role_menu_permission(
     result = db_common.save_role_menu_permission(db,role_id,data,user_id,is_assigned)
     return result
 
-#-----------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------------------
 
 @router.delete('/delete_menu_recursively')
 def delete_menu_recursively(
@@ -2156,9 +2152,7 @@ def delete_menu_recursively(
     user_id = auth_info.get("user_id")
     result = db_common.delete_menu_recursively(db,menu_id, user_id)
     return result
-
-
-
+#-------------------------------------------------------------------------------------------------------------------------------
 @router.post('/create_role')
 def create_role(
     role: List[UserRoleSchema],
@@ -2175,5 +2169,85 @@ def create_role(
     result  = db_common.create_role(role,user_id,db)
 
     return result
+#-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+@router.post("/save_licence")
+def save_licence(licence: LicenceMasterSchema, db: Session = Depends(get_db)):
+    result = db_common.save_licence(db, licence)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+
+
+
+
+@router.get("/get_all_licences", response_model=List[LicenceMasterSchema])
+def get_all_licences(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        # Fetch all master records
+        db_licence_masters = db.query(CaerpLicenceMaster).all()
+        if not db_licence_masters:
+            raise HTTPException(status_code=404, detail="No licences found")
+
+        all_licences = []
+
+        for db_licence_master in db_licence_masters:
+            # Fetch the associated detail records for each master
+            db_licence_details = db.query(CaerpLicenceDetails).filter(CaerpLicenceDetails.licence_master_id == db_licence_master.id).all()
+
+            # Construct the details list using the schema
+            licence_details = [
+                LicenceDetailsSchema(
+                    id=detail.id,
+                    module_name=detail.module_name,
+                    module_description=detail.module_description,
+                    is_default=detail.is_default,
+                    has_purchased=detail.has_purchased,
+                    licenced_from_date=detail.licenced_from_date,
+                    licenced_to_date=detail.licenced_to_date,
+                    is_active=detail.is_active
+                ) for detail in db_licence_details
+            ]
+
+            # Construct the master object using the schema
+            licence_master = LicenceMasterSchema(
+                id=db_licence_master.id,
+                software_name=db_licence_master.software_name,
+                software_category=db_licence_master.software_category,
+                software_description=db_licence_master.software_description,
+                software_version=db_licence_master.software_version,
+                software_access_key=db_licence_master.software_access_key,
+                is_trial=db_licence_master.is_trial,
+                trial_start_date=db_licence_master.trial_start_date,
+                trial_end_date=db_licence_master.trial_end_date,
+                licenced_from_date=db_licence_master.licenced_from_date,
+                licenced_to_date=db_licence_master.licenced_to_date,
+                is_active=db_licence_master.is_active,
+                number_of_users=db_licence_master.number_of_users,
+                details=licence_details
+            )
+
+            all_licences.append(licence_master)
+
+        return all_licences
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
 
 

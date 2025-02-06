@@ -11,14 +11,14 @@ import requests
 from sqlalchemy import desc, or_
 from caerp_constants.caerp_constants import ActionType
 from caerp_db.common import db_otp, db_user
-from caerp_db.common.models import  AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase, UsersRole
+from caerp_db.common.models import  AppViewVillages, CaerpLicenceDetails, CaerpLicenceMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase, UsersRole
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException ,status
 
 from caerp_db.database import get_db
 from caerp_functions import send_message
 from caerp_router.common.common_functions import token_generate
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, UserRoleSchema, Village, VillageResponse     
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, LicenceMasterSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, UserRoleSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -967,11 +967,7 @@ def save_role_menu_permission(
             "error": f"An unexpected error occurred: {str(e)}"
         }
 
-
-
 #-----------------------------------------------------------------------------------------------
-
-
 def delete_menu_recursively(db: Session, menu_id: int, user_id: int):
     try:
         # Fetch the menu by ID
@@ -1050,17 +1046,135 @@ def create_role(roles : List[UserRoleSchema],
     return {"success": True, "menus": response_role}
 
 
+#-----------------------------------------------------------------------------------------------------
 
 
 
+def save_licence(db: Session, licence: LicenceMasterSchema):
+    try:
+        # Handle inserting or updating master record
+        if licence.id is None:
+            db_licence_master = CaerpLicenceMaster(**licence.dict(exclude={"details"}))
+            db.add(db_licence_master)
+            db.flush()  # Ensure the master ID is available by flushing the transaction
+            db.refresh(db_licence_master)  # Ensure the master ID is available
+        else:
+            db_licence_master = db.query(CaerpLicenceMaster).filter(CaerpLicenceMaster.id == licence.id).first()
+            if db_licence_master:
+                for key, value in licence.dict(exclude={"details"}).items():
+                    setattr(db_licence_master, key, value)
+                db.commit()
+            else:
+                raise SQLAlchemyError("Master record not found")
+
+        # Ensure the master ID is available after commit or flush
+        master_id = db_licence_master.id
+        if not master_id:
+            raise SQLAlchemyError("Master ID is null after flush/refresh")
+
+        # Handle inserting or updating detail records
+        for detail in licence.details:
+            if detail.id is None:  # INSERT new detail
+                db_licence_detail = CaerpLicenceDetails(
+                    **detail.dict(exclude={"id"}),
+                    licence_master_id=master_id  # Assign generated master_id
+                )
+                db.add(db_licence_detail)
+            else:  # UPDATE existing detail
+                db_licence_detail = db.query(CaerpLicenceDetails).filter(CaerpLicenceDetails.id == detail.id).first()
+                if db_licence_detail:
+                    for key, value in detail.dict().items():
+                        setattr(db_licence_detail, key, value)
+                else:
+                    raise SQLAlchemyError("Detail record not found")
+        db.commit()
+
+        return {"success": True, "message": "Saved successfully"}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        return {"success": False, "message": f"Database error occurred: {str(e)}"}
+
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
 
 
 
+# def save_interview_panel(db: Session, request: CreateInterviewPanelRequest):
+#     try:
+#         # Handle the master record
+#         if request.master.id == None:
+#             # Insert new record for the master
+#             print("Inserting new master record...")
+#             new_master = InterviewPanelMaster(**request.master.dict())
+#             db.add(new_master)
+#             db.flush()  # Use flush instead of commit
 
+#             # Re-fetch the master record after flush to get the generated ID
+#             # db.refresh(new_master)  # This should work after flush
+#             master_id = new_master.id
+#             print(f"New master record inserted with ID: {master_id}")
 
+#             # Handle the members
+#             for member in request.members:
+#                 if member.id == None:
+#                     print(f"Inserting new member: {member}")
+#                     new_member_data = member.dict()
+#                     new_member_data["interview_panel_master_id"] = master_id
+#                     new_member = InterviewPanelMembers(**new_member_data)
+#                     db.add(new_member)
+#                 else:
+#                     print(f"Updating existing member: {member}")
+#                     existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+#                     if not existing_member:
+#                         raise ValueError(f"Member record with ID {member.id} not found.")
+#                     for key, value in member.dict().items():
+#                         setattr(existing_member, key, value)
 
+#         else:
+#             print(f"Updating existing master record with ID: {request.master.id}")
+#             # Update existing record for the master
+#             master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+#             if not master:
+#                 raise ValueError("Master record not found.")
+            
+#             print(f"Master record found: {master}")
+#             # Perform the update on the master record
+#             for key, value in request.master.dict().items():
+#                 setattr(master, key, value)
+#             db.commit()  # Commit the changes to save updates
 
+#             # Re-fetch the master record after commit to ensure it's in sync
+#             master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+#             if not master:
+#                 raise ValueError("Master record not found after update.")
+#             print(f"Master record successfully refreshed: {master}")
 
+#             # Handle the members
+#             for member in request.members:
+#                 if member.id == None:
+#                     print(f"Inserting new member: {member}")
+#                     new_member_data = member.dict()
+#                     new_member_data["interview_panel_master_id"] = master.id
+#                     new_member = InterviewPanelMembers(**new_member_data)
+#                     db.add(new_member)
+#                 else:
+#                     print(f"Updating existing member: {member}")
+#                     existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+#                     if not existing_member:
+#                         raise ValueError(f"Member record with ID {member.id} not found.")
+#                     for key, value in member.dict().items():
+#                         setattr(existing_member, key, value)
+
+#         db.commit()  # Commit the changes to the database
+#         print("Transaction committed successfully.")
+#         return {"success": True, "message": "Saved successfully"}
+
+#     except Exception as e:
+#         print(f"Error occurred while saving the data: {str(e)}")
+#         db.rollback()  # Rollback the transaction if an error occurs
+#         return {"success": False, "message": f"An error occurred while saving the data: {str(e)}"}
 
 
 
