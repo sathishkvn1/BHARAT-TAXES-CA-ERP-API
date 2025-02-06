@@ -1,5 +1,5 @@
 from fastapi.responses import JSONResponse
-from caerp_db.common.models import AppBankMaster, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
+from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
@@ -2617,78 +2617,78 @@ def save_interview_panel_endpoint(
 # -----------------------------------------------------------------------------------------------------
 
 
-@router.get("/vacancy_details_for_education/{vacancy_id}")
-def get_vacancy_details(vacancy_id: int, 
-                        db: Session = Depends(get_db),
-                        token: str = Depends(oauth2.oauth2_scheme)):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+# @router.get("/vacancy_details_for_education/{vacancy_id}")
+# def get_vacancy_details(vacancy_id: int, 
+#                         db: Session = Depends(get_db),
+#                         token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
 
 
-    # Fetch education levels, streams, and courses for the given vacancy_id
-    education_levels = db.query(VacancyEducationalLevel).filter(
-        VacancyEducationalLevel.vacancy_master_id == vacancy_id,
-        VacancyEducationalLevel.is_deleted == "no"
-    ).all()
+#     # Fetch education levels, streams, and courses for the given vacancy_id
+#     education_levels = db.query(VacancyEducationalLevel).filter(
+#         VacancyEducationalLevel.vacancy_master_id == vacancy_id,
+#         VacancyEducationalLevel.is_deleted == "no"
+#     ).all()
 
-    education_streams = db.query(VacancyEducationalStream).filter(
-        VacancyEducationalStream.vacancy_master_id == vacancy_id,
-        VacancyEducationalStream.is_deleted == "no"
-    ).all()
+#     education_streams = db.query(VacancyEducationalStream).filter(
+#         VacancyEducationalStream.vacancy_master_id == vacancy_id,
+#         VacancyEducationalStream.is_deleted == "no"
+#     ).all()
 
-    education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
-        VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
-        VacancyEducationalSubjectOrCourse.is_deleted == "no"
-    ).all()
+#     education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
+#         VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
+#         VacancyEducationalSubjectOrCourse.is_deleted == "no"
+#     ).all()
 
-    # Check if any results are missing
-    if not education_levels:
-        print("No education levels found.")
-    if not education_streams:
-        print("No education streams found.")
-    if not education_courses:
-        print("No education courses found.")
+#     # Check if any results are missing
+#     if not education_levels:
+#         print("No education levels found.")
+#     if not education_streams:
+#         print("No education streams found.")
+#     if not education_courses:
+#         print("No education courses found.")
 
-    # Step 1: Organize streams by vacancy_master_id
-    stream_dict = {}
-    for stream in education_streams:
-        stream_dict.setdefault(stream.vacancy_master_id, []).append({
-            "id": stream.id,
-            "education_stream_id": stream.education_stream_id,
-            "weightage": stream.weightage or 0.0,
-            "courses": []
-        })
+#     # Step 1: Organize streams by vacancy_master_id
+#     stream_dict = {}
+#     for stream in education_streams:
+#         stream_dict.setdefault(stream.vacancy_master_id, []).append({
+#             "id": stream.id,
+#             "education_stream_id": stream.education_stream_id,
+#             "weightage": stream.weightage or 0.0,
+#             "courses": []
+#         })
 
-    # Step 2: Assign courses to the correct streams
-    for course in education_courses:
-        for stream_list in stream_dict.values():
-            for stream in stream_list:
-                stream["courses"].append({
-                    "id": course.id,
-                    "education_subject_or_course_id": course.education_subject_or_course_id or 0,
-                    "weightage": course.weightage or 0.0
-                })
+#     # Step 2: Assign courses to the correct streams
+#     for course in education_courses:
+#         for stream_list in stream_dict.values():
+#             for stream in stream_list:
+#                 stream["courses"].append({
+#                     "id": course.id,
+#                     "education_subject_or_course_id": course.education_subject_or_course_id or 0,
+#                     "weightage": course.weightage or 0.0
+#                 })
 
-    # Step 3: Organize education levels with nested streams
-    education_data = []
-    for level in education_levels:
-        education_data.append({
-            "id": level.id,
-            "education_level_id": level.education_level_id,
-            "weightage": level.weightage or 0.0,
-            "streams": stream_dict.get(level.vacancy_master_id, [])
-        })
+#     # Step 3: Organize education levels with nested streams
+#     education_data = []
+#     for level in education_levels:
+#         education_data.append({
+#             "id": level.id,
+#             "education_level_id": level.education_level_id,
+#             "weightage": level.weightage or 0.0,
+#             "streams": stream_dict.get(level.vacancy_master_id, [])
+#         })
 
-    # Step 4: Construct the response as a plain dictionary
-    response_data = {
-        "id": vacancy_id,
-        "education": {
-            "levels": education_data
-        }
-    }
+#     # Step 4: Construct the response as a plain dictionary
+#     response_data = {
+#         "id": vacancy_id,
+#         "education": {
+#             "levels": education_data
+#         }
+#     }
 
-    return response_data  # No Pydantic, returning plain dict
+#     return response_data  # No Pydantic, returning plain dict
 # ////////////////////////////////
 
 
@@ -2702,3 +2702,85 @@ def get_vacancy_details(vacancy_id: int,
 
 # Group courses by vacancy_master_id instead of education_stream_id.
 # Ensure streams and courses belong to the same vacancy_master_id before linking.
+
+
+@router.get("/vacancy_details_for_education/{vacancy_id}")
+def get_vacancy_details(vacancy_id: int, 
+                        db: Session = Depends(get_db),
+                        token: str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Fetch education levels, streams, and courses for the given vacancy_id
+    education_levels = db.query(VacancyEducationalLevel).filter(
+        VacancyEducationalLevel.vacancy_master_id == vacancy_id,
+        VacancyEducationalLevel.is_deleted == "no"
+    ).all()
+
+    education_streams = db.query(VacancyEducationalStream).filter(
+        VacancyEducationalStream.vacancy_master_id == vacancy_id,
+        VacancyEducationalStream.is_deleted == "no"
+    ).all()
+
+    # Assuming we have the correct attribute names for `VacancyEducationalSubjectOrCourse`
+    education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
+        VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
+        VacancyEducationalSubjectOrCourse.is_deleted == "no"
+    ).all()
+
+    # Fetch names for levels, streams, and courses
+    level_names = db.query(AppEducationalLevel).all()
+    stream_names = db.query(AppEducationalStream).all()
+    course_names = db.query(AppEducationSubjectCourse).all()
+
+    level_name_dict = {level.id: level.education_level for level in level_names}
+    stream_name_dict = {stream.id: stream.education_stream for stream in stream_names}
+    course_name_dict = {course.id: course.subject_or_course_name for course in course_names}
+
+    # Step 1: Organize streams by education_level_id using the correct relationship
+    stream_dict = {}
+    for stream in education_streams:
+        education_level_id = db.query(AppEducationalStream.education_level_id).filter(
+            AppEducationalStream.id == stream.education_stream_id).scalar()
+        stream_dict.setdefault(education_level_id, []).append({
+            "id": stream.id,
+            "education_stream_id": stream.education_stream_id,
+            "education_stream_name": stream_name_dict.get(stream.education_stream_id, ""),
+            "weightage": stream.weightage or 0.0,
+            "courses": []
+        })
+
+    # Step 2: Assign courses to the correct streams
+    for course in education_courses:
+        education_stream_id = db.query(AppEducationSubjectCourse.education_stream_id).filter(
+            AppEducationSubjectCourse.id == course.education_subject_or_course_id).scalar()
+        for stream_list in stream_dict.values():
+            for stream in stream_list:
+                if education_stream_id == stream["education_stream_id"]:
+                    stream["courses"].append({
+                        "id": course.id,
+                        "education_subject_or_course_id": course.education_subject_or_course_id or 0,
+                        "education_subject_or_course_name": course_name_dict.get(course.education_subject_or_course_id, ""),
+                        "weightage": course.weightage or 0.0
+                    })
+
+    # Step 3: Organize education levels with nested streams
+    education_data = []
+    for level in education_levels:
+        education_data.append({
+            "id": level.id,
+            "education_level_id": level.education_level_id,
+            "education_level_name": level_name_dict.get(level.education_level_id, ""),
+            "weightage": level.weightage or 0.0,
+            "streams": stream_dict.get(level.education_level_id, [])
+        })
+
+    # Step 4: Construct the response as a plain dictionary
+    response_data = {
+        "id": vacancy_id,
+        "education": {
+            "levels": education_data
+        }
+    }
+
+    return response_data
