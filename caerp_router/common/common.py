@@ -2051,20 +2051,30 @@ def get_menu_by_user_id(
     # If parent_id is provided, filter by parent_id
     # if parent_id:
     menu_query = menu_query.filter(MenuStructure.parent_id == parent_id)
-        
     # Fetch the filtered menus
     menu_master_query = menu_query.all()
     menu_master_dict = {menu.id: menu for menu in menu_master_query}
     top_level_parent_id = parent_id
     top_level_grand_parent_id = 0
     if parent_id:
-        parent_menu = menu_master_dict.get(parent_id)
+        parent_menu = db.query(MenuStructure).filter(MenuStructure.id == parent_id).first()  # Fetch the parent separately
+
         if parent_menu:
-            top_level_grand_parent_id = (
-                menu_master_dict.get(parent_menu.parent_id).parent_id
-                if parent_menu.parent_id
-                else 0
-            )
+
+            grand_parent_menu = db.query(MenuStructure).filter(MenuStructure.id == parent_menu.parent_id).first()
+            top_level_grand_parent_id = grand_parent_menu.id if grand_parent_menu else 0
+
+        
+        # parent_menu = menu_master_dict.get(parent_id)
+        # if parent_menu:
+        #     print('parent menu')
+
+        #     top_level_grand_parent_id = (
+        #         menu_master_dict.get(parent_menu.parent_id).parent_id
+        #         if parent_menu.parent_id
+        #         else 0
+        #     )
+        #     print("top_level_grand_parent_id", top_level_grand_parent_id)
 
 
     # Consolidate permissions for each menu

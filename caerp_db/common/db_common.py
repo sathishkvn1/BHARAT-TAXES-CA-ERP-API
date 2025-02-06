@@ -535,14 +535,14 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
     villages = []
     block = None
     taluk = None
-  
+    district = None
 
     for row in result:
         try:
             village_name = str(row.village_name) if row.village_name is not None else ""
             villages.append(
                 Village(
-                    id=row.app_village_id,
+                    id=row.village_id,
                     village_name=village_name,
                     lsg_type=row.lsg_type,
                     lsg_type_id=row.lsg_type_id,
@@ -552,24 +552,35 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
                     lsg_id=row.lsg_id
                 )
             )
+            # Handle block
             if block is None:
-                block = {"name": row.block_name, "id": row.block_id}
+                block = {
+                    "name": row.block_name if row.block_name else "",
+                    "id": row.block_id if row.block_id else 0
+                }
+
+            # Handle taluk
             if taluk is None:
-                taluk = {"name": row.taluk_name, "id": row.taluk_id}
-            # if district is None:
-            #     district = {"name": row.district_name, "id": row.district_id}
+                taluk = {
+                    "name": row.taluk_name if row.taluk_name else "",
+                    "id": row.taluk_id if row.taluk_id else 0
+                }
+
+            # Handle district
+            if district is None:
+                district = {
+                    "name": row.district_name if row.district_name else "",
+                    "id": row.district_id if row.district_id else 0
+                }
 
         except Exception as e:
-            print(f"Error processing row {row}: {e}")
-            continue
+            return []
 
     return VillageResponse(
         villages=villages,
         block=block,
         taluk=taluk,
-        district="",
-        state="kerala",
-        country="India"
+        district=district
     )
 
 
