@@ -4134,152 +4134,152 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-# def create_or_update_vacancy(vacancy_data: VacancySchema, db: Session, created_by: int):
-#     try:
-#         for education in vacancy_data.education.levels:
-#             if education.id == 0:  # Insert new education level
-#                 logging.info(f"Inserting new education level: {education.education_level_id}")
+def create_or_update_vacancy(vacancy_data: VacancySchema, db: Session, created_by: int):
+    try:
+        for education in vacancy_data.education.levels:
+            if education.id == 0:  # Insert new education level
+                logging.info(f"Inserting new education level: {education.education_level_id}")
                 
-#                 # Insert education level
-#                 new_education_level = VacancyEducationalLevel(
-#                     vacancy_master_id=22,  # Ensure you pass the correct master id
-#                     education_level_id=education.education_level_id,
-#                     weightage=education.weightage,
-#                     created_by=created_by,
-#                     created_on=datetime.utcnow()
-#                 )
-#                 db.add(new_education_level)
-#                 db.flush()
+                # Insert education level
+                new_education_level = VacancyEducationalLevel(
+                    vacancy_master_id=22,  # Ensure you pass the correct master id
+                    education_level_id=education.education_level_id,
+                    weightage=education.weightage,
+                    created_by=created_by,
+                    created_on=datetime.utcnow()
+                )
+                db.add(new_education_level)
+                db.flush()
 
-#                 # Insert streams related to this education level
-#                 for stream in education.streams:
-#                     if stream.id == 0:  # Insert new stream
-#                         logging.info(f"Inserting new stream: {stream.education_stream_id}")
+                # Insert streams related to this education level
+                for stream in education.streams:
+                    if stream.id == 0:  # Insert new stream
+                        logging.info(f"Inserting new stream: {stream.education_stream_id}")
 
-#                         new_education_stream = VacancyEducationalStream(
-#                             vacancy_master_id=22,
-#                             education_stream_id=stream.education_stream_id,
-#                             weightage=stream.weightage,
-#                             created_by=created_by,
-#                             created_on=datetime.utcnow()
-#                         )
-#                         db.add(new_education_stream)
-#                         db.flush()
+                        new_education_stream = VacancyEducationalStream(
+                            vacancy_master_id=22,
+                            education_stream_id=stream.education_stream_id,
+                            weightage=stream.weightage,
+                            created_by=created_by,
+                            created_on=datetime.utcnow()
+                        )
+                        db.add(new_education_stream)
+                        db.flush()
 
-#                         # Insert courses for this stream
-#                         for course in stream.courses:
-#                             if course.id == 0:  # Insert new course
-#                                 logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
+                        # Insert courses for this stream
+                        for course in stream.courses:
+                            if course.id == 0:  # Insert new course
+                                logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
 
-#                                 new_education_course = VacancyEducationalSubjectOrCourse(
-#                                     vacancy_master_id=22,
-#                                     education_subject_or_course_id=course.education_subject_or_course_id,
-#                                     weightage=course.weightage,
-#                                     created_by=created_by,
-#                                     created_on=datetime.utcnow()
-#                                 )
-#                                 db.add(new_education_course)
+                                new_education_course = VacancyEducationalSubjectOrCourse(
+                                    vacancy_master_id=22,
+                                    education_subject_or_course_id=course.education_subject_or_course_id,
+                                    weightage=course.weightage,
+                                    created_by=created_by,
+                                    created_on=datetime.utcnow()
+                                )
+                                db.add(new_education_course)
 
-#                 db.commit()
-#             # sss
+                db.commit()
+            # sss
 
-#             else:
-#                 logging.info(f"Updating existing education level: {education.id}")
+            else:
+                logging.info(f"Updating existing education level: {education.id}")
                 
-#                 existing_education_level = db.query(VacancyEducationalLevel).filter_by(id=education.id).first()
-#                 if existing_education_level:
-#                     existing_education_level.weightage = education.weightage
-#                     existing_education_level.modified_by = created_by
-#                     existing_education_level.modified_on = datetime.utcnow()
-#                     db.flush()  # Ensure changes are registered
+                existing_education_level = db.query(VacancyEducationalLevel).filter_by(id=education.id).first()
+                if existing_education_level:
+                    existing_education_level.weightage = education.weightage
+                    existing_education_level.modified_by = created_by
+                    existing_education_level.modified_on = datetime.utcnow()
+                    db.flush()  # Ensure changes are registered
 
-#                     # Fetch existing streams
-#                     existing_streams = {s.id: s for s in db.query(VacancyEducationalStream)
-#                                         .filter(VacancyEducationalStream.vacancy_master_id == 22).all()}
-#                     input_stream_ids = {stream.id for stream in education.streams if stream.id != 0}
+                    # Fetch existing streams
+                    existing_streams = {s.id: s for s in db.query(VacancyEducationalStream)
+                                        .filter(VacancyEducationalStream.vacancy_master_id == 22).all()}
+                    input_stream_ids = {stream.id for stream in education.streams if stream.id != 0}
 
-#                     for stream in education.streams:
-#                         if stream.id == 0:  # Insert new stream
-#                             logging.info(f"Inserting new stream: {stream.education_stream_id}")
-#                             new_stream = VacancyEducationalStream(
-#                                 vacancy_master_id=22,
-#                                 education_stream_id=stream.education_stream_id,
-#                                 weightage=stream.weightage,
-#                                 created_by=created_by,
-#                                 created_on=datetime.utcnow()
-#                             )
-#                             db.add(new_stream)
-#                             db.flush()
-#                             stream.id = new_stream.id  # Update input object with new ID
-#                         else:
-#                             if stream.id in existing_streams:
-#                                 existing_stream = existing_streams[stream.id]
-#                                 if existing_stream.weightage != stream.weightage:  # ✅ Detect actual change
-#                                     logging.info(f"Updating stream {existing_stream.id}")
-#                                     existing_stream.weightage = stream.weightage
-#                                     existing_stream.modified_by = created_by
-#                                     existing_stream.modified_on = datetime.utcnow()
-#                                     db.flush()
+                    for stream in education.streams:
+                        if stream.id == 0:  # Insert new stream
+                            logging.info(f"Inserting new stream: {stream.education_stream_id}")
+                            new_stream = VacancyEducationalStream(
+                                vacancy_master_id=22,
+                                education_stream_id=stream.education_stream_id,
+                                weightage=stream.weightage,
+                                created_by=created_by,
+                                created_on=datetime.utcnow()
+                            )
+                            db.add(new_stream)
+                            db.flush()
+                            stream.id = new_stream.id  # Update input object with new ID
+                        else:
+                            if stream.id in existing_streams:
+                                existing_stream = existing_streams[stream.id]
+                                if existing_stream.weightage != stream.weightage:  # ✅ Detect actual change
+                                    logging.info(f"Updating stream {existing_stream.id}")
+                                    existing_stream.weightage = stream.weightage
+                                    existing_stream.modified_by = created_by
+                                    existing_stream.modified_on = datetime.utcnow()
+                                    db.flush()
 
-#                     # Soft delete removed streams
-#                     for existing_stream_id in set(existing_streams) - input_stream_ids:
-#                         logging.info(f"Soft deleting stream {existing_stream_id}")
-#                         existing_streams[existing_stream_id].is_deleted = 'yes'
-#                         existing_streams[existing_stream_id].modified_by = created_by
-#                         existing_streams[existing_stream_id].modified_on = datetime.utcnow()
-#                         db.flush()
+                    # Soft delete removed streams
+                    for existing_stream_id in set(existing_streams) - input_stream_ids:
+                        logging.info(f"Soft deleting stream {existing_stream_id}")
+                        existing_streams[existing_stream_id].is_deleted = 'yes'
+                        existing_streams[existing_stream_id].modified_by = created_by
+                        existing_streams[existing_stream_id].modified_on = datetime.utcnow()
+                        db.flush()
 
-#                     # Fetch existing courses
-#                     existing_courses = {c.id: c for c in db.query(VacancyEducationalSubjectOrCourse)
-#                                         .filter(VacancyEducationalSubjectOrCourse.vacancy_master_id == 22).all()}
-#                     input_course_ids = {course.id for stream in education.streams for course in stream.courses if course.id != 0}
+                    # Fetch existing courses
+                    existing_courses = {c.id: c for c in db.query(VacancyEducationalSubjectOrCourse)
+                                        .filter(VacancyEducationalSubjectOrCourse.vacancy_master_id == 22).all()}
+                    input_course_ids = {course.id for stream in education.streams for course in stream.courses if course.id != 0}
 
-#                     for stream in education.streams:
-#                         for course in stream.courses:
-#                             if course.id == 0:  # Insert new course
-#                                 logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
-#                                 new_course = VacancyEducationalSubjectOrCourse(
-#                                     vacancy_master_id=22,
-#                                     education_subject_or_course_id=course.education_subject_or_course_id,
-#                                     weightage=course.weightage,
-#                                     created_by=created_by,
-#                                     created_on=datetime.utcnow()
-#                                 )
-#                                 db.add(new_course)
-#                                 db.flush()
-#                             else:
-#                                 if course.id in existing_courses:
-#                                     existing_course = existing_courses[course.id]
-#                                     if course.weightage == 0:  # Soft delete course
-#                                         logging.info(f"Soft deleting course {existing_course.id}")
-#                                         existing_course.is_deleted = 'yes'
-#                                     elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
-#                                         logging.info(f"Updating course {existing_course.id}")
-#                                         existing_course.weightage = course.weightage
-#                                         existing_course.modified_by = created_by
-#                                         existing_course.modified_on = datetime.utcnow()
-#                                     db.flush()
+                    for stream in education.streams:
+                        for course in stream.courses:
+                            if course.id == 0:  # Insert new course
+                                logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
+                                new_course = VacancyEducationalSubjectOrCourse(
+                                    vacancy_master_id=22,
+                                    education_subject_or_course_id=course.education_subject_or_course_id,
+                                    weightage=course.weightage,
+                                    created_by=created_by,
+                                    created_on=datetime.utcnow()
+                                )
+                                db.add(new_course)
+                                db.flush()
+                            else:
+                                if course.id in existing_courses:
+                                    existing_course = existing_courses[course.id]
+                                    if course.weightage == 0:  # Soft delete course
+                                        logging.info(f"Soft deleting course {existing_course.id}")
+                                        existing_course.is_deleted = 'yes'
+                                    elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
+                                        logging.info(f"Updating course {existing_course.id}")
+                                        existing_course.weightage = course.weightage
+                                        existing_course.modified_by = created_by
+                                        existing_course.modified_on = datetime.utcnow()
+                                    db.flush()
 
-#                     # Soft delete removed courses
-#                     for existing_course_id in set(existing_courses) - input_course_ids:
-#                         logging.info(f"Soft deleting course {existing_course_id}")
-#                         existing_courses[existing_course_id].is_deleted = 'yes'
-#                         existing_courses[existing_course_id].modified_by = created_by
-#                         existing_courses[existing_course_id].modified_on = datetime.utcnow()
-#                         db.flush()
+                    # Soft delete removed courses
+                    for existing_course_id in set(existing_courses) - input_course_ids:
+                        logging.info(f"Soft deleting course {existing_course_id}")
+                        existing_courses[existing_course_id].is_deleted = 'yes'
+                        existing_courses[existing_course_id].modified_by = created_by
+                        existing_courses[existing_course_id].modified_on = datetime.utcnow()
+                        db.flush()
 
-#                 db.commit()
+                db.commit()
 
 
 
-#         return {"success": True, "message": "Vacancy created/updated successfully."}
+        return {"success": True, "message": "Vacancy created/updated successfully."}
 
-#     except Exception as e:
-#         db.rollback()  # Rollback in case of error
-#         logging.error(f"Error while creating/updating vacancy: {str(e)}")
-#         raise HTTPException(status_code=400, detail=f"Error while creating/updating vacancy: {str(e)}")
+    except Exception as e:
+        db.rollback()  # Rollback in case of error
+        logging.error(f"Error while creating/updating vacancy: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error while creating/updating vacancy: {str(e)}")
 
-#         #------------------------------------------------------------------------
+        #------------------------------------------------------------------------
 
 
 
@@ -4554,6 +4554,10 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
 
 
                 # db.commit()  # Commit after all updates and inserts                       
+        
+
+        
+        
         # Commit the session (explicit commit)
 
         # education insertion

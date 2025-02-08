@@ -895,7 +895,7 @@ def save_role_menu_permission(
     role_id: int,
     datas: List[RoleMenuMappingSchema],
     user_id: int,
-    is_assigned: Optional[str] = 'yes'  # Fixed the default parameter typo
+    # is_assigned: Optional[str] = 'yes'  # Fixed the default parameter typo
 ):
     """
     Saves or updates role-menu permissions.
@@ -904,7 +904,6 @@ def save_role_menu_permission(
     :param role_id: ID of the role.
     :param datas: List of role-menu mappings.
     :param user_id: ID of the user performing the operation.
-    :param is_assigned: Flag indicating whether the permissions are assigned.
     """
     processed_data = []  # Initialize as a list
 
@@ -920,11 +919,11 @@ def save_role_menu_permission(
             if existing_data:
                 updating_data = data.model_dump()  # Convert Pydantic object to dictionary
 
-                if is_assigned == 'no':
+                if updating_data['is_assigned'] == 'no':
                     updating_data['is_deleted'] = 'yes'
                     updating_data['deleted_by'] = user_id
                     updating_data['deleted_on'] = datetime.now()
-                if is_assigned =='yes':
+                if updating_data['is_assigned'] =='yes':
                     updating_data['is_deleted'] = 'no'
                     updating_data['deleted_by'] = None
                     updating_data['deleted_on'] = None
@@ -977,6 +976,7 @@ def save_role_menu_permission(
             "success": False,
             "error": f"An unexpected error occurred: {str(e)}"
         }
+
 
 #-----------------------------------------------------------------------------------------------
 def delete_menu_recursively(db: Session, menu_id: int, user_id: int):

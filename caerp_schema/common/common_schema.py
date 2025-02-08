@@ -1772,10 +1772,7 @@ class VillageResponse(BaseModel):
     villages: List[Village]
     block: Optional[Dict[str, Union[str, int]]]
     taluk: Optional[Dict[str, Union[str, int]]]
-    district: str = ""
-    state: str = "kerala"
-    country: str = "India"
-
+    district: Optional[Dict[str, Union[str, int]]]
 
 class BusinessActivityMasterSchema(BaseModel):
     id: int
@@ -1888,6 +1885,7 @@ class MenuStructureSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
+
 class RoleMenuMappingSchema(BaseModel):
 
     id          :Optional[int] = None
@@ -1896,9 +1894,9 @@ class RoleMenuMappingSchema(BaseModel):
     can_view    : Optional[str] = 'no'
     can_edit    : Optional[str] = 'no'
     can_delete  : Optional[str] = 'no'
+    is_assigned : Optional[str] = 'no'
     class Config:
         orm_mode = True
-
 
 
 class LicenceDetailsSchema(BaseModel):
