@@ -1,7 +1,7 @@
 from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
+from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -1870,95 +1870,95 @@ async def create_or_update_vacancy(vacancy_data: VacancySchema,
 #------------------------------------------------------------------------------------------------------
 
 
-@router.get("/test/vacancy_details")
-def get_vacancies(
-    department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
-    designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
-    status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
-    announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
-    closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-    vacancy_id: Optional[int] = Query(None, description="Filter by specific vacancy ID"),
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+# @router.get("/test/vacancy_details")
+# def get_vacancies(
+#     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
+#     designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
+#     status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
+#     announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+#     closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+#     vacancy_id: Optional[int] = Query(None, description="Filter by specific vacancy ID"),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
     
-    filters = []
+#     filters = []
 
-    # Apply filters only if they are not "ALL"
-    if department_id and department_id != "ALL":
-        filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
+#     # Apply filters only if they are not "ALL"
+#     if department_id and department_id != "ALL":
+#         filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
 
-    if designation_id and designation_id != "ALL":
-        filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
+#     if designation_id and designation_id != "ALL":
+#         filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
 
-    if status and status != "ALL":
-        filters.append(VacancyDetailsView.vacancy_status == status)
+#     if status and status != "ALL":
+#         filters.append(VacancyDetailsView.vacancy_status == status)
 
-    if announcement_date:
-        filters.append(VacancyDetailsView.announcement_date == announcement_date)
+#     if announcement_date:
+#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
 
-    if closing_date:
-        filters.append(VacancyDetailsView.closing_date == closing_date)
+#     if closing_date:
+#         filters.append(VacancyDetailsView.closing_date == closing_date)
 
-    vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
+#     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
 
-    if vacancy_id:
-        vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
-        if vacancy_details:
-            return vacancy_details
-        else:
-            return {"vacancies": []}  # Return empty list if no matching vacancy_id found
+#     if vacancy_id:
+#         vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
+#         if vacancy_details:
+#             return vacancy_details
+#         else:
+#             return {"vacancies": []}  # Return empty list if no matching vacancy_id found
 
-    vacancies = vacancies_query.all()
+#     vacancies = vacancies_query.all()
 
-    # **Return empty list instead of raising an error**
-    return {
-        "vacancies": [
-            {
-                "vacancy_master_id": vacancy.vacancy_master_id,
-                "department_id": vacancy.department_id,
-                "department_name": vacancy.department_name,
-                "designation_id": vacancy.designation_id,
-                "designation_name": vacancy.designation_name,
-                "vacancy_count": vacancy.vacancy_count,
-                "job_description": vacancy.job_description,
-                "job_location": vacancy.job_location,
-                "reported_date": vacancy.reported_date,
-                "announcement_date": vacancy.announcement_date,
-                "closing_date": vacancy.closing_date,
-                "vacancy_status": vacancy.vacancy_status,
-                "experience_required": vacancy.experience_required,
-                "skill_id": vacancy.skill_id,
-                "skill_name": vacancy.skill_name,
-                "skill_weightage": vacancy.skill_weightage,
-                "language_id": vacancy.language_id,
-                "language_name": vacancy.language_name,
-                "language_proficiency_id": vacancy.language_proficiency_id,
-                "proficiency_level": vacancy.proficiency_level,
-                "is_read_required": vacancy.is_read_required,
-                "read_weightage": vacancy.read_weightage,
-                "is_write_required": vacancy.is_write_required,
-                "write_weightage": vacancy.write_weightage,
-                "is_speak_required": vacancy.is_speak_required,
-                "speak_weightage": vacancy.speak_weightage,
-                "education_level_id": vacancy.education_level_id,
-                "is_any_education_level": vacancy.is_any_education_level,
-                "education_stream_id": vacancy.education_stream_id,
-                "is_any_education_stream": vacancy.is_any_education_stream,
-                "education_subject_or_course_id": vacancy.education_subject_or_course_id,
-                "is_any_subject_or_course": vacancy.is_any_subject_or_course,
-                "education_level_name": vacancy.education_level_name,
-                "education_stream_name": vacancy.education_stream_name,
-                "subject_or_course_name": vacancy.subject_or_course_name,
-                "min_years": vacancy.min_years,
-                "max_years": vacancy.max_years,
-                "experience_weightage": vacancy.experience_weightage,
-            }
-            for vacancy in vacancies
-        ]
-    }
+#     # **Return empty list instead of raising an error**
+#     return {
+#         "vacancies": [
+#             {
+#                 "vacancy_master_id": vacancy.vacancy_master_id,
+#                 "department_id": vacancy.department_id,
+#                 "department_name": vacancy.department_name,
+#                 "designation_id": vacancy.designation_id,
+#                 "designation_name": vacancy.designation_name,
+#                 "vacancy_count": vacancy.vacancy_count,
+#                 "job_description": vacancy.job_description,
+#                 "job_location": vacancy.job_location,
+#                 "reported_date": vacancy.reported_date,
+#                 "announcement_date": vacancy.announcement_date,
+#                 "closing_date": vacancy.closing_date,
+#                 "vacancy_status": vacancy.vacancy_status,
+#                 "experience_required": vacancy.experience_required,
+#                 "skill_id": vacancy.skill_id,
+#                 "skill_name": vacancy.skill_name,
+#                 "skill_weightage": vacancy.skill_weightage,
+#                 "language_id": vacancy.language_id,
+#                 "language_name": vacancy.language_name,
+#                 "language_proficiency_id": vacancy.language_proficiency_id,
+#                 "proficiency_level": vacancy.proficiency_level,
+#                 "is_read_required": vacancy.is_read_required,
+#                 "read_weightage": vacancy.read_weightage,
+#                 "is_write_required": vacancy.is_write_required,
+#                 "write_weightage": vacancy.write_weightage,
+#                 "is_speak_required": vacancy.is_speak_required,
+#                 "speak_weightage": vacancy.speak_weightage,
+#                 "education_level_id": vacancy.education_level_id,
+#                 "is_any_education_level": vacancy.is_any_education_level,
+#                 "education_stream_id": vacancy.education_stream_id,
+#                 "is_any_education_stream": vacancy.is_any_education_stream,
+#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+#                 "education_level_name": vacancy.education_level_name,
+#                 "education_stream_name": vacancy.education_stream_name,
+#                 "subject_or_course_name": vacancy.subject_or_course_name,
+#                 "min_years": vacancy.min_years,
+#                 "max_years": vacancy.max_years,
+#                 "experience_weightage": vacancy.experience_weightage,
+#             }
+#             for vacancy in vacancies
+#         ]
+#     }
 
 
 
@@ -1991,11 +1991,8 @@ def get_vacancies(
 
     if announcement_date:
         filters.append(VacancyDetailsView.announcement_date == announcement_date)
-
     if closing_date:
         filters.append(VacancyDetailsView.closing_date == closing_date)
-
-
     # Search functionality (case-insensitive search using ilike)
     if search:
         filters.append(
@@ -2082,54 +2079,99 @@ async def save_vacancy_announcements(
     
 #-------------------------------------------------------------------------------------------------------
 
+
 @router.get("/announcements_list", response_model=AnnouncementsListResponse)
 async def get_announcements(
     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
     announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
-    status: Optional[str] = None,  # Filter by status like "OPEN" or "CLOSED"
-    announcement_date: Optional[date] = None,
-    closing_date: Optional[date] = None,
-    db: Session = Depends(get_db)
+    status: Optional[str] = None,
+    announcement_date: Optional[str] = None,
+    closing_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
 ):
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     filters = []
 
-    # Apply filters based on the query parameters
+    if announcement_date:
+        try:
+            announcement_date = datetime.strptime(announcement_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid format for announcement_date. Use YYYY-MM-DD")
+
+    if closing_date:
+        try:
+            closing_date = datetime.strptime(closing_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid format for closing_date. Use YYYY-MM-DD")
+
     if announcement_type != "ALL":
         filters.append(VacancyAnnouncementMaster.announcement_type == announcement_type)
-    
+
     if announcement_status != "ALL":
         filters.append(VacancyAnnouncementMaster.announcement_status == announcement_status)
 
     if status:
-        filters.append(VacancyAnnouncementMaster.is_deleted == status)  # assuming status refers to deletion status ("yes" or "no")
+        filters.append(VacancyAnnouncementMaster.is_deleted == status)
 
     if closing_date:
         filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
 
-    # Build the query with filters
-    query = db.query(VacancyAnnouncementMaster).filter(*filters)
+    # Query with Joins
+    announcements = (
+        db.query(
+            VacancyAnnouncementMaster,
+            VacancyMaster.id.label("vacancy_master_id"),
+            VacancyMaster.job_description.label("vacancy_name"),  # Get job description as vacancy name
+            EmployeeMaster.first_name,
+            EmployeeMaster.middle_name,
+            EmployeeMaster.last_name,
+        )
+        .join(VacancyAnnouncementDetails, VacancyAnnouncementDetails.vacancy_announcement_master_id == VacancyAnnouncementMaster.id, isouter=True)
+        .join(VacancyMaster, VacancyMaster.id == VacancyAnnouncementDetails.vacancy_master_id, isouter=True)
+        .join(EmployeeMaster, EmployeeMaster.employee_id == VacancyAnnouncementMaster.created_by, isouter=True)
+        .filter(*filters)
+        .all()
+    )
 
-    # Get all results that match the filters
-    announcements = query.all()
-
-    # Filter by announcement_date after fetching the results (if provided)
-    if announcement_date:
-        announcements = [announcement for announcement in announcements if announcement.created_on.date() == announcement_date]
-
-    # Format the results as a list of dictionaries
     result = []
-    for announcement in announcements:
+    for announcement, vacancy_master_id, vacancy_name, first_name, middle_name, last_name in announcements:
+        details = db.query(VacancyAnnouncementDetails).filter(
+            VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement.id
+        ).all()
+
+        announcement_details = [
+            {
+                "id": detail.id,
+                "vacancy_master_id": detail.vacancy_master_id,
+                # "vacancy_name": vacancy_name,  # Add vacancy name
+            }
+            for detail in details
+        ]
+
+        # Combine first name, middle name, and last name for full name
+        full_name = " ".join(filter(None, [first_name, middle_name, last_name]))
+
         result.append({
             "id": announcement.id,
             "title": announcement.title,
             "announcement_type": announcement.announcement_type,
+            "description": announcement.description,
             "announcement_status": announcement.announcement_status,
-            "created_by": str(announcement.created_by),  # Ensure it's a string
-            "created_on": announcement.created_on.date() if announcement.created_on else None,  # Convert datetime to date
-            "closing_date": announcement.closing_date if announcement.closing_date else None
+            "created_by": full_name, 
+            "first_name": first_name,
+            "middle_name": middle_name,
+            "last_name": last_name,
+            "created_on": announcement.created_on.date(),
+            "closing_date": announcement.closing_date,
+            "announcement_details": announcement_details,
         })
 
     return {"announcements": result}
+
 
 #-------------------------------------------------------------------------------------------------------------------
 

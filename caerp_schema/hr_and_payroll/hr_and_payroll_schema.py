@@ -850,14 +850,24 @@ class VacancyAnnouncements(BaseModel):
     vacancy_announcement_master: List[VacancyAnnouncementMaster]
 
 
+class AnnouncementDetailItem(BaseModel):
+    id: int
+    vacancy_master_id: int
+    # vacancy_name: Optional[str] = None
+   
+
 class AnnouncementDetail(BaseModel):
     id: int
     title: str
     announcement_type: str
     announcement_status: str
     created_by: str
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     created_on: date
     closing_date: Optional[date] = None
+    announcement_details: List[AnnouncementDetailItem] = [] 
 
 class AnnouncementsListResponse(BaseModel):
     announcements: List[AnnouncementDetail]
