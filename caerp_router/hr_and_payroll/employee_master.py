@@ -215,7 +215,7 @@ def delete_employee_details_by_id(
 
 #--------------------------------------------------------------------------------------------------------------
 
-from sqlalchemy import and_, func, text
+from sqlalchemy import and_, func, or_, text
 
 
 
@@ -1870,105 +1870,7 @@ async def create_or_update_vacancy(vacancy_data: VacancySchema,
 #------------------------------------------------------------------------------------------------------
 
 
-# @router.get("/test/vacancy_details")
-# def get_vacancies(
-#     department_id: int = Query(None, description="Filter by department ID"),
-#     designation_id: int = Query(None, description="Filter by designation ID"),
-#     status: str = Query(None, description="Filter by vacancy status (OPEN, CLOSED)"),
-#     announcement_date: str = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
-#     closing_date: str = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-#     vacancy_id: int = Query(None, description="Filter by specific vacancy ID"),
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     filters = []
-    
-#     # Build filters based on query parameters
-#     if department_id:
-#         filters.append(VacancyDetailsView.department_id == department_id)
-    
-#     if designation_id:
-#         filters.append(VacancyDetailsView.designation_id == designation_id)
-    
-#     if status:
-#         filters.append(VacancyDetailsView.vacancy_status == status)
-    
-#     if announcement_date:
-#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
-    
-#     if closing_date:
-#         filters.append(VacancyDetailsView.closing_date == closing_date)
-    
-#     # Apply filters and query the database for vacancy details
-#     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
-
-#     # If vacancy_id is provided, fetch the details for that specific vacancy
-#     if vacancy_id:
-#         vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
-#         if vacancy_details:
-#             # Return the vacancy details in the schema format
-#             return vacancy_details
-
-
-#     # Fetch results for all vacancies if no vacancy_id filter is provided
-#     vacancies = vacancies_query.all()
-
-#     # If no results found, raise an exception
-#     if not vacancies:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vacancy not found")
-    
-#     # Return the results in a structured format including all fields
-#     return {
-#         "vacancies": [
-#             {
-#                 "vacancy_master_id": vacancy.vacancy_master_id,
-#                 "department_id": vacancy.department_id,
-#                 "department_name": vacancy.department_name,
-#                 "designation_id": vacancy.designation_id,
-#                 "designation_name": vacancy.designation_name,
-#                 "vacancy_count": vacancy.vacancy_count,
-#                 "job_description": vacancy.job_description,
-#                 "job_location": vacancy.job_location,
-#                 "reported_date": vacancy.reported_date,
-#                 "announcement_date": vacancy.announcement_date,
-#                 "closing_date": vacancy.closing_date,
-#                 "vacancy_status": vacancy.vacancy_status,
-#                 "experience_required": vacancy.experience_required,
-#                 "skill_id": vacancy.skill_id,
-#                 "skill_name": vacancy.skill_name,
-#                 "skill_weightage": vacancy.skill_weightage,
-#                 "language_id": vacancy.language_id,
-#                 "language_name": vacancy.language_name,
-#                 "language_proficiency_id": vacancy.language_proficiency_id,
-#                 "proficiency_level": vacancy.proficiency_level,
-#                 "is_read_required": vacancy.is_read_required,
-#                 "read_weightage": vacancy.read_weightage,
-#                 "is_write_required": vacancy.is_write_required,
-#                 "write_weightage": vacancy.write_weightage,
-#                 "is_speak_required": vacancy.is_speak_required,
-#                 "speak_weightage": vacancy.speak_weightage,
-#                 "education_level_id": vacancy.education_level_id,
-#                 "is_any_education_level": vacancy.is_any_education_level,
-#                 "education_stream_id": vacancy.education_stream_id,
-#                 "is_any_education_stream": vacancy.is_any_education_stream,
-#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
-#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
-#                 "education_level_name": vacancy.education_level_name,
-#                 "education_stream_name": vacancy.education_stream_name,
-#                 "subject_or_course_name": vacancy.subject_or_course_name,
-#                 "min_years": vacancy.min_years,
-#                 "max_years": vacancy.max_years,
-#                 "experience_weightage": vacancy.experience_weightage,
-#             }
-#             for vacancy in vacancies
-#         ]
-#     }
-
-
-@router.get("/vacancy_details")
+@router.get("/test/vacancy_details")
 def get_vacancies(
     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
     designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
@@ -2057,6 +1959,101 @@ def get_vacancies(
             for vacancy in vacancies
         ]
     }
+
+
+
+
+@router.get("/vacancy_details")
+def get_vacancies(
+    department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
+    designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
+    status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
+    announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+    closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+    search: Optional[str] = Query(None, description="Search by department, designation, or job description"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    filters = []
+
+    # Apply filters only if they are not "ALL"
+    if department_id and department_id != "ALL":
+        filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
+
+    if designation_id and designation_id != "ALL":
+        filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
+
+    if status and status != "ALL":
+        filters.append(VacancyDetailsView.vacancy_status == status)
+
+    if announcement_date:
+        filters.append(VacancyDetailsView.announcement_date == announcement_date)
+
+    if closing_date:
+        filters.append(VacancyDetailsView.closing_date == closing_date)
+
+
+    # Search functionality (case-insensitive search using ilike)
+    if search:
+        filters.append(
+            or_(
+                VacancyDetailsView.department_name.ilike(f"%{search}%"),  # Search in department name
+                VacancyDetailsView.designation_name.ilike(f"%{search}%"),  # Search in designation name
+                VacancyDetailsView.job_description.ilike(f"%{search}%")   # Search in job description
+            )
+        )
+
+    vacancies = db.query(VacancyDetailsView).filter(and_(*filters)).all()
+
+    return {
+        "vacancies": [
+            {
+                "vacancy_master_id": vacancy.vacancy_master_id,
+                "department_id": vacancy.department_id,
+                "department_name": vacancy.department_name,
+                "designation_id": vacancy.designation_id,
+                "designation_name": vacancy.designation_name,
+                "vacancy_count": vacancy.vacancy_count,
+                "job_description": vacancy.job_description,
+                "job_location": vacancy.job_location,
+                "reported_date": vacancy.reported_date,
+                "announcement_date": vacancy.announcement_date,
+                "closing_date": vacancy.closing_date,
+                "vacancy_status": vacancy.vacancy_status,
+                "experience_required": vacancy.experience_required,
+                "skill_id": vacancy.skill_id,
+                "skill_name": vacancy.skill_name,
+                "skill_weightage": vacancy.skill_weightage,
+                "language_id": vacancy.language_id,
+                "language_name": vacancy.language_name,
+                "language_proficiency_id": vacancy.language_proficiency_id,
+                "proficiency_level": vacancy.proficiency_level,
+                "is_read_required": vacancy.is_read_required,
+                "read_weightage": vacancy.read_weightage,
+                "is_write_required": vacancy.is_write_required,
+                "write_weightage": vacancy.write_weightage,
+                "is_speak_required": vacancy.is_speak_required,
+                "speak_weightage": vacancy.speak_weightage,
+                "education_level_id": vacancy.education_level_id,
+                "is_any_education_level": vacancy.is_any_education_level,
+                "education_stream_id": vacancy.education_stream_id,
+                "is_any_education_stream": vacancy.is_any_education_stream,
+                "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+                "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+                "education_level_name": vacancy.education_level_name,
+                "education_stream_name": vacancy.education_stream_name,
+                "subject_or_course_name": vacancy.subject_or_course_name,
+                "min_years": vacancy.min_years,
+                "max_years": vacancy.max_years,
+                "experience_weightage": vacancy.experience_weightage,
+            }
+            for vacancy in vacancies
+        ]
+    }
+
 
 #-------------------------------------------------------------------------------------------------------------
 @router.post("/save_vacancy_announcements/")
@@ -2705,110 +2702,6 @@ def save_interview_panel_endpoint(
     
     
 # -----------------------------------------------------------------------------------------------------
-
-# @router.get("/vacancy_details_for_education/{vacancy_id}")
-# def get_vacancy_details(vacancy_id: int, 
-#                         db: Session = Depends(get_db),
-#                         token: str = Depends(oauth2.oauth2_scheme)):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#     # Join queries to get the data
-#     education_levels_streams = db.execute(
-#         """
-#         SELECT 
-#             ve.id AS level_id,
-#             ve.vacancy_master_id,
-#             ve.education_level_id,
-#             ael.education_level,
-#             ves.id AS stream_id,
-#             ves.education_stream_id,
-#             aes.education_stream
-#         FROM 
-#             vacancy_educational_level ve
-#         JOIN 
-#             app_education_level ael ON ve.education_level_id = ael.id
-#         JOIN 
-#             vacancy_educational_stream ves ON ve.vacancy_master_id = ves.vacancy_master_id
-#         JOIN 
-#             app_education_stream aes ON ves.education_stream_id = aes.id
-#         WHERE 
-#             ve.is_deleted = 'no' AND ves.is_deleted = 'no'
-#         AND 
-#             ve.vacancy_master_id = :vacancy_id
-#         """,
-#         {"vacancy_id": vacancy_id}
-#     ).fetchall()
-
-#     education_streams_courses = db.execute(
-#         """
-#         SELECT 
-#             ves.id AS stream_id,
-#             ves.education_stream_id,
-#             aes.education_stream,
-#             vec.id AS course_id,
-#             vec.education_subject_or_course_id,
-#             aesc.subject_or_course_name
-#         FROM 
-#             vacancy_educational_stream ves
-#         JOIN 
-#             app_education_stream aes ON ves.education_stream_id = aes.id
-#         JOIN 
-#             vacancy_educational_subject_or_course vec ON ves.vacancy_master_id = vec.vacancy_master_id
-#         JOIN 
-#             app_education_subject_or_course aesc ON vec.education_subject_or_course_id = aesc.id
-#         WHERE 
-#             ves.is_deleted = 'no' AND vec.is_deleted = 'no'
-#         AND 
-#             vec.vacancy_master_id = :vacancy_id
-#         """,
-#         {"vacancy_id": vacancy_id}
-#     ).fetchall()
-
-#     # Process and organize the data
-#     level_dict = {}
-#     for level_stream in education_levels_streams:
-#         level_id = level_stream.level_id
-#         if level_id not in level_dict:
-#             level_dict[level_id] = {
-#                 "id": level_stream.level_id,
-#                 "education_level_id": level_stream.education_level_id,
-#                 "education_level_name": level_stream.education_level,
-#                 "weightage": level_stream.weightage or 0.0,
-#                 "streams": []
-#             }
-#         level_dict[level_id]["streams"].append({
-#             "id": level_stream.stream_id,
-#             "education_stream_id": level_stream.education_stream_id,
-#             "education_stream_name": level_stream.education_stream,
-#             "weightage": level_stream.weightage or 0.0,
-#             "courses": []
-#         })
-
-#     # Assign courses to the correct streams
-#     for stream_course in education_streams_courses:
-#         for level in level_dict.values():
-#             for stream in level["streams"]:
-#                 if stream["id"] == stream_course.stream_id:
-#                     stream["courses"].append({
-#                         "id": stream_course.course_id,
-#                         "education_subject_or_course_id": stream_course.education_subject_or_course_id,
-#                         "education_subject_or_course_name": stream_course.subject_or_course_name,
-#                         "weightage": stream_course.weightage or 0.0
-#                     })
-
-#     # Convert level_dict to a list
-#     education_data = list(level_dict.values())
-
-#     # Construct the response
-#     response_data = {
-#         "id": vacancy_id,
-#         "education": {
-#             "levels": education_data
-#         }
-#     }
-
-#     return response_data
 
 
 @router.get("/vacancy_details_for_education/{vacancy_id}")
