@@ -2080,7 +2080,101 @@ async def save_vacancy_announcements(
 #-------------------------------------------------------------------------------------------------------
 
 
-@router.get("/announcements_list", response_model=AnnouncementsListResponse)
+# @router.get("/announcements_list", response_model=AnnouncementsListResponse)
+# async def get_announcements(
+#     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
+#     announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
+#     status: Optional[str] = None,
+#     announcement_date: Optional[str] = None,
+#     closing_date: Optional[str] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+    
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     filters = []
+
+#     if announcement_date:
+#         try:
+#             announcement_date = datetime.strptime(announcement_date, "%Y-%m-%d").date()
+#         except ValueError:
+#             raise HTTPException(status_code=400, detail="Invalid format for announcement_date. Use YYYY-MM-DD")
+
+#     if closing_date:
+#         try:
+#             closing_date = datetime.strptime(closing_date, "%Y-%m-%d").date()
+#         except ValueError:
+#             raise HTTPException(status_code=400, detail="Invalid format for closing_date. Use YYYY-MM-DD")
+
+#     if announcement_type != "ALL":
+#         filters.append(VacancyAnnouncementMaster.announcement_type == announcement_type)
+
+#     if announcement_status != "ALL":
+#         filters.append(VacancyAnnouncementMaster.announcement_status == announcement_status)
+
+#     if status:
+#         filters.append(VacancyAnnouncementMaster.is_deleted == status)
+
+#     if closing_date:
+#         filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
+
+#     # Query with Joins
+#     announcements = (
+#         db.query(
+#             VacancyAnnouncementMaster,
+#             VacancyMaster.id.label("vacancy_master_id"),
+#             VacancyMaster.job_description.label("vacancy_name"),  # Get job description as vacancy name
+#             EmployeeMaster.first_name,
+#             EmployeeMaster.middle_name,
+#             EmployeeMaster.last_name,
+#         )
+#         .join(VacancyAnnouncementDetails, VacancyAnnouncementDetails.vacancy_announcement_master_id == VacancyAnnouncementMaster.id, isouter=True)
+#         .join(VacancyMaster, VacancyMaster.id == VacancyAnnouncementDetails.vacancy_master_id, isouter=True)
+#         .join(EmployeeMaster, EmployeeMaster.employee_id == VacancyAnnouncementMaster.created_by, isouter=True)
+#         .filter(*filters)
+#         .all()
+#     )
+
+#     result = []
+#     for announcement, vacancy_master_id, vacancy_name, first_name, middle_name, last_name in announcements:
+#         details = db.query(VacancyAnnouncementDetails).filter(
+#             VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement.id
+#         ).all()
+
+#         announcement_details = [
+#             {
+#                 "id": detail.id,
+#                 "vacancy_master_id": detail.vacancy_master_id,
+#                 # "vacancy_name": vacancy_name,  # Add vacancy name
+#             }
+#             for detail in details
+#         ]
+
+#         # Combine first name, middle name, and last name for full name
+#         full_name = " ".join(filter(None, [first_name, middle_name, last_name]))
+
+#         result.append({
+#             "id": announcement.id,
+#             "title": announcement.title,
+#             "announcement_type": announcement.announcement_type,
+#             "description": announcement.description,
+#             "announcement_status": announcement.announcement_status,
+#             "created_by": full_name, 
+#             "first_name": first_name,
+#             "middle_name": middle_name,
+#             "last_name": last_name,
+#             "created_on": announcement.created_on.date(),
+#             "closing_date": announcement.closing_date,
+#             "announcement_details": announcement_details,
+#         })
+
+#     return {"announcements": result}
+
+
+
+@router.get("/announcements_list")
 async def get_announcements(
     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
     announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
@@ -2090,21 +2184,22 @@ async def get_announcements(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
-    
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
+
     filters = []
 
     if announcement_date:
         try:
             announcement_date = datetime.strptime(announcement_date, "%Y-%m-%d").date()
+            filters.append(VacancyAnnouncementMaster.created_on == announcement_date)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid format for announcement_date. Use YYYY-MM-DD")
 
     if closing_date:
         try:
             closing_date = datetime.strptime(closing_date, "%Y-%m-%d").date()
+            filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid format for closing_date. Use YYYY-MM-DD")
 
@@ -2117,60 +2212,62 @@ async def get_announcements(
     if status:
         filters.append(VacancyAnnouncementMaster.is_deleted == status)
 
-    if closing_date:
-        filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
-
-    # Query with Joins
+    # Query with necessary joins (removing VacancyMaster join since `vacancy_name` is not needed)
     announcements = (
         db.query(
             VacancyAnnouncementMaster,
-            VacancyMaster.id.label("vacancy_master_id"),
-            VacancyMaster.job_description.label("vacancy_name"),  # Get job description as vacancy name
             EmployeeMaster.first_name,
             EmployeeMaster.middle_name,
-            EmployeeMaster.last_name,
+            EmployeeMaster.last_name
         )
-        .join(VacancyAnnouncementDetails, VacancyAnnouncementDetails.vacancy_announcement_master_id == VacancyAnnouncementMaster.id, isouter=True)
-        .join(VacancyMaster, VacancyMaster.id == VacancyAnnouncementDetails.vacancy_master_id, isouter=True)
         .join(EmployeeMaster, EmployeeMaster.employee_id == VacancyAnnouncementMaster.created_by, isouter=True)
         .filter(*filters)
         .all()
     )
 
-    result = []
-    for announcement, vacancy_master_id, vacancy_name, first_name, middle_name, last_name in announcements:
-        details = db.query(VacancyAnnouncementDetails).filter(
-            VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement.id
-        ).all()
+    # Dictionary to store unique announcements
+    result_dict = {}
 
-        announcement_details = [
-            {
-                "id": detail.id,
-                "vacancy_master_id": detail.vacancy_master_id,
-                # "vacancy_name": vacancy_name,  # Add vacancy name
-            }
-            for detail in details
-        ]
+    for announcement, first_name, middle_name, last_name in announcements:
+        announcement_id = announcement.id
 
-        # Combine first name, middle name, and last name for full name
+        # Full name creation
         full_name = " ".join(filter(None, [first_name, middle_name, last_name]))
 
-        result.append({
-            "id": announcement.id,
-            "title": announcement.title,
-            "announcement_type": announcement.announcement_type,
-            "description": announcement.description,
-            "announcement_status": announcement.announcement_status,
-            "created_by": full_name, 
-            "first_name": first_name,
-            "middle_name": middle_name,
-            "last_name": last_name,
-            "created_on": announcement.created_on.date(),
-            "closing_date": announcement.closing_date,
-            "announcement_details": announcement_details,
-        })
+        # If announcement is not already added, initialize it
+        if announcement_id not in result_dict:
+            result_dict[announcement_id] = {
+                "id": announcement.id,
+                "title": announcement.title,
+                "announcement_type": announcement.announcement_type,
+                "description": announcement.description,
+                "announcement_status": announcement.announcement_status,
+                "created_by": full_name,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "created_on": announcement.created_on.strftime("%Y-%m-%d"),
+                "closing_date": announcement.closing_date.strftime("%Y-%m-%d"),
+                "announcement_details": []  # Empty list for details
+            }
+
+        # Fetch announcement details
+        details = db.query(VacancyAnnouncementDetails).filter(
+            VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement_id
+        ).all()
+
+        for detail in details:
+            result_dict[announcement_id]["announcement_details"].append({
+                "id": detail.id,
+                "vacancy_master_id": detail.vacancy_master_id,
+            })
+
+    # Convert dictionary values to list for response
+    result = list(result_dict.values())
 
     return {"announcements": result}
+
+
 
 
 #-------------------------------------------------------------------------------------------------------------------
