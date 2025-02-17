@@ -141,6 +141,7 @@ def save_employee_master_new(db: Session, request: EmployeeDetails, id: int, use
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 #---------------------------------------------------------------------------------------------------------
+
 def save_employee_master(db: Session, request: EmployeeDetails, employee_id: int, id:  List[int], user_id: int, Action: RecordActionType, employee_profile_component: Optional[str] = None):
    try:
       if Action == RecordActionType.INSERT_ONLY:
@@ -961,7 +962,6 @@ def get_user_roles(db: Session, employee_id: Optional[int]=None)->  List[UserRol
   
     return result
 #------------------------------------------------------------------------------------------------------------
-
 
 def save_or_update_educational_qualifications(
     db: Session, employee_id: int, qualifications: List[EmployeeEducationalQualficationSchema], user_id: int
@@ -2524,18 +2524,16 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
         education_data = []
         for edu in vacancy_educational_qualification:
             # Get education level and stream names
+
+
             education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
             education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
-
             # If education_stream_name is None, set to default or "Unknown"
             education_stream_name = education_stream_name if education_stream_name else "Unknown"
-
             # Get subject/course name
             subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
-
             # If subject_or_course_name is None, set to default or "Unknown"
             subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
-
             # Add education details to the list
             education_data.append(
                 VacancyEducationSchemaForGet(
@@ -2551,6 +2549,7 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
                     if edu.education_subject_or_course_id else [],
                     is_any_subject_or_course=edu.is_any_subject_or_course
                 )
+
             )
 
         # Return the data in the structured format
@@ -3626,8 +3625,6 @@ def applicant_permanent_address(
 
 
 #---------------------------------------------------------------------------------------------------
-
-
 def get_applicant_contact_details(
     db: Session, applicant_id: Optional[int] = None
 ) -> List[ApplicantContactDetailsResponse]:
@@ -3669,10 +3666,11 @@ def get_applicant_contact_details(
 
     # Convert rows to response schema
     contact_details = [
-        ApplicantContactDetailsResponse(**dict(row._asdict())) for row in rows
+        ApplicantContactDetailsResponse(**dict(row._asdict())) for row in rows       
     ]
 
     return contact_details
+
 #--------------------------------------------------------------------------------
 
 def get_applicant_educational_qualifications(
@@ -4284,6 +4282,304 @@ def create_or_update_vacancy(vacancy_data: VacancySchema, db: Session, created_b
 
 
 
+# def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by: int):
+#     try:
+#         print("Starting vacancy insert/update operation")
+
+#         # Prepare data excluding the ID (auto-incremented)
+#         vacancy_master_data = vacancy_data.dict(exclude={"vacancy_experience", "skills_required", "language_proficiency", "education", "id"})
+#         vacancy_master_data['created_by'] = created_by
+#         vacancy_master_data['created_on'] = datetime.utcnow()  # Ensure created_on is set dynamically
+
+#         print(f"Inserting/updating vacancy master data: {vacancy_master_data}")
+
+#         # Handle insert or update for VacancyMaster
+#         if vacancy_data.id == 0:
+#             # Insert new vacancy master
+#             vacancy_master = VacancyMaster(**vacancy_master_data)
+#             db.add(vacancy_master)
+#             db.flush()  # Flush to generate the ID
+#             print(f"Vacancy master inserted with ID: {vacancy_master.id}")
+#         else:
+#             # Update existing vacancy master by ID
+#             vacancy_master = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_data.id).first()
+#             if not vacancy_master:
+#                 raise Exception(f"Vacancy with ID {vacancy_data.id} not found")
+#             for key, value in vacancy_master_data.items():
+#                 setattr(vacancy_master, key, value)
+
+#         # Insert or update related data (e.g., experience, skills, language proficiency, education)
+        
+#         # Update or insert vacancy experience
+#         if vacancy_data.vacancy_experience:
+#             for experience in vacancy_data.vacancy_experience:
+#                 if experience.id == 0:  # New record, insert
+#                     vacancy_experience_data = experience.dict()
+#                     vacancy_experience_data['vacancy_master_id'] = vacancy_master.id
+#                     vacancy_experience = VacancyExperience(**vacancy_experience_data)
+#                     db.add(vacancy_experience)
+#                 else:  # Existing record, update
+#                     vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.id == experience.id).first()
+#                     if vacancy_experience:
+#                         for key, value in experience.dict().items():
+#                             setattr(vacancy_experience, key, value)
+
+#         # Update or insert skills required
+#         if vacancy_data.skills_required:
+#             # Step 1: Identify existing skill ids from the incoming data
+#             incoming_skill_ids = [skill.id for skill in vacancy_data.skills_required]
+
+#             # Step 2: Process new or updated skills
+#             for skill in vacancy_data.skills_required:
+#                 if skill.id == 0:  # New record, insert
+#                     vacancy_skill_data = skill.dict()
+#                     vacancy_skill_data['vacancy_master_id'] = vacancy_master.id
+#                     vacancy_skill_data['created_by'] = created_by  # Assign created_by
+#                     vacancy_skill_data['created_on'] = datetime.utcnow()  # Assign created_on
+#                     vacancy_skill = VacancySkills(**vacancy_skill_data)
+#                     db.add(vacancy_skill)
+#                 else:  # Existing record, update
+#                     vacancy_skill = db.query(VacancySkills).filter(VacancySkills.id == skill.id).first()
+#                     if vacancy_skill:
+#                         # For update, use modified_by and modified_on
+#                         vacancy_skill.modified_by = created_by
+#                         vacancy_skill.modified_on = datetime.utcnow()
+                        
+#                         # Update other fields
+#                         for key, value in skill.dict().items():
+#                             setattr(vacancy_skill, key, value)
+
+#             # Step 3: Soft-delete skills that are no longer required
+#             existing_skill_ids = [skill.id for skill in db.query(VacancySkills).filter(
+#                 VacancySkills.vacancy_master_id == vacancy_master.id,
+#                 VacancySkills.is_deleted == 'no').all()]
+
+#             # Loop through existing skills to check if any should be deleted (soft delete)
+#             for existing_skill_id in existing_skill_ids:
+#                 if existing_skill_id not in incoming_skill_ids:
+#                     # Mark the skill as deleted
+#                     vacancy_skill_to_delete = db.query(VacancySkills).filter(
+#                         VacancySkills.id == existing_skill_id,
+#                         VacancySkills.is_deleted == 'no').first()
+#                     if vacancy_skill_to_delete:
+#                         vacancy_skill_to_delete.is_deleted = 'yes'
+#                         vacancy_skill_to_delete.deleted_by = created_by
+#                         vacancy_skill_to_delete.deleted_on = datetime.utcnow()
+
+#         # Update or insert language proficiency
+#         if vacancy_data.language_proficiency:
+
+#             incoming_language_ids = {lang.id for lang in vacancy_data.language_proficiency}
+
+#             # Step 1: Process new or updated records
+#             for language in vacancy_data.language_proficiency:
+#                 if language.id == 0:  # Insert new record
+#                     language_proficiency_data = language.dict(exclude={"education_level_id"})
+#                     language_proficiency_data['vacancy_master_id'] = vacancy_master.id
+#                     language_proficiency_data['created_by'] = created_by
+#                     language_proficiency_data['created_on'] = datetime.utcnow()
+
+#                     new_record = VacancyLanguageProficiency(**language_proficiency_data)
+#                     db.add(new_record)
+#                 else:  # Update existing record
+#                     existing_record = db.query(VacancyLanguageProficiency).filter(
+#                         VacancyLanguageProficiency.id == language.id
+#                     ).first()
+
+#                     if existing_record:
+#                         for key, value in language.dict().items():
+#                             if value is not None:  # Avoid overwriting with None values
+#                                 setattr(existing_record, key, value)
+#                         existing_record.modified_by = created_by
+#                         existing_record.modified_on = datetime.utcnow()
+
+#             # Step 2: Soft-delete records that are not in the incoming data
+#             existing_records = db.query(VacancyLanguageProficiency).filter(
+#                 VacancyLanguageProficiency.vacancy_master_id == vacancy_master.id,
+#                 VacancyLanguageProficiency.is_deleted == 'no'
+#             ).all()
+
+#             for record in existing_records:
+#                 if record.id not in incoming_language_ids:
+#                     record.is_deleted = 'yes'
+#                     record.deleted_by = created_by
+#                     record.deleted_on = datetime.utcnow()
+
+#             # Commit the transaction
+#             db.commit()
+
+       
+
+#         #education insertion
+#         if vacancy_data.education:
+#             # satr here
+#             for education in vacancy_data.education.levels:
+#                         if education.id == 0:  # Insert new education level
+#                             logging.info(f"Inserting new education level: {education.education_level_id}")
+                            
+#                             # Insert education level
+#                             new_education_level = VacancyEducationalLevel(
+#                                 vacancy_master_id=vacancy_master.id,  # Ensure you pass the correct master id
+#                                 education_level_id=education.education_level_id,
+#                                 weightage=education.weightage,
+#                                 created_by=created_by,
+#                                 created_on=datetime.utcnow()
+#                             )
+#                             db.add(new_education_level)
+#                             db.flush()
+
+#                             # Insert streams related to this education level
+#                             for stream in education.streams:
+#                                 if stream.id == 0:  # Insert new stream
+#                                     logging.info(f"Inserting new stream: {stream.education_stream_id}")
+
+#                                     new_education_stream = VacancyEducationalStream(
+#                                         vacancy_master_id=vacancy_master.id,
+#                                         education_stream_id=stream.education_stream_id,
+#                                         weightage=stream.weightage,
+#                                         created_by=created_by,
+#                                         created_on=datetime.utcnow()
+#                                     )
+#                                     db.add(new_education_stream)
+#                                     db.flush()
+
+#                                     # Insert courses for this stream
+#                                     for course in stream.courses:
+#                                         if course.id == 0:  # Insert new course
+#                                             logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
+
+#                                             new_education_course = VacancyEducationalSubjectOrCourse(
+#                                                 vacancy_master_id=vacancy_master.id,
+#                                                 education_subject_or_course_id=course.education_subject_or_course_id,
+#                                                 weightage=course.weightage,
+#                                                 created_by=created_by,
+#                                                 created_on=datetime.utcnow()
+#                                             )
+#                                             db.add(new_education_course)
+
+#                             db.commit()
+#                         # sss
+
+#                         else:
+#                             logging.info(f"Updating existing education level: {education.id}")
+                            
+#                             existing_education_level = db.query(VacancyEducationalLevel).filter_by(id=education.id).first()
+#                             if existing_education_level:
+#                                 existing_education_level.weightage = education.weightage
+#                                 existing_education_level.modified_by = created_by
+#                                 existing_education_level.modified_on = datetime.utcnow()
+#                                 db.flush()  # Ensure changes are registered
+
+#                                 # Fetch existing streams
+#                                 existing_streams = {s.id: s for s in db.query(VacancyEducationalStream)
+#                                                     .filter(VacancyEducationalStream.vacancy_master_id == vacancy_master.id).all()}
+#                                 input_stream_ids = {stream.id for stream in education.streams if stream.id != 0}
+
+#                                 for stream in education.streams:
+#                                     if stream.id == 0:  # Insert new stream
+#                                         logging.info(f"Inserting new stream: {stream.education_stream_id}")
+#                                         new_stream = VacancyEducationalStream(
+#                                             vacancy_master_id=vacancy_master.id,
+#                                             education_stream_id=stream.education_stream_id,
+#                                             weightage=stream.weightage,
+#                                             created_by=created_by,
+#                                             created_on=datetime.utcnow()
+#                                         )
+#                                         db.add(new_stream)
+#                                         db.flush()
+#                                         stream.id = new_stream.id  # Update input object with new ID
+#                                     else:
+#                                         if stream.id in existing_streams:
+#                                             existing_stream = existing_streams[stream.id]
+#                                             if existing_stream.weightage != stream.weightage:  
+#                                                 logging.info(f"Updating stream {existing_stream.id}")
+#                                                 existing_stream.weightage = stream.weightage
+#                                                 existing_stream.modified_by = created_by
+#                                                 existing_stream.modified_on = datetime.utcnow()
+#                                                 db.flush()
+
+#                                 # Soft delete removed streams
+#                                 for existing_stream_id in set(existing_streams) - input_stream_ids:
+#                                     logging.info(f"Soft deleting stream {existing_stream_id}")
+#                                     existing_streams[existing_stream_id].is_deleted = 'yes'
+#                                     existing_streams[existing_stream_id].modified_by = created_by
+#                                     existing_streams[existing_stream_id].modified_on = datetime.utcnow()
+#                                     db.flush()
+
+#                                 # Fetch existing courses
+#                                 existing_courses = {c.id: c for c in db.query(VacancyEducationalSubjectOrCourse)
+#                                                     .filter(VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_master.id).all()}
+#                                 input_course_ids = {course.id for stream in education.streams for course in stream.courses if course.id != 0}
+
+#                                 for stream in education.streams:
+#                                     for course in stream.courses:
+#                                         if course.id == 0:  # Insert new course
+#                                             logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
+#                                             new_course = VacancyEducationalSubjectOrCourse(
+#                                                 vacancy_master_id=vacancy_master.id,
+#                                                 education_subject_or_course_id=course.education_subject_or_course_id,
+#                                                 weightage=course.weightage,
+#                                                 created_by=created_by,
+#                                                 created_on=datetime.utcnow()
+#                                             )
+#                                             db.add(new_course)
+#                                             db.flush()
+#                                         else:
+#                                             if course.id in existing_courses:
+#                                                 existing_course = existing_courses[course.id]
+#                                                 if course.weightage == 0:  # Soft delete course
+#                                                     logging.info(f"Soft deleting course {existing_course.id}")
+#                                                     existing_course.is_deleted = 'yes'
+#                                                 elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
+#                                                     logging.info(f"Updating course {existing_course.id}")
+#                                                     existing_course.weightage = course.weightage
+#                                                     existing_course.modified_by = created_by
+#                                                     existing_course.modified_on = datetime.utcnow()
+#                                                 db.flush()
+
+#                                 # Soft delete removed courses
+#                                 for existing_course_id in set(existing_courses) - input_course_ids:
+#                                     logging.info(f"Soft deleting course {existing_course_id}")
+#                                     existing_courses[existing_course_id].is_deleted = 'yes'
+#                                     existing_courses[existing_course_id].modified_by = created_by
+#                                     existing_courses[existing_course_id].modified_on = datetime.utcnow()
+#                                     db.flush()
+
+#                             db.commit()
+
+
+
+
+
+#                 # db.commit()  # Commit after all updates and inserts                       
+        
+
+        
+        
+#         # Commit the session (explicit commit)
+
+#         # education insertion
+
+#         db.commit()
+
+#         print(f"Vacancy {'updated' if vacancy_data.id else 'created'} successfully with ID: {vacancy_master.id}")
+#         return {
+#             "success": True,  # Success flag
+#             "message": f"Vacancy {'updated' if vacancy_data.id else 'created'} successfully",  # Success message
+#             "vacancy_master_id": vacancy_master.id  # ID of the created or updated vacancy
+#         }
+
+#     except Exception as e:
+#         print(f"Error during vacancy creation/update: {str(e)}")
+#         db.rollback()  # Rollback in case of error
+#         return {
+#             "success": False,  # Failure flag
+#             "message": f"Error while saving vacancy data: {str(e)}"  # Error message
+#         }
+
+
+
+
 def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by: int):
     try:
         print("Starting vacancy insert/update operation")
@@ -4529,18 +4825,21 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
                                         else:
                                             if course.id in existing_courses:
                                                 existing_course = existing_courses[course.id]
-                                                if course.weightage == 0:  # Soft delete course
-                                                    logging.info(f"Soft deleting course {existing_course.id}")
-                                                    existing_course.is_deleted = 'yes'
-                                                elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
-                                                    logging.info(f"Updating course {existing_course.id}")
-                                                    existing_course.weightage = course.weightage
-                                                    existing_course.modified_by = created_by
-                                                    existing_course.modified_on = datetime.utcnow()
+                                                # if course.weightage == 0:  # Soft delete course
+                                                #     logging.info(f"Soft deleting course {existing_course.id}")
+                                                #     existing_course.is_deleted = 'yes'
+                                                # elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
+                                                logging.info(f"Updating course {existing_course.id}")
+                                                existing_course.weightage = course.weightage
+                                                existing_course.education_subject_or_course_id= course.education_subject_or_course_id
+                                                existing_course.is_deleted= 'no'
+                                                existing_course.modified_by = created_by
+                                                existing_course.modified_on = datetime.utcnow()
                                                 db.flush()
 
                                 # Soft delete removed courses
                                 for existing_course_id in set(existing_courses) - input_course_ids:
+                                    logging.info(f'existing - input - {set(existing_courses) - input_course_ids}')
                                     logging.info(f"Soft deleting course {existing_course_id}")
                                     existing_courses[existing_course_id].is_deleted = 'yes'
                                     existing_courses[existing_course_id].modified_by = created_by
@@ -4580,4 +4879,13 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
         }
 
 
-
+# def get_applicants_by_vacancy(db: Session, vacancy_master_id: int):
+#     """
+#     Fetches all applicants associated with a specific vacancy_master_id.
+    
+#     :param db: Database session.
+#     :param vacancy_master_id: ID of the vacancy to filter applicants.
+#     :return: List of applicants filtered by vacancy_master_id.
+#     """
+#     return db.query(ViewApplicantDetails).join(ApplicationMaster, ApplicationMaster.applicant_id == ViewApplicantDetails.applicant_id) \
+#         .filter(ApplicationMaster.vacancy_master_id == vacancy_master_id).all()

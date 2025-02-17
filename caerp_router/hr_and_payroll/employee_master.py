@@ -1,6 +1,6 @@
 from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_db.hr_and_payroll.model import ApplicationMaster, HrDocumentMaster, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
@@ -1870,99 +1870,6 @@ async def create_or_update_vacancy(vacancy_data: VacancySchema,
 #------------------------------------------------------------------------------------------------------
 
 
-# @router.get("/test/vacancy_details")
-# def get_vacancies(
-#     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
-#     designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
-#     status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
-#     announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
-#     closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-#     vacancy_id: Optional[int] = Query(None, description="Filter by specific vacancy ID"),
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     filters = []
-
-#     # Apply filters only if they are not "ALL"
-#     if department_id and department_id != "ALL":
-#         filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
-
-#     if designation_id and designation_id != "ALL":
-#         filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
-
-#     if status and status != "ALL":
-#         filters.append(VacancyDetailsView.vacancy_status == status)
-
-#     if announcement_date:
-#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
-
-#     if closing_date:
-#         filters.append(VacancyDetailsView.closing_date == closing_date)
-
-#     vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
-
-#     if vacancy_id:
-#         vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
-#         if vacancy_details:
-#             return vacancy_details
-#         else:
-#             return {"vacancies": []}  # Return empty list if no matching vacancy_id found
-
-#     vacancies = vacancies_query.all()
-
-#     # **Return empty list instead of raising an error**
-#     return {
-#         "vacancies": [
-#             {
-#                 "vacancy_master_id": vacancy.vacancy_master_id,
-#                 "department_id": vacancy.department_id,
-#                 "department_name": vacancy.department_name,
-#                 "designation_id": vacancy.designation_id,
-#                 "designation_name": vacancy.designation_name,
-#                 "vacancy_count": vacancy.vacancy_count,
-#                 "job_description": vacancy.job_description,
-#                 "job_location": vacancy.job_location,
-#                 "reported_date": vacancy.reported_date,
-#                 "announcement_date": vacancy.announcement_date,
-#                 "closing_date": vacancy.closing_date,
-#                 "vacancy_status": vacancy.vacancy_status,
-#                 "experience_required": vacancy.experience_required,
-#                 "skill_id": vacancy.skill_id,
-#                 "skill_name": vacancy.skill_name,
-#                 "skill_weightage": vacancy.skill_weightage,
-#                 "language_id": vacancy.language_id,
-#                 "language_name": vacancy.language_name,
-#                 "language_proficiency_id": vacancy.language_proficiency_id,
-#                 "proficiency_level": vacancy.proficiency_level,
-#                 "is_read_required": vacancy.is_read_required,
-#                 "read_weightage": vacancy.read_weightage,
-#                 "is_write_required": vacancy.is_write_required,
-#                 "write_weightage": vacancy.write_weightage,
-#                 "is_speak_required": vacancy.is_speak_required,
-#                 "speak_weightage": vacancy.speak_weightage,
-#                 "education_level_id": vacancy.education_level_id,
-#                 "is_any_education_level": vacancy.is_any_education_level,
-#                 "education_stream_id": vacancy.education_stream_id,
-#                 "is_any_education_stream": vacancy.is_any_education_stream,
-#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
-#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
-#                 "education_level_name": vacancy.education_level_name,
-#                 "education_stream_name": vacancy.education_stream_name,
-#                 "subject_or_course_name": vacancy.subject_or_course_name,
-#                 "min_years": vacancy.min_years,
-#                 "max_years": vacancy.max_years,
-#                 "experience_weightage": vacancy.experience_weightage,
-#             }
-#             for vacancy in vacancies
-#         ]
-#     }
-
-
-
-
 @router.get("/vacancy_details")
 def get_vacancies(
     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
@@ -1970,7 +1877,7 @@ def get_vacancies(
     status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
     announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
     closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
-    search: Optional[str] = Query(None, description="Search by department, designation, or job description"),
+    vacancy_id: Optional[int] = Query(None, description="Filter by specific vacancy ID"),
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
@@ -1991,20 +1898,22 @@ def get_vacancies(
 
     if announcement_date:
         filters.append(VacancyDetailsView.announcement_date == announcement_date)
+
     if closing_date:
         filters.append(VacancyDetailsView.closing_date == closing_date)
-    # Search functionality (case-insensitive search using ilike)
-    if search:
-        filters.append(
-            or_(
-                VacancyDetailsView.department_name.ilike(f"%{search}%"),  # Search in department name
-                VacancyDetailsView.designation_name.ilike(f"%{search}%"),  # Search in designation name
-                VacancyDetailsView.job_description.ilike(f"%{search}%")   # Search in job description
-            )
-        )
 
-    vacancies = db.query(VacancyDetailsView).filter(and_(*filters)).all()
+    vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
 
+    if vacancy_id:
+        vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
+        if vacancy_details:
+            return vacancy_details
+        else:
+            return {"vacancies": []}  # Return empty list if no matching vacancy_id found
+
+    vacancies = vacancies_query.all()
+
+    # **Return empty list instead of raising an error**
     return {
         "vacancies": [
             {
@@ -2050,6 +1959,97 @@ def get_vacancies(
             for vacancy in vacancies
         ]
     }
+
+
+
+
+# @router.get("/vacancy_details")
+# def get_vacancies(
+#     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
+#     designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
+#     status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
+#     announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+#     closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+#     search: Optional[str] = Query(None, description="Search by department, designation, or job description"),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     filters = []
+
+#     # Apply filters only if they are not "ALL"
+#     if department_id and department_id != "ALL":
+#         filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
+
+#     if designation_id and designation_id != "ALL":
+#         filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
+
+#     if status and status != "ALL":
+#         filters.append(VacancyDetailsView.vacancy_status == status)
+
+#     if announcement_date:
+#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
+#     if closing_date:
+#         filters.append(VacancyDetailsView.closing_date == closing_date)
+#     # Search functionality (case-insensitive search using ilike)
+#     if search:
+#         filters.append(
+#             or_(
+#                 VacancyDetailsView.department_name.ilike(f"%{search}%"),  # Search in department name
+#                 VacancyDetailsView.designation_name.ilike(f"%{search}%"),  # Search in designation name
+#                 VacancyDetailsView.job_description.ilike(f"%{search}%")   # Search in job description
+#             )
+#         )
+
+#     vacancies = db.query(VacancyDetailsView).filter(and_(*filters)).all()
+
+#     return {
+#         "vacancies": [
+#             {
+#                 "vacancy_master_id": vacancy.vacancy_master_id,
+#                 "department_id": vacancy.department_id,
+#                 "department_name": vacancy.department_name,
+#                 "designation_id": vacancy.designation_id,
+#                 "designation_name": vacancy.designation_name,
+#                 "vacancy_count": vacancy.vacancy_count,
+#                 "job_description": vacancy.job_description,
+#                 "job_location": vacancy.job_location,
+#                 "reported_date": vacancy.reported_date,
+#                 "announcement_date": vacancy.announcement_date,
+#                 "closing_date": vacancy.closing_date,
+#                 "vacancy_status": vacancy.vacancy_status,
+#                 "experience_required": vacancy.experience_required,
+#                 "skill_id": vacancy.skill_id,
+#                 "skill_name": vacancy.skill_name,
+#                 "skill_weightage": vacancy.skill_weightage,
+#                 "language_id": vacancy.language_id,
+#                 "language_name": vacancy.language_name,
+#                 "language_proficiency_id": vacancy.language_proficiency_id,
+#                 "proficiency_level": vacancy.proficiency_level,
+#                 "is_read_required": vacancy.is_read_required,
+#                 "read_weightage": vacancy.read_weightage,
+#                 "is_write_required": vacancy.is_write_required,
+#                 "write_weightage": vacancy.write_weightage,
+#                 "is_speak_required": vacancy.is_speak_required,
+#                 "speak_weightage": vacancy.speak_weightage,
+#                 "education_level_id": vacancy.education_level_id,
+#                 "is_any_education_level": vacancy.is_any_education_level,
+#                 "education_stream_id": vacancy.education_stream_id,
+#                 "is_any_education_stream": vacancy.is_any_education_stream,
+#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+#                 "education_level_name": vacancy.education_level_name,
+#                 "education_stream_name": vacancy.education_stream_name,
+#                 "subject_or_course_name": vacancy.subject_or_course_name,
+#                 "min_years": vacancy.min_years,
+#                 "max_years": vacancy.max_years,
+#                 "experience_weightage": vacancy.experience_weightage,
+#             }
+#             for vacancy in vacancies
+#         ]
+#     }
 
 
 #-------------------------------------------------------------------------------------------------------------
@@ -2336,118 +2336,330 @@ async def save_applicant(
 
 
 #------------------------------------------------------------------------------------------
+# @router.get("/TEST/get_applicant_details/", response_model=Dict[str, Any])
+# def get_applicant_details(
+#     applicant_id: Optional[int] = None,
+#     profile_component: Optional[str] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Retrieves detailed information about an applicant.
+
+#     - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+#     - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+#       - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+#       - `applicant_login_details`: Login information for the applicant.
+#       - `applicant_present_address`: Current address of the applicant.
+#       - `applicant_permanent_address`: Permanent address of the applicant.
+#       - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+#       - `applicant_educational_qualification`: Educational qualifications of the applicant.
+#       - `applicant_professional_qualification`: Professional qualifications of the applicant.
+#       - `applicant_experience`: Employment or work experience details of the applicant.
+#       - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+#       - `applicant_hobby`: Hobbies and interests of the applicant.
+#       - `applicant_skill`: Skills of the applicant.
+#       - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+
+#     - **db**: The database session used for querying the relevant data.
+
+#     **Response**:
+#     Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+
+#     - If **applicant_id** is provided, it returns the details for that specific applicant.
+#     - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+
+#     **Example Request**:
+#     - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+#     - `GET /get_applicant_details/` (Fetch all details for the applicant)
+
+
+#     ```
+
+#     **Notes**:
+#     - If no data is found for the given `applicant_id`, a 404 error will be raised.
+#     - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     profile_data = {}
+
+#     # If neither applicant_id nor profile_component is provided, fetch all applicant details
+#     if applicant_id is None and profile_component is None:
+        
+#         applicant_details = db_employee_master.get_all_applicant_detals(db)
+        
+       
+
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+
+#         # Ensure proper mapping to ApplicantDetailsView
+#         profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
+#     # If applicant_id is provided and profile_component is also provided, handle those cases
+#     elif applicant_id is not None and profile_component is not None:
+#         if profile_component == "applicant_master":
+            
+#             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+#         elif profile_component == "applicant_present_address":
+            
+#             profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
+#         elif profile_component == "applicant_permanent_address":
+            
+#             profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+#         elif profile_component == "applicant_contact_details":
+            
+#             profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
+#         elif profile_component == "applicant_educational_qualification":
+            
+#             profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_professional_qualifications":
+            
+#             profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_experience":
+           
+#             profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
+
+#         elif profile_component == "applicant_language_proficiency":
+           
+#             profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
+      
+#         elif profile_component == "applicant_hobby":
+           
+#             profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
+
+#         elif profile_component == "applicant_skill":
+           
+#             profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
+
+#         elif profile_component == "applicant_social_media_profile":
+           
+#             profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
+      
+      
+#         else:
+#             raise HTTPException(status_code=400, detail="Invalid profile component")
+
+#     # If no profile_data found for the given component, raise 404
+#     if not profile_data:
+#         print("No profile data found for the given component")  # Debugging print
+#         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
+
+#     return profile_data
+
+
 @router.get("/get_applicant_details/", response_model=Dict[str, Any])
 def get_applicant_details(
     applicant_id: Optional[int] = None,
     profile_component: Optional[str] = None,
+    vacancy_master_id: Optional[int] = None, 
     db: Session = Depends(get_db),
     token: str = Depends(oauth2.oauth2_scheme)
 ):
     """
-    Retrieves detailed information about an applicant.
+        Retrieves detailed information about an applicant.
 
-    - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
-    - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
-      - `applicant_master`: Basic applicant details (e.g., name, age, gender).
-      - `applicant_login_details`: Login information for the applicant.
-      - `applicant_present_address`: Current address of the applicant.
-      - `applicant_permanent_address`: Permanent address of the applicant.
-      - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
-      - `applicant_educational_qualification`: Educational qualifications of the applicant.
-      - `applicant_professional_qualification`: Professional qualifications of the applicant.
-      - `applicant_experience`: Employment or work experience details of the applicant.
-      - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
-      - `applicant_hobby`: Hobbies and interests of the applicant.
-      - `applicant_skill`: Skills of the applicant.
-      - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+        - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+        - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+        - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+        - `applicant_login_details`: Login information for the applicant.
+        - `applicant_present_address`: Current address of the applicant.
+        - `applicant_permanent_address`: Permanent address of the applicant.
+        - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+        - `applicant_educational_qualification`: Educational qualifications of the applicant.
+        - `applicant_professional_qualification`: Professional qualifications of the applicant.
+        - `applicant_experience`: Employment or work experience details of the applicant.
+        - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+        - `applicant_hobby`: Hobbies and interests of the applicant.
+        - `applicant_skill`: Skills of the applicant.
+        - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
 
-    - **db**: The database session used for querying the relevant data.
+        - **db**: The database session used for querying the relevant data.
 
-    **Response**:
-    Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+        **Response**:
+        Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
 
-    - If **applicant_id** is provided, it returns the details for that specific applicant.
-    - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+        - If **applicant_id** is provided, it returns the details for that specific applicant.
+        - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
 
-    **Example Request**:
-    - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
-    - `GET /get_applicant_details/` (Fetch all details for the applicant)
+        **Example Request**:
+        - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+        - `GET /get_applicant_details/` (Fetch all details for the applicant)
 
 
-    ```
+        ```
 
-    **Notes**:
-    - If no data is found for the given `applicant_id`, a 404 error will be raised.
-    - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+        **Notes**:
+        - If no data is found for the given `applicant_id`, a 404 error will be raised.
+        - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
 
-    """
+        """
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     profile_data = {}
 
-    # If neither applicant_id nor profile_component is provided, fetch all applicant details
     if applicant_id is None and profile_component is None:
-        
+        # Fetch all applicant details
         applicant_details = db_employee_master.get_all_applicant_detals(db)
-        
-       
-
         if not applicant_details:
             raise HTTPException(status_code=404, detail="No data found for applicant details")
-
-        # Ensure proper mapping to ApplicantDetailsView
         profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
 
-    # If applicant_id is provided and profile_component is also provided, handle those cases
+    elif vacancy_master_id is not None:
+        # Fetch applicants by vacancy_master_id
+        applicant_details = db_employee_master.get_applicants_by_vacancy(db, vacancy_master_id)
+        if not applicant_details:
+            raise HTTPException(status_code=404, detail="No applicants found for the given vacancy")
+        profile_data["applicants_by_vacancy"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
     elif applicant_id is not None and profile_component is not None:
+        # Fetch specific profile component details for a given applicant
         if profile_component == "applicant_master":
-            
             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
         elif profile_component == "applicant_present_address":
-            
             profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
         elif profile_component == "applicant_permanent_address":
-            
             profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
         elif profile_component == "applicant_contact_details":
-            
             profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
         elif profile_component == "applicant_educational_qualification":
-            
             profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
         elif profile_component == "applicant_professional_qualifications":
-            
             profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
         elif profile_component == "applicant_experience":
-           
             profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
-
         elif profile_component == "applicant_language_proficiency":
-           
             profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
-      
         elif profile_component == "applicant_hobby":
-           
             profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
-
         elif profile_component == "applicant_skill":
-           
             profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
-
         elif profile_component == "applicant_social_media_profile":
-           
             profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
-      
-      
         else:
             raise HTTPException(status_code=400, detail="Invalid profile component")
 
-    # If no profile_data found for the given component, raise 404
     if not profile_data:
-        print("No profile data found for the given component")  # Debugging print
-        raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
+        raise HTTPException(status_code=404, detail="No data found for the given parameters")
 
     return profile_data
+
+# @router.get("/get_applicant_details/", response_model=Dict[str, Any])
+# def get_applicant_details(
+#     applicant_id: Optional[int] = None,
+#     profile_component: Optional[str] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#     Retrieves detailed information about an applicant.
+
+#     - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+#     - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+#       - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+#       - `applicant_login_details`: Login information for the applicant.
+#       - `applicant_present_address`: Current address of the applicant.
+#       - `applicant_permanent_address`: Permanent address of the applicant.
+#       - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+#       - `applicant_educational_qualification`: Educational qualifications of the applicant.
+#       - `applicant_professional_qualification`: Professional qualifications of the applicant.
+#       - `applicant_experience`: Employment or work experience details of the applicant.
+#       - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+#       - `applicant_hobby`: Hobbies and interests of the applicant.
+#       - `applicant_skill`: Skills of the applicant.
+#       - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+
+#     - **db**: The database session used for querying the relevant data.
+
+#     **Response**:
+#     Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+
+#     - If **applicant_id** is provided, it returns the details for that specific applicant.
+#     - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+
+#     **Example Request**:
+#     - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+#     - `GET /get_applicant_details/` (Fetch all details for the applicant)
+
+
+#     ```
+
+#     **Notes**:
+#     - If no data is found for the given `applicant_id`, a 404 error will be raised.
+#     - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+
+#     """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     profile_data = {}
+
+#     # If neither applicant_id nor profile_component is provided, fetch all applicant details
+#     if applicant_id is None and profile_component is None:
+        
+#         applicant_details = db_employee_master.get_all_applicant_detals(db)
+        
+       
+
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+
+#         # Ensure proper mapping to ApplicantDetailsView
+#         profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
+#     # If applicant_id is provided and profile_component is also provided, handle those cases
+#     elif applicant_id is not None and profile_component is not None:
+#         if profile_component == "applicant_master":
+            
+#             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+#         elif profile_component == "applicant_present_address":
+            
+#             profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
+#         elif profile_component == "applicant_permanent_address":
+            
+#             profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+#         elif profile_component == "applicant_contact_details":
+            
+#             profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
+#         elif profile_component == "applicant_educational_qualification":
+            
+#             profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_professional_qualifications":
+            
+#             profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_experience":
+           
+#             profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
+
+#         elif profile_component == "applicant_language_proficiency":
+           
+#             profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
+      
+#         elif profile_component == "applicant_hobby":
+           
+#             profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
+
+#         elif profile_component == "applicant_skill":
+           
+#             profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
+
+#         elif profile_component == "applicant_social_media_profile":
+           
+#             profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
+      
+      
+#         else:
+#             raise HTTPException(status_code=400, detail="Invalid profile component")
+
+#     # If no profile_data found for the given component, raise 404
+#     if not profile_data:
+#         print("No profile data found for the given component")  # Debugging print
+#         raise HTTPException(status_code=404, detail=f"Profile component '{profile_component}' not found")
+
+#     return profile_data
+
 #----------------------------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------------------------
@@ -2923,3 +3135,18 @@ def get_vacancy_details(vacancy_id: int,
     }
 
     return response_data
+
+
+#----------------------------------------------------------------------------------------------
+# @router.get("/get_applicants_by_vacancy/{vacancy_id}", response_model=List[ApplicantDetailsSchema])
+# def get_applicants_by_vacancy(vacancy_id: int, db: Session = Depends(get_db)):
+#     """
+#     Fetch all applicants based on vacancy_master_id (vacancy_id).
+#     """
+#     applicant_details = db_employee_master.get_applicants_by_vacancy(db, vacancy_id)
+
+#     if not applicant_details:
+#         raise HTTPException(status_code=404, detail="No applicants found for the given vacancy")
+
+#     # Return the data, FastAPI will automatically serialize the SQLAlchemy objects into the schema
+#     return applicant_details
