@@ -6,7 +6,7 @@ from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewPanelMaster, InterviewPanelMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, Courses, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, LanguageProficiencySchema, LanguageProficiencySchemaForGet, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancyEducationSchema, VacancyEducationSchemaForGet, VacancyExperienceSchema, VacancySchema, VacancySkillsSchema, VacancySkillsSchemaForGet
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, Courses, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, LanguageProficiencySchema, LanguageProficiencySchemaForGet, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancyEducationSchema, VacancyEducationSchemaForGet, VacancyExperienceSchema, VacancySchema, VacancySkillsSchema, VacancySkillsSchemaForGet
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -4879,13 +4879,70 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
         }
 
 
+
 # def get_applicants_by_vacancy(db: Session, vacancy_master_id: int):
 #     """
-#     Fetches all applicants associated with a specific vacancy_master_id.
+#     Fetches all applicants associated with a specific vacancy_master_id using a raw SQL query.
     
 #     :param db: Database session.
 #     :param vacancy_master_id: ID of the vacancy to filter applicants.
 #     :return: List of applicants filtered by vacancy_master_id.
 #     """
-#     return db.query(ViewApplicantDetails).join(ApplicationMaster, ApplicationMaster.applicant_id == ViewApplicantDetails.applicant_id) \
-#         .filter(ApplicationMaster.vacancy_master_id == vacancy_master_id).all()
+#     query = text("""
+#         SELECT 
+#             am.id AS application_id,
+#             am.applicant_id,
+#             ap.first_name, ap.middle_name, ap.last_name, 
+#             ap.gender_id, ap.blood_group, ap.marital_status_id, ap.date_of_birth, ap.nationality_id,
+#             am.vacancy_master_id, 
+#             vm.designation_id, vm.department_id, vm.job_description, vm.vacancy_count, 
+#             vm.reported_date, vm.announcement_date, vm.closing_date, vm.vacancy_status, 
+#             vm.job_location, vm.experience_required, 
+#             am.application_date, am.application_status, am.is_deleted
+#         FROM application_master am
+#         JOIN applicant_master ap ON am.applicant_id = ap.applicant_id
+#         JOIN vacancy_master vm ON am.vacancy_master_id = vm.id
+#         WHERE am.vacancy_master_id = :vacancy_master_id;
+#     """)
+
+#     print(f"Executing SQL Query: {query}")
+#     print(f"With Parameter: vacancy_master_id={vacancy_master_id}")
+
+#     result = db.execute(query, {"vacancy_master_id": vacancy_master_id})
+#     return result.fetchall()
+
+
+def get_applicants_by_vacancy(db: Session, vacancy_master_id: int):
+    """
+    Fetches all applicants associated with a specific vacancy_master_id using a raw SQL query.
+    
+    :param db: Database session.
+    :param vacancy_master_id: ID of the vacancy to filter applicants.
+    :return: List of applicants filtered by vacancy_master_id.
+    """
+    query = text("""
+        SELECT 
+            am.id AS application_id,
+            am.applicant_id,
+            ap.first_name, ap.middle_name, ap.last_name, 
+            ap.gender_id, ap.blood_group, ap.marital_status_id, ap.date_of_birth, ap.nationality_id,
+            am.vacancy_master_id, 
+            vm.designation_id, vm.department_id, vm.job_description, vm.vacancy_count, 
+            vm.reported_date, vm.announcement_date, vm.closing_date, vm.vacancy_status, 
+            vm.job_location, vm.experience_required, 
+            am.application_date, am.application_status, am.is_deleted,
+            acd.personal_mobile_number, acd.personal_whatsapp_number, acd.personal_email_id
+        FROM application_master am
+        JOIN applicant_master ap ON am.applicant_id = ap.applicant_id
+        JOIN vacancy_master vm ON am.vacancy_master_id = vm.id
+        LEFT JOIN applicant_contact_details acd ON am.applicant_id = acd.applicant_id
+        WHERE am.vacancy_master_id = :vacancy_master_id;
+    """)
+
+    print(f"Executing SQL Query: {query}")
+    print(f"With Parameter: vacancy_master_id={vacancy_master_id}")
+
+    result = db.execute(query, {"vacancy_master_id": vacancy_master_id})
+    return result.fetchall()
+
+#---------------------------------------------------------------------------------------

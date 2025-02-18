@@ -1361,17 +1361,32 @@ class ApplicantSocialMediaResponse(BaseModel):
 
 
 
-class InterviewScheduleRequest(BaseModel):
-    id: Optional[int] = 0  # id is optional, and default is 0 for insert
-    applicant_id: int
-    vacancy_id: int
-    interview_panel_id: int
-    interview_date: date
-    interview_time: time
-    location: str
-    interview_status: str = "SCHEDULED"  # Default value for interview status
-    remarks: Optional[str] = None  # Optional field for remarks
+# class InterviewScheduleRequest(BaseModel):
+#     id: Optional[int] = 0  # id is optional, and default is 0 for insert
+#     applicant_id: int
+#     vacancy_id: int
+#     interview_panel_id: int
+#     interview_date: date
+#     interview_time: time
+#     location: str
+#     interview_status: str = "SCHEDULED"  # Default value for interview status
+#     remarks: Optional[str] = None  # Optional field for remarks
 
+
+
+
+class InterviewScheduleRequest(BaseModel):
+    id: Optional[int] = 0  
+    vacancy_id:int
+    interview_panel_id: int  
+    interview_date: datetime 
+    interview_time: datetime 
+    location: str  
+    interview_status: str 
+    remarks: Optional[str] = None  
+
+    class Config:
+        orm_mode = True  
 
 class InterviewSchedulesResponse(BaseModel):
     schedules: List[InterviewScheduleRequest]
@@ -1396,3 +1411,7 @@ class InterviewPanelMemberSchema(BaseModel):
 class CreateInterviewPanelRequest(BaseModel):
     master: InterviewPanelMasterSchema
     members: List[InterviewPanelMemberSchema]
+
+
+
+
