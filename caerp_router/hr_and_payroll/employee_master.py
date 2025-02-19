@@ -1,7 +1,7 @@
 from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
 from caerp_db.hr_and_payroll.model import ApplicationMaster, HrDocumentMaster, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewSchedulesResponse,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -3095,130 +3095,137 @@ def get_vacancy_details(vacancy_id: int,
 
 
 #----------------------------------------------------------------------------------------------
-# @router.post("/save_interview_schedule/")
-# async def save_interview_schedule(
-#     applicant_ids: List[int],  # List of applicant IDs
-#     schedules: List[InterviewScheduleRequest],  
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#     try:
-#         saved_schedules = []
-
-#         for schedule in schedules:
-#             for applicant_id in applicant_ids:  # Handle multiple applicants
-
-#                 # **Case 1:** If `id == 0`, insert a new schedule
-#                 if schedule.id == 0:
-#                     new_schedule = InterviewSchedule(
-#                         applicant_id=applicant_id,
-#                         vacancy_id=schedule.vacancy_id,
-#                         interview_panel_id=schedule.interview_panel_id,
-#                         interview_date=schedule.interview_date,
-#                         interview_time=schedule.interview_time,
-#                         location=schedule.location,
-#                         interview_status=schedule.interview_status,
-#                         remarks=schedule.remarks,
-#                         is_deleted="no"
-#                     )
-#                     db.add(new_schedule)
-#                     db.commit()
-#                     db.refresh(new_schedule)
-#                     saved_schedules.append(new_schedule)
-
-#                 else:
-#                     # **Check if the schedule exists for this applicant**
-#                     existing_schedule = db.query(InterviewSchedule).filter(
-#                         InterviewSchedule.id == schedule.id,
-#                         InterviewSchedule.applicant_id == applicant_id
-#                     ).first()
-
-#                     if existing_schedule:
-#                         # **Case 2a:** Remove the existing person (Soft delete)
-#                         if schedule.interview_status == "REMOVED":
-#                             existing_schedule.is_deleted = "yes"
-
-#                         # **Case 2b:** Update the existing schedule
-#                         else:
-#                             existing_schedule.vacancy_id = schedule.vacancy_id
-#                             existing_schedule.interview_panel_id = schedule.interview_panel_id
-#                             existing_schedule.interview_date = schedule.interview_date
-#                             existing_schedule.interview_time = schedule.interview_time
-#                             existing_schedule.location = schedule.location
-#                             existing_schedule.interview_status = schedule.interview_status
-#                             existing_schedule.remarks = schedule.remarks
-
-#                         db.commit()
-#                         db.refresh(existing_schedule)
-#                         saved_schedules.append(existing_schedule)
-
-#         return {"success": True, "message": "Schedules processed successfully", "data": saved_schedules}
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
 
 
 @router.post("/save_interview_schedule/")
-async def save_interview_schedule(
-    applicant_ids: List[int],  # List of applicant IDs
-    schedules: List[InterviewScheduleRequest],  
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
+def save_schedule(request: InterviewScheduleRequest, 
+                  db: Session = Depends(get_db),
+                  token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Save or update interview schedules.
+
+    This endpoint allows users to create new interview schedules or update existing ones 
+    for a given vacancy. It also performs a soft delete for schedules that are missing 
+    from the request.
+
+    ### Request Body:
+    ```json
+    {
+      "schedules": [
+        {
+          "id": 0,
+          "applicant_id": 100,
+          "vacancy_id": 50,
+          "interview_panel_id": 1,
+          "interview_date": "2025-02-19T07:51:26.050Z",
+          "interview_time": "2025-02-19T07:51:26.050Z",
+          "location": "kochi",
+          "remarks": "SSSS"
+        }
+      ]
+    }
+    ```
+
+    ### Request Parameters:
+    - `id` (int): `0` for new records, otherwise the existing schedule ID.
+    - `applicant_id` (int): ID of the applicant being scheduled.
+    - `vacancy_id` (int, required): The vacancy ID for which the interview is scheduled.
+    - `interview_panel_id` (int): The ID of the interview panel.
+    - `interview_date` (str, ISO 8601 format): The date of the interview.
+    - `interview_time` (str, ISO 8601 format): The time of the interview.
+    - `location` (str): The location where the interview will take place.
+    - `remarks` (str, optional): Additional notes for the interview.
+
+    ### Response:
+    - **Success** (`200 OK`):
+    ```json
+    {
+      "success": "true",
+      "message": "Interview schedules saved successfully"
+    }
+    ```
+    - **Failure** (`400 Bad Request` / `500 Internal Server Error`):
+    ```json
+    {
+      "success": "false",
+      "message": "Error: <detailed error message>"
+    }
+    ```
+
+    ### Logic:
+    - If `id = 0`, a new schedule is inserted.
+    - If `id > 0`, an existing schedule is updated.
+    - Any existing schedules in the database that are not in the request are marked as deleted (`is_deleted = "yes"`).
+
+    ### Errors:
+    - Returns `"Vacancy ID is required"` if no schedules are provided.
+    - Returns `"Error: <detailed message>"` if any unexpected database or server error occurs.
+
+    """
+    
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
+    
     try:
-        for schedule in schedules:
-            for applicant_id in applicant_ids:  # Handle multiple applicants
+        # Step 1: Validate Vacancy ID
+        vacancy_id = request.schedules[0].vacancy_id if request.schedules else None
+        if not vacancy_id:
+            raise HTTPException(status_code=400, detail="Vacancy ID is required")
 
-                # **Case 1:** If `id == 0`, insert a new schedule
-                if schedule.id == 0:
-                    new_schedule = InterviewSchedule(
-                        applicant_id=applicant_id,
-                        vacancy_id=schedule.vacancy_id,
-                        interview_panel_id=schedule.interview_panel_id,
-                        interview_date=schedule.interview_date,
-                        interview_time=schedule.interview_time,
-                        location=schedule.location,
-                        interview_status=schedule.interview_status,
-                        remarks=schedule.remarks,
-                        is_deleted="no"
-                    )
-                    db.add(new_schedule)
-                    db.commit()
-                    db.refresh(new_schedule)
+        # Step 2: Fetch Existing Schedules for Vacancy
+        existing_schedules = db.query(InterviewSchedule).filter(
+            InterviewSchedule.vacancy_id == vacancy_id,
+            InterviewSchedule.is_deleted == "no"
+        ).all()
 
-                else:
-                    # **Check if the schedule exists for this applicant**
-                    existing_schedule = db.query(InterviewSchedule).filter(
-                        InterviewSchedule.id == schedule.id,
-                        InterviewSchedule.applicant_id == applicant_id
-                    ).first()
+        # Step 3: Create a lookup dictionary {applicant_id -> existing schedule}
+        existing_schedule_map = {s.applicant_id: s for s in existing_schedules}
 
-                    if existing_schedule:
-                        # **Case 2a:** Remove the existing person (Soft delete)
-                        if schedule.interview_status == "REMOVED":
-                            existing_schedule.is_deleted = "yes"
+        # Step 4: Extract applicant IDs from the request
+        new_applicant_ids = {schedule.applicant_id for schedule in request.schedules}
 
-                        # **Case 2b:** Update the existing schedule
-                        else:
-                            existing_schedule.vacancy_id = schedule.vacancy_id
-                            existing_schedule.interview_panel_id = schedule.interview_panel_id
-                            existing_schedule.interview_date = schedule.interview_date
-                            existing_schedule.interview_time = schedule.interview_time
-                            existing_schedule.location = schedule.location
-                            existing_schedule.interview_status = schedule.interview_status
-                            existing_schedule.remarks = schedule.remarks
+        # Step 5: Insert or Update Logic
+        for schedule in request.schedules:
+            if schedule.id == 0:
+                # 🟢 Insert New Record
+                new_schedule = InterviewSchedule(
+                    applicant_id=schedule.applicant_id,
+                    vacancy_id=schedule.vacancy_id,
+                    interview_panel_id=schedule.interview_panel_id,
+                    interview_date=schedule.interview_date,
+                    interview_time=schedule.interview_time,
+                    location=schedule.location,
+                    interview_status="SCHEDULED",
+                    remarks=schedule.remarks,
+                    is_deleted="no",
+                )
+                db.add(new_schedule)
+                db.flush()  # Ensure ID is generated
+                db.refresh(new_schedule)  # Refresh the object with DB values
 
-                        db.commit()
-                        db.refresh(existing_schedule)
+            else:
+                # 🟡 Update Existing Record
+                existing_schedule = db.query(InterviewSchedule).filter(
+                    InterviewSchedule.id == schedule.id
+                ).first()
+                
+                if existing_schedule:
+                    existing_schedule.interview_panel_id = schedule.interview_panel_id
+                    existing_schedule.interview_date = schedule.interview_date
+                    existing_schedule.interview_time = schedule.interview_time
+                    existing_schedule.location = schedule.location
+                    existing_schedule.interview_status = "RESCHEDULED"  # Fixed Typo
+                    existing_schedule.remarks = schedule.remarks
 
-        return {"success": True, "message": "Saved successfully"}
+        # Step 6: Mark Missing Applicants as Deleted (Soft Delete)
+        for applicant_id, schedule in existing_schedule_map.items():
+            if applicant_id not in new_applicant_ids:
+                schedule.is_deleted = "yes"
+
+        # Step 7: Commit Changes
+        db.commit()
+        return {"success": "true", "message": "Interview schedules saved successfully"}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        db.rollback()
+        return {"success": "false", "message": f"Error: {str(e)}"}
