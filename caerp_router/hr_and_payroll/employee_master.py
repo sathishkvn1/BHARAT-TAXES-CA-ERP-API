@@ -1,6 +1,6 @@
 from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import ApplicationMaster, HrDocumentMaster, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_db.hr_and_payroll.model import ApplicationMaster, ApplicationRankList, HrDocumentMaster, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
@@ -2767,86 +2767,8 @@ def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
         return language_proficiency_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
-#------------------------------------------------------------------------------------------------
 
-# def calculate_total_scores(vacancy_id: int, db: Session):
-#     # Fetch individual components
-#     skills = fetch_skills_scores(vacancy_id, db)
-#     experience = fetch_experience_scores(vacancy_id, db)
-#     qualification = fetch_qualification_scores(vacancy_id, db)
-#     language_proficiency = fetch_language_proficiency_scores(vacancy_id, db)
 
-#     # Combine data
-#     applicant_scores = {}
-
-#     # Merge skill scores
-#     for row in skills:
-#         applicant_id, first_name, middle_name, last_name, skill_score = row
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {
-#                 "applicant_id": applicant_id, 
-#                 "first_name": first_name,
-#                 "middle_name": middle_name,
-#                 "last_name": last_name,
-#                 "skill_score": 0, 
-#                 "experience_score": 0, 
-#                 "qualification_score": 0, 
-#                 "language_proficiency_score": 0
-#             }
-#         applicant_scores[applicant_id]["skill_score"] = skill_score
-
-#     # Merge experience scores
-#     for (applicant_id, first_name, middle_name, last_name), experience_score in experience.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {
-#                 "applicant_id": applicant_id, 
-#                 "first_name": first_name,
-#                 "middle_name": middle_name,
-#                 "last_name": last_name,
-#                 "skill_score": 0, 
-#                 "experience_score": 0, 
-#                 "qualification_score": 0, 
-#                 "language_proficiency_score": 0
-#             }
-#         applicant_scores[applicant_id]["experience_score"] = experience_score
-
-#     # Merge qualification scores
-#     for (applicant_id, first_name, middle_name, last_name), qualification_score in qualification.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {
-#                 "applicant_id": applicant_id, 
-#                 "first_name": first_name,
-#                 "middle_name": middle_name,
-#                 "last_name": last_name,
-#                 "skill_score": 0, 
-#                 "experience_score": 0, 
-#                 "qualification_score": 0, 
-#                 "language_proficiency_score": 0
-#             }
-#         applicant_scores[applicant_id]["qualification_score"] = qualification_score
-
-#     # Merge language proficiency scores
-#     for (applicant_id, first_name, middle_name, last_name), language_proficiency_score in language_proficiency.items():
-#         if applicant_id not in applicant_scores:
-#             applicant_scores[applicant_id] = {
-#                 "applicant_id": applicant_id, 
-#                 "first_name": first_name,
-#                 "middle_name": middle_name,
-#                 "last_name": last_name,
-#                 "skill_score": 0, 
-#                 "experience_score": 0, 
-#                 "qualification_score": 0, 
-#                 "language_proficiency_score": 0
-#             }
-#         applicant_scores[applicant_id]["language_proficiency_score"] = language_proficiency_score
-
-#     # Calculate the total score
-#     for applicant_id, scores in applicant_scores.items():
-#         total_score = (scores["skill_score"] + scores["experience_score"] + 
-#                        scores["qualification_score"] + scores["language_proficiency_score"])
-#         scores["total_score"] = total_score
-
-#     return applicant_scores
 #----------------------------------------------------------------------------------------------------------
 
 def calculate_total_scores(vacancy_id: int, db: Session):
@@ -2894,7 +2816,7 @@ def calculate_total_scores(vacancy_id: int, db: Session):
             applicant_scores.append(applicant)
         applicant["experience_score"] = experience_score
 
-    # Merge qualification scores
+    # Merge qualification /education scores
     for (applicant_id, first_name, middle_name, last_name), qualification_score in qualification.items():
         applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
         if not applicant:
@@ -2943,18 +2865,121 @@ def calculate_total_scores(vacancy_id: int, db: Session):
     }
 
 #------------------------------------------------------------------------------------------------
+# @router.get("/ranked-applicants")
+# def get_ranked_applicants(vacancy_id: int,
+#                            db: Session = Depends(get_db),
+#                            token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         ranked_applicants = calculate_total_scores(vacancy_id, db)
+#         return {"success": "true", "data": ranked_applicants}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+# @router.get("/ranked-applicants")
+# def get_ranked_applicants(vacancy_id: int,
+#                            db: Session = Depends(get_db),
+#                            token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         # Fetch applicants with their scores
+#         ranked_applicants = calculate_total_scores(vacancy_id, db)
+
+#         # Ensure the response is a list before sorting
+#         if isinstance(ranked_applicants, dict):
+#             ranked_applicants = ranked_applicants.get("data", [])
+
+#         # Sort applicants by total_score in descending order
+#         ranked_applicants = sorted(ranked_applicants, key=lambda x: x["total_score"], reverse=True)
+
+#         # Assign rank based on sorted order
+#         for idx, applicant in enumerate(ranked_applicants, start=1):
+#             applicant["rank"] = idx
+
+#         return {"success": "true", "data": ranked_applicants}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/ranked-applicants")
-def get_ranked_applicants(vacancy_id: int,
-                           db: Session = Depends(get_db),
-                           token: str = Depends(oauth2.oauth2_scheme)):
+def get_ranked_applicants(
+    vacancy_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+):
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
+
     try:
+        # Fetch applicants and calculate scores
         ranked_applicants = calculate_total_scores(vacancy_id, db)
+
+        # Ensure the response is a list before sorting
+        if isinstance(ranked_applicants, dict):
+            ranked_applicants = ranked_applicants.get("data", [])
+
+        # Sort by total_score in descending order
+        ranked_applicants = sorted(ranked_applicants, key=lambda x: x["total_score"], reverse=True)
+
+        # Assign ranks and insert into `application_rank_list`
+        for idx, applicant in enumerate(ranked_applicants, start=1):
+            applicant["rank"] = idx  # Add rank to response
+
+            # Prepare record for insertion
+            rank_entry = ApplicationRankList(
+                applicant_id=applicant["applicant_id"],
+                vacancy_master_id=vacancy_id,
+                education_score=applicant.get("qualification_score", 0.0),
+                professional_score=0.0,  # Modify based on actual calculation
+                experience_score=applicant.get("experience_score", 0.0),
+                language_score=applicant.get("language_proficiency_score", 0.0),
+                skill_score=applicant.get("skill_score", 0.0),
+                interview_score=0.0,  # Modify if applicable
+                rank_number=idx,
+                total_score=applicant["total_score"],
+                # status="Pending",  # Modify based on business logic
+                is_deleted="no"
+            )
+
+            # Check if the record already exists
+            existing_record = db.query(ApplicationRankList).filter_by(
+                applicant_id=applicant["applicant_id"],
+                vacancy_master_id=vacancy_id
+            ).first()
+
+            if existing_record:
+                # Update existing record
+                existing_record.education_score = rank_entry.education_score
+                existing_record.professional_score = rank_entry.professional_score
+                existing_record.experience_score = rank_entry.experience_score
+                existing_record.language_score = rank_entry.language_score
+                existing_record.skill_score = rank_entry.skill_score
+                existing_record.interview_score = rank_entry.interview_score
+                existing_record.rank_number = rank_entry.rank_number
+                existing_record.total_score = rank_entry.total_score
+                # existing_record.status = rank_entry.status
+            else:
+                # Insert new record
+                db.add(rank_entry)
+
+        # Commit changes to database
+        db.commit()
+
         return {"success": "true", "data": ranked_applicants}
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
 #------------------------------------------------------------------------------------------------
 # @router.post("/save_interview_schedule/")
 # async def save_interview_schedule(

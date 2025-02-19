@@ -338,6 +338,8 @@ class VacancyEducationalStream(caerp_base):
     deleted_on                  = Column(DateTime, nullable=True, default=None)
 
 
+
+
 class VacancyEducationalSubjectOrCourse(caerp_base):
     __tablename__ = 'vacancy_educational_subject_or_course'
 
@@ -353,6 +355,9 @@ class VacancyEducationalSubjectOrCourse(caerp_base):
     is_deleted                    = Column(Enum('yes', 'no'), nullable=False, default='no')
     deleted_by                    = Column(Integer, nullable=True)
     deleted_on                    = Column(DateTime, nullable=True, default=None)
+
+
+
 
 # Assuming caerp_base is a subclass of SQLAlchemy's declarative base
 class VacancyExperience(caerp_base):
@@ -621,22 +626,21 @@ class ApplicantSocialMediaProfile(caerp_base):
 
 class ViewApplicantDetails(caerp_base):
     __tablename__ = 'view_applicant_details'
-
     applicant_id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String)
     middle_name = Column(String)
     last_name = Column(String)
     date_of_birth = Column(Date)
-    
+   
     gender_id = Column(Integer)
     gender_name = Column(String)
-    
+   
     blood_group_id = Column(Integer)
     blood_group = Column(String)
-    
+   
     marital_status_id = Column(Integer)
     marital_status = Column(String)
-    
+   
     nationality_id = Column(Integer)
     nationality_name = Column(String)
     
@@ -696,7 +700,7 @@ class ViewApplicantDetails(caerp_base):
     
     permanent_taluk_id = Column(Integer)
     permanent_taluk_name = Column(String)
-    
+   
     permanent_district_id = Column(Integer)
     permanent_district_name = Column(String)
     
@@ -767,3 +771,24 @@ class InterviewPanelMembers(caerp_base):
     is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
 
  
+
+class ApplicationRankList(caerp_base):
+    __tablename__ = "application_rank_list"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    applicant_id = Column(Integer,  nullable=False)
+    vacancy_master_id = Column(Integer,  nullable=False)
+    
+    education_score = Column(Float, nullable=False, default=0.0)
+    professional_score = Column(Float, nullable=False, default=0.0)
+    experience_score = Column(Float, nullable=False, default=0.0)
+    language_score = Column(Float, nullable=False, default=0.0)
+    skill_score = Column(Float, nullable=False, default=0.0)
+    interview_score = Column(Float, nullable=False, default=0.0)
+
+    rank_number = Column(Integer, nullable=False, default=0)
+    total_score = Column(Float, nullable=False, default=0.0)
+
+    # status = Column(Enum("Pending", "Selected", "Rejected"), default="Pending")
+    is_deleted = Column(Enum("yes", "no"), nullable=False, default="no")
+

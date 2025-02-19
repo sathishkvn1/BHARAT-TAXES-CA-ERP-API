@@ -2483,7 +2483,7 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
         vacancy_experience = db.query(VacancyExperience).filter(VacancyExperience.vacancy_master_id == vacancy_id).all()
         skills_required = db.query(VacancySkills).filter(VacancySkills.vacancy_master_id == vacancy_id).all()
         language_proficiency = db.query(VacancyLanguageProficiency).filter(VacancyLanguageProficiency.vacancy_master_id == vacancy_id).all()
-        vacancy_educational_qualification = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.vacancy_master_id == vacancy_id).all()
+        # vacancy_educational_qualification = db.query(VacancyEducationalQualification).filter(VacancyEducationalQualification.vacancy_master_id == vacancy_id).all()
 
         # Map related data to corresponding schema
         vacancy_experience_data = [
@@ -2522,35 +2522,35 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
 
         # Prepare education data with both ID and Name
         education_data = []
-        for edu in vacancy_educational_qualification:
-            # Get education level and stream names
+        # for edu in vacancy_educational_qualification:
+        #     # Get education level and stream names
 
 
-            education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
-            education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
-            # If education_stream_name is None, set to default or "Unknown"
-            education_stream_name = education_stream_name if education_stream_name else "Unknown"
-            # Get subject/course name
-            subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
-            # If subject_or_course_name is None, set to default or "Unknown"
-            subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
-            # Add education details to the list
-            education_data.append(
-                VacancyEducationSchemaForGet(
-                    id=edu.id,
-                    education_level_id=edu.education_level_id,
-                    education_level=education_level_name,  
-                    is_any_level=edu.is_any_level,
-                    education_stream_id=edu.education_stream_id,
-                    education_stream=education_stream_name,  
-                    is_any_stream=edu.is_any_stream,
-                    course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
-                                    subject_or_course_name=subject_or_course_name)]  
-                    if edu.education_subject_or_course_id else [],
-                    is_any_subject_or_course=edu.is_any_subject_or_course
-                )
+        #     education_level_name = db.query(AppEducationalLevel.education_level).filter(AppEducationalLevel.id == edu.education_level_id).scalar()
+        #     education_stream_name = db.query(AppEducationalStream.education_stream).filter(AppEducationalStream.id == edu.education_stream_id).scalar()
+        #     # If education_stream_name is None, set to default or "Unknown"
+        #     education_stream_name = education_stream_name if education_stream_name else "Unknown"
+        #     # Get subject/course name
+        #     subject_or_course_name = db.query(AppEducationSubjectCourse.subject_or_course_name).filter(AppEducationSubjectCourse.id == edu.education_subject_or_course_id).scalar()
+        #     # If subject_or_course_name is None, set to default or "Unknown"
+        #     subject_or_course_name = subject_or_course_name if subject_or_course_name else "Unknown"
+        #     # Add education details to the list
+        #     education_data.append(
+        #         VacancyEducationSchemaForGet(
+        #             id=edu.id,
+        #             education_level_id=edu.education_level_id,
+        #             education_level=education_level_name,  
+        #             is_any_level=edu.is_any_level,
+        #             education_stream_id=edu.education_stream_id,
+        #             education_stream=education_stream_name,  
+        #             is_any_stream=edu.is_any_stream,
+        #             course=[Courses(education_subject_or_course_id=[edu.education_subject_or_course_id], 
+        #                             subject_or_course_name=subject_or_course_name)]  
+        #             if edu.education_subject_or_course_id else [],
+        #             is_any_subject_or_course=edu.is_any_subject_or_course
+        #         )
 
-            )
+        #     )
 
         # Return the data in the structured format
         return VacancyCreateSchemaForGet(
