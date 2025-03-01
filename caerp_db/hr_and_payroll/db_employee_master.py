@@ -6,7 +6,7 @@ from datetime import date,datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.hr_and_payroll.model import ApplicantContactDetails, ApplicantEducationalQualification, ApplicantExperience, ApplicantHobby, ApplicantLanguageProficiency, ApplicantMaster, ApplicantPermanentAddress, ApplicantPresentAddress, ApplicantProfessionalQualification, ApplicantSkill, ApplicantSocialMediaProfile, ApplicationMaster, EmployeeSalaryDetails, EmployeeSalaryDetailsView, EmployeeTeamMaster, EmployeeTeamMembers, HrDepartmentMaster, HrDesignationMaster, HrEmployeeCategory, HrViewEmployeeTeamMaster, HrViewEmployeeTeamMembers, InterviewPanelMaster, InterviewPanelMembers, InterviewSchedule, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyEducationalLevel, VacancyEducationalQualification, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyExperience, VacancyLanguageProficiency, VacancyMaster, VacancySkills, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, Courses, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewScheduleSchema, LanguageProficiencySchema, LanguageProficiencySchemaForGet, SaveEmployeeTeamMaster, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancyEducationSchema, VacancyEducationSchemaForGet, VacancyExperienceSchema, VacancySchema, VacancySkillsSchema, VacancySkillsSchemaForGet
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, ApplicantContactDetailsResponse, ApplicantDetails, ApplicantDetailsView, ApplicantEducationalQualificationResponse, ApplicantExperienceResponse, ApplicantHobbyResponse, ApplicantLanguageProficiencyResponse, ApplicantMasterResponse, ApplicantPermanentAddressResponse, ApplicantPresentAddressResponse, ApplicantProfessionalQualificationResponse, ApplicantSkillResponse, ApplicantSocialMediaResponse, Course, Courses, CreateInterviewPanelRequest, EmployeeAddressDetailsSchema, EmployeeDetails,EmployeeDocumentsSchema, EmployeeEducationalQualficationSchema, EmployeeLanguageProficiencyBase, EmployeeSalarySchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMasterSchema, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest, InterviewScheduleSchema, LanguageProficiencySchema, LanguageProficiencySchemaForGet, SaveEmployeeTeamMaster, ScheduledCandidate, VacancyAnnouncements, VacancyCreateSchema, VacancyCreateSchemaForGet, VacancyEducationSchema, VacancyEducationSchemaForGet, VacancyExperienceSchema, VacancySchema, VacancySkillsSchema, VacancySkillsSchemaForGet
 from caerp_constants.caerp_constants import RecordActionType, ActionType, ActiveStatus, ApprovedStatus
 from typing import Union, List, Optional
 from sqlalchemy import and_, func, insert, update , text, or_
@@ -1784,6 +1784,7 @@ def search_employee_master_details_with_page(
     return result
 
 
+#------------------------------------------------------------------------------------------------------
 def get_employee_language_proficiency_details(db: Session, employee_id: int):
     # Fetch employee proficiency details
     emp_lang_prof_info = (
@@ -1842,7 +1843,7 @@ def get_employee_language_proficiency_details(db: Session, employee_id: int):
 
     return lang_proficiencies
 
-
+#------------------------------------------------------------------------------------------------------
 
 def save_employee_language_proficiency(
     db: Session,
@@ -2707,43 +2708,6 @@ def get_vacancy_details_by_id(db: Session, vacancy_id: int) -> Optional[VacancyC
 #         return None
 
 #---------------------------------------------------------------------------------------------------
-# def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
-#     try:
-#         for master in data.vacancy_announcement_master:
-#             # Insert/update VacancyAnnouncementMaster record
-#             master_record = VacancyAnnouncementMaster(
-#                 id=master.id if master.id > 0 else None,
-#                 title=master.title,
-#                 description=master.description,
-#                 announcement_type=master.announcement_type,
-#                 closing_date=master.closing_date,
-#                 created_by=user_id,
-#                 created_on=datetime.utcnow(),
-#                 is_deleted='no'
-#             )
-#             db.add(master_record)
-#             db.flush()  # Flush to get the master record's ID
-
-#             # Insert/update VacancyAnnouncementDetails records
-#             if master.announcement_details:  # Check if announcement_details is not None
-#                 for detail in master.announcement_details:
-#                     detail_record = VacancyAnnouncementDetails(
-#                         id=detail.id if detail.id > 0 else None,
-#                         vacancy_announcement_master_id=master_record.id,
-#                         vacancy_master_id=detail.vacancy_master_id,
-#                         created_by=user_id,
-#                         created_on=datetime.utcnow(),
-#                         is_deleted='no'
-#                     )
-#                     db.add(detail_record)
-
-#         db.commit()  # Commit the transaction
-#         return {"success": True, "message": "Vacancy announcements saved successfully"}
-    
-#     except Exception as e:
-#         db.rollback()  # Rollback if any error occurs
-#         return {"success": False, "message": f"Unexpected error: {str(e)}"}
-
 
 
 def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, user_id: int):
@@ -2793,6 +2757,11 @@ def save_vacancy_announcements_to_db(data: VacancyAnnouncements, db: Session, us
                             detail_record.vacancy_master_id = detail.vacancy_master_id
                         else:
                             raise ValueError(f"VacancyAnnouncementDetails with id {detail.id} not found for update.")
+                        
+                    # ✅ Update vacancy_master status to 'ANNOUNCED'
+                    vacancy_record = db.query(VacancyMaster).filter(VacancyMaster.id == detail.vacancy_master_id).first()
+                    if vacancy_record:
+                        vacancy_record.vacancy_status = "ANNOUNCED"
 
         db.commit()  # Commit the transaction
         return {"success": True, "message": "Vacancy announcements saved successfully"}
@@ -4132,153 +4101,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 
-def create_or_update_vacancy(vacancy_data: VacancySchema, db: Session, created_by: int):
-    try:
-        for education in vacancy_data.education.levels:
-            if education.id == 0:  # Insert new education level
-                logging.info(f"Inserting new education level: {education.education_level_id}")
-                
-                # Insert education level
-                new_education_level = VacancyEducationalLevel(
-                    vacancy_master_id=22,  # Ensure you pass the correct master id
-                    education_level_id=education.education_level_id,
-                    weightage=education.weightage,
-                    created_by=created_by,
-                    created_on=datetime.utcnow()
-                )
-                db.add(new_education_level)
-                db.flush()
-
-                # Insert streams related to this education level
-                for stream in education.streams:
-                    if stream.id == 0:  # Insert new stream
-                        logging.info(f"Inserting new stream: {stream.education_stream_id}")
-
-                        new_education_stream = VacancyEducationalStream(
-                            vacancy_master_id=22,
-                            education_stream_id=stream.education_stream_id,
-                            weightage=stream.weightage,
-                            created_by=created_by,
-                            created_on=datetime.utcnow()
-                        )
-                        db.add(new_education_stream)
-                        db.flush()
-
-                        # Insert courses for this stream
-                        for course in stream.courses:
-                            if course.id == 0:  # Insert new course
-                                logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
-
-                                new_education_course = VacancyEducationalSubjectOrCourse(
-                                    vacancy_master_id=22,
-                                    education_subject_or_course_id=course.education_subject_or_course_id,
-                                    weightage=course.weightage,
-                                    created_by=created_by,
-                                    created_on=datetime.utcnow()
-                                )
-                                db.add(new_education_course)
-
-                db.commit()
-            # sss
-
-            else:
-                logging.info(f"Updating existing education level: {education.id}")
-                
-                existing_education_level = db.query(VacancyEducationalLevel).filter_by(id=education.id).first()
-                if existing_education_level:
-                    existing_education_level.weightage = education.weightage
-                    existing_education_level.modified_by = created_by
-                    existing_education_level.modified_on = datetime.utcnow()
-                    db.flush()  # Ensure changes are registered
-
-                    # Fetch existing streams
-                    existing_streams = {s.id: s for s in db.query(VacancyEducationalStream)
-                                        .filter(VacancyEducationalStream.vacancy_master_id == 22).all()}
-                    input_stream_ids = {stream.id for stream in education.streams if stream.id != 0}
-
-                    for stream in education.streams:
-                        if stream.id == 0:  # Insert new stream
-                            logging.info(f"Inserting new stream: {stream.education_stream_id}")
-                            new_stream = VacancyEducationalStream(
-                                vacancy_master_id=22,
-                                education_stream_id=stream.education_stream_id,
-                                weightage=stream.weightage,
-                                created_by=created_by,
-                                created_on=datetime.utcnow()
-                            )
-                            db.add(new_stream)
-                            db.flush()
-                            stream.id = new_stream.id  # Update input object with new ID
-                        else:
-                            if stream.id in existing_streams:
-                                existing_stream = existing_streams[stream.id]
-                                if existing_stream.weightage != stream.weightage:  # ✅ Detect actual change
-                                    logging.info(f"Updating stream {existing_stream.id}")
-                                    existing_stream.weightage = stream.weightage
-                                    existing_stream.modified_by = created_by
-                                    existing_stream.modified_on = datetime.utcnow()
-                                    db.flush()
-
-                    # Soft delete removed streams
-                    for existing_stream_id in set(existing_streams) - input_stream_ids:
-                        logging.info(f"Soft deleting stream {existing_stream_id}")
-                        existing_streams[existing_stream_id].is_deleted = 'yes'
-                        existing_streams[existing_stream_id].modified_by = created_by
-                        existing_streams[existing_stream_id].modified_on = datetime.utcnow()
-                        db.flush()
-
-                    # Fetch existing courses
-                    existing_courses = {c.id: c for c in db.query(VacancyEducationalSubjectOrCourse)
-                                        .filter(VacancyEducationalSubjectOrCourse.vacancy_master_id == 22).all()}
-                    input_course_ids = {course.id for stream in education.streams for course in stream.courses if course.id != 0}
-
-                    for stream in education.streams:
-                        for course in stream.courses:
-                            if course.id == 0:  # Insert new course
-                                logging.info(f"Inserting new course: {course.education_subject_or_course_id}")
-                                new_course = VacancyEducationalSubjectOrCourse(
-                                    vacancy_master_id=22,
-                                    education_subject_or_course_id=course.education_subject_or_course_id,
-                                    weightage=course.weightage,
-                                    created_by=created_by,
-                                    created_on=datetime.utcnow()
-                                )
-                                db.add(new_course)
-                                db.flush()
-                            else:
-                                if course.id in existing_courses:
-                                    existing_course = existing_courses[course.id]
-                                    if course.weightage == 0:  # Soft delete course
-                                        logging.info(f"Soft deleting course {existing_course.id}")
-                                        existing_course.is_deleted = 'yes'
-                                    elif existing_course.weightage != course.weightage:  # ✅ Detect actual change
-                                        logging.info(f"Updating course {existing_course.id}")
-                                        existing_course.weightage = course.weightage
-                                        existing_course.modified_by = created_by
-                                        existing_course.modified_on = datetime.utcnow()
-                                    db.flush()
-
-                    # Soft delete removed courses
-                    for existing_course_id in set(existing_courses) - input_course_ids:
-                        logging.info(f"Soft deleting course {existing_course_id}")
-                        existing_courses[existing_course_id].is_deleted = 'yes'
-                        existing_courses[existing_course_id].modified_by = created_by
-                        existing_courses[existing_course_id].modified_on = datetime.utcnow()
-                        db.flush()
-
-                db.commit()
-
-
-
-        return {"success": True, "message": "Vacancy created/updated successfully."}
-
-    except Exception as e:
-        db.rollback()  # Rollback in case of error
-        logging.error(f"Error while creating/updating vacancy: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Error while creating/updating vacancy: {str(e)}")
-
-        #------------------------------------------------------------------------
-
 
 
 
@@ -4706,8 +4528,6 @@ def save_vacancy_data(vacancy_data: VacancyCreateSchema, db: Session, created_by
             # Commit the transaction
             db.commit()
 
-       
-
         #education insertion
         if vacancy_data.education:
             # satr here
@@ -4915,3 +4735,120 @@ def get_applicants_by_vacancy(db: Session, vacancy_master_id: int):
     return result.fetchall()
 
 #---------------------------------------------------------------------------------------
+def get_scheduled_candidates(db: Session, vacancy_id: int) -> List[ScheduledCandidate]:
+    candidates = db.execute(text("""
+        SELECT 
+            am.applicant_id,
+            am.first_name,
+            am.middle_name,
+            am.last_name,
+            acd.personal_mobile_number,
+            acd.personal_whatsapp_number,
+            acd.personal_email_id,
+            isch.interview_date,
+            isch.interview_time,
+            isch.location,
+            isch.interview_status,
+            ipm.panel_description,
+            vm.job_description,
+            vm.vacancy_status,
+            vm.job_location,
+            vm.experience_required,
+            hdm.department_name,
+            hdm.id AS department_id,
+            hdm.is_deleted AS department_deleted,
+            hds.designation AS designation_name,
+            hds.id AS designation_id,
+            hds.is_deleted AS designation_deleted
+        FROM interview_schedule isch
+        INNER JOIN applicant_master am ON isch.applicant_id = am.applicant_id
+        INNER JOIN applicant_contact_details acd ON am.applicant_id = acd.applicant_id AND acd.is_deleted = 'no'
+        INNER JOIN vacancy_master vm ON isch.vacancy_id = vm.id
+        INNER JOIN interview_panel_master ipm ON isch.interview_panel_id = ipm.id
+        INNER JOIN hr_department_master hdm ON vm.department_id = hdm.id
+        INNER JOIN hr_designation_master hds ON vm.designation_id = hds.id
+        WHERE isch.vacancy_id = :vacancy_id
+        AND isch.is_deleted = 'no'
+        AND am.is_deleted = 'no'
+        AND vm.is_deleted = 'no'
+        AND ipm.is_deleted = 'no'
+        AND hdm.is_deleted = 'no'
+        AND hds.is_deleted = 'no'
+    """), {"vacancy_id": vacancy_id}).mappings().all()
+
+    result = []
+    for row in candidates:
+        row_dict = dict(row)
+
+        # Convert timedelta to time
+        interview_time_value = row_dict.get("interview_time")
+        if isinstance(interview_time_value, timedelta):
+            row_dict["interview_time"] = (datetime.min + interview_time_value).time()
+
+        result.append(row_dict)
+
+    return result
+
+#---------------------------------------------------------------------------------------
+# def get_scheduled_candidates(db: Session, vacancy_id: int) -> List[ScheduledCandidate]:
+#     candidates = db.execute(text("""
+#         SELECT 
+#             am.applicant_id,
+#             am.first_name,
+#             am.middle_name,
+#             am.last_name,
+#             acd.personal_mobile_number,
+#             acd.personal_whatsapp_number,
+#             acd.personal_email_id,
+#             isch.interview_date,
+#             isch.interview_time,
+#             isch.location,
+#             isch.interview_status,
+#             ipm.panel_description,
+#             ipm.interview_date_from,
+#             ipm.interview_date_to,
+#             ipm.interview_time_from,
+#             ipm.interview_time_to,
+#             vm.job_description,
+#             vm.vacancy_status,
+#             vm.job_location,
+#             vm.experience_required,
+#             hdm.department_name,
+#             hdm.id AS department_id,
+#             hdm.is_deleted AS department_deleted,
+#             hds.designation AS designation_name,
+#             hds.id AS designation_id,
+#             hds.is_deleted AS designation_deleted,
+#             -- Fetch panel members as a concatenated string
+#             GROUP_CONCAT(DISTINCT CONCAT(em.first_name, ' ', em.last_name) SEPARATOR ', ') AS panel_members
+#         FROM interview_schedule isch
+#         INNER JOIN applicant_master am ON isch.applicant_id = am.applicant_id
+#         INNER JOIN applicant_contact_details acd ON am.applicant_id = acd.applicant_id AND acd.is_deleted = 'no'
+#         INNER JOIN vacancy_master vm ON isch.vacancy_id = vm.id
+#         INNER JOIN interview_panel_master ipm ON isch.interview_panel_id = ipm.id
+#         INNER JOIN interview_panel_members ipmm ON ipm.id = ipmm.interview_panel_master_id AND ipmm.is_deleted = 'no'
+#         INNER JOIN employee_master em ON ipmm.interviewer_id = em.employee_id
+#         INNER JOIN hr_department_master hdm ON vm.department_id = hdm.id
+#         INNER JOIN hr_designation_master hds ON vm.designation_id = hds.id
+#         WHERE isch.vacancy_id = :vacancy_id
+#         AND isch.is_deleted = 'no'
+#         AND am.is_deleted = 'no'
+#         AND vm.is_deleted = 'no'
+#         AND ipm.is_deleted = 'no'
+#         AND hdm.is_deleted = 'no'
+#         AND hds.is_deleted = 'no'
+#         GROUP BY isch.id  -- Grouping by interview schedule ID to avoid duplicates
+#     """), {"vacancy_id": vacancy_id}).mappings().all()
+
+#     result = []
+#     for row in candidates:
+#         row_dict = dict(row)
+
+#         # Convert timedelta to time
+#         interview_time_value = row_dict.get("interview_time")
+#         if isinstance(interview_time_value, timedelta):
+#             row_dict["interview_time"] = (datetime.min + interview_time_value).time()
+
+#         result.append(row_dict)
+
+#     return result
