@@ -1,12 +1,24 @@
 
 
 
-from caerp_constants.caerp_constants import ActionType
-from caerp_db.common.models import AppEducationalQualificationsMaster, AppViewVillages, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, Gender, NationalityDB, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery,  StateDB, TalukDB
-from sqlalchemy.orm import Session
-from fastapi import HTTPException ,status
+from datetime import date, datetime
+import json
+import random
+from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError
 
-from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, Village, VillageResponse     
+import requests
+from sqlalchemy import desc, or_
+from caerp_constants.caerp_constants import ActionType
+from caerp_db.common import db_otp, db_user
+from caerp_db.common.models import  AppViewVillages, CaerpLicenceDetails, CaerpLicenceMaster, CityDB, ConstitutionTypes, CountryDB, CurrencyDB, DistrictDB, EmployeeContactDetails, EmployeeMaster, Gender, MenuStructure, NationalityDB, Notification, PanCard, PostOfficeTypeDB, PostOfficeView, PostalCircleDB, PostalDeliveryStatusDB, PostalDivisionDB, PostalRegionDB, Profession, QueryManagerQuery, QueryView, RoleMenuMapping,  StateDB, TalukDB, UserBase, UsersRole
+from sqlalchemy.orm import Session
+from fastapi import Depends, HTTPException ,status
+
+from caerp_db.database import get_db
+from caerp_functions import send_message
+from caerp_router.common.common_functions import token_generate
+from caerp_schema.common.common_schema import ConstitutionTypeForUpdate, EducationSchema, LicenceMasterSchema, MenuStructureSchema, NotificationSchema, ProfessionSchemaForUpdate, QueryManagerQuerySchema, QueryManagerViewSchema, RoleMenuMappingSchema, UserRoleSchema, Village, VillageResponse     
 
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentStatusSchema,RefundStatusSchema,RefundReasonSchema
@@ -21,6 +33,7 @@ def get_countries(db: Session):
 
 
 def get_country_by_id(db: Session, country_id: int):
+    
     return db.query(CountryDB).filter(CountryDB.id == country_id).first()
 
 
@@ -135,50 +148,9 @@ def get_pan_card_by_code_type(db: Session, code_type: str):
 
 
 
-def get_all_qualification(db: Session):
-    return db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.is_deleted == 'no').all() 
 
 
 
-def save_educational_qualifications(db: Session, id: int, data: EducationSchema):
-    if id == 0:
-        # Add operation
-        new_qualification = AppEducationalQualificationsMaster(**data.dict())
-        db.add(new_qualification)
-        db.commit()
-        db.refresh(new_qualification)
-        return new_qualification
-    else:
-        # Update operation
-        existing_qualification = db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.id == id).first()
-        if existing_qualification is None:
-            raise HTTPException(status_code=404, detail="Qualification not found")
-        
-        # Update the existing qualification with new data
-        for field, value in data.dict().items():
-            setattr(existing_qualification, field, value)
-        
-        db.commit()
-        db.refresh(existing_qualification)
-        return existing_qualification
-
-
-
-
-def delete_educational_qualifications(db: Session, id: int):
-    result = db.query(AppEducationalQualificationsMaster).filter(AppEducationalQualificationsMaster.id == id).first()
-
-    if result is None:
-        raise HTTPException(status_code=404, detail="Director not found")
-
-    result.is_deleted = 'yes'
-
-
-    db.commit()
-
-    return {
-        "message": "Deleted successfully",
-    }
 
 
 def get_all_constitution(db: Session):
@@ -260,13 +232,6 @@ def get_query_manager_query_by_id(db: Session, id: int):
 #     return db.query(QueryView).filter(QueryView.id == id).first()
 
 #-----------------------------------------------------------
-
-
-
-
-
-
-
 def save_payments_mode(db: Session,
                    payments_mode_data: PaymentModeSchema, 
                    id: int = 0):
@@ -570,14 +535,14 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
     villages = []
     block = None
     taluk = None
-  
+    district = None
 
     for row in result:
         try:
             village_name = str(row.village_name) if row.village_name is not None else ""
             villages.append(
                 Village(
-                    id=row.app_village_id,
+                    id=row.village_id,
                     village_name=village_name,
                     lsg_type=row.lsg_type,
                     lsg_type_id=row.lsg_type_id,
@@ -587,52 +552,640 @@ def get_villages_data(db: Session, pincode: str) -> VillageResponse:
                     lsg_id=row.lsg_id
                 )
             )
+            # Handle block
             if block is None:
-                block = {"name": row.block_name, "id": row.block_id}
+                block = {
+                    "name": row.block_name if row.block_name else "",
+                    "id": row.block_id if row.block_id else 0
+                }
+
+            # Handle taluk
             if taluk is None:
-                taluk = {"name": row.taluk_name, "id": row.taluk_id}
-            # if district is None:
-            #     district = {"name": row.district_name, "id": row.district_id}
+                taluk = {
+                    "name": row.taluk_name if row.taluk_name else "",
+                    "id": row.taluk_id if row.taluk_id else 0
+                }
+
+            # Handle district
+            if district is None:
+                district = {
+                    "name": row.district_name if row.district_name else "",
+                    "id": row.district_id if row.district_id else 0
+                }
 
         except Exception as e:
-            print(f"Error processing row {row}: {e}")
-            continue
+            return []
 
     return VillageResponse(
         villages=villages,
         block=block,
         taluk=taluk,
-        district="",
-        state="kerala",
-        country="India"
+        district=district
     )
 
 
+#-------------------------------------------------------------------------------------------------
+def send_query_manager_otp(
+        db : Session,
+        mobile_no: Optional[str]=None,
+        email_id : Optional[str]=None,
+        user_name : Optional[str]=None,
+        ):
+# if email_id: 
+
+    # else:
+    if user_name :
+        user = db.query(UserBase).filter(UserBase.user_name == user_name).first()
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        employee_id = user.employee_id
+        official_mobile_no = db.query(EmployeeContactDetails.personal_mobile_number).filter(EmployeeContactDetails.employee_id==user.employee_id).scalar()
+        # official_mobile_no = official_mobile_no[0]
+    if mobile_no:
+        official_mobile_no = mobile_no 
+        employee_id = db.query(EmployeeContactDetails.employee_id).filter(EmployeeContactDetails.personal_mobile_number == mobile_no).scalar()
+        # employee_id = employee_id[0]
+        if employee_id is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    mobile_otp_value = random.randint(pow(10,5), pow(10,5+1)-1)  
+    new_otp = db_otp.create_otp(db, mobile_otp_value,employee_id)
+    mobile_otp_id = new_otp.id    
+    
+    sms_type= 'OTP'
+    template_data = db_user.get_templates_by_type(db,sms_type)
+    temp_id= template_data.template_id
+    template_message = template_data.message_template
+    replace_values = [ mobile_otp_value, 'mobile registration']
+    placeholder = "{#var#}"
+    for value in replace_values:
+        template_message = template_message.replace(placeholder, str(value),1)
+                    
+    
+    try:
+        result = send_message.send_sms_otp(official_mobile_no,template_message,temp_id,db)
+        return {
+        "success" :True,
+        'mobile_otp_id' : mobile_otp_id,
+        'user_id' : employee_id
+            }
+    except Exception as e:
+                # Handle sms sending failure
+                print(f"Failed to send message: {str(e)}")
+    
+
+#-----------------------------------------------------------------------------------------------
+
+def get_query_details(db: Session, id: int):
+    # Fetch the main query details
+    query_details = db.query(QueryView).filter(QueryView.query_manager_id == id).first()
+    
+    if not query_details:
+        return None
+
+    # Fetch the employee details if resolved_by is present
+    employee_details = None
+    if query_details.queried_by:
+        employee_details = db.query(EmployeeMaster).filter(EmployeeMaster.employee_id == query_details.queried_by).first()
+    # Fetch the employee contact details if employee_id is present
+    contact_details = None
+    if employee_details:
+        contact_details = db.query(EmployeeContactDetails).filter(EmployeeContactDetails.employee_id == employee_details.employee_id).first()
+
+    # Fetch the user details if queried_by is present
+    user_details = None
+    if query_details.queried_by:
+        user_details = db.query(UserBase).filter(UserBase.employee_id == query_details.queried_by).first()
+
+    # Combine results
+    return {
+        "query_details": query_details,
+        "employee_name": employee_details.first_name if employee_details else None,
+        "employee_id": employee_details.employee_id if employee_details else None,
+        "mobile_number": contact_details.personal_mobile_number if contact_details else None,
+        "user_name": user_details.user_name if user_details else None,
+        "user_id"  : user_details.employee_id if user_details else None
+    }
+#-------------------------------------------------------------------------------------------
+
+def get_notifications(
+        db : Session,
+        notification_id : Optional[int] =None,
+        display_location : Optional[str] = None
+) : 
+    query = db.query(Notification).filter(Notification.is_deleted == "no")
+    if notification_id :
+        query = query.filter(Notification.id == notification_id)
+    if display_location:
+        query = query.filter(Notification.display_location == display_location)
+
+    # notifications = query.all()
+    notifications = query.order_by(desc(Notification.notification_date)).all()
+    return notifications
+
+
+#-------------------------------------------------------------------------------------------
+
+def add_notification(
+    notification: NotificationSchema, 
+    db: Session = Depends(get_db) ,
+    notification_id: Optional[int] = None
+    # display_location: Optional[int] = None,
+):
+
+    notification_obj = None
+    if notification_id :
+            notification_obj = db.query(Notification).filter(Notification.id == notification_id, 
+                                                          Notification.is_deleted == "no").first()
+            if not notification_obj:
+                raise HTTPException(status_code=404, detail="Notification not found.")
+            # for key, value in notification.dict(exclude_unset=True).items():
+            #   setattr(notifications, key, value)
+            # notifications.modified_on = datetime.utcnow()
+
+    # elif display_location :
+    #         notification_obj = db.query(Notification).filter(Notification.display_location == display_location, 
+    #                                                       Notification.is_deleted == "no").first()
+    #         if not notification_obj:
+    #             raise HTTPException(status_code=404, detail="Notification not found.")
+    if notification_obj : 
+        for key, value in notification.dict(exclude_unset=True).items():
+            setattr(notification_obj, key, value)
+        notification_obj.modified_on = datetime.utcnow()
+        db.commit()
+        db.refresh(notification_obj)
+        return  {'success' : True,
+                'notificationnid ': notification_obj.id
+        } 
+
+    else : 
+#     db.commit()
+#     db.refresh(db_notification)
+#     
+        new_notification = Notification(**notification.dict(exclude_unset=True))
+        db.add(new_notification)
+        db.commit()
+        db.refresh(new_notification)
+        return {'success' : True,
+                'new notificationnid ': new_notification.id
+        }
 
 
 
 
 
+def get_queries_by_id(
+        db: Session,         
+        id: Optional[int]= None, 
+        is_resolved : Optional[str] = 'ALL',
+        search_value: Optional[str] = "ALL",
+        from_date : Optional[date]= None,
+        to_date : Optional[date] = None) -> List[QueryManagerViewSchema]:
+    today = date.today()
+    from_date = from_date or today
+    to_date = to_date or today
+
+    query = db.query(QueryView)
+    query = query.filter(
+        QueryView.query_on >= datetime.combine(from_date, datetime.min.time()),
+        QueryView.query_on <= datetime.combine(to_date, datetime.max.time())
+    )
+    if id :
+        query = query.filter(QueryView.query_manager_id == id)
+    if is_resolved != 'ALL':
+        query = query.filter(QueryView.is_resolved == is_resolved)
+   
+    if search_value and search_value != "ALL":
+        query = query.filter(
+            or_(
+                QueryView.query.like(f"%{search_value}%"),
+                QueryView.query_on.like(f"%{search_value}%")
+            )
+        )
+    results = query.all()
+    return [QueryManagerViewSchema.from_orm(result) for result in results]
+    
+
+
+def send_query_resolved_notification(phone, template_name: str, placeholders: list)->dict:
+    token = token_generate()
+    url = "https://apis.rmlconnect.net/wba/v1/messages"
+    payload = {
+            "phone": phone,
+            "media": {
+                "type": "media_template",
+                "template_name": template_name,
+                "lang_code": "en",
+                "body": [{"text": value} for value in placeholders]
+            }
+        }
+    headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': f"{token}"  # Ensure token is prefixed with Bearer
+        }
+
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        # print("Request Headers:", headers)
+        # print("Request Payload:", json.dumps(payload, indent=4))
+        # print('/response ..............',response)
+        # response.raise_for_status()  # Raise HTTPError for bad responses
+        return {"success": True, "response": response.json()}
+    except requests.exceptions.RequestException as e:        
+        return {"success": False, "error": str(e), "response": response.text}
+
+
+#----------------------------------------------------------------------------------------------------------
+def create_menu(menus: List[MenuStructureSchema], user_id: int, db: Session = Depends(get_db)):
+    processed_menus = []
+
+    for menu in menus:
+        # Check if the menu already exists
+        existing_menu = db.query(MenuStructure).filter(MenuStructure.id == menu.id).first()
+
+        if existing_menu:
+            # Update existing menu
+            menu_data = menu.model_dump()  # Convert Pydantic object to dictionary
+            menu_data['modified_by'] = user_id
+            menu_data['modified_on'] = datetime.now()
+
+            for key, value in menu_data.items():
+                if hasattr(existing_menu, key):  # Update only fields that exist in the model
+                    setattr(existing_menu, key, value)
+
+            db.commit()
+            db.refresh(existing_menu)
+            processed_menus.append(existing_menu)  # Add updated menu to the list
+        else:
+            # Create new menu
+            new_menu = MenuStructure(
+                **menu.model_dump(),
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(new_menu)
+            db.commit()
+            db.refresh(new_menu)
+            processed_menus.append(new_menu)  # Add newly created menu to the list
+
+    # Serialize using MenuStructureSchema
+    response_menus = [MenuStructureSchema.from_orm(menu) for menu in processed_menus]
+
+    return {"success": True, "menus": response_menus}
+
+#----------------------------------------------------------------------------------------------------------
+
+def build_menu_tree(menu_items, role_menu_mapping, parent_id=0):
+    """
+    Recursively builds a tree structure for menus.
+
+    Args:
+        menu_items: List of all menu items.
+        role_menu_mapping: Dictionary with role-specific menu mappings.
+        parent_id: Parent menu ID for recursion.
+
+    Returns:
+        A list representing the menu tree.
+    """
+    menu_tree = []
+    for item in menu_items:
+        if item.parent_id == parent_id:
+            # Check if the menu is assigned to the role
+            mapping = role_menu_mapping.get(item.id)
+            # Build the menu entry
+            menu_entry = {
+                "id": item.id,
+                "menu_name": item.menu_name,
+                "parent_id": item.parent_id,
+                "has_sub_menu": item.has_sub_menu,
+                "display_order": item.display_order,
+                "link" : item.link,
+                "display_location_id" : item.display_location_id,
+                "is_assigned": "yes" if mapping else "no",
+                "has_view": item.has_view if hasattr(item, "has_view") else "no",
+                "has_edit": item.has_edit if hasattr(item, "has_edit") else "no",
+                "has_delete": item.has_delete if hasattr(item, "has_delete") else "no",
+                "can_view": mapping.can_view if mapping else "no",
+                "can_edit": mapping.can_edit if mapping else "no",
+                "can_delete": mapping.can_delete if mapping else "no",
+            }
+            # Add sub_menus as the last key
+            menu_entry["sub_menus"] = build_menu_tree(menu_items, role_menu_mapping, item.id)
+            menu_tree.append(menu_entry)
+    return menu_tree
+
+
+#----------------------------------------------------------------------------------------------------------
+def get_menu_structure(role_id : int,
+                      db: Session):
+    menus = db.query(MenuStructure).filter(MenuStructure.is_deleted == "no").order_by(MenuStructure.display_order).all()
+    # Fetch role menu mappings if role_id is provided
+    role_menu_mapping = {}
+    if role_id:
+        mappings = db.query(RoleMenuMapping).filter(RoleMenuMapping.role_id == role_id,RoleMenuMapping.is_deleted== 'no').all()
+        role_menu_mapping = {mapping.menu_id: mapping for mapping in mappings}
+    # Build the menu tree
+    menu_tree = build_menu_tree(menus, role_menu_mapping)
+
+    return {"menuData": menu_tree}
+
+#----------------------------------------------------------------------------------------------------------
+def save_role_menu_permission(
+    db: Session,
+    role_id: int,
+    datas: List[RoleMenuMappingSchema],
+    user_id: int,
+    # is_assigned: Optional[str] = 'yes'  # Fixed the default parameter typo
+):
+    """
+    Saves or updates role-menu permissions.
+
+    :param db: Database session.
+    :param role_id: ID of the role.
+    :param datas: List of role-menu mappings.
+    :param user_id: ID of the user performing the operation.
+    """
+    processed_data = []  # Initialize as a list
+
+    try:
+        for data in datas:
+            # Check if the record exists for the role and menu
+            existing_data = db.query(RoleMenuMapping).filter(
+                RoleMenuMapping.role_id == role_id,
+                RoleMenuMapping.menu_id == data.menu_id,
+                # RoleMenuMapping.is_deleted == 'no'
+            ).first()
+
+            if existing_data:
+                updating_data = data.model_dump()  # Convert Pydantic object to dictionary
+
+                if updating_data['is_assigned'] == 'no':
+                    updating_data['is_deleted'] = 'yes'
+                    updating_data['deleted_by'] = user_id
+                    updating_data['deleted_on'] = datetime.now()
+                if updating_data['is_assigned'] =='yes':
+                    updating_data['is_deleted'] = 'no'
+                    updating_data['deleted_by'] = None
+                    updating_data['deleted_on'] = None
+                    # Update existing record
+                updating_data['id']          = existing_data.id
+                updating_data['modified_by'] = user_id
+                updating_data['modified_on'] = datetime.now()
+
+                for key, value in updating_data.items():
+                    if hasattr(existing_data, key):  # Update only fields that exist in the model
+                        setattr(existing_data, key, value)
+
+                db.commit()
+                db.refresh(existing_data)
+                processed_data.append({
+                    "id": existing_data.id,
+                    "message": "Updated successfully"
+                })  # Add updated record ID and message to the list
+            # else:
+            #     # Create a new record
+            #     new_mapping = RoleMenuMapping(
+            #         **data.model_dump(),
+            #         role_id = role_id,
+            #         created_by=user_id,
+            #         created_on=datetime.now()
+            #     )
+            #     db.add(new_mapping)
+            #     db.commit()
+            #     db.refresh(new_mapping)
+            #     processed_data.append({
+            #         "id": new_mapping.id,
+            #         "message": "Created successfully"
+            #     })  # Add newly created record ID and message to the list
+
+        return {"success": True, "data": processed_data}
+
+    except SQLAlchemyError as e:
+        # Rollback any uncommitted changes
+        db.rollback()
+        # Log the error if needed and return failure response
+        return {
+            "success": False,
+            "error": f"Database error occurred: {str(e)}"
+        }
+
+    except Exception as e:
+        # Handle any other unexpected exceptions
+        db.rollback()
+        return {
+            "success": False,
+            "error": f"An unexpected error occurred: {str(e)}"
+        }
+
+
+#-----------------------------------------------------------------------------------------------
+def delete_menu_recursively(db: Session, menu_id: int, user_id: int):
+    try:
+        # Fetch the menu by ID
+        menu = db.query(MenuStructure).filter(MenuStructure.id == menu_id, MenuStructure.is_deleted == 'no').first()
+
+        if not menu:
+            return {"success": False, "message": "Menu not found or already deleted"}
+
+        # Find all submenus (child menus)
+        submenus = db.query(MenuStructure).filter(MenuStructure.parent_id == menu_id, MenuStructure.is_deleted == 'no').all()
+
+        # Recursively delete all submenus
+        for submenu in submenus:
+            delete_menu_recursively(db, submenu.id, user_id)
+
+        # After all submenus are deleted, delete the menu itself
+        menu.is_deleted = 'yes'
+        menu.deleted_by = user_id
+        menu.deleted_on = datetime.now()
+
+        db.commit()
+
+        return {"success": True, "message": f"Menu with ID {menu_id} and all its submenus deleted successfully"}
+
+    except SQLAlchemyError as e:
+        # Rollback if there is a database error
+        db.rollback()
+        return {"success": False, "message": f"Database error occurred: {str(e)}"}
+
+    except Exception as e:
+        # Handle any other unexpected errors
+        db.rollback()
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
+  
+
+
+def create_role(roles : List[UserRoleSchema],
+                 user_id: int,
+                 db: Session,
+                #  role_id: Optional[int] = None
+                 ):
+    processed_roles = []
+
+    for role in roles:
+        # Check if the menu already exists
+        existing_role = db.query(UsersRole).filter(UsersRole.id == role.id).first()
+
+        if existing_role:
+            # Update existing menu
+            role_data = role.model_dump()  # Convert Pydantic object to dictionary
+            role_data['modified_by'] = user_id
+            role_data['modified_on'] = datetime.now()
+
+            for key, value in role_data.items():
+                if hasattr(existing_role, key):  # Update only fields that exist in the model
+                    setattr(existing_role, key, value)
+
+            db.commit()
+            db.refresh(existing_role)
+            processed_roles.append(existing_role)  # Add updated menu to the list
+        else:
+            # Create new menu
+            new_role = UsersRole(
+                **role.model_dump(),
+                created_by=user_id,
+                created_on=datetime.now()
+            )
+            db.add(new_role)
+            db.commit()
+            db.refresh(new_role)
+            processed_roles.append(new_role)  # Add newly created menu to the list
+
+    # Serialize using MenuStructureSchema
+    response_role = [UserRoleSchema.from_orm(role) for role in processed_roles]
+
+    return {"success": True, "menus": response_role}
+
+
+#-----------------------------------------------------------------------------------------------------
 
 
 
+def save_licence(db: Session, licence: LicenceMasterSchema):
+    try:
+        # Handle inserting or updating master record
+        if licence.id is None:
+            db_licence_master = CaerpLicenceMaster(**licence.dict(exclude={"details"}))
+            db.add(db_licence_master)
+            db.flush()  # Ensure the master ID is available by flushing the transaction
+            db.refresh(db_licence_master)  # Ensure the master ID is available
+        else:
+            db_licence_master = db.query(CaerpLicenceMaster).filter(CaerpLicenceMaster.id == licence.id).first()
+            if db_licence_master:
+                for key, value in licence.dict(exclude={"details"}).items():
+                    setattr(db_licence_master, key, value)
+                db.commit()
+            else:
+                raise SQLAlchemyError("Master record not found")
+
+        # Ensure the master ID is available after commit or flush
+        master_id = db_licence_master.id
+        if not master_id:
+            raise SQLAlchemyError("Master ID is null after flush/refresh")
+
+        # Handle inserting or updating detail records
+        for detail in licence.details:
+            if detail.id is None:  # INSERT new detail
+                db_licence_detail = CaerpLicenceDetails(
+                    **detail.dict(exclude={"id"}),
+                    licence_master_id=master_id  # Assign generated master_id
+                )
+                db.add(db_licence_detail)
+            else:  # UPDATE existing detail
+                db_licence_detail = db.query(CaerpLicenceDetails).filter(CaerpLicenceDetails.id == detail.id).first()
+                if db_licence_detail:
+                    for key, value in detail.dict().items():
+                        setattr(db_licence_detail, key, value)
+                else:
+                    raise SQLAlchemyError("Detail record not found")
+        db.commit()
+
+        return {"success": True, "message": "Saved successfully"}
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        return {"success": False, "message": f"Database error occurred: {str(e)}"}
+
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": f"An unexpected error occurred: {str(e)}"}
 
 
 
+# def save_interview_panel(db: Session, request: CreateInterviewPanelRequest):
+#     try:
+#         # Handle the master record
+#         if request.master.id == None:
+#             # Insert new record for the master
+#             print("Inserting new master record...")
+#             new_master = InterviewPanelMaster(**request.master.dict())
+#             db.add(new_master)
+#             db.flush()  # Use flush instead of commit
 
+#             # Re-fetch the master record after flush to get the generated ID
+#             # db.refresh(new_master)  # This should work after flush
+#             master_id = new_master.id
+#             print(f"New master record inserted with ID: {master_id}")
 
+#             # Handle the members
+#             for member in request.members:
+#                 if member.id == None:
+#                     print(f"Inserting new member: {member}")
+#                     new_member_data = member.dict()
+#                     new_member_data["interview_panel_master_id"] = master_id
+#                     new_member = InterviewPanelMembers(**new_member_data)
+#                     db.add(new_member)
+#                 else:
+#                     print(f"Updating existing member: {member}")
+#                     existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+#                     if not existing_member:
+#                         raise ValueError(f"Member record with ID {member.id} not found.")
+#                     for key, value in member.dict().items():
+#                         setattr(existing_member, key, value)
 
+#         else:
+#             print(f"Updating existing master record with ID: {request.master.id}")
+#             # Update existing record for the master
+#             master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+#             if not master:
+#                 raise ValueError("Master record not found.")
+            
+#             print(f"Master record found: {master}")
+#             # Perform the update on the master record
+#             for key, value in request.master.dict().items():
+#                 setattr(master, key, value)
+#             db.commit()  # Commit the changes to save updates
 
+#             # Re-fetch the master record after commit to ensure it's in sync
+#             master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+#             if not master:
+#                 raise ValueError("Master record not found after update.")
+#             print(f"Master record successfully refreshed: {master}")
 
+#             # Handle the members
+#             for member in request.members:
+#                 if member.id == None:
+#                     print(f"Inserting new member: {member}")
+#                     new_member_data = member.dict()
+#                     new_member_data["interview_panel_master_id"] = master.id
+#                     new_member = InterviewPanelMembers(**new_member_data)
+#                     db.add(new_member)
+#                 else:
+#                     print(f"Updating existing member: {member}")
+#                     existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+#                     if not existing_member:
+#                         raise ValueError(f"Member record with ID {member.id} not found.")
+#                     for key, value in member.dict().items():
+#                         setattr(existing_member, key, value)
 
+#         db.commit()  # Commit the changes to the database
+#         print("Transaction committed successfully.")
+#         return {"success": True, "message": "Saved successfully"}
 
-
-
-
-
-
-
-
+#     except Exception as e:
+#         print(f"Error occurred while saving the data: {str(e)}")
+#         db.rollback()  # Rollback the transaction if an error occurs
+#         return {"success": False, "message": f"An error occurred while saving the data: {str(e)}"}
 
 
 

@@ -7,7 +7,7 @@ from caerp_schema.office.office_schema import  OffWorkOrderMasterSchema,OffViewS
 from caerp_schema.accounts.quotation_schema import AccInvoiceResponceSchema, AccProformaInvoiceDetailsSchema, AccProformaInvoiceDetailsViewSchema, AccProformaInvoiceMasterSchema, AccProformaInvoiceMasterViewSchema, AccProformaInvoiceResponceSchema, AccProformaInvoiceShema, AccQuotationDetailsViewSchema, AccQuotationMasterSchema, AccQuotationMasterViewSchema,AccQuotationSchema,AccQuotationDetailsSchema,AccQuotationResponseSchema, AccTaxInvoiceDetailsSchema, AccTaxInvoiceDetailsViewSchema, AccTaxInvoiceMasterSchema, AccTaxInvoiceMasterViewSchema, AccTaxInvoiceResponceSchema, AccTaxInvoiceShema
 from caerp_db.accounts.models import AccProformaInvoiceDetails, AccProformaInvoiceDetailsView, AccProformaInvoiceMaster, AccProformaInvoiceMasterView, AccQuotationDetailsView, AccQuotationMaster,AccQuotationDetails, AccQuotationMasterView, AccTaxInvoiceDetails, AccTaxInvoiceDetailsView, AccTaxInvoiceMaster, AccTaxInvoiceMasterView
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import and_,or_, func, text
+from sqlalchemy import and_, desc,or_, func, text
 from datetime import date, datetime
 from caerp_constants.caerp_constants import EntryPoint
 from caerp_functions.send_email import send_email
@@ -464,6 +464,8 @@ def get_quotation_data(
     if to_date:
         query = query.filter(AccQuotationMasterView.quotation_date <= to_date)
 
+    query = query.order_by(desc(AccQuotationMasterView.quotation_date))
+
     # Fetch master data
     master_data = query.all()
     
@@ -504,6 +506,10 @@ def get_quotation_data(
         #     'is_editable': is_editable
         #     }
     return quotations
+
+
+
+
 #-------------------------------------------------------------
 # def generate_profoma_invoice_details(
 #         db: Session,
@@ -657,6 +663,7 @@ def get_quotation_data(
 #         db.rollback()
 #         raise HTTPException(status_code=500, detail=str(e))
 
+
 def generate_profoma_invoice_details(
         db: Session,
         work_order_master_id: int,
@@ -742,7 +749,7 @@ def generate_profoma_invoice_details(
 
         # Process each work order detail (only those required) and map it to the quotation details
         for details in work_order_details_data:
-            service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
+            # service_document_id = save_customer_data_document_master(db, work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id)
             # Filter quotation details based on the service_goods_master_id from the work order
             relevant_quotation_details = [qd for qd in quotation_details_data if qd.service_goods_master_id == details.service_goods_master_id]
             
@@ -793,6 +800,22 @@ def generate_profoma_invoice_details(
                 }
                 task_id = save_service_task_details(db, work_order_master_id, details.work_order_details_id, proforma_invoice_master_id,proforma_invoice_detail_id, user_id,financial_year_id,customer_id,data)
                 net_amount = total_invoice_amount
+                # if (details.number_of_partners or details.number_of_directors or details.number_of_shareholders or details.number_of_trustees or details.number_of_members )> 0 :
+                #     is_partner_director_proprietor = 'yes'
+
+                # document_details_data = {
+                #     'task_id' : task_id,
+                #     'work_order_master_id' : work_order_master_id,
+                #     'work_order_details_id' : details.work_order_details_id,
+                #     'service_goods_master_id' : details.service_goods_master_id,
+                #     'constitution_id' : details.constitution_id,
+                #     'is_partner_director_proprietor' : 'yes'
+                    
+                  
+                # }
+        
+            service_document_id = save_customer_data_document_master(db,task_id,work_order_master_id, details.work_order_details_id, details.service_goods_master_id, details.constitution_id, details)
+
         # Update Invoice Master with total amount
         proforma_invoice_master.additional_discount_amount  = quotation_master_data.additional_discount_amount
         proforma_invoice_master.bill_discount_amount        = quotation_master_data.bill_discount_amount
@@ -858,80 +881,119 @@ def save_service_task_details(
    
 #----------------------------------------------------------------------------------------------
 
-
-
 def save_customer_data_document_master(
     db: Session,
+    task_id: int,
     work_order_master_id: int,
     work_order_details_id: int,
     service_id: int,
-    consultation_id: int
+    consultation_id: int,
+    details: WorkOrderDetailsView
 ):
-    # Check for business place data
+    def add_customer_document(category_id, master_id, is_stakeholder='no', stakeholder_role=None, is_signatory='no', is_business_place='no', place_name=None, signatory_serial_number =None):
+        document = CustomerDataDocumentMaster(
+            work_order_master_id=work_order_master_id,
+            work_order_details_id=work_order_details_id,
+            service_task_id=task_id,
+            document_data_category_id=category_id,
+            document_data_master_id=master_id,
+            is_partner_director_proprietor=is_stakeholder,
+            stake_holder_role=stakeholder_role,
+            is_authorised_sigantory=is_signatory,
+            is_business_place=is_business_place,
+            business_place_type_and_name=place_name,
+            signatory_serial_number = signatory_serial_number,
+            is_deleted='no'
+        )
+        db.add(document)
+
+    # Fetch business place data
     business_place_list = db.query(OffViewWorkOrderBusinessPlaceDetails).filter(
         OffViewWorkOrderBusinessPlaceDetails.work_order_details_id == work_order_details_id,
         OffViewWorkOrderBusinessPlaceDetails.is_deleted == 'no'
     ).all()
 
-    
-
-    # SQL query to fetch document data with conditional filtering based on business place
+    # SQL query to fetch document data
     sql = text("""
-        SELECT 
-            d.*, b.document_data_category_id
-        FROM 
-            off_service_document_data_master a
-        JOIN 
-            off_service_document_data_details b ON a.id = b.service_document_data_master_id
-        JOIN 
-            off_document_data_master d ON b.document_data_master_id = d.id
-        WHERE 
-            a.service_goods_master_id = :service_id 
-            AND a.constitution_id = :consultation_id
-            AND   b.document_data_category_id != 3
-            AND  b.is_deleted = 'no'
-           
+        SELECT d.*, b.document_data_category_id
+        FROM off_service_document_data_master a
+        JOIN off_service_document_data_details b ON a.id = b.service_document_data_master_id
+        JOIN off_document_data_master d ON b.document_data_master_id = d.id
+        WHERE a.service_goods_master_id = :service_id 
+          AND a.constitution_id = :consultation_id
+          AND b.document_data_category_id NOT IN (3, 4)
+          AND b.is_deleted = 'no'
     """)
+    result = list(db.execute(sql, {'service_id': service_id, 'consultation_id': consultation_id}).mappings())
+    if not result:
+        return {'message': 'No documents found'}
 
-    # Execute the query with filtering condition based on business place data
-    result = db.execute(sql, {
-        'service_id': service_id,
-        'consultation_id': consultation_id,
-    }).mappings()
+    # Stakeholder counters
+    stakeholder_types = {
+        'PARTNER': details.number_of_partners,
+        'DIR': details.number_of_directors,
+        'SHARE': details.number_of_shareholders,
+        'TRUST': details.number_of_trustees,
+        'MEMBER': details.number_of_members
+    }
 
-    # Loop through the query results and insert into CustomerDataDocumentMaster
+    for stakeholder, count in stakeholder_types.items():
+        if count and count > 0:
+            for i in range(count):
+                stakeholder_role = f"{stakeholder}_{i + 1}"
+                for row in result:
+                    if row['document_data_category_id'] == 1:
+                        add_customer_document(
+                            category_id=1,
+                            master_id=row['id'],
+                            is_stakeholder='yes',
+                            stakeholder_role=stakeholder_role
+                        )
+
+    # Add authorized signatories
+    if details.number_of_authorized_signatory:
+        for i in range(details.number_of_authorized_signatory):
+            signatory_role = f"auth_{i+1}"
+            for row in result:
+                if row['document_data_category_id'] == 1:
+                    add_customer_document(
+                        category_id=1,
+                        master_id=row['id'],
+                        is_signatory='yes',
+                        signatory_serial_number= signatory_role
+                    )
+
+    # Add non-stakeholder documents
     for row in result:
-        document_data_master_id = row['id']
-        document_data_category_id = row['document_data_category_id']
+        if row['document_data_category_id'] != 1:
+            add_customer_document(
+                category_id=row['document_data_category_id'],
+                master_id=row['id']
+            )
 
-        # Create a new instance of CustomerDataDocumentMaster
-        new_document = CustomerDataDocumentMaster(
-            work_order_master_id=work_order_master_id,
-            work_order_details_id=work_order_details_id,
-            document_data_category_id=document_data_category_id,
-            document_data_master_id=document_data_master_id,          
-            is_deleted='no' 
+    # Add business place documents
+    counters = {'GODOWN': 1, 'BRANCH': 1}
+    for business_place in business_place_list:
+        place_name = "MAIN_OFFICE"
+        if business_place.business_place_type in counters:
+            place_name = f"{business_place.business_place_type}{counters[business_place.business_place_type]}"
+            counters[business_place.business_place_type] += 1
+
+        add_customer_document(
+            category_id=4,
+            master_id=business_place.utility_document_id,
+            is_business_place='yes',
+            place_name=place_name
+        )
+        add_customer_document(
+            category_id=3,
+            master_id=business_place.business_place_document_id,
+            is_business_place='yes',
+            place_name=place_name
         )
 
-        db.add(new_document)
-    # if business_place_data:
-    for business_place_data in business_place_list:
-        document_data_master_id = business_place_data.utility_document_id
-        document_data_category_id = 3
-        new_document = CustomerDataDocumentMaster(
-            work_order_master_id=work_order_master_id,
-            work_order_details_id=work_order_details_id,
-            document_data_category_id=document_data_category_id,
-            document_data_master_id=document_data_master_id,          
-            is_deleted='no' 
-        )
-
-        db.add(new_document)
-   
     db.commit()
-
-    return {'message' : 'success',
-            'id': new_document.id}
+    return {'message': 'success'}
 
 
 
@@ -1195,6 +1257,9 @@ def get_proforma_invoice_details(
         if to_date:
             query = query.filter(AccProformaInvoiceMasterView.proforma_invoice_date <= to_date)
 
+        
+        query = query.order_by(desc(AccProformaInvoiceMasterView.proforma_invoice_date))
+
             # Fetch the invoice master data
         invoice_master_data = query.all()
 
@@ -1227,17 +1292,7 @@ def get_proforma_invoice_details(
                 is_editable = is_editable
             )
             )
-            # Add the details to the response schema
-            # invoice_response_data.proforma_invoice_details = invoice_details_list
-        # if proforma_invoice_master_id:
-        #     if master.proforma_invoice_status_id == 1:
-        #         is_editable = True
-        #     else:
-        #         is_editable = False
-            # return {
-            #     'invoice_response_data': invoice_response_data,
-            #     'is_editable' : is_editable
-            # }
+
         return invoice_response_data
     except Exception as e:
         print(f"Error: {e}")
@@ -1283,6 +1338,8 @@ def get_tax_invoice_details(
             query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date >= from_date)
         if to_date:
             query = query.filter(AccTaxInvoiceMasterView.tax_invoice_date <= to_date)
+
+        query = query.order_by(desc(AccTaxInvoiceMasterView.tax_invoice_date))
 
         # Fetch the invoice master data
         invoice_master_data = query.all()

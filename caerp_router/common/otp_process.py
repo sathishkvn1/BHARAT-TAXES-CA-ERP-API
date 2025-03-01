@@ -14,6 +14,7 @@ router = APIRouter(
     prefix ='/otp',
     tags=['OTP']
 )
+
 @router.post("/mobile_otp_verification/{otp}")
 def mobile_otp_verification(
     otp: str,
@@ -40,6 +41,8 @@ def mobile_otp_verification(
     else :
         return { "message": "Invalid  OTP.", "is_verified": False}
  
+
+
 @router.post("/mobile_resend_otp")
 def mobile_resend_otp(   
     db:Session = Depends(get_db),
@@ -87,6 +90,24 @@ def mobile_resend_otp(
    
      
 
+#-------------------------------------------------------------------------
+
    
+@router.post('/query_mobile_otp_verification/{otp}')
+def query_mobile_otp_verification(
+    otp : str,
+    mobile_otp_id : int ,
+    db:Session = Depends(get_db)
+): 
+     result = db_otp.query_mobile_otp_verification(otp,mobile_otp_id, db)
+     if result :
+         return result
+     else:
+         return {
+             'message' : 'Invalid  OTP.',
+             "is_verified": False
+         }
+   
+
 
 

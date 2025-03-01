@@ -1,13 +1,14 @@
-from caerp_db.common.models import EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import HrDocumentMaster, PrlSalaryComponent
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, SaveEmployeeTeamMaster
+from fastapi.responses import JSONResponse
+from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
+from caerp_db.hr_and_payroll.model import ApplicationMaster, ApplicationRankList, HrDocumentMaster, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest,  SaveEmployeeTeamMaster, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
 from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 
-from typing import List, Optional, Type, Union
+from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
 from caerp_auth.authentication import authenticate_user
 from datetime import date,datetime
@@ -132,12 +133,7 @@ def save_employee_master(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-
-
-
 #---------------------------------------------------------------------------------------------------------
-
 @router.post('/upload_document')
 def upload_document(
    employee_id: int,
@@ -172,10 +168,7 @@ def upload_document(
   except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e))
 
-
 #---------------------------------------------------------------------------------------------------------
-
-
 #delete employee details by id
 @router.delete("/delete_employee_details")
 def delete_employee_details_by_id(
@@ -220,9 +213,9 @@ def delete_employee_details_by_id(
     except Exception as e:    
      raise HTTPException(status_code=500, detail=str(e)) 
 
-  
-#---------------------------------------------------------------------------------------------------------
-from sqlalchemy import func
+#--------------------------------------------------------------------------------------------------------------
+
+from sqlalchemy import and_, func, or_, text
 
 
 
@@ -507,7 +500,7 @@ def get_employee_details(
             "Comma-separated list of components to view employee details. "
             "Valid options are: [present_address, permanent_address, bank_details, contact_details, "
             "employment_details, emergency_contact_details, dependent_details, employee_salary, "
-            "educational_qualification, employee_experience, employee_documents, professional_qualification.]"
+            "educational_qualification, employee_experience, employee_documents, professional_qualification,language_proficiency.]"
         )
     ),
     category: Optional[Union[str, int]] = Query("ALL", description="Filter by category or 'ALL'"),
@@ -620,13 +613,24 @@ def get_employee_details(
                             'employee_salary': [EmployeeSalaryGet(**salary.__dict__) for salary in salary_info]
                         })
 
+                
                 if option == "educational_qualification":
-                    edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
-                    if edu_qual_info:
-                        qualifications = [EmployeeEducationalQualficationGet(**qual.__dict__) for qual in edu_qual_info]
+                   edu_qual_info = db_employee_master.get_qualification_details(db, employee_id=employee_id)
+                   if edu_qual_info:
+                        qualifications = [
+                            EmployeeEducationalQualficationGet(
+                               **qual.__dict__,
+                               education_level=education_level,
+                               education_stream=education_stream,
+                               education_subject_or_course=education_subject_or_course
+                            )
+                            for qual, education_level, education_stream, education_subject_or_course in edu_qual_info
+                        ]
+                        
                         employee_details.append({
-                            'educational_qualification': qualifications
+                        'educational_qualification': qualifications
                         })
+
 
                 if option == "employee_experience":
                     exp_info = db_employee_master.get_experience_details(db, employee_id=employee_id)
@@ -671,11 +675,23 @@ def get_employee_details(
                         employee_details.append({
                           'professional_qualification': prof_qualifications
                        })
-
+                
+                if option == "language_proficiency":
+                    emp_lang_prof_info = db_employee_master.get_employee_language_proficiency_details(db, employee_id=employee_id)
+                    if emp_lang_prof_info:
+                       
+                        employee_details.append({
+                          'employee_language_proficiency': emp_lang_prof_info
+                       })
+                    else:
+                        employee_details.append({
+                            'employee_language_proficiency': []
+                        })
             return employee_details
-
         else:
-            raise HTTPException(status_code=400, detail="Profile component is required to fetch details for a specific employee.")
+            return {"success": False, "message": "Profile component is required to fetch details for a specific employee."}
+
+    
     else:
         employees_query = db_employee_master.search_employee_master_details(
             db, user_status, approval_status, category, department, designation, is_consultant, search
@@ -721,6 +737,8 @@ def get_employee_details(
             employee_details.append(emp_detail)
 
         return employee_details
+
+
 
 
 
@@ -957,7 +975,7 @@ def employee_save_update(
     
 
 #--------------------------------------------------------------------------------------------------------------
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import insert, update
 
 def save_or_update_records(
@@ -1713,3 +1731,1526 @@ def check_user_and_mobile(
         }
 
     return result
+
+
+
+#--------------------------------------------------------------------------------------------------------
+
+
+@router.post("/save_employee_language_proficiency/")
+def save_employee_language_proficiency(
+    data: List[EmployeeLanguageProficiencyBase], 
+    employee_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    try:
+        # Call the database function to process records
+        result = db_employee_master.save_employee_language_proficiency(
+            db, employee_id, data, user_id
+        )
+
+        if result["success"]:
+            return {
+                "success": True,
+                "message": result["message"]
+            }
+        else:
+            return {
+                "success": False,
+                "message": result["message"]
+            }
+            
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+#------------------------------------------------------------------------------------------------
+
+# @router.post("/vacancy/create", response_model=dict)
+# async def create_vacancy(vacancy_data: VacancyCreateSchema, 
+#                          db: Session = Depends(get_db),
+#                          token: str = Depends(oauth2.oauth2_scheme)):
+#     """
+#     Create a new vacancy record and its associated data.
+#     Inserts data into vacancy_master and related tables like VacancyExperience, VacancySkills, etc.
+#     """
+#     # Check if token is provided
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     # Authenticate and get user_id from token
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+#     if not user_id:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+#     try:
+#         # Pass user_id (as created_by) along with vacancy data to the save function
+#         result = db_employee_master.save_vacancy_data(vacancy_data, db, user_id)
+        
+#         # Return the response with success message and the generated vacancy_master_id
+#         return {"message": "Vacancy created successfully", "vacancy_master_id": result['vacancy_master_id']}
+    
+#     except Exception as e:
+#         # Handle any exceptions and return an HTTP error if something goes wrong
+#         raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
+#-------------------------------------------------------------------------------------------------------
+
+
+@router.post("/save_vacancy_data", response_model=dict)
+async def create_vacancy(vacancy_data: VacancyCreateSchema, 
+                         db: Session = Depends(get_db),
+                         token: str = Depends(oauth2.oauth2_scheme)):
+    """
+
+    """
+    # Check if token is provided
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Authenticate and get user_id from token
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+    try:
+        # Pass user_id (as created_by) along with vacancy data to the save function
+        result = db_employee_master.save_vacancy_data(vacancy_data, db, user_id)
+        
+        # Return the response with success message and the generated vacancy_master_id
+        return result  # Returning the result which includes success, message, and vacancy_master_id
+    
+    except Exception as e:
+        # Handle any exceptions and return an HTTP error if something goes wrong
+        raise HTTPException(status_code=500, detail=f"Error while creating vacancy: {str(e)}")
+
+
+#-------------------------------------------------------------------------------------
+
+
+
+@router.post("/vacancy/create_or_update/")
+async def create_or_update_vacancy(vacancy_data: VacancySchema, 
+                                   db: Session = Depends(get_db),
+                                   token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Endpoint to create or update a vacancy.
+    """
+    # Check if token is provided
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Authenticate and get user_id from token
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+    try:
+        # Save vacancy data (user_id will go to created_by, modified_by, and deleted_by)
+        db_employee_master.create_or_update_vacancy(vacancy_data, db, user_id)
+
+        # Return success response
+        return {"success": True, "message": "Vacancy created/updated successfully."}
+
+    except Exception as e:
+        # In case of error, rollback and raise HTTPException
+        raise HTTPException(status_code=500, detail=f"Error while creating/updating vacancy: {str(e)}")
+
+    
+#------------------------------------------------------------------------------------------------------
+
+
+@router.get("/vacancy_details")
+def get_vacancies(
+    department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
+    designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
+    status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
+    announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+    closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+    vacancy_id: Optional[int] = Query(None, description="Filter by specific vacancy ID"),
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    filters = []
+
+    # Apply filters only if they are not "ALL"
+    if department_id and department_id != "ALL":
+        filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
+
+    if designation_id and designation_id != "ALL":
+        filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
+
+    if status and status != "ALL":
+        filters.append(VacancyDetailsView.vacancy_status == status)
+
+    if announcement_date:
+        filters.append(VacancyDetailsView.announcement_date == announcement_date)
+
+    if closing_date:
+        filters.append(VacancyDetailsView.closing_date == closing_date)
+
+    vacancies_query = db.query(VacancyDetailsView).filter(and_(*filters))
+
+    if vacancy_id:
+        vacancy_details = db_employee_master.get_vacancy_details_by_id(db, vacancy_id)
+        if vacancy_details:
+            return vacancy_details
+        else:
+            return {"vacancies": []}  # Return empty list if no matching vacancy_id found
+
+    vacancies = vacancies_query.all()
+
+    # **Return empty list instead of raising an error**
+    return {
+        "vacancies": [
+            {
+                "vacancy_master_id": vacancy.vacancy_master_id,
+                "department_id": vacancy.department_id,
+                "department_name": vacancy.department_name,
+                "designation_id": vacancy.designation_id,
+                "designation_name": vacancy.designation_name,
+                "vacancy_count": vacancy.vacancy_count,
+                "job_description": vacancy.job_description,
+                "job_location": vacancy.job_location,
+                "reported_date": vacancy.reported_date,
+                "announcement_date": vacancy.announcement_date,
+                "closing_date": vacancy.closing_date,
+                "vacancy_status": vacancy.vacancy_status,
+                "experience_required": vacancy.experience_required,
+                "skill_id": vacancy.skill_id,
+                "skill_name": vacancy.skill_name,
+                "skill_weightage": vacancy.skill_weightage,
+                "language_id": vacancy.language_id,
+                "language_name": vacancy.language_name,
+                "language_proficiency_id": vacancy.language_proficiency_id,
+                "proficiency_level": vacancy.proficiency_level,
+                "is_read_required": vacancy.is_read_required,
+                "read_weightage": vacancy.read_weightage,
+                "is_write_required": vacancy.is_write_required,
+                "write_weightage": vacancy.write_weightage,
+                "is_speak_required": vacancy.is_speak_required,
+                "speak_weightage": vacancy.speak_weightage,
+                "education_level_id": vacancy.education_level_id,
+                "is_any_education_level": vacancy.is_any_education_level,
+                "education_stream_id": vacancy.education_stream_id,
+                "is_any_education_stream": vacancy.is_any_education_stream,
+                "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+                "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+                "education_level_name": vacancy.education_level_name,
+                "education_stream_name": vacancy.education_stream_name,
+                "subject_or_course_name": vacancy.subject_or_course_name,
+                "min_years": vacancy.min_years,
+                "max_years": vacancy.max_years,
+                "experience_weightage": vacancy.experience_weightage,
+            }
+            for vacancy in vacancies
+        ]
+    }
+
+
+
+
+# @router.get("/vacancy_details")
+# def get_vacancies(
+#     department_id: Optional[str] = Query("ALL", description="Filter by department ID (pass 'ALL' for no filter)"),
+#     designation_id: Optional[str] = Query("ALL", description="Filter by designation ID (pass 'ALL' for no filter)"),
+#     status: str = Query("ALL", description="Filter by vacancy status (OPEN, CLOSED, ALL)"),
+#     announcement_date: Optional[str] = Query(None, description="Filter by announcement date (yyyy-mm-dd)"),
+#     closing_date: Optional[str] = Query(None, description="Filter by closing date (yyyy-mm-dd)"),
+#     search: Optional[str] = Query(None, description="Search by department, designation, or job description"),
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     filters = []
+
+#     # Apply filters only if they are not "ALL"
+#     if department_id and department_id != "ALL":
+#         filters.append(VacancyDetailsView.department_id == int(department_id))  # Convert to int
+
+#     if designation_id and designation_id != "ALL":
+#         filters.append(VacancyDetailsView.designation_id == int(designation_id))  # Convert to int
+
+#     if status and status != "ALL":
+#         filters.append(VacancyDetailsView.vacancy_status == status)
+
+#     if announcement_date:
+#         filters.append(VacancyDetailsView.announcement_date == announcement_date)
+#     if closing_date:
+#         filters.append(VacancyDetailsView.closing_date == closing_date)
+#     # Search functionality (case-insensitive search using ilike)
+#     if search:
+#         filters.append(
+#             or_(
+#                 VacancyDetailsView.department_name.ilike(f"%{search}%"),  # Search in department name
+#                 VacancyDetailsView.designation_name.ilike(f"%{search}%"),  # Search in designation name
+#                 VacancyDetailsView.job_description.ilike(f"%{search}%")   # Search in job description
+#             )
+#         )
+
+#     vacancies = db.query(VacancyDetailsView).filter(and_(*filters)).all()
+
+#     return {
+#         "vacancies": [
+#             {
+#                 "vacancy_master_id": vacancy.vacancy_master_id,
+#                 "department_id": vacancy.department_id,
+#                 "department_name": vacancy.department_name,
+#                 "designation_id": vacancy.designation_id,
+#                 "designation_name": vacancy.designation_name,
+#                 "vacancy_count": vacancy.vacancy_count,
+#                 "job_description": vacancy.job_description,
+#                 "job_location": vacancy.job_location,
+#                 "reported_date": vacancy.reported_date,
+#                 "announcement_date": vacancy.announcement_date,
+#                 "closing_date": vacancy.closing_date,
+#                 "vacancy_status": vacancy.vacancy_status,
+#                 "experience_required": vacancy.experience_required,
+#                 "skill_id": vacancy.skill_id,
+#                 "skill_name": vacancy.skill_name,
+#                 "skill_weightage": vacancy.skill_weightage,
+#                 "language_id": vacancy.language_id,
+#                 "language_name": vacancy.language_name,
+#                 "language_proficiency_id": vacancy.language_proficiency_id,
+#                 "proficiency_level": vacancy.proficiency_level,
+#                 "is_read_required": vacancy.is_read_required,
+#                 "read_weightage": vacancy.read_weightage,
+#                 "is_write_required": vacancy.is_write_required,
+#                 "write_weightage": vacancy.write_weightage,
+#                 "is_speak_required": vacancy.is_speak_required,
+#                 "speak_weightage": vacancy.speak_weightage,
+#                 "education_level_id": vacancy.education_level_id,
+#                 "is_any_education_level": vacancy.is_any_education_level,
+#                 "education_stream_id": vacancy.education_stream_id,
+#                 "is_any_education_stream": vacancy.is_any_education_stream,
+#                 "education_subject_or_course_id": vacancy.education_subject_or_course_id,
+#                 "is_any_subject_or_course": vacancy.is_any_subject_or_course,
+#                 "education_level_name": vacancy.education_level_name,
+#                 "education_stream_name": vacancy.education_stream_name,
+#                 "subject_or_course_name": vacancy.subject_or_course_name,
+#                 "min_years": vacancy.min_years,
+#                 "max_years": vacancy.max_years,
+#                 "experience_weightage": vacancy.experience_weightage,
+#             }
+#             for vacancy in vacancies
+#         ]
+#     }
+
+
+#-------------------------------------------------------------------------------------------------------------
+@router.post("/save_vacancy_announcements/")
+async def save_vacancy_announcements(
+    data: VacancyAnnouncements,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    
+    # Step 1: Validate the token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    # Step 2: Authenticate the user (you can modify as per your authentication mechanism)
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    # Step 3: Save the vacancy announcements to the DB
+    result = db_employee_master.save_vacancy_announcements_to_db(data, db, user_id)
+
+    # Step 4: Return the result based on success or failure
+    if result["success"]:
+        return {"success": True, "message": "Vacancy announcements saved successfully"}
+    else:
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+#-------------------------------------------------------------------------------------------------------
+
+
+# @router.get("/announcements_list", response_model=AnnouncementsListResponse)
+# async def get_announcements(
+#     announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
+#     announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
+#     status: Optional[str] = None,
+#     announcement_date: Optional[str] = None,
+#     closing_date: Optional[str] = None,
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+    
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     filters = []
+
+#     if announcement_date:
+#         try:
+#             announcement_date = datetime.strptime(announcement_date, "%Y-%m-%d").date()
+#         except ValueError:
+#             raise HTTPException(status_code=400, detail="Invalid format for announcement_date. Use YYYY-MM-DD")
+
+#     if closing_date:
+#         try:
+#             closing_date = datetime.strptime(closing_date, "%Y-%m-%d").date()
+#         except ValueError:
+#             raise HTTPException(status_code=400, detail="Invalid format for closing_date. Use YYYY-MM-DD")
+
+#     if announcement_type != "ALL":
+#         filters.append(VacancyAnnouncementMaster.announcement_type == announcement_type)
+
+#     if announcement_status != "ALL":
+#         filters.append(VacancyAnnouncementMaster.announcement_status == announcement_status)
+
+#     if status:
+#         filters.append(VacancyAnnouncementMaster.is_deleted == status)
+
+#     if closing_date:
+#         filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
+
+#     # Query with Joins
+#     announcements = (
+#         db.query(
+#             VacancyAnnouncementMaster,
+#             VacancyMaster.id.label("vacancy_master_id"),
+#             VacancyMaster.job_description.label("vacancy_name"),  # Get job description as vacancy name
+#             EmployeeMaster.first_name,
+#             EmployeeMaster.middle_name,
+#             EmployeeMaster.last_name,
+#         )
+#         .join(VacancyAnnouncementDetails, VacancyAnnouncementDetails.vacancy_announcement_master_id == VacancyAnnouncementMaster.id, isouter=True)
+#         .join(VacancyMaster, VacancyMaster.id == VacancyAnnouncementDetails.vacancy_master_id, isouter=True)
+#         .join(EmployeeMaster, EmployeeMaster.employee_id == VacancyAnnouncementMaster.created_by, isouter=True)
+#         .filter(*filters)
+#         .all()
+#     )
+
+#     result = []
+#     for announcement, vacancy_master_id, vacancy_name, first_name, middle_name, last_name in announcements:
+#         details = db.query(VacancyAnnouncementDetails).filter(
+#             VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement.id
+#         ).all()
+
+#         announcement_details = [
+#             {
+#                 "id": detail.id,
+#                 "vacancy_master_id": detail.vacancy_master_id,
+#                 # "vacancy_name": vacancy_name,  # Add vacancy name
+#             }
+#             for detail in details
+#         ]
+
+#         # Combine first name, middle name, and last name for full name
+#         full_name = " ".join(filter(None, [first_name, middle_name, last_name]))
+
+#         result.append({
+#             "id": announcement.id,
+#             "title": announcement.title,
+#             "announcement_type": announcement.announcement_type,
+#             "description": announcement.description,
+#             "announcement_status": announcement.announcement_status,
+#             "created_by": full_name, 
+#             "first_name": first_name,
+#             "middle_name": middle_name,
+#             "last_name": last_name,
+#             "created_on": announcement.created_on.date(),
+#             "closing_date": announcement.closing_date,
+#             "announcement_details": announcement_details,
+#         })
+
+#     return {"announcements": result}
+
+
+
+@router.get("/announcements_list")
+async def get_announcements(
+    announcement_type: Optional[str] = Query("ALL", enum=["ALL", "GENERAL", "SPECIAL"]),
+    announcement_status: Optional[str] = Query("ALL", enum=["ALL", "ACTIVE", "INACTIVE"]),
+    status: Optional[str] = None,
+    announcement_date: Optional[str] = None,
+    closing_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    filters = []
+
+    if announcement_date:
+        try:
+            announcement_date = datetime.strptime(announcement_date, "%Y-%m-%d").date()
+            filters.append(VacancyAnnouncementMaster.created_on == announcement_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid format for announcement_date. Use YYYY-MM-DD")
+
+    if closing_date:
+        try:
+            closing_date = datetime.strptime(closing_date, "%Y-%m-%d").date()
+            filters.append(VacancyAnnouncementMaster.closing_date == closing_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid format for closing_date. Use YYYY-MM-DD")
+
+    if announcement_type != "ALL":
+        filters.append(VacancyAnnouncementMaster.announcement_type == announcement_type)
+
+    if announcement_status != "ALL":
+        filters.append(VacancyAnnouncementMaster.announcement_status == announcement_status)
+
+    if status:
+        filters.append(VacancyAnnouncementMaster.is_deleted == status)
+
+    # Query with necessary joins (removing VacancyMaster join since `vacancy_name` is not needed)
+    announcements = (
+        db.query(
+            VacancyAnnouncementMaster,
+            EmployeeMaster.first_name,
+            EmployeeMaster.middle_name,
+            EmployeeMaster.last_name
+        )
+        .join(EmployeeMaster, EmployeeMaster.employee_id == VacancyAnnouncementMaster.created_by, isouter=True)
+        .filter(*filters)
+        .all()
+    )
+
+    # Dictionary to store unique announcements
+    result_dict = {}
+
+    for announcement, first_name, middle_name, last_name in announcements:
+        announcement_id = announcement.id
+
+        # Full name creation
+        full_name = " ".join(filter(None, [first_name, middle_name, last_name]))
+
+        # If announcement is not already added, initialize it
+        if announcement_id not in result_dict:
+            result_dict[announcement_id] = {
+                "id": announcement.id,
+                "title": announcement.title,
+                "announcement_type": announcement.announcement_type,
+                "description": announcement.description,
+                "announcement_status": announcement.announcement_status,
+                "created_by": full_name,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "created_on": announcement.created_on.strftime("%Y-%m-%d"),
+                "closing_date": announcement.closing_date.strftime("%Y-%m-%d"),
+                "announcement_details": []  # Empty list for details
+            }
+
+        # Fetch announcement details
+        details = db.query(VacancyAnnouncementDetails).filter(
+            VacancyAnnouncementDetails.vacancy_announcement_master_id == announcement_id
+        ).all()
+
+        for detail in details:
+            result_dict[announcement_id]["announcement_details"].append({
+                "id": detail.id,
+                "vacancy_master_id": detail.vacancy_master_id,
+            })
+
+    # Convert dictionary values to list for response
+    result = list(result_dict.values())
+
+    return {"announcements": result}
+
+
+
+
+#-------------------------------------------------------------------------------------------------------------------
+
+# @router.post("/save_applicant/")
+# async def save_applicant(
+#     data: ApplicantDetails, 
+#     profile_component: List[str] = Query(...),  # Receiving the list of components to save
+#     db: Session = Depends(get_db),  # Dependency for the DB session
+#     token: str = Depends(oauth2.oauth2_scheme)  # OAuth2 token for authentication
+# ):
+#     # Step 1: Validate the token
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+#     # Step 2: Authenticate the user
+#     auth_info = authenticate_user(token)
+#     user_id = auth_info.get("user_id")
+
+#     if not user_id:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+#     # Step 3: Save the applicant data to the DB by passing profile_component
+#     result = db_employee_master.save_applicant(data, db, user_id, profile_component)
+
+#     # Step 4: Return the result based on success or failure
+#     if result["success"]:
+#         return {"success": True, "message": "Applicant details saved successfully"}
+#     else:
+#         raise HTTPException(status_code=500, detail=result["message"])
+
+#-------------------------------------------------------------------------------------------------------------------
+
+@router.post("/save_applicant/")
+async def save_applicant(
+
+    data: ApplicantDetails, 
+    vacancy_master_id: Optional[int] = None, 
+    profile_component: List[str] = Query(...),  # Receiving the list of components to save
+    db: Session = Depends(get_db),  # Dependency for the DB session
+    token: str = Depends(oauth2.oauth2_scheme)  # OAuth2 token for authentication
+):
+    # Step 1: Validate the token
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    # Step 2: Authenticate the user
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token or user not found")
+
+    # Step 3: Save the applicant data to the DB by passing profile_component
+    result = db_employee_master.save_applicant(data,vacancy_master_id, db, user_id, profile_component)
+
+    # Step 4: Return the result based on success or failure
+    if result["success"]:
+        return {
+            "success": True,
+            "message": "Saved successfully",
+            "applicant_id": result.get("applicant_id")  
+        }
+    else:
+        raise HTTPException(status_code=500, detail=result["message"])
+
+
+#------------------------------------------------------------------------------------------
+
+
+# @router.get("/get_applicant_details/", response_model=Dict[str, Any])
+# def get_applicant_details(
+#     applicant_id: Optional[int] = None,
+#     profile_component: Optional[str] = None,
+#     vacancy_master_id: Optional[int] = None, 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#         Retrieves detailed information about an applicant.
+
+#         - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+#         - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+#         - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+#         - `applicant_login_details`: Login information for the applicant.
+#         - `applicant_present_address`: Current address of the applicant.
+#         - `applicant_permanent_address`: Permanent address of the applicant.
+#         - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+#         - `applicant_educational_qualification`: Educational qualifications of the applicant.
+#         - `applicant_professional_qualification`: Professional qualifications of the applicant.
+#         - `applicant_experience`: Employment or work experience details of the applicant.
+#         - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+#         - `applicant_hobby`: Hobbies and interests of the applicant.
+#         - `applicant_skill`: Skills of the applicant.
+#         - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+
+#         - **db**: The database session used for querying the relevant data.
+
+#         **Response**:
+#         Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+
+#         - If **applicant_id** is provided, it returns the details for that specific applicant.
+#         - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+
+#         **Example Request**:
+#         - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+#         - `GET /get_applicant_details/` (Fetch all details for the applicant)
+
+
+#         ```
+
+#         **Notes**:
+#         - If no data is found for the given `applicant_id`, a 404 error will be raised.
+#         - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+
+#         """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     profile_data = {}
+
+#     if applicant_id is None and profile_component is None:
+#         # Fetch all applicant details
+#         applicant_details = db_employee_master.get_all_applicant_detals(db)
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+#         profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+#     # hhhh
+
+#     elif vacancy_master_id is not None:
+#         print("Inside the vacancy condition")
+#         # Fetch applicants by vacancy_master_id
+#         applicant_details = db_employee_master.get_applicants_by_vacancy(db, vacancy_master_id)
+
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No applicants found for the given vacancy")
+
+#         # Convert result to dictionary format
+#         profile_data["applicants_by_vacancy"] = [
+#             dict(row._mapping) for row in applicant_details
+#         ]
+
+  
+#     elif applicant_id is not None and profile_component is not None:
+#         # Fetch specific profile component details for a given applicant
+#         if profile_component == "applicant_master":
+#             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+#         elif profile_component == "applicant_present_address":
+#             profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
+#         elif profile_component == "applicant_permanent_address":
+#             profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+#         elif profile_component == "applicant_contact_details":
+#             profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
+#         elif profile_component == "applicant_educational_qualification":
+#             profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_professional_qualifications":
+#             profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_experience":
+#             profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
+#         elif profile_component == "applicant_language_proficiency":
+#             profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
+#         elif profile_component == "applicant_hobby":
+#             profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
+#         elif profile_component == "applicant_skill":
+#             profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
+#         elif profile_component == "applicant_social_media_profile":
+#             profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
+#         else:
+#             raise HTTPException(status_code=400, detail="Invalid profile component")
+
+#     if not profile_data:
+#         raise HTTPException(status_code=404, detail="No data found for the given parameters")
+
+#     return profile_data
+
+
+
+# @router.get("/get_applicant_details/", response_model=Dict[str, Any])
+# def get_applicant_details(
+#     applicant_id: Optional[int] = None,
+#     profile_component: Optional[str] = None,
+#     vacancy_master_id: Optional[int] = None, 
+#     db: Session = Depends(get_db),
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     """
+#         Retrieves detailed information about an applicant.
+
+#         - **applicant_id**: (Optional) The unique identifier of the applicant. If provided, it filters the results to return only the applicant's data with this ID.
+#         - **profile_component**: (Optional) Specifies which profile component to fetch. The following components are supported:
+#         - `applicant_master`: Basic applicant details (e.g., name, age, gender).
+#         - `applicant_login_details`: Login information for the applicant.
+#         - `applicant_present_address`: Current address of the applicant.
+#         - `applicant_permanent_address`: Permanent address of the applicant.
+#         - `applicant_contact_details`: Contact information (phone number, email) for the applicant.
+#         - `applicant_educational_qualification`: Educational qualifications of the applicant.
+#         - `applicant_professional_qualification`: Professional qualifications of the applicant.
+#         - `applicant_experience`: Employment or work experience details of the applicant.
+#         - `applicant_language_proficiency`: Languages spoken by the applicant and their proficiency levels.
+#         - `applicant_hobby`: Hobbies and interests of the applicant.
+#         - `applicant_skill`: Skills of the applicant.
+#         - `applicant_social_media_profile`: Social media profile links (Facebook, LinkedIn, etc.).
+
+#         - **db**: The database session used for querying the relevant data.
+
+#         **Response**:
+#         Returns a dictionary where the key is the profile component, and the value is the corresponding details of the applicant. The content of the response depends on the selected `profile_component`. If no `profile_component` is specified, it returns all available data for the applicant.
+
+#         - If **applicant_id** is provided, it returns the details for that specific applicant.
+#         - If **profile_component** is provided, it returns the details only for that specific component. If no `profile_component` is provided, all components are returned.
+
+#         **Example Request**:
+#         - `GET /get_applicant_details/?applicant_id=123&profile_component=applicant_social_media_profile`
+#         - `GET /get_applicant_details/` (Fetch all details for the applicant)
+
+
+#         ```
+
+#         **Notes**:
+#         - If no data is found for the given `applicant_id`, a 404 error will be raised.
+#         - If an invalid `profile_component` is provided, a 400 error will be raised with a message indicating the invalid component.
+
+#         """
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     profile_data = {}
+
+#     if applicant_id is None and profile_component is None:
+#         # Fetch all applicant details
+#         applicant_details = db_employee_master.get_all_applicant_detals(db)
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No data found for applicant details")
+#         profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+#     # hhhh
+
+#     elif vacancy_master_id is not None:
+#         print("Inside the vacancy condition")
+#         # Fetch applicants by vacancy_master_id
+#         applicant_details = db_employee_master.get_applicants_by_vacancy(db, vacancy_master_id)
+
+#         if not applicant_details:
+#             raise HTTPException(status_code=404, detail="No applicants found for the given vacancy")
+
+#         # Convert result to dictionary format
+#         profile_data["applicants_by_vacancy"] = [
+#             dict(row._mapping) for row in applicant_details
+#         ]
+
+  
+#     elif applicant_id is not None and profile_component is not None:
+#         # Fetch specific profile component details for a given applicant
+#         if profile_component == "applicant_master":
+#             profile_data["applicant_master"] = db_employee_master.get_applicant_master(db, applicant_id)
+#         elif profile_component == "applicant_present_address":
+#             profile_data["applicant_present_address"] = db_employee_master.applicant_present_address(db, applicant_id)
+#         elif profile_component == "applicant_permanent_address":
+#             profile_data["applicant_permanent_address"] = db_employee_master.applicant_permanent_address(db, applicant_id)
+#         elif profile_component == "applicant_contact_details":
+#             profile_data["applicant_contact_details"] = db_employee_master.get_applicant_contact_details(db, applicant_id)
+#         elif profile_component == "applicant_educational_qualification":
+#             profile_data["applicant_educational_qualification"] = db_employee_master.get_applicant_educational_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_professional_qualifications":
+#             profile_data["applicant_professional_qualifications"] = db_employee_master.get_applicant_professional_qualifications(db, applicant_id)
+#         elif profile_component == "applicant_experience":
+#             profile_data["applicant_experience"] = db_employee_master.get_applicant_experience(db, applicant_id)
+#         elif profile_component == "applicant_language_proficiency":
+#             profile_data["applicant_language_proficiency"] = db_employee_master.get_applicant_language_proficiency(db, applicant_id)
+#         elif profile_component == "applicant_hobby":
+#             profile_data["applicant_hobby"] = db_employee_master.get_applicant_hobbies(db, applicant_id)
+#         elif profile_component == "applicant_skill":
+#             profile_data["applicant_skill"] = db_employee_master.get_applicant_skills(db, applicant_id)
+#         elif profile_component == "applicant_social_media_profile":
+#             profile_data["applicant_social_media_profile"] = db_employee_master.get_applicant_social_media_profiles(db, applicant_id)
+#         else:
+#             raise HTTPException(status_code=400, detail="Invalid profile component")
+
+#     if not profile_data:
+#         raise HTTPException(status_code=404, detail="No data found for the given parameters")
+
+#     return profile_data
+
+
+
+
+@router.get("/get_applicant_details/", response_model=Dict[str, Any])
+def get_applicant_details(
+    applicant_id: Optional[int] = None,
+    profile_component: Optional[str] = None,
+    vacancy_master_id: Optional[int] = None, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """Fetch applicant details based on provided parameters."""
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    profile_data = {}
+
+    if applicant_id is None and profile_component is None and vacancy_master_id is None:
+        # Fetch all applicant details
+        applicant_details = db_employee_master.get_all_applicant_detals(db)  # Fixed typo
+        if not applicant_details:
+            raise HTTPException(status_code=404, detail="No data found for applicant details")
+        profile_data["applicant_details"] = [ApplicantDetailsView(**applicant.__dict__) for applicant in applicant_details]
+
+    elif vacancy_master_id is not None:
+        # Fetch applicants by vacancy_master_id
+        applicant_details = db_employee_master.get_applicants_by_vacancy(db, vacancy_master_id)
+        if not applicant_details:
+            raise HTTPException(status_code=404, detail="No applicants found for the given vacancy")
+        profile_data["applicants_by_vacancy"] = [dict(row._mapping) for row in applicant_details]
+
+    elif applicant_id is not None and profile_component is None:
+        # Fetch all details for a specific applicant
+        applicant_details = db_employee_master.get_applicant_master(db, applicant_id)
+        if not applicant_details:
+            raise HTTPException(status_code=404, detail="No applicant found with the given ID")
+        profile_data["applicant_master"] = applicant_details
+
+    elif applicant_id is not None and profile_component is not None:
+        # Fetch specific profile component details for a given applicant
+        component_map = {
+            "applicant_master": db_employee_master.get_applicant_master,
+            "applicant_present_address": db_employee_master.applicant_present_address,
+            "applicant_permanent_address": db_employee_master.applicant_permanent_address,
+            "applicant_contact_details": db_employee_master.get_applicant_contact_details,
+            "applicant_educational_qualification": db_employee_master.get_applicant_educational_qualifications,
+            "applicant_professional_qualifications": db_employee_master.get_applicant_professional_qualifications,
+            "applicant_experience": db_employee_master.get_applicant_experience,
+            "applicant_language_proficiency": db_employee_master.get_applicant_language_proficiency,
+            "applicant_hobby": db_employee_master.get_applicant_hobbies,
+            "applicant_skill": db_employee_master.get_applicant_skills,
+            "applicant_social_media_profile": db_employee_master.get_applicant_social_media_profiles
+        }
+
+        if profile_component not in component_map:
+            raise HTTPException(status_code=400, detail=f"Invalid profile component: {profile_component}")
+
+        profile_data[profile_component] = component_map[profile_component](db, applicant_id)
+
+    if not profile_data:
+        raise HTTPException(status_code=404, detail="No data found for the given parameters")
+
+    return profile_data
+
+
+
+#----------------------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------------------------
+def fetch_skills_scores(vacancy_id: int, db: Session):
+    query = text("""
+        SELECT 
+            a.applicant_id,
+            a.first_name,
+            a.middle_name,
+            a.last_name,
+            SUM(DISTINCT vs.weightage) AS skill_score
+        FROM 
+            applicant_master a
+        JOIN 
+            applicant_skill aps ON a.applicant_id = aps.applicant_id
+        JOIN 
+            vacancy_skills vs ON aps.skill_id = vs.skill_id AND vs.vacancy_master_id = :vacancy_id
+        WHERE 
+            aps.is_deleted = 'no' AND vs.is_deleted = 'no'
+        GROUP BY 
+            a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    return db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+
+
+def fetch_experience_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(CASE 
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 2 THEN 10
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 3 THEN 15
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 5 THEN 20
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) <= 10 THEN 30
+            WHEN (DATEDIFF(COALESCE(ae.end_date, NOW()), ae.start_date) / 365) > 10 THEN 40
+            ELSE 0 
+        END) AS experience_score
+    FROM 
+        applicant_master a
+    JOIN 
+        application_master am ON a.applicant_id = am.applicant_id
+    LEFT JOIN 
+        applicant_experience ae ON a.applicant_id = ae.applicant_id
+    WHERE 
+        am.vacancy_master_id = :vacancy_id
+        AND am.is_deleted = 'no'
+        AND (ae.is_deleted = 'no' OR ae.is_deleted IS NULL)
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        experience_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return experience_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching experience scores: {str(e)}")
+
+#------------------------------------------------------------------------------------------------
+def fetch_qualification_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(
+            CASE 
+                WHEN vel.education_level_id = ae.education_level_id THEN vel.weightage ELSE 0 
+            END + 
+            CASE 
+                WHEN ves.education_stream_id = ae.education_stream_id THEN ves.weightage ELSE 0 
+            END + 
+            CASE 
+                WHEN vesc.education_subject_or_course_id = ae.education_subject_or_course_id THEN vesc.weightage ELSE 0 
+            END
+        ) AS qualification_score
+    FROM 
+        applicant_educational_qualification ae
+    LEFT JOIN 
+        applicant_master a ON ae.applicant_id = a.applicant_id
+    LEFT JOIN 
+        application_master am ON a.applicant_id = am.applicant_id
+    LEFT JOIN 
+        vacancy_educational_level vel ON vel.vacancy_master_id = am.vacancy_master_id AND vel.education_level_id = ae.education_level_id
+    LEFT JOIN 
+        vacancy_educational_stream ves ON ves.vacancy_master_id = am.vacancy_master_id AND ves.education_stream_id = ae.education_stream_id
+    LEFT JOIN 
+        vacancy_educational_subject_or_course vesc ON vesc.vacancy_master_id = am.vacancy_master_id AND vesc.education_subject_or_course_id = ae.education_subject_or_course_id
+    WHERE 
+        ae.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        qualification_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return qualification_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching qualification scores: {str(e)}")
+
+#----------------------------------------------------------------------------------------------------------
+def fetch_language_proficiency_scores(vacancy_id: int, db: Session):
+    query = text("""
+    SELECT 
+        a.applicant_id,
+        a.first_name,
+        a.middle_name,
+        a.last_name,
+        SUM(
+            CASE
+                WHEN vlp.is_read_required = 'yes' AND alp.read_proficiency_id = vlp.language_proficiency_id THEN vlp.read_weightage ELSE 0
+            END +
+            CASE
+                WHEN vlp.is_write_required = 'yes' AND alp.write_proficiency_id = vlp.language_proficiency_id THEN vlp.write_weightage ELSE 0
+            END +
+            CASE
+                WHEN vlp.is_speak_required = 'yes' AND alp.speak_proficiency_id = vlp.language_proficiency_id THEN vlp.speak_weightage ELSE 0
+            END
+        ) AS language_proficiency_score
+    FROM 
+        applicant_language_proficiency alp
+    LEFT JOIN 
+        applicant_master a ON alp.applicant_id = a.applicant_id
+    LEFT JOIN 
+        application_master am ON alp.applicant_id = am.applicant_id
+    LEFT JOIN 
+        vacancy_language_proficiency vlp ON vlp.vacancy_master_id = am.vacancy_master_id AND vlp.language_id = alp.language_id
+    WHERE 
+        alp.is_deleted = 'no' AND am.vacancy_master_id = :vacancy_id
+    GROUP BY 
+        a.applicant_id, a.first_name, a.middle_name, a.last_name;
+    """)
+    try:
+        result = db.execute(query, {"vacancy_id": vacancy_id}).fetchall()
+        language_proficiency_data = {
+            (row[0], row[1], row[2], row[3]): float(row[4]) if row[4] is not None else 0.0
+            for row in result
+        }
+        return language_proficiency_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching language proficiency scores: {str(e)}")
+
+
+#----------------------------------------------------------------------------------------------------------
+
+def calculate_total_scores(vacancy_id: int, db: Session):
+    # Fetch individual components
+    skills = fetch_skills_scores(vacancy_id, db)
+    experience = fetch_experience_scores(vacancy_id, db)
+    qualification = fetch_qualification_scores(vacancy_id, db)
+    language_proficiency = fetch_language_proficiency_scores(vacancy_id, db)
+
+    # Initialize a list to store applicant score objects
+    applicant_scores = []
+
+    # Merge skill scores
+    for row in skills:
+        applicant_id, first_name, middle_name, last_name, skill_score = row
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["skill_score"] = skill_score
+
+    # Merge experience scores
+    for (applicant_id, first_name, middle_name, last_name), experience_score in experience.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["experience_score"] = experience_score
+
+    # Merge qualification /education scores
+    for (applicant_id, first_name, middle_name, last_name), qualification_score in qualification.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["qualification_score"] = qualification_score
+
+    # Merge language proficiency scores
+    for (applicant_id, first_name, middle_name, last_name), language_proficiency_score in language_proficiency.items():
+        applicant = next((a for a in applicant_scores if a["applicant_id"] == applicant_id), None)
+        if not applicant:
+            applicant = {
+                "applicant_id": applicant_id,
+                "first_name": first_name,
+                "middle_name": middle_name,
+                "last_name": last_name,
+                "skill_score": 0,
+                "experience_score": 0,
+                "qualification_score": 0,
+                "language_proficiency_score": 0
+            }
+            applicant_scores.append(applicant)
+        applicant["language_proficiency_score"] = language_proficiency_score
+
+    # Calculate the total score for each applicant
+    for applicant in applicant_scores:
+        total_score = (applicant["skill_score"] + applicant["experience_score"] + 
+                       applicant["qualification_score"] + applicant["language_proficiency_score"])
+        applicant["total_score"] = total_score
+
+    # Filter out applicants with no score data (if needed)
+    applicant_scores = [applicant for applicant in applicant_scores if applicant["total_score"] > 0]
+
+    return {
+        "success": "true",
+        "data": applicant_scores  # Return data as a list, not a dictionary with IDs
+    }
+
+#------------------------------------------------------------------------------------------------
+# @router.get("/ranked-applicants")
+# def get_ranked_applicants(vacancy_id: int,
+#                            db: Session = Depends(get_db),
+#                            token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         ranked_applicants = calculate_total_scores(vacancy_id, db)
+#         return {"success": "true", "data": ranked_applicants}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+# @router.get("/ranked-applicants")
+# def get_ranked_applicants(vacancy_id: int,
+#                            db: Session = Depends(get_db),
+#                            token: str = Depends(oauth2.oauth2_scheme)):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     try:
+#         # Fetch applicants with their scores
+#         ranked_applicants = calculate_total_scores(vacancy_id, db)
+
+#         # Ensure the response is a list before sorting
+#         if isinstance(ranked_applicants, dict):
+#             ranked_applicants = ranked_applicants.get("data", [])
+
+#         # Sort applicants by total_score in descending order
+#         ranked_applicants = sorted(ranked_applicants, key=lambda x: x["total_score"], reverse=True)
+
+#         # Assign rank based on sorted order
+#         for idx, applicant in enumerate(ranked_applicants, start=1):
+#             applicant["rank"] = idx
+
+#         return {"success": "true", "data": ranked_applicants}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/ranked-applicants")
+def get_ranked_applicants(
+    vacancy_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme),
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+
+    try:
+        # Fetch applicants and calculate scores
+        ranked_applicants = calculate_total_scores(vacancy_id, db)
+
+        # Ensure the response is a list before sorting
+        if isinstance(ranked_applicants, dict):
+            ranked_applicants = ranked_applicants.get("data", [])
+
+        # Sort by total_score in descending order
+        ranked_applicants = sorted(ranked_applicants, key=lambda x: x["total_score"], reverse=True)
+
+        # Assign ranks and insert into `application_rank_list`
+        for idx, applicant in enumerate(ranked_applicants, start=1):
+            applicant["rank"] = idx  # Add rank to response
+
+            # Prepare record for insertion
+            rank_entry = ApplicationRankList(
+                applicant_id=applicant["applicant_id"],
+                vacancy_master_id=vacancy_id,
+                education_score=applicant.get("qualification_score", 0.0),
+                professional_score=0.0,  # Modify based on actual calculation
+                experience_score=applicant.get("experience_score", 0.0),
+                language_score=applicant.get("language_proficiency_score", 0.0),
+                skill_score=applicant.get("skill_score", 0.0),
+                interview_score=0.0,  # Modify if applicable
+                rank_number=idx,
+                total_score=applicant["total_score"],
+                # status="Pending",  # Modify based on business logic
+                is_deleted="no"
+            )
+
+            # Check if the record already exists
+            existing_record = db.query(ApplicationRankList).filter_by(
+                applicant_id=applicant["applicant_id"],
+                vacancy_master_id=vacancy_id
+            ).first()
+
+            if existing_record:
+                # Update existing record
+                existing_record.education_score = rank_entry.education_score
+                existing_record.professional_score = rank_entry.professional_score
+                existing_record.experience_score = rank_entry.experience_score
+                existing_record.language_score = rank_entry.language_score
+                existing_record.skill_score = rank_entry.skill_score
+                existing_record.interview_score = rank_entry.interview_score
+                existing_record.rank_number = rank_entry.rank_number
+                existing_record.total_score = rank_entry.total_score
+                # existing_record.status = rank_entry.status
+            else:
+                # Insert new record
+                db.add(rank_entry)
+
+        # Commit changes to database
+        db.commit()
+
+        return {"success": "true", "data": ranked_applicants}
+    
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+#------------------------------------------------------------------------------------------------
+# @router.post("/save_interview_schedule/")
+# async def save_interview_schedule(
+#     schedules: List[InterviewScheduleRequest],  # List of interview schedules to save
+#     db: Session = Depends(get_db),  # Database session dependency
+#     token: str = Depends(oauth2.oauth2_scheme)
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+#     try:
+#         saved_schedules = []
+#         for schedule in schedules:
+#             # Delegating insert or update logic to save_schedule function
+#             saved_schedule = db_employee_master.save_schedule(schedule, db)
+#             # Manually convert the SQLAlchemy object to a dictionary
+#             saved_schedule_dict = {
+#                 "id": saved_schedule.id,
+#                 "applicant_id": saved_schedule.applicant_id,
+#                 "vacancy_id": saved_schedule.vacancy_id,
+#                 "interview_panel_id": saved_schedule.interview_panel_id,
+#                 "interview_date": saved_schedule.interview_date,
+#                 "interview_time": saved_schedule.interview_time,
+#                 "location": saved_schedule.location,
+#                 "interview_status": saved_schedule.interview_status,
+#                 "remarks": saved_schedule.remarks
+#             }
+           
+#             # Convert dictionary to InterviewScheduleRequest
+#             saved_schedules.append(InterviewScheduleRequest(**saved_schedule_dict))
+        
+#         return {"success": "true", "message": "Schedules saved successfully"}
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+    
+#-----------------------------------------------------------------------------------------------------
+@router.post("/save_interview_panel")
+def save_interview_panel_endpoint(
+    request: CreateInterviewPanelRequest, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    try:
+        # Call the service to save the interview panel data
+        response = db_employee_master.save_interview_panel(db, request)
+        return response
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An error occurred while saving the data.")
+    
+    
+# -----------------------------------------------------------------------------------------------------
+
+
+@router.get("/vacancy_details_for_education/{vacancy_id}")
+def get_vacancy_details(vacancy_id: int, 
+                        db: Session = Depends(get_db),
+                        token: str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # Fetch education levels, streams, and courses for the given vacancy_id
+    education_levels = db.query(VacancyEducationalLevel).filter(
+        VacancyEducationalLevel.vacancy_master_id == vacancy_id,
+        VacancyEducationalLevel.is_deleted == "no"
+    ).all()
+
+    education_streams = db.query(VacancyEducationalStream).filter(
+        VacancyEducationalStream.vacancy_master_id == vacancy_id,
+        VacancyEducationalStream.is_deleted == "no"
+    ).all()
+
+    # Assuming we have the correct attribute names for `VacancyEducationalSubjectOrCourse`
+    education_courses = db.query(VacancyEducationalSubjectOrCourse).filter(
+        VacancyEducationalSubjectOrCourse.vacancy_master_id == vacancy_id,
+        VacancyEducationalSubjectOrCourse.is_deleted == "no"
+    ).all()
+
+    # Fetch names for levels, streams, and courses
+    level_names = db.query(AppEducationalLevel).all()
+    stream_names = db.query(AppEducationalStream).all()
+    course_names = db.query(AppEducationSubjectCourse).all()
+
+    level_name_dict = {level.id: level.education_level for level in level_names}
+    stream_name_dict = {stream.id: stream.education_stream for stream in stream_names}
+    course_name_dict = {course.id: course.subject_or_course_name for course in course_names}
+
+    # Step 1: Organize streams by education_level_id using the correct relationship
+    stream_dict = {}
+    for stream in education_streams:
+        education_level_id = db.query(AppEducationalStream.education_level_id).filter(
+            AppEducationalStream.id == stream.education_stream_id).scalar()
+        stream_dict.setdefault(education_level_id, []).append({
+            "id": stream.id,
+            "education_stream_id": stream.education_stream_id,
+            "education_stream_name": stream_name_dict.get(stream.education_stream_id, ""),
+            "weightage": stream.weightage or 0.0,
+            "courses": []
+        })
+
+    # Step 2: Assign courses to the correct streams
+    for course in education_courses:
+        education_stream_id = db.query(AppEducationSubjectCourse.education_stream_id).filter(
+            AppEducationSubjectCourse.id == course.education_subject_or_course_id).scalar()
+        for stream_list in stream_dict.values():
+            for stream in stream_list:
+                if education_stream_id == stream["education_stream_id"]:
+                    stream["courses"].append({
+                        "id": course.id,
+                        "education_subject_or_course_id": course.education_subject_or_course_id or 0,
+                        "education_subject_or_course_name": course_name_dict.get(course.education_subject_or_course_id, ""),
+                        "weightage": course.weightage or 0.0
+                    })
+
+    # Step 3: Organize education levels with nested streams
+    education_data = []
+    for level in education_levels:
+        education_data.append({
+            "id": level.id,
+            "education_level_id": level.education_level_id,
+            "education_level_name": level_name_dict.get(level.education_level_id, ""),
+            "weightage": level.weightage or 0.0,
+            "streams": stream_dict.get(level.education_level_id, [])
+        })
+
+    # Step 4: Construct the response as a plain dictionary
+    response_data = {
+        "id": vacancy_id,
+        "education": {
+            "levels": education_data
+        }
+    }
+
+    return response_data
+
+
+#----------------------------------------------------------------------------------------------
+
+
+@router.post("/save_interview_schedule/")
+def save_schedule(request: InterviewScheduleRequest, 
+                  db: Session = Depends(get_db),
+                  token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Save or update interview schedules.
+
+    This endpoint allows users to create new interview schedules or update existing ones 
+    for a given vacancy. It also performs a soft delete for schedules that are missing 
+    from the request.
+
+    ### Request Body:
+    ```json
+    {
+      "schedules": [
+        {
+          "id": 0,
+          "applicant_id": 100,
+          "vacancy_id": 50,
+          "interview_panel_id": 1,
+          "interview_date": "2025-02-19T07:51:26.050Z",
+          "interview_time": "2025-02-19T07:51:26.050Z",
+          "location": "kochi",
+          "remarks": "SSSS"
+        }
+      ]
+    }
+    ```
+
+    ### Request Parameters:
+    - `id` (int): `0` for new records, otherwise the existing schedule ID.
+    - `applicant_id` (int): ID of the applicant being scheduled.
+    - `vacancy_id` (int, required): The vacancy ID for which the interview is scheduled.
+    - `interview_panel_id` (int): The ID of the interview panel.
+    - `interview_date` (str, ISO 8601 format): The date of the interview.
+    - `interview_time` (str, ISO 8601 format): The time of the interview.
+    - `location` (str): The location where the interview will take place.
+    - `remarks` (str, optional): Additional notes for the interview.
+
+    ### Response:
+    - **Success** (`200 OK`):
+    ```json
+    {
+      "success": "true",
+      "message": "Interview schedules saved successfully"
+    }
+    ```
+    - **Failure** (`400 Bad Request` / `500 Internal Server Error`):
+    ```json
+    {
+      "success": "false",
+      "message": "Error: <detailed error message>"
+    }
+    ```
+
+    ### Logic:
+    - If `id = 0`, a new schedule is inserted.
+    - If `id > 0`, an existing schedule is updated.
+    - Any existing schedules in the database that are not in the request are marked as deleted (`is_deleted = "yes"`).
+
+    ### Errors:
+    - Returns `"Vacancy ID is required"` if no schedules are provided.
+    - Returns `"Error: <detailed message>"` if any unexpected database or server error occurs.
+
+    """
+    
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        # Step 1: Validate Vacancy ID
+        vacancy_id = request.schedules[0].vacancy_id if request.schedules else None
+        if not vacancy_id:
+            raise HTTPException(status_code=400, detail="Vacancy ID is required")
+
+        # Step 2: Fetch Existing Schedules for Vacancy
+        existing_schedules = db.query(InterviewSchedule).filter(
+            InterviewSchedule.vacancy_id == vacancy_id,
+            InterviewSchedule.is_deleted == "no"
+        ).all()
+
+        # Step 3: Create a lookup dictionary {applicant_id -> existing schedule}
+        existing_schedule_map = {s.applicant_id: s for s in existing_schedules}
+
+        # Step 4: Extract applicant IDs from the request
+        new_applicant_ids = {schedule.applicant_id for schedule in request.schedules}
+
+        # Step 5: Insert or Update Logic
+        for schedule in request.schedules:
+            if schedule.id == 0:
+                # 🟢 Insert New Record
+                new_schedule = InterviewSchedule(
+                    applicant_id=schedule.applicant_id,
+                    vacancy_id=schedule.vacancy_id,
+                    interview_panel_id=schedule.interview_panel_id,
+                    interview_date=schedule.interview_date,
+                    interview_time=schedule.interview_time,
+                    location=schedule.location,
+                    interview_status="SCHEDULED",
+                    remarks=schedule.remarks,
+                    is_deleted="no",
+                )
+                db.add(new_schedule)
+                db.flush()  # Ensure ID is generated
+                db.refresh(new_schedule)  # Refresh the object with DB values
+
+            else:
+                # 🟡 Update Existing Record
+                existing_schedule = db.query(InterviewSchedule).filter(
+                    InterviewSchedule.id == schedule.id
+                ).first()
+                
+                if existing_schedule:
+                    existing_schedule.interview_panel_id = schedule.interview_panel_id
+                    existing_schedule.interview_date = schedule.interview_date
+                    existing_schedule.interview_time = schedule.interview_time
+                    existing_schedule.location = schedule.location
+                    existing_schedule.interview_status = "RESCHEDULED"  # Fixed Typo
+                    existing_schedule.remarks = schedule.remarks
+
+        # Step 6: Mark Missing Applicants as Deleted (Soft Delete)
+        for applicant_id, schedule in existing_schedule_map.items():
+            if applicant_id not in new_applicant_ids:
+                schedule.is_deleted = "yes"
+
+        # Step 7: Commit Changes
+        db.commit()
+        return {"success": "true", "message": "Interview schedules saved successfully"}
+
+    except Exception as e:
+        db.rollback()
+        return {"success": "false", "message": f"Error: {str(e)}"}

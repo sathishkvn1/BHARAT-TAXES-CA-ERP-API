@@ -16,16 +16,16 @@ from caerp_db.database import  get_db,SessionLocal
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster
 from caerp_db.office import db_office_master
 from typing import Union,List,Dict,Any
-from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory, OffViewCustomerEnquiryAppointmentDetails
+from caerp_db.office.models import AppDayOfWeek, AppHsnSacMaster, AppHsnSacTaxMaster, CustomerDataDocumentMaster, OffAppointmentMaster , OffConsultantSchedule, OffConsultationMode, OffDocumentDataMaster,  OffServiceGoodsPriceMaster, OffServiceTaskHistory, OffViewCustomerEnquiryAppointmentDetails
 # from caerp_router.office.crud import call_get_service_details
 from caerp_schema.common.common_schema import BusinessActivityMasterSchema, BusinessActivitySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import SaveEmployeeTeamMaster
-from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, CustomerEnquiryAppointmentDetailsSchema, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
+from caerp_schema.office.office_schema import   AppViewHsnSacMasterSchema, AppointmentStatusConstants, BundledServiceData,  ConsultantEmployee, ConsultantScheduleCreate, ConsultantService, ConsultantServiceDetailsListResponse, ConsultantServiceDetailsResponse, ConsultationModeSchema, ConsultationToolSchema, CreateWorkOrderDependancySchema, CreateWorkOrderRequest, CreateWorkOrderSetDtailsRequest, CustomerEnquiryAppointmentDetailsSchema, DocumentsSchema, EmployeeResponse, OffAppointmentDetails, OffAppointmentMasterSchema, OffConsultationTaskMasterSchema, OffDocumentDataBase, OffDocumentDataMasterBase, OffEnquiryResponseSchema, OffOfferMasterSchemaResponse, OffServiceTaskHistorySchema, OffServiceTaskMasterSchema, OffViewConsultationTaskMasterSchema, OffViewEnquiryResponseSchema, OffViewServiceDocumentsDataDetailsDocCategory, OffViewServiceDocumentsDataDetailsSchema, OffViewServiceDocumentsDataMasterSchema, OffViewServiceGoodsMasterDisplay, OffViewServiceTaskMasterSchema,  OffViewWorkOrderMasterSchema, PriceData, PriceListResponse,RescheduleOrCancelRequest, ResponseSchema, SaveOfferDetails, SaveServiceDocumentDataMasterRequest, SaveServicePriceMasterSchema, SaveServicesGoodsMasterRequest, Service_Group,  ServiceDocumentsList_Group, ServiceGoodsPrice, ServiceModel, ServiceModelSchema, ServiceRequest, ServiceResponse, ServiceTaskMasterAssign, SetPriceModel,  TimeSlotResponse, UpdateCustomerDataDocumentSchema, WorkOrderDependancySchema
 from caerp_auth import oauth2
 # from caerp_constants.caerp_constants import SearchCriteria
 from typing import Optional
 from datetime import date
-from sqlalchemy import insert, text,null
+from sqlalchemy import desc, insert, text,null
 # from datetime import datetime
 from sqlalchemy import select, func,or_
 from fastapi.encoders import jsonable_encoder
@@ -321,7 +321,7 @@ async def reschedule_or_cancel_appointment(
     return db_office_master.reschedule_or_cancel_appointment(db, request_data, action, visit_master_id)
     
 
-
+#--------------------------------------------------------------------------------------
 
 @router.get("/get/appointment_info")
 async def get_appointment_info(type: str = Query(..., description="Type of information to retrieve: cancellation_reasons or status"),
@@ -383,6 +383,7 @@ def get_and_search_appointments(
         search_value=search_value
     )
     return {"Appointments": result}
+
 #-------------------------swathy-------------------------------------------------------------------------------
 @router.get("/customer_enquiry_appointment_details", response_model=List[CustomerEnquiryAppointmentDetailsSchema])
 def get_customer_enquiry_appointment_details(
@@ -401,7 +402,7 @@ def get_customer_enquiry_appointment_details(
     if mobile_number:
         query = query.filter(OffViewCustomerEnquiryAppointmentDetails.mobile_number == mobile_number)
     
-    records = query.all()
+    records = query.all() 
 
     if not records:
         raise HTTPException(status_code=404, detail="No records found for the given phone number.")
@@ -633,6 +634,8 @@ def save_off_document_master(
         raise e
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
 #----------------------------------------------------------------------------------------------------
 @router.get('/services/search_off_document_data_master', response_model=List[OffDocumentDataMasterBase])
 def search_off_document_data_master(
@@ -1127,6 +1130,40 @@ def save_service_price_endpoint(price_data: List[PriceData],
         return {"detail": "Price data saved successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+#-----------------------------------------------------------------------------------------------------------  
+@router.post("/save_service_price_master/")
+def save_service_price_master(
+    price_data: List[SaveServicePriceMasterSchema],
+    service_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    Save or update service price master records.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        responses = []
+        for data in price_data:
+            result = db_office_master.save_service_price_master(data, service_id, db)
+            if result["success"]:
+                responses.append(result)
+            else:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=result["message"])
+
+        return {"success": True, "message": "Price data processed successfully", "data": responses}
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
 #---------------------------------------------------------------------------------------------------------------
 import datetime
 @router.post("/add_price/", response_model=dict)
@@ -1222,76 +1259,16 @@ def get_service_documents_list_by_group_category(
         print(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-# #---------------------------------------------------------------------------------------
-# @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
-# def get_service_documents_data_details(
-#     service_document_data_master_id: int,
-#     document_category: Optional[str] = Query(None, title="Select document category", 
-#                                             enum=['PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),         
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Retrieve service document details based on specified criteria.
-
-#     Parameters:
-#     - **service_id**: Required parameter to filter by service ID.
-#     - **document_category**: Optional parameter to filter by document category.
-#     - Return a list of documents details with the selected category for the specified service_id.
-    
-#     Possible values for `document_category` include:
-#     - 'PERSONAL DOC'
-#     - 'CONSTITUTION DOC'
-#     - 'PRINCIPAL PLACE DOC'
-#     - 'UTILITY DOC'
-#     - 'DATA TO BE SUBMITTED'
-
-#     Returns:
-#     - Returns all document details for the specified service_id and 'document_category'.
-#     - If no records are found, return {'message': 'No data found'}.
-#     """
-#     try:
-#         results = db_office_master.get_service_documents_data_details(db, service_document_data_master_id, document_category)
-
-#         if not results:
-#             return []
-
-#         # Group the results by document category
-#         grouped_results = {}
-#         for result in results:
-#             if result.document_data_category_id not in grouped_results:
-#                 grouped_results[result.document_data_category_id] = {
-#                     "document_data_category_id": result.document_data_category_id,
-#                     "document_data_category_category_name": result.document_data_category_category_name,
-#                     "details": []
-#                 }
-#             grouped_results[result.document_data_category_id]["details"].append(result)
-
-#         # Convert grouped_results dict to List[OffViewServiceDocumentsDataDetailsDocCategory]
-#         final_results = list(grouped_results.values())
-
-#         return final_results
-
-#     except Exception as e:
-#         # logging.error(f"Error fetching service documents details: {e}")
-#         raise HTTPException(status_code=500, detail="Internal Server Error")
-    
-    
-    
-#  #-------------------------------------------------------------------------------------------------------------   
-
-
-
-
-
+#-------------------------------------------------------------------------------------------------------------   
 @router.get('/services/get_service_documents_data_details', response_model=List[OffViewServiceDocumentsDataDetailsDocCategory])
 def get_service_documents_data_details(
     service_document_data_master_id: Optional[int] = Query(None, title="Service Document Data Master ID"),
     service_id: Optional[int] = Query(None, title="Service ID"),
     constitution_id: Optional[int] = Query(None, title="Constitution ID"),
     document_category: Optional[str] = Query("ALL", title="Select document category", 
-                                             enum=['ALL','PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 'DATA TO BE SUBMITTED']),
+                                             enum=['ALL','PERSONAL DOC', 'CONSTITUTION DOC', 'BUSSINESS PLACE DOC', 'UTILITY DOC']),
     nature_of_possession_id: Optional[int] = Query(None, title="Nature of Possession ID", 
-                                                   description="Only relevant if 'PRINCIPAL PLACE DOC' is selected."),
+                                                   description="Only relevant if 'BUSSINESS PLACE DOC' is selected."),
     db: Session = Depends(get_db)
 ):
     """
@@ -1302,11 +1279,11 @@ def get_service_documents_data_details(
     service document data master ID, constitution ID, service ID, document category, and nature of possession ID. 
 
     - **document_category** (Optional[str], default="ALL"): The category of the document to filter the results.
-     Categories include 'PERSONAL DOC', 'CONSTITUTION DOC', 'PRINCIPAL PLACE DOC', 'UTILITY DOC', 
-     and 'DATA TO BE SUBMITTED'. If 'ALL' is selected, documents from all categories will be retrieved.
+     Categories include 'PERSONAL DOC', 'CONSTITUTION DOC', 'BUSINESS PLACE DOC',and 'UTILITY DOC', 
+     . If 'ALL' is selected, documents from all categories will be retrieved.
 
     - **nature_of_possession_id** (Optional[int]): The ID representing the nature of possession.
-    This filter is only relevant when 'PRINCIPAL PLACE DOC' is selected as the document category.
+    This filter is only relevant when 'BUSSINESS PLACE DOC' is selected as the document category.
   
     """
     try:
@@ -1341,159 +1318,24 @@ def get_service_documents_data_details(
 
 
 
-# @router.get("/services/get_all_service_document_data_master")
-# def get_all_service_document_data_master(
-#     db: Session = Depends(get_db),
-#     search: Optional[str] = None,
-#     service_id: Union[int, str] = 'ALL',
-#     group_id: Union[int, str] = 'ALL',
-#     sub_group_id: Union[int, str] = 'ALL',
-#     category_id: Union[int, str] = 'ALL',
-#     sub_category_id: Union[int, str] = 'ALL',
-#     constitution_id: Union[int, str] = 'ALL',
-#     doc_data_status: Optional[str] = Query('ALL', description="Filter by type: 'CONFIGURED', 'NOT CONFIGURED'"),
-# ) -> List[dict]:
-#     try:
-       
+@router.get('/get_bussiness_place_document_by_nature_of_possession', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
+def get_business_place_document_by_nature_of_possession(
+        service_id: int,
+        constitution_id: int,
+        nature_of_possession : int,
+        db:Session = Depends(get_db)
+):
+    return db_office_master.get_business_place_document_by_nature_of_possession(service_id,constitution_id,nature_of_possession,db)
 
-#         search_conditions = []
 
-#         if search:
-#             search_like = f'%{search}%'
-#             search_conditions.append(
-#                 or_(
-#                     text("g.service_goods_name LIKE :search"),
-#                     text("b.group_name LIKE :search"),
-#                     text("d.category_name LIKE :search"),
-#                     text("c.sub_group_name LIKE :search"),
-#                     text("e.sub_category_name LIKE :search"),
-#                     text("f.business_constitution_name LIKE :search")
-#                 )
-#             )
+@router.get('/get_utility_document_by_service_id', response_model=List[OffViewServiceDocumentsDataDetailsSchema])
+def get_utility_document_by_service_id(
+        service_id: int,
+        constitution_id: int,        
+        db:Session = Depends(get_db)
+):
+    return db_office_master.get_utility_document_by_service_id(service_id,constitution_id,db)
 
-#         if service_id != 'ALL':
-#             search_conditions.append(text("g.id = :service_id"))
-        
-#         if group_id != 'ALL':
-#             search_conditions.append(text("g.group_id = :group_id"))
-        
-#         if sub_group_id != 'ALL':
-#             search_conditions.append(text("g.sub_group_id = :sub_group_id"))
-        
-#         if category_id != 'ALL':
-#             search_conditions.append(text("g.category_id = :category_id"))
-        
-#         if sub_category_id != 'ALL':
-#             search_conditions.append(text("g.sub_category_id = :sub_category_id"))
-        
-#         if constitution_id != 'ALL':
-#             search_conditions.append(text("f.id = :constitution_id"))
-        
-#         if doc_data_status != 'ALL':
-#             if doc_data_status == "CONFIGURED":
-#                 # search_conditions.append(text("a.id IS NOT NULL"))
-#                 search_conditions.append(text("a.id IS NOT NULL AND d.is_deleted = 'no'"))
-#             elif doc_data_status == "NOT CONFIGURED":
-#                 # search_conditions.append(text("a.id IS NULL"))
-#                 search_conditions.append(text("a.id IS NULL OR (a.id IS NOT NULL AND d.is_deleted = 'yes')"))
-    
-
-#         base_query = """
-#         SELECT
-#             ROW_NUMBER() OVER (ORDER BY g.service_goods_name, f.business_constitution_name) AS unique_id,
-#             a.id AS service_document_data_master_id,
-#             g.id AS service_goods_master_id,
-#             g.service_goods_name,
-#             f.id AS constitution_id,
-#             f.business_constitution_name,
-#             b.id AS group_id,
-#             b.group_name,
-#             c.id AS sub_group_id,
-#             c.sub_group_name,
-#             d.id AS category_id,
-#             d.category_name,
-#             e.id AS sub_category_id,
-#             e.sub_category_name,
-            
-#             CASE
-#                   WHEN a.id IS NOT NULL AND EXISTS (
-#                       SELECT 1
-#                       FROM off_service_document_data_details AS dd
-#                       WHERE dd.service_document_data_master_id = a.id
-#                       AND dd.is_deleted = 'no'
-#                   ) THEN 'Configured'
-#                   ELSE 'Not Configured'
-#             END AS document_status
-#         FROM 
-#             off_service_goods_master AS g
-#         CROSS JOIN app_business_constitution AS f
-#         LEFT JOIN off_service_document_data_master AS a 
-#             ON g.id = a.service_goods_master_id 
-#             AND f.id = a.constitution_id
-#         LEFT JOIN off_service_goods_group AS b ON g.group_id = b.id
-#         LEFT JOIN off_service_goods_sub_group AS c ON g.sub_group_id = c.id
-#         LEFT JOIN off_service_goods_category AS d ON g.category_id = d.id
-#         LEFT JOIN off_service_goods_sub_category AS e ON g.sub_category_id = e.id
-#         """
-
-#         if search_conditions:
-#             base_query += " WHERE " + " AND ".join(str(cond) for cond in search_conditions)
-        
-#         base_query += " ORDER BY g.service_goods_name, f.display_order"
-
-       
-
-#         query = text(base_query)
-
-#         params = {
-#             'search': f'%{search}%' if search else None,
-#             'service_id': service_id if service_id != 'ALL' else None,
-#             'group_id': group_id if group_id != 'ALL' else None,
-#             'sub_group_id': sub_group_id if sub_group_id != 'ALL' else None,
-#             'category_id': category_id if category_id != 'ALL' else None,
-#             'sub_category_id': sub_category_id if sub_category_id != 'ALL' else None,
-#             'constitution_id': constitution_id if constitution_id != 'ALL' else None
-#         }
-
-     
-
-#         result = db.execute(query, params)
-#         rows = result.fetchall()
-
-#         # Log keys and rows for debugging
-       
-#         if not rows:
-#             return []
-
-#         service_document_data_master = []
-#         for row in rows:
-#             service_document_data_master.append({
-#                 "unique_id": row.unique_id,
-#                 "service_goods_master_id": row.service_goods_master_id,
-#                 "service_goods_name": row.service_goods_name,
-#                 "service_document_data_master_id": row.service_document_data_master_id,  # Ensure this matches the alias in your SQL query
-#                 "group_id": row.group_id,
-#                 "group_name": row.group_name,
-#                 "sub_group_id": row.sub_group_id,
-#                 "sub_group_name": row.sub_group_name,
-#                 "category_id": row.category_id,
-#                 "category_name": row.category_name,
-#                 "sub_category_id": row.sub_category_id,
-#                 "sub_category_name": row.sub_category_name,
-#                 "constitution_id": row.constitution_id,
-#                 "business_constitution_name": row.business_constitution_name,
-#                 # "business_constitution_code": row.business_constitution_code,
-#                 # "description": row.description,
-#                 "status": row.document_status
-#             })
-
-#         return service_document_data_master
-
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-       
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @router.get("/services/get_all_service_document_data_master")
@@ -1668,18 +1510,22 @@ def get_all_service_document_data_master(
 
 from datetime import datetime
 
+
+
+
 # @router.get("/consultant_employees", response_model=List[ConsultantEmployee])
 # def get_consultant_employees(
 #     db: Session = Depends(get_db),
 #     search_query: str = Query(None, description="Search query to filter consultant employees")
 # ):
 #     current_date = datetime.utcnow().date()
+    
+#     # Initial query with necessary joins
 #     query = db.query(
 #         EmployeeMaster.employee_id,
 #         EmployeeMaster.first_name,
 #         EmployeeMaster.middle_name,
-#          EmployeeMaster.last_name,
-#         # func.concat(EmployeeMaster.first_name, ' ', EmployeeMaster.middle_name, ' ', EmployeeMaster.last_name).label('employee_name'),
+#         EmployeeMaster.last_name,
 #         EmployeeMaster.employee_number,
 #         EmployeeContactDetails.personal_email_id.label('personal_email'),
 #         EmployeeContactDetails.official_email_id.label('official_email'),
@@ -1703,6 +1549,8 @@ from datetime import datetime
 #         EmployeeEmploymentDetails.is_consultant == 'yes',
 #         EmployeeEmploymentDetails.effective_from_date <= current_date,
 #         (EmployeeEmploymentDetails.effective_to_date == None) | (EmployeeEmploymentDetails.effective_to_date >= current_date),
+#         EmployeeContactDetails.effective_from_date <= current_date,
+#         (EmployeeContactDetails.effective_to_date == None) | (EmployeeContactDetails.effective_to_date >= current_date),
 #         EmployeeMaster.is_deleted == 'no',
 #         EmployeeEmploymentDetails.is_deleted == 'no',
 #         EmployeeContactDetails.is_deleted == 'no'
@@ -1719,7 +1567,10 @@ from datetime import datetime
 #             EmployeeContactDetails.personal_mobile_number.ilike(f"%{search_query}%") |
 #             EmployeeContactDetails.official_mobile_number.ilike(f"%{search_query}%")
 #         )
+
+       
 #         query = query.filter(search_filter)
+#         query = query.order_by(desc(EmployeeMaster.employee_id))
 
 #     return query.all()
 
@@ -1730,7 +1581,7 @@ def get_consultant_employees(
     search_query: str = Query(None, description="Search query to filter consultant employees")
 ):
     current_date = datetime.utcnow().date()
-    
+
     # Initial query with necessary joins
     query = db.query(
         EmployeeMaster.employee_id,
@@ -1780,8 +1631,9 @@ def get_consultant_employees(
         )
         query = query.filter(search_filter)
 
-    return query.all()
+    query = query.order_by(desc(EmployeeMaster.employee_id))  # Ensure this line is applied last
 
+    return query.all()
 
 #-------------------------------------------------------------------------------------------------------------
 
@@ -2623,9 +2475,6 @@ def get_consultant_employees_pdf(
     pdf_buffer = generate_consultant_employees_pdf(employee_list, file_path)
     
     return StreamingResponse(pdf_buffer, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=consultant_employees.pdf"})
-
-
-
 #--------------------------------------------------------------------------------------
 from fpdf import FPDF
 from jinja2 import Environment, FileSystemLoader
@@ -3419,64 +3268,6 @@ def update_customer_data_document(
     
 #------------------------------------------------------------------------------------------------------
 
-# @router.get("/get_documents_and_data")
-# def get_documents(
-#     type: Optional[str] = Query(None, description="Filter by type: 'DOCUMENT', 'DATA'"),
-#     db: Session = Depends(get_db)
-# ) -> List[Dict[str, Any]]:
-    
-#     """  Fetches a list of documents and data records based on an optional filter type.
-#     **Parameters:**
-
-#     - **type** (Optional, `str`): Filter the results by document data type. The value should be either `'DOCUMENT'` or `'DATA'`.
-#     """
-#     sql_query = text("""
-#     SELECT
-#         a.id,
-#         a.work_order_master_id,
-#         a.work_order_details_id,
-#         a.document_data_category_id,
-#         b.category_name,
-#         a.document_data_master_id,
-#         c.document_data_name,
-#         d.id AS document_data_type_id, 
-#         d.document_data_type, 
-#         c.has_expiry,
-#         a.customer_id,
-#         a.stake_holder_master_id,
-#         a.data,
-#         a.display_order,
-#         a.is_document_uploded,
-#         a.uploaded_date,
-#         a.uploaded_by,
-#         a.valid_from_date,
-#         a.valid_to_date,
-#         a.remarks,
-#         a.is_deleted
-#     FROM
-#         customer_data_document_master a
-#     LEFT JOIN
-#         off_document_data_category b ON a.document_data_category_id = b.id
-#     LEFT JOIN
-#         off_document_data_master c ON a.document_data_master_id = c.id
-#     LEFT JOIN
-#         off_document_data_type d ON c.document_data_type_id = d.id 
-#     WHERE
-#         a.is_deleted = 'no'
-#     AND 
-#         (:type IS NULL OR d.document_data_type = :type)
-#     """)
-
-#     try:
-#         result = db.execute(sql_query, {"type": type})
-#         # Convert results to a list of dictionaries
-#         results_list = [dict(zip(result.keys(), row)) for row in result.fetchall()]
-#         return results_list
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-    
-
-
 @router.get("/get_documents_and_data")
 def get_documents(
     work_order_master_id: int,  # Required parameter
@@ -3504,10 +3295,15 @@ def get_documents(
         c.document_data_name,
         d.id AS document_data_type_id, 
         d.document_data_type, 
+        a.is_partner_director_proprietor,
+        a.is_business_place,
+        a.is_authorised_sigantory,
+        a.business_place_type_and_name,
+        a.stake_holder_role,
+        a.signatory_serial_number,            
         c.has_expiry,
         a.customer_id,
         a.stake_holder_master_id,
-        a.data,
         a.display_order,
         a.is_document_uploded,
         a.uploaded_date,
@@ -3541,6 +3337,7 @@ def get_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 #-------------------------------------------------------------------------------------------------------
+
 @router.post('/upload_document/{id}')
 def upload_document(
    id: int,
@@ -3566,9 +3363,11 @@ def upload_document(
     except Exception as e:    
         raise HTTPException(status_code=500, detail=str(e))
 
+
 #-----------------------------------------------------------------------------------------------------
 @router.get("/get_upload_document/{id}", response_model=dict)
-def get_upload_document(id: int):
+def get_upload_document(id: int,
+                        db : Session = Depends(get_db)):
     # Search for a file that starts with the given ID and has any extension
     file_path = None
     for file in Path(UPLOAD_WORK_ORDER_DOCUMENTS).glob(f"{id}.*"):
@@ -3578,9 +3377,18 @@ def get_upload_document(id: int):
 
     if not file_path:
         raise HTTPException(status_code=404, detail="File not found")
-
+    else:
+        data = db.query(CustomerDataDocumentMaster).filter(CustomerDataDocumentMaster.id == id).first()
+    if not data:
+        raise HTTPException(status_code=404, detail="Document data not found")
     
-    return {"photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}"}
+    # Convert ORM model to Pydantic model
+    serialized_data = DocumentsSchema.from_orm(data)
+
+    return {
+        "photo_url": f"{BASE_URL}/office/upload_document/{file_path.name}",
+        "data": serialized_data.dict()
+    }
 
 
 #---------------------------------------------------------------------------------------------------
@@ -4214,3 +4022,33 @@ def download_csv_templates(file_name: str = Query(...)):
 
 
 #--------------------------------------------------------------------------------------------------------------
+
+@router.get("/get_uploaded_document_by service_id")
+def get_uploaded_document_by_service_id(
+    service_id: int,
+    doc_type : Optional[str] = Query("ALL", description="Filter by type: 'PERSONAL DOC', 'CONSTITUTION DOC','BUSINESS_PLACE DOC','UTILITY DOC'"),
+    business_place_name: Optional[str] =None,
+    stake_holder_role : Optional[str]= None,
+    signatory_serial_number : Optional[str] = None,
+    db : Session = Depends(get_db)):
+    """
+    Retrieve uploaded documents by service ID with optional filtering by document type,
+    effective date range, and uploaded status.
+
+    Args:
+        id (int): The service task ID.
+        doc_type (Optional[str]): Document type to filter by. Defaults to "ALL".
+        business_place_name (Optional[str]) :business place type and name to filter
+        stake_holder_role : Optional[str] : designation 
+        db (Session): Database session dependency.
+
+    Returns:
+        List: A list of matching documents.
+
+    Raises:
+        HTTPException: If no documents are found for the given filters.
+    """
+    result = db_office_master.get_uploaded_document_by_service_id(db,service_id , doc_type,business_place_name,stake_holder_role, signatory_serial_number)
+    return result
+
+#-------------------------------------------------------------------------------------------------------

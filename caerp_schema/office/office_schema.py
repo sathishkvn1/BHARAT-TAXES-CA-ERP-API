@@ -461,13 +461,12 @@ class OffServiceDocumentDataRequired(BaseModel):
     document_data_category_id   :   int
     details                     : List[OffServiceDocumentDataDetails]
  
+
 class ServiceDocuments(BaseModel):
     personal_doc                : Optional[List[OffServiceDocumentDataRequired]] = None
     constitution_doc            : Optional[List[OffServiceDocumentDataRequired]] = None
-    principal_place_doc         : Optional[List[OffServiceDocumentDataRequired]] = None
+    business_place_doc         : Optional[List[OffServiceDocumentDataRequired]] = None
     utility_doc                 : Optional[List[OffServiceDocumentDataRequired]] = None
-    data_to_be_submitted_doc    : Optional[List[OffServiceDocumentDataRequired]] = None
-
    
 class SaveServiceDocumentDataMasterRequest(BaseModel):
     Service         : Optional[OffServiceDocumentDataMasterDisplay] = None
@@ -1029,6 +1028,7 @@ class OffWorkOrderMasterSchema(BaseModel):
         from_attributes = True
 
 
+
 class WorkOrderDetailsSchema(BaseModel):
     
     id                        : Optional[int] = None
@@ -1050,6 +1050,7 @@ class WorkOrderDetailsSchema(BaseModel):
     number_of_shareholders    : Optional[int] = None
     number_of_trustees        : Optional[int] = None
     number_of_members         : Optional[int] = None
+    number_of_authorized_signatory : Optional[int] = None
     is_main_service         : Optional[str] ='no'             
     is_bundle_service       : Optional[str] ='no' 
     bundle_service_id       : Optional[int] = None
@@ -1072,6 +1073,27 @@ class WorkOrderDetailsSchema(BaseModel):
         from_attributes = True
 
 
+
+
+class SaveServicePriceMasterSchema(BaseModel):
+    id                               : Optional[int] =None
+    constitution_id                  : int
+    service_charge                   : Optional[float] = 0.0
+    govt_agency_fee                  : Optional[float] = 0.0
+    stamp_duty                       : Optional[float] = 0.0
+    stamp_fee                        : Optional[float] = 0.0
+    service_provider_percentage      : Optional[float] = 0.0
+    wish_to_provide_percentage       : Optional[float] = 0.0
+    employee_percentage              : Optional[float] = 0.0
+    urgency_percentage               : Optional[float] = 0.0
+    very_urgency_percentage          : Optional[float] = 0.0
+    effective_from_date              : date
+    effective_to_date                : Optional[date]= None
+    
+    class Config:
+        orm_mode = True
+
+        
 class WorkOrderDependancySchema(BaseModel):
     id : Optional[int]=None
     work_order_master_id    : int
@@ -1149,6 +1171,7 @@ class  WorkOrderBusinessPlaceDetailsScheema(BaseModel):
     work_order_details_id   : Optional[int] = None
     business_place_type     : Optional[str] = 'GODOWN'  
     nature_of_possession_id : Optional[int] = None
+    business_place_document_id   : Optional[int] = None
     utility_document_id     : Optional[int] = None
     is_deleted              : Optional[str] = 'no'
 
@@ -1326,7 +1349,6 @@ class WorkOrderResponseSchema(BaseModel):
         orm_mode = True
         from_attributes = True
 
-
 class OffViewBusinessPlaceDetailsScheema(BaseModel):
 
     business_place_id       : Optional[int] = None
@@ -1334,13 +1356,13 @@ class OffViewBusinessPlaceDetailsScheema(BaseModel):
     business_place_type     : Optional[str] = 'GODOWN'  
     nature_of_possession_id : Optional[int] = None
     nature_of_possession    : Optional[str] = None
+    business_place_document_id   : Optional[int] = None
     utility_document_id     : Optional[int] = None
     document_data_name      : Optional[str] = None
     is_deleted              : Optional[str] = None
     class Config:
         orm_mode = True
         from_attributes = True
-
 
 class WorkOrderSetDetailsResponseSchema(BaseModel):
     workOrderDetails : OffViewWorkOrderDetailsSchema
@@ -1454,9 +1476,14 @@ class UpdateCustomerDataDocumentSchema(BaseModel):
 class DocumentsSchema(BaseModel):
     valid_from_date         : Optional[date] = None
     valid_to_date           : Optional[date] = None
-    remarks                 : Optional[str]=None
+    business_place_type_and_name     : Optional[str]  = None
+    stake_holder_role           : Optional[str] = None
+    signatory_serial_number     : Optional[str] = None
+    remarks                     : Optional[str]=None
 
-
+    class Config:
+        orm_mode = True
+        from_attributes = True
 
 class OffServiceTaskMasterSchema(BaseModel):
     task_status_id          : int

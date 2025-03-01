@@ -1644,15 +1644,18 @@ class QueryManagerQuerySchemaForGet(BaseModel):
 
 
 
+
 class QueryManagerSchema(BaseModel):
     query_id: int
-    queried_by: str
+    user_id : int
+    # queried_by: str
     query_description: Optional[str]
 
 
     class Config:
         orm_mode = True
         
+
         
 class QueryStatus(str, Enum):
     ALL = "ALL"
@@ -1769,10 +1772,7 @@ class VillageResponse(BaseModel):
     villages: List[Village]
     block: Optional[Dict[str, Union[str, int]]]
     taluk: Optional[Dict[str, Union[str, int]]]
-    district: str = ""
-    state: str = "kerala"
-    country: str = "India"
-
+    district: Optional[Dict[str, Union[str, int]]]
 
 class BusinessActivityMasterSchema(BaseModel):
     id: int
@@ -1791,3 +1791,141 @@ class BusinessActivitySchema(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+
+class BankMasterBase(BaseModel):
+    id             : int
+    bank_name      : str
+    ifsc_code      : Optional[str] = None
+    micr_code      : Optional[str] = None
+    branch_name    : Optional[str] = None
+    bank_address   : Optional[str] = None
+    contact_number : Optional[str] = None
+    city_name      : Optional[str] = None
+    district_name  : Optional[str] = None
+    state_name     : Optional[str] = None
+    net_bank_url   : Optional[str] = None
+   
+
+    class Config:
+        orm_mode = True
+
+
+
+class UserRegistrationCreate(BaseModel):
+    username: str
+    password: str
+    latitude: float
+    longitude: float
+
+
+class NotificationSchema(BaseModel):
+
+    id                  : Optional[int] = None
+    tittle              : Optional[str] = None
+    message             : Optional[str] = None
+    notification_link   : Optional[str] = None
+    display_location    : Optional[str] = None
+    notification_date   : Optional[date] = None
+    is_active           : Optional[str] = 'yes'
+    created_by          : Optional[int] 
+    created_on          : Optional[date] 
+    modified_by         : Optional[int] = None
+    modified_on         : Optional[date] = None
+    is_deleted          : Optional[str] = 'no'
+    deleted_by          : Optional[int] = None
+    deleted_on          : Optional[date] = None
+    
+
+
+class QueryManagerViewSchema(BaseModel):
+    
+
+    query_manager_id       :Optional[int] = None
+    query_id               : Optional[int] = None
+    query                   : Optional[str] = None
+    query_description       : Optional[str] = None
+    queried_by              : Optional[int] = None
+    query_on                : Optional[datetime] = None
+    is_resolved             : Optional[str] = 'no'
+    resolved_by             : Optional[int] = None
+    resolved_on             : Optional[datetime] = None   
+    is_deleted              : Optional[str] = 'no'
+    class Config:
+        from_orm = True
+        from_attributes = True
+
+
+
+
+class MenuStructureSchema(BaseModel):
+    
+    id                  : Optional[int] = None
+    parent_id           : int 
+    menu_name           : str
+    description         : str
+    has_sub_menu        : str
+    display_location_id    : int
+    display_order       : int
+    link                : str
+    has_view            : Optional[str] = 'no'
+    has_edit            : Optional[str] = 'no'
+    has_delete          : Optional[str] = 'no'
+    control_key         : Optional[str] = None
+    # modified_by         : Optional[int] = None
+    # modified_on         : Optional[datetime] = None
+    # created_by          : int
+    # created_on          : datetime
+    # is_deleted          : Optional[str] = 'no'
+    # deleted_by          : Optional[int] = None
+    # deleted_on          : Optional[datetime] =None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
+
+class RoleMenuMappingSchema(BaseModel):
+
+    id          :Optional[int] = None
+    # role_id     : Optional[int] = None
+    menu_id     : Optional[int] = None
+    can_view    : Optional[str] = 'no'
+    can_edit    : Optional[str] = 'no'
+    can_delete  : Optional[str] = 'no'
+    is_assigned : Optional[str] = 'no'
+    class Config:
+        orm_mode = True
+
+
+class LicenceDetailsSchema(BaseModel):
+    id: Optional[int] = None
+    module_name: Optional[str] 
+    module_description: str
+    is_default: str
+    has_purchased: str
+    licenced_from_date: datetime
+    licenced_to_date: datetime
+    is_active: str
+
+
+class LicenceMasterSchema(BaseModel):
+    id: Optional[int] = None
+    software_name: Optional[str] 
+    software_category: str
+    software_description: str
+    software_version: str
+    software_access_key: str
+    is_trial: str
+    trial_start_date: datetime
+    trial_end_date: datetime
+    licenced_from_date: datetime
+    licenced_to_date: datetime
+    is_active: str
+    number_of_users: int
+    details: List[LicenceDetailsSchema]
+
+
+
+# id: Optional[int] = None 

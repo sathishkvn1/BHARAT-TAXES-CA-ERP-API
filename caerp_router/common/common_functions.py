@@ -1,14 +1,16 @@
 from enum import Enum
+import json
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi import HTTPException, status
 
 
 from pydantic import BaseModel
+import requests
 from sqlalchemy.orm import Session
 
 from caerp_db.accounts.models import AccProformaInvoiceMaster, AccQuotationMaster, AccTaxInvoiceMaster
-from caerp_db.common.models import AppConstitutionStakeholders, AppDesignation, AppEducationalQualificationsMaster, BloodGroupDB, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CountryDB, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, NationalityDB, Profession, StateDB, UsersRole
+from caerp_db.common.models import AppBankAccountType, AppConstitutionStakeholders, AppDesignation, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, AppLanguageProficiency, AppLanguages, AppSkills, BloodGroupDB, BusinessActivity, BusinessActivityMaster, BusinessActivityType, CountryDB, EmployeeDocuments,EmployeeEducationalQualification, EmployeeEmploymentDetails, EmployeeExperience, EmployeeLanguageProficiency, EmployeeMaster, EmployeeProfessionalQualification, Gender,  MaritalStatus, MenuLocation, NationalityDB, Profession, StateDB, UsersRole
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll.model import EmployeeTeamMaster, HrDepartmentMaster, HrDesignationMaster, HrDocumentMaster, HrEmployeeCategory, PrlCalculationFrequency, PrlCalculationMethod, PrlSalaryComponent
 
@@ -121,11 +123,17 @@ TABLE_MODEL_MAPPING = {
     "BusinessActivity":BusinessActivity,
     "BusinessActivityMaster":BusinessActivityMaster,
     "GstOtherAuthorizedRepresentativeResignation":GstOtherAuthorizedRepresentativeResignation,
-    "AppEducationalQualificationsMaster":AppEducationalQualificationsMaster,
-    
-
-    
-    
+    "AppEducationalLevel":AppEducationalLevel,
+    "AppEducationalStream":AppEducationalStream,
+    "AppEducationSubjectCourse":AppEducationSubjectCourse,
+    "AppBankAccountType":AppBankAccountType,
+    "AppLanguageProficiency":AppLanguageProficiency,
+    "AppLanguages":AppLanguages,
+    "EmployeeLanguageProficiency":EmployeeLanguageProficiency,
+    "MenuLocation" : MenuLocation,
+    "AppSkills":AppSkills,
+  
+   
     
 }
 
@@ -176,8 +184,7 @@ async def get_info(
         # Fetch records using the DynamicAPI instance
         return dynamic_api.get_records(db, fields_list)
 
-#........................fr delete
-
+#........................fr delete---------------------------------------------------------------------
 @router.get("/delete_undelete_by_id", operation_id="modify_records")
 async def delete_undelete_by_id(
     model_name: str = Query(..., description="Model name to fetch data from"),
@@ -215,7 +222,7 @@ async def delete_undelete_by_id(
     else:
         raise HTTPException(status_code=400, detail="Invalid action type")
        
-#--------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
 
 # @router.get("/lock_unlock_record", operation_id="lock_unlock_record")
 # async def lock_unlock(
@@ -724,3 +731,31 @@ async def fetch_related_records_endpoint(
     )
 
     return records
+
+
+
+
+def token_generate() -> str:
+    """Generate an authentication token."""
+    url = "https://apis.rmlconnect.net/auth/v1/login/"
+    payload = {
+        "username": "Brqglob",  # Replace with your actual username
+        "password": "Brg@678in"  # Replace with your actual password
+    }
+    headers = {'Content-Type': 'application/json'}
+
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(payload))
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        data = response.json()
+
+        jwt_auth = data.get('JWTAUTH')
+        if not jwt_auth: 
+            raise ValueError("Token not found in response")
+        return jwt_auth
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+        raise
+    except ValueError as e:
+        print(f"Error: {e}")
+        raise

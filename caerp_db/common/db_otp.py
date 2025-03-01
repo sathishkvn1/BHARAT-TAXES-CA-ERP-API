@@ -1,3 +1,4 @@
+from fastapi import HTTPException,status
 from sqlalchemy.orm import Session
 from caerp_db.common.models import OtpGeneration
 from datetime import datetime,timedelta
@@ -29,3 +30,19 @@ def create_otp(db: Session, otp_value: str, user_id: int):
 
     # Return the newly created OTP object
     return new_otp
+
+
+
+
+def query_mobile_otp_verification(otp,mobile_otp_id, db):
+
+    mobile_otp = get_otp_by_id(db, mobile_otp_id)
+    
+    if mobile_otp is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP record not found")
+    
+    if mobile_otp.otp == otp:
+        
+        return {"message": "OTP verified successfully.", "is_verified": True}
+    else :
+        return { "message": "Invalid  OTP.", "is_verified": False}

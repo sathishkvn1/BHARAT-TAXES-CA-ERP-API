@@ -1,6 +1,6 @@
 
 # from sqlalchemy import Date
-from sqlalchemy import Date
+from sqlalchemy import TIMESTAMP, Date
 from sqlalchemy import Column, Integer, String ,Float,Text, DECIMAL,Time
 from sqlalchemy.dialects.mysql import CHAR
 from caerp_db.database import caerp_base
@@ -21,11 +21,6 @@ class LoginAttempt(caerp_base):
     login_id    = Column(Integer)
     ip          =  Column(String(20), nullable=True)
     when        =  Column(DateTime, nullable=True)
-
-    
-
-
-
 
 
 class EmailCredentials(caerp_base):
@@ -95,9 +90,6 @@ class SmsTemplates(caerp_base):
      is_active               = Column(Enum('yes', 'no'), nullable=False, default='yes')
 
 
-
-
-
     
 # class UserBase(caerp_base):
 #     __tablename__ = "users"
@@ -112,6 +104,7 @@ class SmsTemplates(caerp_base):
 #     locked_upto   = Column(DateTime, default=None)
 #     modified_by   = Column(Integer, default=None)
 #     modified_on   = Column(DateTime, default=None)
+
 
 class UserBase(caerp_base):
     __tablename__ = "users"
@@ -178,6 +171,7 @@ class CountryDB(caerp_base):
 #     districts                   = relationship("DistrictDB",back_populates="states")
 #     is_deleted = Column(Enum('yes', 'no'), default='no', nullable=False)
 #     # post_offices = relationship("PostOfficeView", back_populates="state_name")
+
 class StateDB(caerp_base):
     __tablename__ = "app_states"
     id                          = Column(Integer, primary_key=True, autoincrement=True)
@@ -342,12 +336,12 @@ class PanCard(caerp_base):
     pan_card_type_code	= Column(String(1), nullable=False)
     pan_card_type	    = Column(String(100), nullable=False)
     
-class AppEducationalQualificationsMaster(caerp_base):
-    __tablename__   =   "app_educational_qualifications"
+# class AppEducationalQualificationsMaster(caerp_base):
+#     __tablename__   =   "app_educational_qualifications"
 
-    id                  = Column(Integer, primary_key=True, autoincrement=True)
-    qualification	    = Column(String(50), nullable=False)
-    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+#     id                  = Column(Integer, primary_key=True, autoincrement=True)
+#     qualification	    = Column(String(50), nullable=False)
+#     is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
     
 class ConstitutionTypes(caerp_base):
     __tablename__   =   "app_constitution_types"
@@ -703,22 +697,24 @@ class EmployeeProfessionalQualification(caerp_base):
 class EmployeeEducationalQualification(caerp_base):
     __tablename__ = "employee_educational_qualification"    
 
-    id                          = Column(Integer, primary_key=True, autoincrement=True)
-    employee_id                 = Column(Integer, nullable=False)
-    qualification_name          = Column(String(100), nullable=False)
-    course_name                 = Column(String(100), nullable=False)
-    institution                 = Column(String(100), nullable=False)
-    percentage_or_grade         = Column(String(100), nullable=False)
-    month_and_year_of_completion = Column(String(50), nullable=False)
-    status                      = Column(Enum('PURSUING','COMPLETED','RESULT AWAITING'),nullable=False)
-    remarks                     = Column(String(500), default=None)
-    created_by                  = Column(Integer, nullable=False)
-    created_on                  = Column(DateTime, nullable=False, default=func.now())
-    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
-    deleted_by                  = Column(Integer, default=None)
-    deleted_on                  = Column(DateTime, default=None)
-    modified_by                 = Column(Integer, default=None)
-    modified_on                 = Column(DateTime, default=None)
+    id                            = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id                   = Column(Integer, nullable=False)
+    education_level_id            = Column(Integer, nullable=False)
+    education_stream_id           = Column(Integer, nullable=False)
+    education_subject_or_course_id= Column(Integer, nullable=False)
+    institution                   = Column(String(100), nullable=False)
+    percentage_or_grade           = Column(String(100), nullable=False)
+    month_and_year_of_completion  = Column(String(50), nullable=False)
+    status                        = Column(Enum('PURSUING','COMPLETED','RESULT AWAITING'),nullable=False)
+    remarks                       = Column(String(500), default=None)
+    created_by                    = Column(Integer, nullable=False)
+    created_on                    = Column(DateTime, nullable=False, default=func.now())
+    is_deleted                    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                    = Column(Integer, default=None)
+    deleted_on                    = Column(DateTime, default=None)
+    modified_by                   = Column(Integer, default=None)
+    modified_on                   = Column(DateTime, default=None)
+
 
 
 class AppViewVillages(caerp_base):
@@ -763,6 +759,7 @@ class BusinessActivityMaster(caerp_base):
     business_activity             = Column(String, nullable=False)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
 
+
 class BusinessActivity(caerp_base):
     __tablename__ = 'app_business_activity'
 
@@ -806,3 +803,235 @@ class AppConstitutionStakeholders(caerp_base):
     constitution_id            = Column(Integer,nullable=False)
     stakeholder                      = Column(String, nullable=False)
     is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class AppEducationalLevel(caerp_base):
+    __tablename__   =   "app_education_level"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    education_level     = Column(String(100), nullable=False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppEducationalStream(caerp_base):
+    __tablename__   =   "app_education_stream"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    education_level_id  = Column(Integer,nullable=False) 
+    education_stream    = Column(String(100), nullable=False)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class AppEducationSubjectCourse(caerp_base):
+    __tablename__   =   "app_education_subject_or_course"
+
+    id                      = Column(Integer, primary_key=True, autoincrement=True)
+    education_stream_id     = Column(Integer,nullable=False) 
+    subject_or_course_name  = Column(String(100), nullable=False)
+    is_deleted              = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppBankMaster(caerp_base):
+    __tablename__ = "app_bank_master"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    bank_name         = Column(String(100), nullable=False)
+    ifsc_code         = Column(String(50), nullable=True)
+    micr_code         = Column(String(50), nullable=True)
+    branch_name       = Column(String(100), nullable=True)
+    bank_address      = Column(String(500), nullable=True)
+    contact_number    = Column(String(50), nullable=True)
+    city_name         = Column(String(50), nullable=True)
+    district_name     = Column(String(50), nullable=True)
+    state_name        = Column(String(50), nullable=True)
+    net_bank_url      = Column(String(50), nullable=True)
+    is_deleted        = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class AppBankAccountType(caerp_base):
+    __tablename__ = "app_bank_account_type"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bank_account_type = Column(String(100), nullable=True)
+    is_deleted = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class UserRegistration(caerp_base):
+    __tablename__ = 'users_registration'  # Table name
+
+    id = Column(Integer, primary_key=True, index=True)  # Unique ID for each user
+    username = Column(String(100), unique=True, nullable=False)  # Username (unique)
+    password = Column(String(255), nullable=False)  # Encrypted password
+    latitude = Column(Float, nullable=False)  # User's latitude
+    longitude = Column(Float, nullable=False)  # User's longitude
+    created_at = Column(TIMESTAMP, server_default=func.now())  
+
+
+
+class AppLanguageProficiency(caerp_base):
+    __tablename__ = "app_language_proficiency"
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    proficiency_level = Column(String(100), nullable=False)
+    is_deleted        = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+class AppLanguages(caerp_base):
+    __tablename__ = "app_languages"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    language    = Column(String(100), nullable=False)
+    is_deleted  = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+class EmployeeLanguageProficiency(caerp_base):
+    __tablename__ = "employee_language_proficiency"
+
+    id                  = Column(Integer, primary_key=True, autoincrement=True)
+    employee_id         = Column(Integer,nullable=False)
+    language_id         = Column(Integer,nullable=False)
+    read_proficiency_id = Column(Integer,nullable=False)
+    write_proficiency_id = Column(Integer,nullable=False)
+    speak_proficiency_id = Column(Integer,nullable=False)
+    remarks             = Column(String(500),nullable=True)
+    created_by          = Column(Integer,nullable=False)
+    created_on          = Column(DateTime,nullable=False, default=datetime.now)
+    modified_by         = Column(Integer,nullable=True)
+    modified_on         = Column(DateTime,nullable=True)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, nullable=True)
+    deleted_on          = Column(DateTime, nullable=True)
+
+
+
+
+class Notification(caerp_base):
+    __tablename__ = 'notification'
+
+    id                          = Column(Integer, primary_key=True, autoincrement=True)
+    tittle                      = Column(String(50), default=None)
+    message                     = Column(String(500), default=None)
+    notification_link           = Column(String(100), default=None)
+    display_location            = Column(Enum('HOME','DASHBOARD','BOTH'), default='BOTH')
+    notification_date           = Column(Date, default=None)
+    is_active                   = Column(Enum('yes', 'no'), nullable=False, default='yes')
+    created_by                  = Column(String(50), default=None)
+    created_on                  = Column(DateTime, default=None)
+    modified_by                 = Column(Integer, default=None)
+    modified_on                 = Column(Date,default=None)
+    is_deleted                  = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by                  = Column(Integer, default=None)
+    deleted_on                 = Column(String(50), default=None)
+
+class QueryView(caerp_base):
+    __tablename__ = 'query_view'
+
+    query_manager_id        = Column(Integer,primary_key=True, autoincrement=True)
+    query_id                = Column(Integer,nullable=False)
+    query                   = Column(Integer,nullable=False)
+    query_description       = Column(String,nullable=True)
+    queried_by              = Column(Integer,nullable=False)
+    query_on                = Column(DateTime, nullable=False, default=func.now())
+    is_resolved             = Column(Enum('yes','no'),nullable=False, default='no')
+    resolved_by             = Column(Integer,nullable=True)
+    resolved_on             = Column(DateTime, nullable=False, default=func.now())
+   
+    is_deleted              = Column(Enum('yes','no'),nullable=False, default='no')
+
+
+
+
+class MenuLocation(caerp_base):
+      __tablename__ = 'app_menu_location'
+      
+      id                    = Column(Integer, primary_key=True, autoincrement=True)
+      menu_location_name    = Column(String(50), nullable=False)
+      is_deleted            = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+class MenuStructure(caerp_base):
+    __tablename__ = 'app_menu_master'
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    parent_id       = Column(Integer, nullable=False)
+    menu_name       = Column(String(50), nullable= False)
+    description     = Column(String(500), nullable= False)
+    has_sub_menu    = Column(Enum('yes', 'no'), nullable=False, default='no')
+    link            = Column(String(100), nullable=False)
+    control_key     = Column(String(50),nullable = True,default=None)
+    display_order   = Column(Integer, nullable=False)
+    display_location_id = Column(Integer , nullable= False)
+    has_view        = Column(Enum('yes','no'),nullable=False,default='no')
+    has_edit        = Column(Enum('yes','no'),nullable=False,default='no')
+    has_delete      = Column(Enum('yes','no'),nullable=False,default='no')
+    created_by          = Column(Integer, default=None)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, default=None)
+    modified_on         = Column(DateTime, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, default=None)
+    deleted_on          = Column(DateTime, default=None)
+
+
+class RoleMenuMapping(caerp_base):
+    __tablename__ = 'role_menu_mapping'
+
+    id                = Column(Integer, primary_key=True, autoincrement=True)
+    role_id             = Column(Integer, nullable=False)
+    menu_id             = Column(Integer, nullable=False)
+    can_view            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    can_edit            = Column(Enum('yes', 'no'), nullable=False, default='no')
+    can_delete          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    created_by          = Column(Integer, default=None)
+    created_on          = Column(DateTime, nullable=False, default=func.now())
+    modified_by         = Column(Integer, default=None)
+    modified_on         = Column(DateTime, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+    deleted_by          = Column(Integer, default=None)
+    deleted_on          = Column(DateTime, default=None)
+
+
+
+class AppSkills(caerp_base):
+    __tablename__ = 'app_skills'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    skill = Column(String(100), nullable=True, default=None)
+    is_deleted          = Column(Enum('yes', 'no'), nullable=False, default='no')
+
+
+
+
+
+
+
+class CaerpLicenceMaster(caerp_base):
+    __tablename__ = 'caerp_licence_master'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    software_name = Column(String(100), nullable=True, default=None)
+    software_category = Column(Enum('GOLD', 'SILVER'), nullable=False)
+    software_description = Column(String(2000), nullable=False)
+    software_version = Column(String(20), nullable=False)
+    software_access_key = Column(String(20), nullable=False)
+    is_trial = Column(Enum('yes', 'no'), nullable=False, default='no')
+    trial_start_date = Column(DateTime, nullable=False)
+    trial_end_date = Column(DateTime, nullable=False)
+    licenced_from_date = Column(DateTime, nullable=False)
+    licenced_to_date = Column(DateTime, nullable=False)
+    is_active = Column(Enum('yes', 'no'), nullable=False, default='no')
+    number_of_users = Column(Integer, nullable=False)
+
+   
+
+class CaerpLicenceDetails(caerp_base):
+    __tablename__ = 'caerp_licence_details'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    licence_master_id = Column(Integer,  nullable=False)
+    module_name = Column(String(100), nullable=True, default=None)
+    module_description = Column(String(500), nullable=False, default='no')
+    is_default = Column(Enum('yes', 'no'), nullable=False, default='no')
+    has_purchased = Column(Enum('yes', 'no'), nullable=False, default='no')
+    licenced_from_date = Column(DateTime, nullable=False)
+    licenced_to_date = Column(DateTime, nullable=False)
+    is_active = Column(Enum('yes', 'no'), nullable=False, default='no')

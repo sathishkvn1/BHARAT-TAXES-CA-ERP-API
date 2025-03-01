@@ -1,18 +1,32 @@
-from fastapi import APIRouter,Depends,HTTPException,status,Query
+import random
+import re
+from fastapi import APIRouter,Depends,HTTPException, WebSocket,status,Query
+import httpx
+from pydantic import BaseModel
 from caerp_auth.authentication import authenticate_user
-from caerp_db.common.models import  AppViewVillages, CountryDB,  NationalityDB, QueryManager, QueryManagerQuery,UserBase
-from caerp_schema.common.common_schema import CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, NationalityDetail, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryStatus, QueryViewSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, User, VillageResponse
-
+from caerp_db.common.models import   AppBankMaster, CaerpLicenceDetails, CaerpLicenceMaster, CountryDB, MenuStructure,  NationalityDB, QueryManager, QueryManagerQuery, RoleMenuMapping,UserBase, UserRegistration
+from caerp_schema.common.common_schema import BankMasterBase, CityDetail, CityResponse, ConstitutionTypeForUpdate, ConstitutionTypeSchemaResponse, ConsultancyServiceCreate, CountryCreate, CountryDetail, CurrencyDetail, DistrictDetailByState, DistrictResponse, EducationSchema, GenderSchemaResponse, LicenceDetailsSchema, LicenceMasterSchema, MenuStructureSchema, NationalityDetail, NotificationSchema, PancardSchemaResponse, PostOfficeListResponse, PostOfficeTypeDetail, PostalCircleDetail, PostalDeliveryStatusDetail, PostalDivisionDetail, PostalRegionDetail, ProfessionSchemaForUpdate, ProfessionSchemaResponse, QualificationSchemaResponse, QueryManagerQuerySchema, QueryManagerQuerySchemaForGet, QueryManagerSchema, QueryManagerViewSchema, QueryStatus, QueryViewSchema, RoleMenuMappingSchema, StatesByCountry,StateDetail, TalukDetail, TalukResponse, TalukResponseByDistrict, UserRegistrationCreate, UserRoleSchema, VillageResponse
+from sqlalchemy.exc import SQLAlchemyError
 from caerp_db.common.models import PaymentsMode,PaymentStatus,RefundStatus,RefundReason
 from caerp_schema.common.common_schema import PaymentModeSchema,PaymentModeSchemaForGet,PaymentStatusSchema,PaymentStatusSchemaForGet,RefundStatusSchema,RefundStatusSchemaForGet,RefundReasonSchema,RefundReasonSchemaForGet
 from caerp_db.database import get_db
 from sqlalchemy.orm import Session
-from caerp_db.common import db_common
-from caerp_constants.caerp_constants import CRUD, ActionType, ActiveStatus, DeletedStatus
-from typing import List
+from caerp_db.common import db_common, db_user
+from caerp_constants.caerp_constants import CRUD, ActionType,  DeletedStatus
+from typing import List, Optional
 from caerp_auth import oauth2
-from datetime import datetime
+from datetime import date, datetime
 from sqlalchemy import text
+
+import io
+import os
+import wave
+import json
+from vosk import Model, KaldiRecognizer
+
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 
 router = APIRouter(
@@ -22,88 +36,38 @@ router = APIRouter(
 
 
 
-# @router.get("/states", response_model=List[DemoCreate], tags=['demo'])
-# def get_all_states(db: Session = Depends(get_db)):
-#     states = db_common.get_states(db)  
-#     return states
-
-
-
-# @router.get("/country", response_model=List[CountryCreate])
-# def get_all_countries(db: Session = Depends(get_db),
-#                       token: str = Depends(oauth2.oauth2_scheme)):
-#     """
-#     Retrieve all countries.
-
-#     This endpoint retrieves a list of all countries available in the database.
-
-#     Parameters:
-#     - `db` (optional): SQLAlchemy database session. If not provided, a new session will be created.
-#     - `token` (required): Authentication token.
-
-#     Returns:
-#     - List[CountryCreate]: A list of countries with their IDs and names.
-
-#     Raises:
-#     - HTTPException(401): If the authentication token is missing.
-#     """
-#     # Check authorization
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-#     countries = db_common.get_countries(db)
-#     return countries
 
 
 
 @router.get("/country", response_model=List[CountryCreate])
-def get_all_countries(db: Session = Depends(get_db), id: int = None):
-    if id == 1:
-        # No authentication required for id == 1
-        countries = db_common.get_countries(db)
-        return countries
-    elif id is not None:
-        # Authentication required for any other value of id
-        return get_countries_authenticated(db)
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid id")
+def get_all_countries(db: Session = Depends(get_db),
+                      token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Retrieve all countries.
 
-def get_countries_authenticated(db: Session = Depends(get_db), 
-                                token: str = oauth2.oauth2_scheme):
-      # Call the dependency to get the token value
+    This endpoint retrieves a list of all countries available in the database.
+
+    Parameters:
+    - `db` (optional): SQLAlchemy database session. If not provided, a new session will be created.
+    - `token` (required): Authentication token.
+
+    Returns:
+    - List[CountryCreate]: A list of countries with their IDs and names.
+
+    Raises:
+    - HTTPException(401): If the authentication token is missing.
+    """
+    # Check authorization
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
     countries = db_common.get_countries(db)
     return countries
 
-from fastapi import APIRouter, HTTPException, Request
-@router.route("/test_countries/{country_id}", methods=["GET", "PUT", "DELETE"])
-async def manage_country(country_id: int, request: Request):
-    if request.method == "GET":
-        # Retrieve country logic
-        country = CountryDB.get_country(country_id)
-        if country:
-            return {"country_id": country_id, "country": country}
-        else:
-            raise HTTPException(status_code=404, detail="Country not found")
 
-    elif request.method == "PUT":
-        # Update country logic
-        country_data = await request.json()
-        updated_country = CountryDB.update_country(country_id, country_data)
-        if updated_country:
-            return {"message": f"Updated country {country_id}"}
-        else:
-            raise HTTPException(status_code=404, detail="Country not found")
 
-    elif request.method == "DELETE":
-        # Delete country logic
-        deleted_country = CountryDB.delete_country(country_id)
-        if deleted_country:
-            return {"message": f"Deleted country {country_id}"}
-        else:
-            raise HTTPException(status_code=404, detail="Country not found")
-    
+
+
 
 @router.get("/country/{country_id}", response_model=CountryDetail)
 def get_country_by_id(country_id: int,
@@ -304,6 +268,8 @@ def get_cities_by_country_and_state(country_id: int,
     return {"country_id": country_id, "state_id": state_id, "cities": city_details}
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/city/{city_id}", response_model=CityDetail)
 def get_city_by_id(city_id: int,
                     db: Session = Depends(get_db),
@@ -335,6 +301,9 @@ def get_city_by_id(city_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No city found with ID {city_id}")
 
     return city
+
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 @router.get("/get_taluks/{state_id}", response_model=TalukResponse)
@@ -376,6 +345,8 @@ def get_taluks_by_state(state_id: int,
 
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_taluks/by_district/{district_id}", response_model=TalukResponseByDistrict)
 def get_taluks_by_district(district_id: int,
                            db: Session = Depends(get_db),
@@ -413,6 +384,8 @@ def get_taluks_by_district(district_id: int,
     return TalukResponseByDistrict(district_id=district_id, taluks=taluk_details)
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_taluks/by_taluk/{taluk_id}", response_model=TalukDetail)
 def get_taluk_by_id(taluk_id: int,
                     db: Session = Depends(get_db),
@@ -445,6 +418,8 @@ def get_taluk_by_id(taluk_id: int,
 
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_currencies", response_model=List[CurrencyDetail])
 async def get_currencies(db: Session = Depends(get_db),
                          token: str = Depends(oauth2.oauth2_scheme)
@@ -470,7 +445,7 @@ async def get_currencies(db: Session = Depends(get_db),
     currencies = db_common.get_all_currencies(db)
     return currencies
 
-
+#--------------------------------------------------------------------------------------------------------------
 @router.get("/get_currencies/{currency_id}", response_model=CurrencyDetail)
 def get_currency_by_id(currency_id: int,
                        db: Session = Depends(get_db),
@@ -501,6 +476,7 @@ def get_currency_by_id(currency_id: int,
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No currency found with ID {currency_id}")
     return currency
 
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_nationality", response_model=List[NationalityDetail])
 async def get_all_nationalities(db: Session = Depends(get_db),
@@ -527,6 +503,8 @@ async def get_all_nationalities(db: Session = Depends(get_db),
     return nationalities
 
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_nationality/{nationality_id}", response_model=NationalityDetail)
 async def get_nationality_by_id(nationality_id: int,
@@ -559,6 +537,8 @@ async def get_nationality_by_id(nationality_id: int,
     return nationality
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_post_office_types", response_model=List[PostOfficeTypeDetail])
 async def get_all_post_office_types(db: Session = Depends(get_db),
                                     token: str = Depends(oauth2.oauth2_scheme)):
@@ -582,6 +562,8 @@ async def get_all_post_office_types(db: Session = Depends(get_db),
     
     post_office_types = db_common.get_all_post_office_types(db)
     return post_office_types
+
+#--------------------------------------------------------------------------------------------------------------
 
 
 @router.get("/get_post_office_type/{id}", response_model=PostOfficeTypeDetail)
@@ -612,6 +594,8 @@ async def get_post_office_type(id: int, db: Session = Depends(get_db),
     return post_office_type
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_postal_delivery_status", response_model=List[PostalDeliveryStatusDetail])
 async def get_all_postal_delivery_status(db: Session = Depends(get_db),
                                          token: str = Depends(oauth2.oauth2_scheme)
@@ -637,6 +621,8 @@ async def get_all_postal_delivery_status(db: Session = Depends(get_db),
     delivery_statuses = db_common.get_all_postal_delivery_statuses(db)
     return delivery_statuses
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_postal_delivery_status/{id}", response_model=PostalDeliveryStatusDetail)
 async def get_postal_delivery_status_by_id(id: int, db: Session = Depends(get_db),
@@ -667,6 +653,8 @@ async def get_postal_delivery_status_by_id(id: int, db: Session = Depends(get_db
     return delivery_status
 
 
+#--------------------------------------------------------------------------------------------------------------
+
 @router.get("/get_postal_circles", response_model=List[PostalCircleDetail])
 async def get_all_postal_circles(db: Session = Depends(get_db),
                                   token: str = Depends(oauth2.oauth2_scheme)):
@@ -689,6 +677,10 @@ async def get_all_postal_circles(db: Session = Depends(get_db),
     
     postal_circles = db_common.get_all_postal_circles(db)
     return postal_circles
+
+
+#--------------------------------------------------------------------------------------------------------------
+
 
 @router.get("/get_postal_circles/{id}", response_model=PostalCircleDetail)
 async def get_postal_circle(id: int, db: Session = Depends(get_db),
@@ -719,6 +711,8 @@ async def get_postal_circle(id: int, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail=f"Postal Circle with {id} not found")
     return postal_circle
 
+
+#--------------------------------------------------------------------------------------------------------------
 
 @router.get("/get_postal_regions", response_model=List[PostalRegionDetail])
 async def get_all_postal_regions(db: Session = Depends(get_db),
@@ -1016,97 +1010,6 @@ def get_pan_card_by_card_type(
     return pan_card_detail
 
 
-@router.get("/educational_qualification", response_model=List[QualificationSchemaResponse])
-def get_educational_qualification_details(
-        db: Session = Depends(get_db),
-        token: str = Depends(oauth2.oauth2_scheme)
-       
-    ):
-    """
-    Parameters:
-    - `token` (required): Authentication token.
-    """
-    # Check authorization
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    qualification_details = db_common.get_all_qualification(db)
-    return qualification_details
-
-
-
-
-# @router.post("/save/educational_qualifications/{id}", response_model=dict)
-# def save_educational_qualifications(
-#     data: EducationSchema,
-#     id: int = 0,
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     try:
-#         if not token:
-#             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#         # Authenticate the token
-#         payload = verify_token(token)
-
-#         # Save educational qualifications
-#         result = db_common.save_educational_qualifications(db, id, data)
-        
-#         # If the operation fails for any reason, return failure with error message
-#         if not result:
-#             return {"message": "Failed to save educational qualifications", "success": False}
-        
-#         # Return a response indicating success
-#         return {"message": "Educational qualifications saved successfully", "success": True}
-#     except HTTPException as e:
-#         # Propagate HTTPException to the client
-#         raise e
-#     except Exception as ex:
-#         # Handle other exceptions (e.g., database errors)
-#         error_detail = "An error occurred while saving educational qualifications"
-#         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
-
-
-
-
-@router.post("/save/educational_qualifications/{id}", response_model=dict)
-def save_educational_qualifications(
-    data: EducationSchema,
-    id: int = 0,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    try:
-        if not token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-        # Authenticate the token
-        payload = verify_token(token)
-
-        # Save educational qualifications
-        result = db_common.save_educational_qualifications(db, id, data)
-        
-        # If the operation fails for any reason, return failure with error message
-        if not result:
-            return {"message": "Failed to save educational qualifications", "success": False}
-        
-        # Return a response indicating success
-        return {"message": "Educational qualifications saved successfully", "success": True}
-    
-    except HTTPException as e:
-        # Check if the exception is due to an invalid token
-        if e.status_code == status.HTTP_401_UNAUTHORIZED:
-            # Return a specific response for invalid token
-            return {"message": "Invalid token", "success": False}
-        else:
-            # Propagate other HTTP exceptions to the client
-            raise e
-            
-    except Exception as ex:
-        # Handle other exceptions (e.g., database errors)
-        error_detail = "An error occurred while saving educational qualifications"
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=error_detail)
-
 
     
 
@@ -1136,21 +1039,7 @@ def verify_token(token: str):
 
 
     
-@router.delete("/delete/educational_qualifications/{id}")
-def delete_educational_qualifications(
-                    
-                     id: int,
-                     db: Session = Depends(get_db),
-                     token: str = Depends(oauth2.oauth2_scheme)):
-    
-    
-    
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
 
-
-    
-    return db_common.delete_educational_qualifications(db, id)
 
 
 
@@ -1294,41 +1183,6 @@ def get_all_query_manager_queries(db: Session, deleted_status: DeletedStatus):
         raise ValueError("Invalid deleted_status")
     
     
-    
-@router.post("/save/query_manager/")
-def save_query_manager(
-    data: QueryManagerSchema,
-    db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
-):
-    if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-    
-
-
-    # Retrieve the user_id based on the provided username
-    user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
-    # Create a new QueryManager record
-    new_query_manager = QueryManager(
-        query_id=data.query_id,
-        queried_by=user.id, 
-        query_on=datetime.now(),
-        query_description=data.query_description 
-      
-    )
-
-    # Save the new record
-    db.add(new_query_manager)
-    db.commit()
-    db.refresh(new_query_manager)
-
-    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
-
-
-
 @router.post("/resolve/query_manager/{query_manager_id}")
 def resolve_query_manager(
     query_manager_id: int,
@@ -1361,44 +1215,6 @@ def resolve_query_manager(
     return {"message": "Query resolved successfully", "query_manager": query_manager}
 
 		
-
-
-# @router.get("/queries/", response_model=List[QueryViewSchema])
-# def get_queries_by_status(
-#     status: QueryStatus = Query(QueryStatus.ALL),
-#     db: Session = Depends(get_db),
-#     token: str = Depends(oauth2.oauth2_scheme)
-# ):
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-#     query = db.query(QueryView)  # Query the QueryView view
-    
-#     # Filter queries based on resolution status
-#     if status == QueryStatus.RESOLVED:
-#         query = query.filter(QueryView.is_resolved == 'yes')
-#     elif status == QueryStatus.NOT_RESOLVED:
-#         query = query.filter(QueryView.is_resolved == 'no')
-    
-#     # Execute the query and fetch results
-#     queries = query.all()
-    
-#     return queries
-
-
-
-# @router.get("/queries/{id}", response_model=QueryViewSchema)
-# def get_queries_by_id(id: int,
-#                       db: Session = Depends(get_db),
-#                       token: str = Depends(oauth2.oauth2_scheme)):
-    
-#     if not token:
-#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
-
-#     query = db_common.get_queries_by_id(db, id)
-#     if query is None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-
-#     return query
 
 
 @router.get("/get_usernames_with_names_and_ids", response_model=List[dict])
@@ -1816,3 +1632,632 @@ def crud_nationality(crud_operation: CRUD, nationality_id: int = None, nationali
 @router.get("/get/villages_by_pincode/", response_model=VillageResponse)
 def get_villages(pincode: str, db: Session = Depends(get_db)):
     return db_common.get_villages_data(db, pincode)
+
+#-------------------------------------------------------------------------------
+
+@router.get("/get_bank_details/{ifsc_code}", response_model=List[BankMasterBase])
+def get_bank_details_by_ifsc_code(
+    ifsc_code: str, 
+    db: Session = Depends(get_db)
+   
+):
+    """
+    Retrieve all bank details by the given IFSC code.
+    """
+   
+    # Query the bank details based on the IFSC code and not deleted status
+    bank_details = db.query(AppBankMaster).filter(
+        AppBankMaster.ifsc_code == ifsc_code,
+        AppBankMaster.is_deleted == 'no'
+    ).all()
+
+    # If no records are found, raise a 404 error with a custom message
+    if not bank_details:
+        return []
+    return bank_details
+
+
+#-----------------------------------------------------------------------
+
+@router.post('/save/send_query_manager_otp')
+def send_query_manager_otp(
+    input_value: str,  # Single input parameter
+    db: Session = Depends(get_db)
+):  
+    # Determine the type of input
+    if re.match(r'^\S+@\S+\.\S+$', input_value):  # Simple email regex
+        input_type = "email"
+        mobile_no = None
+        email_id = input_value
+        user_name = None
+    elif input_value.isdigit() and len(input_value) in [10, 12]:  # Mobile number
+        input_type = "mobile"
+        mobile_no = input_value
+        email_id = None
+        user_name = None
+    else:  # Assume it's a username
+        input_type = "username"
+        mobile_no = None
+        email_id = None
+        user_name = input_value
+
+    # Call the database function with the determined input type
+    result = db_common.send_query_manager_otp(
+        db, 
+        mobile_no=mobile_no, 
+        email_id=email_id, 
+        user_name=user_name
+    )
+
+    return {
+        "input_type": input_type,
+        "result": result
+    }
+    
+
+#-----------------------------------------------------------------------
+@router.post("/save/query_manager/")
+def save_query_manager(
+    data: QueryManagerSchema,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+
+
+    # Retrieve the user_id based on the provided username
+    # user = db.query(UserBase).filter(UserBase.user_name == data.queried_by).first()
+    # if user is None:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    # Create a new QueryManager record
+    new_query_manager = QueryManager(
+        query_id=data.query_id,
+        queried_by=data.user_id, 
+        query_on=datetime.now(),
+        query_description=data.query_description 
+      
+    )
+
+    # Save the new record
+    db.add(new_query_manager)
+    db.commit()
+    db.refresh(new_query_manager)
+
+    return {"message": "Query inserted successfully", "query_manager": new_query_manager}
+
+
+
+#---------------------------------------------------------------------------------------
+
+
+# from passlib.context import CryptContext
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# @router.post("/register")
+# async def register(user: UserRegistrationCreate, db: Session = Depends(get_db)):
+#     # Check if user already exists
+#     db_user = db.query(UserRegistration).filter(UserRegistration.username == user.username).first()
+#     if db_user:
+#         raise HTTPException(status_code=400, detail="Username already registered")
+    
+#     # Hash the password
+#     hashed_password = pwd_context.hash(user.password)
+
+#     # Create a new user object
+#     new_user = UserRegistration(
+#         username=user.username,
+#         password=hashed_password,
+#         latitude=user.latitude,
+#         longitude=user.longitude
+#     )
+
+#     # Add the new user to the session and commit
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+
+#     return {"message": "User registered successfully!", "user_id": new_user.id}
+
+
+
+@router.post('/send_resolved_notification')
+def send_resolved_notification(
+    query_id: int,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    quer_details = db_common.get_query_details(db, query_id)
+    
+    if not quer_details:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query details not found")
+
+    mobile_no = quer_details["mobile_number"]
+    employee_name = quer_details["employee_name"]
+    user_name = quer_details["user_name"]
+    user_id     = quer_details["user_id"]
+    employee_id = quer_details["employee_id"]
+
+    if not mobile_no:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mobile number is missing for the resolved employee")
+    random_no = random.randint(pow(10,4), pow(10,4+1)-1)
+    password = f'{user_name}@{random_no}'
+    phone_number = f'+91{mobile_no}'
+    template = "query1"
+    placeholders = [employee_name, user_name, password]
+    
+    password_reset_result = db_user.user_password_reset(db, user_id, password)  
+    if password_reset_result:
+        result = db_common.send_query_resolved_notification(phone_number, template, placeholders)
+
+    if result["success"]:
+        return {
+            "success": True,
+            "response": result["response"]
+        }
+    else:
+        return {
+            "success": False,
+            "response": result["error"]
+        }
+
+#-------------------------------------------------------------------------------------
+@router.get("/notifications/", response_model=List[NotificationSchema])
+def get_notifications(
+    notification_id : Optional[int] = None,
+    display_location : Optional[str] = None,
+    db: Session = Depends(get_db),
+    # token: str = Depends(oauth2.oauth2_scheme)
+):
+    # if not token:
+    #     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    # auth_info = authenticate_user(token)
+    # user_id = auth_info.get("user_id")
+    result = db_common.get_notifications(db,notification_id,display_location)
+    return result
+    
+
+#-------------------------------------------------------------------------------------
+@router.post("/notifications/")
+def add_notification(    
+    notification: NotificationSchema, 
+    db: Session = Depends(get_db) ,
+    notification_id: Optional[int] = None,
+    # display_location: Optional[int] = None,
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.add_notification(notification,db, notification_id)
+    return result
+#-------------------------------------------------------------------------------------
+
+@router.get("/queries", response_model=List[QueryManagerViewSchema])
+def get_queries(id: Optional[int] =None,
+                      search_value: Optional[str] = "ALL",
+                      is_resolved : Optional[str] = 'ALL',
+                      from_date     : Optional[date] = None,
+                      to_date       : Optional[date] =None,
+                      db: Session = Depends(get_db),
+                      token: str = Depends(oauth2.oauth2_scheme)):
+    """
+    Retrieve a list of queries based on the provided parameters.
+
+    Parameters:
+        id (Optional[int]): 
+            The unique identifier of a specific query. 
+            If provided, returns the query matching this ID.
+        
+        search_value (Optional[str], default="ALL"): 
+            A search term to filter queries (e.g., query description or content). 
+            Use "ALL" for no filtering.
+
+        is_resolved (Optional[str], default="ALL"): 
+            Filter queries by resolution status. 
+            "yes" for resolved queries and "no" for unresolved queries.
+
+        db (Session): 
+            The database session used to fetch query data. 
+            Injected automatically using FastAPI dependencies.
+
+        token (str): 
+            The authorization token required for authentication. 
+            Missing or invalid tokens will result in an HTTP 401 error.
+
+    Returns:
+        List[QueryManagerViewSchema]: 
+            A list of queries matching the specified filters.
+
+    Raises:
+        HTTPException: 
+            - 401 Unauthorized if the token is missing.
+            - 404 Not Found if no queries match the provided criteria.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    query = db_common.get_queries_by_id(db, id,is_resolved ,search_value,from_date, to_date)
+    if query is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    return query
+
+#-------------------------------------------------------------------------------------
+@router.post('/create_menu')
+def create_menu(
+    menu: List[MenuStructureSchema],
+    db: Session = Depends(get_db),
+    token :str = Depends(oauth2.oauth2_scheme)
+):
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result  = db_common.create_menu(menu,user_id,db)
+    return result
+
+#===========================================================================
+@router.get("/get_menu_structure")
+def get_menu_structure(
+    role_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    """
+    API to fetch the menu structure as a tree, considering role-based assignments.
+
+    Args:
+        role_id: Optional role ID to filter assigned menus.
+        db: Database session.
+
+    Returns:
+        JSON structure with menus in a tree format.
+    """
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+   
+    result = db_common.get_menu_structure(role_id,db)
+    return result
+    # Fetch all menus
+ #================================================================================================================
+# @router.get("/menu_by_user_id")
+# def get_menu_by_user_id(
+#     parent_id: Optional[int] = 0,
+#     token: str = Depends(oauth2.oauth2_scheme),
+#     db: Session = Depends(get_db),
+# ):
+#     if not token:
+#         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+#     auth_info = authenticate_user(token)
+#     role_ids = auth_info.get("role_id")
+
+#     # Fetch RoleMenuMapping based on role_ids
+#     role_menu_mappings = db.query(RoleMenuMapping).filter(
+#         RoleMenuMapping.role_id.in_(role_ids),
+#         RoleMenuMapping.is_deleted == 'no'
+#     ).all()
+
+#     # Get menu IDs from the role mappings
+#     menu_ids = [menu_mapping.menu_id for menu_mapping in role_menu_mappings]
+
+#     # Fetch all menus from MenuStructure that match the menu_ids
+#     menu_query = db.query(MenuStructure).filter(MenuStructure.id.in_(menu_ids))
+
+#     # If parent_id is provided, filter by parent_id
+#     # if parent_id:
+#     menu_query = menu_query.filter(MenuStructure.parent_id == parent_id)
+        
+#     # Fetch the filtered menus
+#     menu_master_query = menu_query.all()
+#     menu_master_dict = {menu.id: menu for menu in menu_master_query}
+#     top_level_parent_id = parent_id
+#     top_level_grand_parent_id = 0
+#     if parent_id:
+#         parent_menu = menu_master_dict.get(parent_id)
+#         if parent_menu:
+#             top_level_grand_parent_id = (
+#                 menu_master_dict.get(parent_menu.parent_id).parent_id
+#                 if parent_menu.parent_id
+#                 else 0
+#             )
+
+
+#     # Consolidate permissions for each menu
+#     consolidated_permissions = {}
+
+#     for menu_mapping in role_menu_mappings:
+#         menu_id = menu_mapping.menu_id
+#         menu_master = menu_master_dict.get(menu_id)
+
+#         if menu_master:
+#             # Initialize menu permissions if not already present
+#             if menu_id not in consolidated_permissions:
+#                 consolidated_permissions[menu_id] = {
+#                     "menu_id": menu_id,
+#                     "menu_name": menu_master.menu_name,
+#                     "link": menu_master.link,
+#                     "display_order": menu_master.display_order,
+#                     "display_location_id": menu_master.display_location_id,
+#                     "can_view": "no",
+#                     "can_edit": "no",
+#                     "can_delete": "no",
+#                     "is_deleted": "no",
+#                     "created_on": menu_mapping.created_on,
+#                     "created_by": menu_mapping.created_by,
+#                     "modified_on": menu_mapping.modified_on,
+#                     "modified_by": menu_mapping.modified_by,
+#                     "deleted_by": menu_mapping.deleted_by,
+#                     "deleted_on": menu_mapping.deleted_on,
+#                 }
+
+#             # Update permissions based on the current role mapping
+#             consolidated_permissions[menu_id]["can_view"] = (
+#                 "yes" if menu_master.has_view == "yes" and menu_mapping.can_view == "yes" else consolidated_permissions[menu_id]["can_view"]
+#             )
+#             consolidated_permissions[menu_id]["can_edit"] = (
+#                 "yes" if menu_master.has_edit == "yes" and menu_mapping.can_edit == "yes" else consolidated_permissions[menu_id]["can_edit"]
+#             )
+#             consolidated_permissions[menu_id]["can_delete"] = (
+#                 "yes" if menu_master.has_delete == "yes" and menu_mapping.can_delete == "yes" else consolidated_permissions[menu_id]["can_delete"]
+#             )
+#             consolidated_permissions[menu_id]["is_deleted"] = (
+#                 "yes" if menu_mapping.is_deleted == "yes" or menu_master.is_deleted == "yes" else consolidated_permissions[menu_id]["is_deleted"]
+#             )
+
+#     # Convert consolidated permissions to a list
+#     consolidated_menus = list(consolidated_permissions.values())
+
+#     # Construct the response
+#     response = {
+#         "parent_id": parent_id,
+#         "grand_parent_id":top_level_grand_parent_id,
+#         "menus": consolidated_menus,
+#     }
+
+#     return response
+@router.get("/menu_by_user_id")
+def get_menu_by_user_id(
+    parent_id: Optional[int] = 0,
+    token: str = Depends(oauth2.oauth2_scheme),
+    db: Session = Depends(get_db),
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    role_ids = auth_info.get("role_id")
+
+    # Fetch RoleMenuMapping based on role_ids
+    role_menu_mappings = db.query(RoleMenuMapping).filter(
+        RoleMenuMapping.role_id.in_(role_ids),
+        RoleMenuMapping.is_deleted == 'no'
+    ).all()
+
+    # Get menu IDs from the role mappings
+    menu_ids = [menu_mapping.menu_id for menu_mapping in role_menu_mappings]
+
+    # Fetch all menus from MenuStructure that match the menu_ids
+    menu_query = db.query(MenuStructure).filter(MenuStructure.id.in_(menu_ids),
+                                                MenuStructure.is_deleted == 'no')
+
+
+    # If parent_id is provided, filter by parent_id
+    # if parent_id:
+    menu_query = menu_query.filter(MenuStructure.parent_id == parent_id)
+    # Fetch the filtered menus
+    menu_master_query = menu_query.all()
+    menu_master_dict = {menu.id: menu for menu in menu_master_query}
+    top_level_parent_id = parent_id
+    top_level_grand_parent_id = 0
+    if parent_id:
+        parent_menu = db.query(MenuStructure).filter(MenuStructure.id == parent_id).first()  # Fetch the parent separately
+
+        if parent_menu:
+
+            grand_parent_menu = db.query(MenuStructure).filter(MenuStructure.id == parent_menu.parent_id).first()
+            top_level_grand_parent_id = grand_parent_menu.id if grand_parent_menu else 0
+
+        
+        # parent_menu = menu_master_dict.get(parent_id)
+        # if parent_menu:
+        #     print('parent menu')
+
+        #     top_level_grand_parent_id = (
+        #         menu_master_dict.get(parent_menu.parent_id).parent_id
+        #         if parent_menu.parent_id
+        #         else 0
+        #     )
+        #     print("top_level_grand_parent_id", top_level_grand_parent_id)
+
+
+    # Consolidate permissions for each menu
+    consolidated_permissions = {}
+
+    for menu_mapping in role_menu_mappings:
+        menu_id = menu_mapping.menu_id
+        menu_master = menu_master_dict.get(menu_id)
+
+        if menu_master:
+            # Initialize menu permissions if not already present
+            if menu_id not in consolidated_permissions:
+                consolidated_permissions[menu_id] = {
+                    "menu_id": menu_id,
+                    "menu_name": menu_master.menu_name,
+                    "link": menu_master.link,
+                    "display_order": menu_master.display_order,
+                    "display_location_id": menu_master.display_location_id,
+                    "can_view": "no",
+                    "can_edit": "no",
+                    "can_delete": "no",
+                    "is_deleted": "no",
+                    "created_on": menu_mapping.created_on,
+                    "created_by": menu_mapping.created_by,
+                    "modified_on": menu_mapping.modified_on,
+                    "modified_by": menu_mapping.modified_by,
+                    "deleted_by": menu_mapping.deleted_by,
+                    "deleted_on": menu_mapping.deleted_on,
+                }
+
+            # Update permissions based on the current role mapping
+            consolidated_permissions[menu_id]["can_view"] = (
+                "yes" if menu_master.has_view == "yes" and menu_mapping.can_view == "yes" else consolidated_permissions[menu_id]["can_view"]
+            )
+            consolidated_permissions[menu_id]["can_edit"] = (
+                "yes" if menu_master.has_edit == "yes" and menu_mapping.can_edit == "yes" else consolidated_permissions[menu_id]["can_edit"]
+            )
+            consolidated_permissions[menu_id]["can_delete"] = (
+                "yes" if menu_master.has_delete == "yes" and menu_mapping.can_delete == "yes" else consolidated_permissions[menu_id]["can_delete"]
+            )
+            consolidated_permissions[menu_id]["is_deleted"] = (
+                "yes" if menu_mapping.is_deleted == "yes" or menu_master.is_deleted == "yes" else consolidated_permissions[menu_id]["is_deleted"]
+            )
+
+    # Convert consolidated permissions to a list
+    consolidated_menus = list(consolidated_permissions.values())
+
+    # Construct the response
+    response = {
+        "parent_id": parent_id,
+        "grand_parent_id":top_level_grand_parent_id,
+        "menus": consolidated_menus,
+    }
+
+    return response
+
+#----------------------------------------------------------------------------------------------------------------
+@router.post("/save_role_menu_permission")
+def save_role_menu_permission(
+    role_id : int,
+    data : List[RoleMenuMappingSchema],
+    db: Session = Depends(get_db),
+    # is_assigned: Optional[str] = 'yes',
+    token : str = Depends(oauth2.oauth2_scheme)):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.save_role_menu_permission(db,role_id,data,user_id)
+    return result
+
+#-------------------------------------------------------------------------------------------------------------------------------
+
+@router.delete('/delete_menu_recursively')
+def delete_menu_recursively(
+    menu_id : int,
+    db: Session = Depends(get_db),
+    token : str =Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    result = db_common.delete_menu_recursively(db,menu_id, user_id)
+    return result
+#-------------------------------------------------------------------------------------------------------------------------------
+@router.post('/create_role')
+def create_role(
+    role: List[UserRoleSchema],
+    db: Session = Depends(get_db),
+    # role_id: Optional[int] = None,
+    token :str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    auth_info = authenticate_user(token)
+    user_id = auth_info.get("user_id")
+    # result  = db_common.create_role(role,user_id,db,role_id)
+    result  = db_common.create_role(role,user_id,db)
+
+    return result
+#-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+@router.post("/save_licence")
+def save_licence(licence: LicenceMasterSchema, db: Session = Depends(get_db)):
+    result = db_common.save_licence(db, licence)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+
+
+
+
+@router.get("/get_all_licences", response_model=List[LicenceMasterSchema])
+def get_all_licences(
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2.oauth2_scheme)
+):
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+    
+    try:
+        # Fetch all master records
+        db_licence_masters = db.query(CaerpLicenceMaster).all()
+        if not db_licence_masters:
+            raise HTTPException(status_code=404, detail="No licences found")
+
+        all_licences = []
+
+        for db_licence_master in db_licence_masters:
+            # Fetch the associated detail records for each master
+            db_licence_details = db.query(CaerpLicenceDetails).filter(CaerpLicenceDetails.licence_master_id == db_licence_master.id).all()
+
+            # Construct the details list using the schema
+            licence_details = [
+                LicenceDetailsSchema(
+                    id=detail.id,
+                    module_name=detail.module_name,
+                    module_description=detail.module_description,
+                    is_default=detail.is_default,
+                    has_purchased=detail.has_purchased,
+                    licenced_from_date=detail.licenced_from_date,
+                    licenced_to_date=detail.licenced_to_date,
+                    is_active=detail.is_active
+                ) for detail in db_licence_details
+            ]
+
+            # Construct the master object using the schema
+            licence_master = LicenceMasterSchema(
+                id=db_licence_master.id,
+                software_name=db_licence_master.software_name,
+                software_category=db_licence_master.software_category,
+                software_description=db_licence_master.software_description,
+                software_version=db_licence_master.software_version,
+                software_access_key=db_licence_master.software_access_key,
+                is_trial=db_licence_master.is_trial,
+                trial_start_date=db_licence_master.trial_start_date,
+                trial_end_date=db_licence_master.trial_end_date,
+                licenced_from_date=db_licence_master.licenced_from_date,
+                licenced_to_date=db_licence_master.licenced_to_date,
+                is_active=db_licence_master.is_active,
+                number_of_users=db_licence_master.number_of_users,
+                details=licence_details
+            )
+
+            all_licences.append(licence_master)
+
+        return all_licences
+
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=500, detail=f"Database error occurred: {str(e)}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+
+
