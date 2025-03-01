@@ -51,6 +51,7 @@ app = FastAPI(
         - [Accounts Module](/accounts/docs): Documentation for endpoints related to the  accounts related process.
         - [Service Module](/services/docs): Documentation for endpoints related to the  accounts related process.
         - [Mother Customer Module](/mother_customer/docs): Documentation for endpoints related to the  mother_customer related process.
+        - [GST module](/mother_customer/docs): Documentation for endpoints related to the  gst module related process.
        """
 )
 
