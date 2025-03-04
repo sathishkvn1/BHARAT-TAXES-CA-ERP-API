@@ -792,7 +792,7 @@ class VacancyCreateSchema(BaseModel):
     reported_date: date  # Use date type for date fields
     announcement_date: date
     closing_date: date
-    vacancy_status: str
+    vacancy_status:str="OPEN"
     experience_required: str
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchema]
@@ -1402,3 +1402,63 @@ class CreateInterviewPanelRequest(BaseModel):
 
 
 
+
+class ScheduledCandidate(BaseModel):
+    applicant_id: int
+    first_name: str
+    middle_name: Optional[str]
+    last_name: str
+    interview_date: date
+    interview_time: time
+    location: str
+    interview_status: str
+    panel_description: str
+    job_description: str
+    vacancy_status: str
+    job_location: Optional[str]
+    experience_required: str
+    designation_id: int
+    designation_name: str
+    department_id: int
+    department_name: str
+    personal_mobile_number: Optional[str]
+    personal_whatsapp_number: Optional[str]
+    personal_email_id: Optional[str]
+
+    class Config:
+        orm_mode = True
+
+
+class VacancyStatus(str, Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+    RANKLIST_GENERATED = "RANKLIST_GENERATED"
+    INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED"
+
+# class ScheduledCandidate(BaseModel):
+#     applicant_id: int
+#     first_name: str
+#     middle_name: Optional[str]
+#     last_name: str
+#     interview_date: date
+#     interview_time: time
+#     location: str
+#     interview_status: str
+#     panel_description: str
+#     job_description: str
+#     vacancy_status: str
+#     job_location: Optional[str]
+#     experience_required: str
+#     designation_id: int
+#     designation_name: str
+#     department_id: int
+#     department_name: str
+#     personal_mobile_number: Optional[str]
+#     personal_whatsapp_number: Optional[str]
+#     personal_email_id: Optional[str]
+    
+  
+#     panel_members: List[str] = []
+
+#     class Config:
+#         from_attributes = True  
