@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from fastapi.responses import JSONResponse
 from caerp_db.common.models import AppBankMaster, AppEducationSubjectCourse, AppEducationalLevel, AppEducationalStream, EmployeeContactDetails, EmployeeEducationalQualification, EmployeeExperience, EmployeeMaster, EmployeeDocuments,  EmployeeProfessionalQualification, UserBase
-from caerp_db.hr_and_payroll.model import ApplicationMaster, ApplicationRankList, HrDocumentMaster, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
-from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewScheduleRequest,  SaveEmployeeTeamMaster, ScheduledCandidate, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema, VacancyStatus
+from caerp_db.hr_and_payroll.model import ApplicationMaster, ApplicationRankList, HrDocumentMaster, InterviewPanelMaster, InterviewPanelMembers, InterviewSchedule, PrlSalaryComponent, VacancyAnnouncementDetails, VacancyAnnouncementMaster, VacancyDetailsView, VacancyEducationalLevel, VacancyEducationalStream, VacancyEducationalSubjectOrCourse, VacancyMaster, ViewApplicantDetails
+from caerp_schema.hr_and_payroll.hr_and_payroll_schema import AddEmployeeToTeam, AnnouncementDetailItem, AnnouncementsListResponse, ApplicantDetails, ApplicantDetailsView, CourseSchema, CreateInterviewPanelRequest, EducationLevelSchema, EducationRequirementSchema, EmployeeAddressDetailsSchema, EmployeeDetails, EmployeeDetailsCombinedSchema, EmployeeDocumentResponse, EmployeeLanguageProficiencyBase,  EmployeeMasterDisplay,EmployeeSalarySchema, EmployeeDocumentsSchema, EmployeeTeamMasterSchema, EmployeeTeamMembersGet, HrViewEmployeeTeamMemberSchema, HrViewEmployeeTeamSchema, InterviewPanelMasterCreate, InterviewPanelMasterSchemaForGet, InterviewPanelMemberSchemaForGet, InterviewScheduleRequest,  SaveEmployeeTeamMaster, ScheduledCandidate, StreamSchema, VacancyAnnouncements, VacancyCreateSchema, VacancySchema
 from caerp_schema.hr_and_payroll.hr_and_payroll_schema import EmployeeDetailsGet,EmployeeMasterDisplay,EmployeePresentAddressGet,EmployeePermanentAddressGet,EmployeeContactGet,EmployeeBankAccountGet,EmployeeEmployementGet,EmployeeEmergencyContactGet,EmployeeDependentsGet,EmployeeSalaryGet,EmployeeEducationalQualficationGet,EmployeeExperienceGet,EmployeeDocumentsGet,EmployeeProfessionalQualificationGet,EmployeeSecurityCredentialsGet,EmployeeUserRolesGet
 from caerp_db.database import get_db
 from caerp_db.hr_and_payroll import db_employee_master
@@ -2854,9 +2854,10 @@ def get_ranked_applicants(
 
         # Update vacancy_status in vacancy_master
         vacancy_record = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_id).first()
+        print("vacancy_record",vacancy_record)
 
         if vacancy_record:
-            vacancy_record.vacancy_status = "RANKLIST_GENERATED"
+            vacancy_record.vacancy_status = "RANKLIST_GENERATED".strip()
 
         # Commit changes to database
         db.commit()
@@ -2907,24 +2908,84 @@ def get_ranked_applicants(
 #         raise HTTPException(status_code=500, detail=str(e))
     
 #-----------------------------------------------------------------------------------------------------
+
 @router.post("/save_interview_panel")
 def save_interview_panel_endpoint(
-    request: CreateInterviewPanelRequest, 
+    request: CreateInterviewPanelRequest,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2.oauth2_scheme)
+    token: str = Depends(oauth2.oauth2_scheme),
+    interview_panel_master_id: Optional[int] = None
 ):
+    """
+        API Endpoint to Save/Update an Interview Panel
+
+        This endpoint handles creating, updating, and managing interview panels and their members.
+
+        ### Functionality:
+        
+        - **Create a new interview panel** if `request.master.id` is `None`.
+        - **Update an existing panel** if `request.master.id` is provided.
+        - **Insert new members** for an existing panel without modifying panel details.
+        - **Soft delete members** that are no longer present in the request.
+
+        ### Request Body:
+        ```json
+        {
+        "master": {
+        
+            "interview_date_from": "2025-03-10",
+            "interview_date_to": "2025-03-10",
+            "interview_time_from": "10:00:00",
+            "interview_time_to": "12:00:00",
+            "panel_description": "Technical Interview Panel for Software Engineers",
+            "location": "Conference Room A"
+        },
+        "members": [
+            {
+            "interviewer_id": 101,
+            "remarks": "Senior Software Engineer"
+            },
+            {
+            "interviewer_id": 102,
+            "remarks": "HR Representative"
+            }
+        ]
+        }
+        ```
+
+        ### Query Parameters:
+        - `interview_panel_master_id` (Optional, int): If provided, members will be inserted for the given panel ID.
+
+        ### Headers:
+        - `Authorization`: Bearer token (Required)
+
+        ### Responses:
+        - **200 OK**: `{ "success": True, "message": "Saved successfully" }`
+        - **401 Unauthorized**: `{ "detail": "Token is missing" }`
+        - **404 Not Found**: `{ "detail": "Master record not found" }`
+        - **500 Internal Server Error**: `{ "detail": "An error occurred while saving the data: <error_message>" }`
+    """
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token is missing"
+        )
+
     try:
-        # Call the service to save the interview panel data
-        response = db_employee_master.save_interview_panel(db, request)
+        response = db_employee_master.save_interview_panel(
+            db, request, interview_panel_master_id
+        )
         return response
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="An error occurred while saving the data.")
+        raise HTTPException(
+            status_code=500, detail=f"An error occurred while saving the data: {str(e)}"
+        )   
     
-    
+
+
+
+
 # -----------------------------------------------------------------------------------------------------
 
 
@@ -3011,7 +3072,6 @@ def get_vacancy_details(vacancy_id: int,
 
 
 #----------------------------------------------------------------------------------------------
-
 
 @router.post("/save_interview_schedule/")
 def save_schedule(request: InterviewScheduleRequest, 
@@ -3138,13 +3198,80 @@ def save_schedule(request: InterviewScheduleRequest,
             if applicant_id not in new_applicant_ids:
                 schedule.is_deleted = "yes"
 
-        # Step 7: Commit Changes
+        # Step 7: Update Vacancy Status
+        vacancy_record = db.query(VacancyMaster).filter(VacancyMaster.id == vacancy_id).first()
+        if vacancy_record:
+            vacancy_record.vacancy_status = "INTERVIEW_SCHEDULED"
+
+        # Step 7: Commit Changes   
         db.commit()
         return {"success": "true", "message": "Interview schedules saved successfully"}
 
     except Exception as e:
         db.rollback()
         return {"success": "false", "message": f"Error: {str(e)}"}
+    
+
+#----------------------------------------------------------------------------------
+# from sqlalchemy.orm import Session, joinedload
+
+# @router.get("/get_interview_panel", response_model=List[InterviewPanelMasterSchemaForGet])
+# def get_interview_panel_list(db: Session = Depends(get_db)):
+#     try:
+#         # Fetch all interview panel masters (only non-deleted ones)
+#         interview_panels = (
+#             db.query(InterviewPanelMaster)
+#             .filter(InterviewPanelMaster.is_deleted == "no")
+#             .options(joinedload(InterviewPanelMaster.members))  # Load related members
+#             .all()
+#         )
+
+#         # Prepare response data
+#         response = []
+#         for panel in interview_panels:
+#             # Get related members
+#             members = (
+#                 db.query(InterviewPanelMembers, EmployeeMaster)
+#                 .join(EmployeeMaster, InterviewPanelMembers.interviewer_id == EmployeeMaster.employee_id)
+#                 .filter(InterviewPanelMembers.interview_panel_master_id == panel.id)
+#                 .filter(InterviewPanelMembers.is_deleted == "no")
+#                 .all()
+#             )
+
+#             # Convert members to schema format
+#             member_list = [
+#                 InterviewPanelMemberSchemaForGet(
+#                     id=m[0].id,
+#                     interview_panel_master_id=m[0].interview_panel_master_id,
+#                     interviewer_id=m[0].interviewer_id,
+#                     interviewer_first_name=m[1].first_name,
+#                     interviewer_middle_name=m[1].middle_name or "",
+#                     interviewer_last_name=m[1].last_name,
+#                     remarks=m[0].remarks
+#                 )
+#                 for m in members
+#             ]
+
+#             # Add panel details with members
+#             response.append(
+#                 InterviewPanelMasterSchemaForGet(
+#                     id=panel.id,
+#                     interview_date_from=panel.interview_date_from,
+#                     interview_date_to=panel.interview_date_to,
+#                     interview_time_from=panel.interview_time_from,
+#                     interview_time_to=panel.interview_time_to,
+#                     panel_description=panel.panel_description,
+#                     location=panel.location,
+#                     members=member_list
+#                 )
+#             )
+
+#         return response
+
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"An error occurred while fetching the data: {str(e)}")
+
+
 
 #--------------------------------------------------------------------------------------------------
 # Query	Join Type	Purpose

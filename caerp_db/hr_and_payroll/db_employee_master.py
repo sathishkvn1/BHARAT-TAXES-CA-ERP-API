@@ -4015,81 +4015,88 @@ def save_schedule(schedule, db: Session):
         raise Exception(f"Error: {str(e)}")
 
 #----------------------------------------------------------------------------------------------------------
-def save_interview_panel(db: Session, request: CreateInterviewPanelRequest):
+
+
+def save_interview_panel(db: Session, request: CreateInterviewPanelRequest, interview_panel_master_id: int = None):
+    """
+    Handles saving/updating an interview panel master record and its members.
+
+    ✅ Supports the following cases:
+    - **Case 1:** Create a new master along with members.
+    - **Case 2:** Update an existing master along with members.
+    - **Case 3:** Insert new members for an existing master without updating the master.
+    - **Case 4:** Soft delete members that are missing in the request.
+    """
+
     try:
-        # Handle the master record
-        if request.master.id == None:
-            # Insert new record for the master
-            print("Inserting new master record...")
-            new_master = InterviewPanelMaster(**request.master.dict())
+        # **Case 1: Create a new master with members**
+        if request.master and request.master.id is None:  
+            new_master = InterviewPanelMaster(**request.master.dict(exclude={"id"}))
             db.add(new_master)
-            db.flush()  # Use flush instead of commit
+            db.flush()  # Ensure ID is generated
+            master_id = new_master.id  # Get the newly created ID
 
-            # Re-fetch the master record after flush to get the generated ID
-            # db.refresh(new_master)  # This should work after flush
-            master_id = new_master.id
-            print(f"New master record inserted with ID: {master_id}")
+            print(f"DEBUG: New Master ID after flush: {new_master.id}")
+            print(f"DEBUG: Assigned master_id: {master_id}")
 
-            # Handle the members
-            for member in request.members:
-                if member.id == None:
-                    print(f"Inserting new member: {member}")
-                    new_member_data = member.dict()
-                    new_member_data["interview_panel_master_id"] = master_id
-                    new_member = InterviewPanelMembers(**new_member_data)
-                    db.add(new_member)
-                else:
-                    print(f"Updating existing member: {member}")
-                    existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
-                    if not existing_member:
-                        raise ValueError(f"Member record with ID {member.id} not found.")
-                    for key, value in member.dict().items():
-                        setattr(existing_member, key, value)
-
-        else:
-            print(f"Updating existing master record with ID: {request.master.id}")
-            # Update existing record for the master
-            master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+        # **Case 2: Update an existing master with members**
+        elif request.master:  
+            master_id = request.master.id
+            master = db.query(InterviewPanelMaster).filter_by(id=master_id).first()
             if not master:
                 raise ValueError("Master record not found.")
-            
-            print(f"Master record found: {master}")
-            # Perform the update on the master record
-            for key, value in request.master.dict().items():
+
+            # Update only the provided fields
+            for key, value in request.master.dict(exclude={"id"}).items():
                 setattr(master, key, value)
-            db.commit()  # Commit the changes to save updates
 
-            # Re-fetch the master record after commit to ensure it's in sync
-            master = db.query(InterviewPanelMaster).filter_by(id=request.master.id).first()
+        # **Case 3: Insert members alone for an existing master**
+        elif interview_panel_master_id:  
+            master_id = interview_panel_master_id
+            master = db.query(InterviewPanelMaster).filter_by(id=master_id).first()
             if not master:
-                raise ValueError("Master record not found after update.")
-            print(f"Master record successfully refreshed: {master}")
+                raise ValueError("Master record not found for given interview_panel_master_id.")
 
-            # Handle the members
+        else:
+            raise ValueError("Either master data or interview_panel_master_id must be provided.")
+
+        # **Case 4: Insert/Update Members + Soft Delete Handling**
+        if request.members:
+            existing_members = db.query(InterviewPanelMembers).filter_by(interview_panel_master_id=master_id, is_deleted="no").all()
+            existing_member_ids = {member.id for member in existing_members}
+
+            incoming_member_ids = {member.id for member in request.members if member.id is not None}
+
+            # Soft delete members that are missing in the request
+            members_to_delete = existing_member_ids - incoming_member_ids
+            if members_to_delete:
+                db.query(InterviewPanelMembers).filter(InterviewPanelMembers.id.in_(members_to_delete)).update(
+                    {"is_deleted": "yes"}, synchronize_session=False
+                )
+                db.flush()
+
             for member in request.members:
-                if member.id == None:
-                    print(f"Inserting new member: {member}")
-                    new_member_data = member.dict()
-                    new_member_data["interview_panel_master_id"] = master.id
-                    new_member = InterviewPanelMembers(**new_member_data)
+                if member.id is None:  # Insert new member
+                    new_member = InterviewPanelMembers(
+                        interviewer_id=member.interviewer_id,
+                        remarks=member.remarks,
+                        interview_panel_master_id=master_id,
+                        is_deleted="no"
+                    )
                     db.add(new_member)
-                else:
-                    print(f"Updating existing member: {member}")
-                    existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id).first()
+                else:  # Update existing member
+                    existing_member = db.query(InterviewPanelMembers).filter_by(id=member.id, is_deleted="no").first()
                     if not existing_member:
-                        raise ValueError(f"Member record with ID {member.id} not found.")
-                    for key, value in member.dict().items():
+                        raise ValueError(f"Active member with ID {member.id} not found.")
+                    for key, value in member.dict(exclude={"id"}).items():
                         setattr(existing_member, key, value)
 
-        db.commit()  # Commit the changes to the database
-        print("Transaction committed successfully.")
+        db.commit()
         return {"success": True, "message": "Saved successfully"}
 
     except Exception as e:
-        print(f"Error occurred while saving the data: {str(e)}")
-        db.rollback()  # Rollback the transaction if an error occurs
-        return {"success": False, "message": f"An error occurred while saving the data: {str(e)}"}
-
+        db.rollback()
+        raise ValueError(f"An error occurred while saving the data: {str(e)}")
 
 #----------------------------------------------------------------------------------------------------------
 
