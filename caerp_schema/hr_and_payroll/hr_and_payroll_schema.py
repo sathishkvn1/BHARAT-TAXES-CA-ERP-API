@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, ConfigDict
 from typing import List,Optional, Union,Dict
 from datetime import date, datetime, time
 from caerp_constants.caerp_constants import BooleanFlag
@@ -19,8 +19,7 @@ class EmployeeMasterSchema(BaseModel):
     # next_increment_date   : Optional[date] = None
     nationality_id         : int
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeMasterDisplay(BaseModel):
@@ -40,8 +39,7 @@ class EmployeeMasterDisplay(BaseModel):
     approved_by            : int
     approved_on            : datetime
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -62,8 +60,7 @@ class EmployeePresentAddressSchema(BaseModel):
 
     remarks                     : Optional[str] = None
    
-    class Config:  
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeePresentAddressGet(BaseModel):
@@ -83,8 +80,7 @@ class EmployeePresentAddressGet(BaseModel):
     present_country_id          : int
     remarks                     : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -103,8 +99,7 @@ class EmployeePermanentAddressSchema(BaseModel):
     permanent_country_id            : int
     remarks                         : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -125,8 +120,7 @@ class EmployeePermanentAddressGet(BaseModel):
     permanent_country_id         : int
     remarks                      : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeContactSchema(BaseModel):
@@ -139,8 +133,7 @@ class EmployeeContactSchema(BaseModel):
     official_email_id            : Optional[str] = None
     remarks                      : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -155,8 +148,7 @@ class EmployeeContactGet(BaseModel):
     official_email_id           : Optional[str] = None
     remarks                     : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeBankAccountSchema(BaseModel):
@@ -167,8 +159,7 @@ class EmployeeBankAccountSchema(BaseModel):
     ifsc_code                  : Optional[str] = None
     remarks                    : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
   
 
 
@@ -181,8 +172,7 @@ class EmployeeBankAccountGet(BaseModel):
     ifsc_code                  : Optional[str] = None
     remarks                    : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeEmployementSchema(BaseModel):
@@ -195,8 +185,7 @@ class EmployeeEmployementSchema(BaseModel):
     effective_to_date          : Optional[date] = None
     remarks                    : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeEmployementGet(BaseModel):
@@ -210,8 +199,7 @@ class EmployeeEmployementGet(BaseModel):
     # effective_to_date       : Optional[date] = None
     remarks                   : Optional[str] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -230,9 +218,7 @@ class EmployeeEducationalQualficationGet(BaseModel):
     month_and_year_of_completion   : str
     status                         : Optional[str] = None
     remarks                        : Optional[str] = None
-    class Config:  
-        orm_mode = True
-
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeSalarySchema(BaseModel):
@@ -247,8 +233,7 @@ class EmployeeSalarySchema(BaseModel):
    effective_to_date         : Optional[date] = None
    next_increment_date       : Optional[date] = None
 
-   class config():
-      orm_mode=True
+   model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeSalaryGet(BaseModel):
@@ -272,8 +257,7 @@ class EmployeeSalaryGet(BaseModel):
     effective_to_date          : Optional[date]
     next_increment_date        : Optional[date]
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -291,8 +275,8 @@ class EmployeeExperienceGet(BaseModel):
     end_date               : Optional[date]
     remarks                : Optional[str] = None
    
-    class Config:
-        orm_mode           = True
+    model_config = ConfigDict(from_attributes=True)
+       
 
 
 class EmployeeDocumentsSchema(BaseModel):
@@ -303,8 +287,8 @@ class EmployeeDocumentsSchema(BaseModel):
     issued_by        : Optional[str] = None
     remarks          : Optional[str] = None
 
-    class Config:  
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  
+
 
 
 class EmployeeDocumentsGet(BaseModel):
@@ -317,8 +301,8 @@ class EmployeeDocumentsGet(BaseModel):
     issued_by       : Optional[str] = None
     remarks         : Optional[str] = None
 
-    class Config: 
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True) 
+
 
 
 
@@ -329,8 +313,8 @@ class EmployeeEmergencyContactSchema(BaseModel):
     mobile_number       : str
     effective_date_to   : Optional[date] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Corrected class name to 'Config'
+
 
 
 
@@ -345,8 +329,8 @@ class EmployeeEmergencyContactGet(BaseModel):
     effective_date_from   : date
     effective_date_to     : Optional[date] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Corrected class name to 'Config'
+   
     
 
 
@@ -357,8 +341,8 @@ class EmployeeDependentsSchema(BaseModel):
     date_of_birth         : Optional[date] = None
     effective_date_to     : Optional[date] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Corrected class name to 'Config'
+
 
 
 class EmployeeDependentsGet(BaseModel):
@@ -371,8 +355,8 @@ class EmployeeDependentsGet(BaseModel):
     effective_date_from   : date
     effective_date_to     : Optional[date] = None
 
-    class Config:  # Corrected class name to 'Config'
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)  # Corrected class name to 'Config'
+
 
 class EmployeeProfessionalQualificationGet(BaseModel):
     id                           : int
@@ -387,8 +371,8 @@ class EmployeeProfessionalQualificationGet(BaseModel):
     status                       : Optional[str] = None
     remarks                      : Optional[str] = None
     
-    class Config: 
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True) 
+
 
 
 
@@ -432,8 +416,7 @@ class EmployeeEducationalQualficationSchema(BaseModel):
     status                         :  Optional[str] = None
     remarks                        : Optional[str] = None
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeExperienceSchema(BaseModel):
@@ -449,8 +432,8 @@ class EmployeeExperienceSchema(BaseModel):
     end_date               : Optional[date]=None
     remarks                : Optional[str] = None
    
-    class Config:
-        orm_mode           = True
+    model_config = ConfigDict(from_attributes=True)
+       
 
 
 
@@ -465,8 +448,8 @@ class EmployeeProfessionalQualificationSchema(BaseModel):
     status                       : Optional[str] = None
     remarks                      : Optional[str] = None
     
-    class Config:
-        orm_mode           = True  
+    model_config = ConfigDict(from_attributes=True)
+         
 
 
 
@@ -507,8 +490,7 @@ class EmployeeLanguageProficiencyGet(BaseModel):
     speak_proficiency_level : str
     remarks                 : Optional[str] =None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EmployeeDetailsGet(BaseModel):
@@ -550,8 +532,8 @@ class EmployeeDocumentResponse(BaseModel):
     is_deleted       : str
     document         : Optional[str]
 
-    class Config:
-        from_attributes = True 
+    model_config = ConfigDict(from_attributes=True)
+
 
 #------------------------------EmployeeTeam--------------------------------------------------------------------
 class EmployeeTeamMasterSchema(BaseModel):
@@ -561,8 +543,7 @@ class EmployeeTeamMasterSchema(BaseModel):
     description          : str
     effective_from_date  : Optional[date] = None
    
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class EmployeeTeamMembersSchema(BaseModel):
     id                  : int
@@ -571,8 +552,7 @@ class EmployeeTeamMembersSchema(BaseModel):
     team_leader_id      : Optional[int]
     effective_from_date : Optional[date] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class SaveEmployeeTeamMaster(BaseModel):
     master  : EmployeeTeamMasterSchema
@@ -586,9 +566,8 @@ class HrViewEmployeeTeamMemberSchema(BaseModel):
     leader_last_name: str
   
 
-    class Config:
-        orm_mode = True
-        from_attributes = True 
+    model_config = ConfigDict(from_attributes=True)
+        
 
 
 class HrViewEmployeeTeamMasterSchema(BaseModel):
@@ -601,18 +580,16 @@ class HrViewEmployeeTeamMasterSchema(BaseModel):
     effective_to_date: Optional[date]
    #  leaders: List[HrViewEmployeeTeamMemberSchema] 
     leaders: Optional[List[HrViewEmployeeTeamMemberSchema]] = None
-    class Config:
-        orm_mode = True
-        from_attributes = True 
+    model_config = ConfigDict(from_attributes=True)
+       
 
 
 
 class HrViewEmployeeTeamSchema(BaseModel):
     teams: List[HrViewEmployeeTeamMasterSchema]
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+        
         
 class EmployeeTeamMembersGet(BaseModel):
     team_member_id      :int
@@ -632,16 +609,14 @@ class EmployeeTeamMembersGet(BaseModel):
     effective_from_date : date
     effective_to_date   : Optional[date] = None
 
-    class Config:
-        orm_mode = True
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+        
 
 
 class AddEmployeeToTeam(BaseModel):
    team_members: List[EmployeeTeamMembersSchema]
-   class Config:
-        orm_mode = True
-        from_attributes = True 
+   model_config = ConfigDict(from_attributes=True)
+        
 
 
 
@@ -654,8 +629,7 @@ class EmployeeLanguageProficiencyBase(BaseModel):
     speak_proficiency_id: int
     remarks             : Optional[str] =None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 #-------------------------------------------------------------------------------
 # Schema for Vacancy Experience
@@ -690,8 +664,7 @@ class LanguageProficiencySchema(BaseModel):
     is_speak_required: str = 'no'  
     speak_weightage: float = 0.0 
 
-    class Config:
-        orm_mode = True  
+    model_config = ConfigDict(from_attributes=True)  
 
 class LanguageProficiencySchemaForGet(BaseModel):
     id: int = 0 
@@ -706,8 +679,7 @@ class LanguageProficiencySchemaForGet(BaseModel):
     is_speak_required: str = 'no'  
     speak_weightage: float = 0.0 
 
-    class Config:
-        orm_mode = True  
+    model_config = ConfigDict(from_attributes=True)  
 
 # Main Education Schema
 # class VacancyEducationSchema(BaseModel):
@@ -792,7 +764,7 @@ class VacancyCreateSchema(BaseModel):
     reported_date: date  # Use date type for date fields
     announcement_date: date
     closing_date: date
-    vacancy_status:str="OPEN"
+    vacancy_status: str
     experience_required: str
     vacancy_experience: Optional[List[VacancyExperienceSchema]] = None
     skills_required: List[VacancySkillsSchema]
@@ -898,8 +870,7 @@ class ApplicationMasterSchema(BaseModel):
     application_status: str  
     is_deleted: str  
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 class ApplicantPresentAddressSchema(BaseModel):
@@ -1116,8 +1087,7 @@ class ApplicantDetailsView(BaseModel):
     contact_deleted: Optional[bool]
 
     
-    class Config:
-        orm_mode = True 
+model_config = ConfigDict(from_attributes=True) 
 
 
 class ApplicantMasterResponse(BaseModel):
@@ -1135,8 +1105,7 @@ class ApplicantMasterResponse(BaseModel):
     nationality_id: Optional[int] = None
     nationality_name: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 #--------------------------------------------------------------------------
@@ -1166,8 +1135,7 @@ class ApplicantPresentAddressResponse(BaseModel):
     present_country_id: Optional[int] = None
     present_country_name: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1206,8 +1174,7 @@ class ApplicantPermanentAddressResponse(BaseModel):
     permanent_country_id: Optional[int] = None
     permanent_country_name: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1244,8 +1211,7 @@ class ApplicantEducationalQualificationResponse(BaseModel):
     middle_name: Optional[str]  # Optional if it can be None
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1266,8 +1232,7 @@ class ApplicantProfessionalQualificationResponse(BaseModel):
     middle_name: Optional[str]  # Optional if it can be None
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1289,8 +1254,7 @@ class ApplicantExperienceResponse(BaseModel):
     middle_name: Optional[str]
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1311,8 +1275,7 @@ class ApplicantLanguageProficiencyResponse(BaseModel):
     middle_name: Optional[str] = None
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1326,8 +1289,7 @@ class ApplicantHobbyResponse(BaseModel):
     middle_name: Optional[str] = None
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1343,8 +1305,7 @@ class ApplicantSkillResponse(BaseModel):
     middle_name: Optional[str] = None
     last_name: str
 
-    class Config:
-        orm_mode = True
+model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -1392,14 +1353,42 @@ class InterviewPanelMasterSchema(BaseModel):
 
 class InterviewPanelMemberSchema(BaseModel):
     id: Optional[int] = None
+    # interview_panel_master_id: Optional[int] = None  
     interviewer_id: int
     remarks: Optional[str] = None
 
 class CreateInterviewPanelRequest(BaseModel):
-    master: InterviewPanelMasterSchema
+    master: Optional[InterviewPanelMasterSchema] = None
     members: List[InterviewPanelMemberSchema]
 
 
+
+# hjasgjhsdgah
+
+class InterviewPanelMemberSchemaForGet(BaseModel):
+    id: int
+    interviewer_id: int
+    interviewer_first_name:str
+    interviewer_middle_name:str
+    interviewer_last_name:str
+    interview_panel_master_id:int
+    remarks: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+class InterviewPanelMasterSchemaForGet(BaseModel):
+    id: int
+    interview_date_from: date
+    interview_date_to: date
+    interview_time_from: time
+    interview_time_to: time
+    panel_description: str
+    location: str
+    members: List[InterviewPanelMemberSchemaForGet] = []
+
+    class Config:
+        orm_mode = True
 
 
 
@@ -1425,40 +1414,24 @@ class ScheduledCandidate(BaseModel):
     personal_whatsapp_number: Optional[str]
     personal_email_id: Optional[str]
 
+    model_config = ConfigDict(from_attributes=True)
+
+
+
+class InterviewPanelMemberCreate(BaseModel):
+    id: Optional[int] = None  # Optional for updating existing members
+    interviewer_id: int  # Required field
+
+class InterviewPanelMasterCreate(BaseModel):
+    id: Optional[int] = None  
+   
+    interview_date_from: Optional[date] = None
+    interview_date_to: Optional[date] = None
+    interview_time_from: Optional[time] = None
+    interview_time_to: Optional[time] = None
+    panel_description: Optional[str] = None
+    location: Optional[str] = None
+    members: Optional[List[InterviewPanelMemberCreate]] = []  # Optional list of members
+
     class Config:
         orm_mode = True
-
-
-class VacancyStatus(str, Enum):
-    OPEN = "OPEN"
-    CLOSED = "CLOSED"
-    RANKLIST_GENERATED = "RANKLIST_GENERATED"
-    INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED"
-
-# class ScheduledCandidate(BaseModel):
-#     applicant_id: int
-#     first_name: str
-#     middle_name: Optional[str]
-#     last_name: str
-#     interview_date: date
-#     interview_time: time
-#     location: str
-#     interview_status: str
-#     panel_description: str
-#     job_description: str
-#     vacancy_status: str
-#     job_location: Optional[str]
-#     experience_required: str
-#     designation_id: int
-#     designation_name: str
-#     department_id: int
-#     department_name: str
-#     personal_mobile_number: Optional[str]
-#     personal_whatsapp_number: Optional[str]
-#     personal_email_id: Optional[str]
-    
-  
-#     panel_members: List[str] = []
-
-#     class Config:
-#         from_attributes = True  
