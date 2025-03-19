@@ -13,6 +13,7 @@ from caerp_router.services.gst_services import gst_registration,gst_registeratio
 
 from caerp_router.accounts import quotation
 from caerp_router.hr_and_payroll import employee_master
+from caerp_router.gst import gst
 from caerp_functions import captcha
 from caerp_db.database import caerp_base, caerp_engine
 from fastapi.staticfiles import StaticFiles
@@ -51,10 +52,8 @@ app = FastAPI(
         - [Accounts Module](/accounts/docs): Documentation for endpoints related to the  accounts related process.
         - [Service Module](/services/docs): Documentation for endpoints related to the  accounts related process.
         - [Mother Customer Module](/mother_customer/docs): Documentation for endpoints related to the  mother_customer related process.
-        - [GST module](/mother_customer/docs): Documentation for endpoints related to the  gst module related process.
-        - [GST module2](/mother_customer/docs): Documentation for endpoints related to the  gst module related process.
-        - [GST module3](/mother_customer/docs): Documentation for endpoints related to the  gst module related process.
-       """
+        - [GST module](/gst/docs): Documentation for endpoints related to the  gst module related process.
+         """
 )
 
 
@@ -67,6 +66,8 @@ hr_and_payroll=FastAPI(debug=True)
 accounts=FastAPI(debug=True)
 gst_services=FastAPI(debug=True)
 gst_mother_customer=FastAPI(debug=True)
+
+gst_test = FastAPI(debug=True)
 
 
 app.add_middleware(
@@ -122,11 +123,15 @@ gst_services.include_router(gst_registeration_service.router)
 gst_services.include_router(gst_amendment.router)
 
 gst_mother_customer.include_router(authentication.router)
-gst_mother_customer.include_router(mother_customer.router) 
+gst_mother_customer.include_router(mother_customer.router)
+
+gst_test.include_router(authentication.router)
+gst_test.include_router(gst.router) 
 
 
 
 app.mount("/common", app_common, name="common")
+app.mount("/gst", gst_test, name="gst")
 app.mount("/office", app_office, name="office")
 app.mount("/hr_and_payroll", hr_and_payroll, name="hr_and_payroll")
 app.mount("/accounts/",accounts,name="accounts")
