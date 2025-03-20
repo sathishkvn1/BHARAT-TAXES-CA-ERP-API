@@ -2,7 +2,7 @@ from fastapi import HTTPException, Path,  UploadFile
 from sqlalchemy.orm import Session
 from caerp_db.gst.model import *
 from typing import Union, List, Optional
-from sqlalchemy import and_, func, insert, update , text, or_
+from sqlalchemy import and_, func, insert, update , text, or_, delete
 
 def save_gst_test(db: Session, request: gstTest):
     data = request.model_dump()
@@ -30,3 +30,9 @@ def save_gstr2b(db: Session, request: gstr2b):
         db.commit()
         return_id = result.lastrowid
         return return_id
+
+def delete_gstr2b(db: Session, request: dict):
+    sql_stmt = delete(gstr2b).where(gstr2b.tax_period == request['tax_period'])
+    db.execute(sql_stmt)
+    db.commit()
+    return

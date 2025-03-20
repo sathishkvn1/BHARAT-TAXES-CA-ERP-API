@@ -85,41 +85,81 @@ async def save_gst2b_fileupload(
     entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     mon_year = df['data']['rtnprd']
     formatedMonYear = datetime.strptime(mon_year[2:] + "-" + mon_year[:2] + "-01", "%Y-%m-%d").date()
+
+    condition ={"tax_period": formatedMonYear}
+
+    db_gst.delete_gstr2b(db, condition)
+
     gstin = df['data']['gstin']
-    b2bdata = df['data']['docdata']['b2b']
-    cdnrdata = df['data']['docdata']['cdnr']
+    b2bdata = df['data']['docdata'].get('b2b', [])
+    b2badata = df['data']['docdata'].get('b2ba', [])
+    cdnrdata = df['data']['docdata'].get('cdnr', [])
+    cdnadata = df['data']['docdata'].get('cdna', [])
+
+    for record in b2bdata:
+        record["type"] = "b2b"
+
+    for record in cdnrdata:
+        record["type"] = "cdnr"
+
+    for record in cdnadata:
+        record["type"] = "cdna"
+
+    for record in b2badata:
+        record["type"] = "b2ba"
     
-    final_data = []
-    for row in b2bdata:
-        inv = row['inv']
+    mergedData = b2bdata + cdnrdata + cdnadata + b2badata
+
+    for row in mergedData:
+        
         trdnm = row['trdnm']
         supprd = row['supprd']
         formatedsupprd = datetime.strptime(supprd[2:] + "-" + supprd[:2] + "-01", "%Y-%m-%d").date()
         ctin = row['ctin']
+        type = row['type']
         supfildt = dateFormat(row['supfildt'])
+
+        if type == "b2b":
+            inv = row['inv']
+        else:
+            inv = row['nt']
 
         for invRow in inv:
                 dt = dateFormat(invRow['dt'])
-                val = invRow['val']
-                txval = invRow['txval']
-                typ = invRow['typ']
-                rsn = invRow['rsn']
+                oidt = dateFormat(invRow['dt'])
+                oinum = ntnum = ""
+                refund_date = "1900-01-01"
+                inum = ""
 
+                if type == "b2ba":
+                    oidt = dateFormat(invRow['oidt'])
+                    oinum = invRow['oinum']
+                elif type == "cdnr":
+                    oidt = dt
+                    ntnum = invRow['ntnum']
+                    refund_date = dt
+                elif type == "cdna":
+                    oidt = dateFormat(invRow['oidt'])
+                    oinum = invRow['oinum']
+                else:
+                    oidt = dt
+                    inum = invRow['inum']
+                
                 data = {
                 "p_g_id" : 0,
                 "cfs" : "",
-                "type" : "b2b",
+                "type" : type,
                 "supplier_name" : trdnm,
                 "supplier_tax_period": formatedsupprd,
                 "supplier_file_date": supfildt,
                 "gstin" : ctin,
                 "invoice_date": dt,
-                "invoice_number" : invRow['inum'],
+                "invoice_number" : inum,
                 "applicable_tax_per" : 1,
                 "state" : invRow['pos'],
                 "reverse_charge" : invRow['rev'],
                 "taxable_rate" : 0,
-                "taxable_value" : 0,
+                "taxable_value" : invRow['txval'],
                 "iamt" : invRow['igst'],
                 "camt" : invRow['cgst'],
                 "samt" : invRow['sgst'],
@@ -129,19 +169,19 @@ async def save_gst2b_fileupload(
                 "tx_c" : 0,
                 "tx_s" : 0,
                 "tx_cs" : 0,
-                "refund_number" : "",
-                "refund_date": '2025-03-19',
-                "reason" : "",
-                "document_type" : "",
+                "refund_number" : ntnum,
+                "refund_date": refund_date,
+                "reason" : invRow['rsn'],
+                "document_type" : invRow['typ'],
                 "p_gst" : "",
                 "chksum" : "",
                 "flag" : "",
                 "cflag" : "",
-                "inv_typ" : "",
+                "inv_typ" : invRow['typ'],
                 "new_entry" : 0,
                 "gstr_description" : "",                
-                "amd_invoice_number" : "",
-                "amd_invoice_date": '2025-03-19',
+                "amd_invoice_number" : oinum,  
+                "amd_invoice_date": oidt,
                 "tax_period" : formatedMonYear,
                 "entry_date" : entry_date
                 }
