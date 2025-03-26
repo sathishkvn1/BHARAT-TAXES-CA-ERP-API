@@ -36,3 +36,18 @@ def delete_gstr2b(db: Session, request: dict):
     db.execute(sql_stmt)
     db.commit()
     return
+
+def save_gstr2a(db: Session, request: gstr2a):
+        data = request.model_dump()
+        data.pop("p_g_id", None)
+        sql_stmt = insert(gstr2a).values(**data)
+        result = db.execute(sql_stmt)
+        db.commit()
+        return_id = result.lastrowid
+        return return_id
+
+def delete_gstr2a(db: Session, request: dict):
+    sql_stmt = delete(gstr2a).where(gstr2a.tax_period == request['tax_period'])
+    db.execute(sql_stmt)
+    db.commit()
+    return

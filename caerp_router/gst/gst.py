@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
-from caerp_schema.gst.gst_schema import gstTestSchema,gst2bSchema
+from caerp_schema.gst.gst_schema import gstTestSchema,gst2bSchema,gst2aSchema
 from datetime import date,datetime
 from io import BytesIO
 import pandas as pd
@@ -189,7 +189,122 @@ async def save_gst2b_fileupload(
                 data_dict = gst2bSchema(**data)
                 db_gst.save_gstr2b(db,data_dict)
     
+    return {"success": True, "message": "GSTR2B file uploaded successfully"}
         
             
-      
+@router.post("/save_gst2a_fileupload")
+async def save_gst2a_fileupload(
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...)):     
+    
+    file_content = BytesIO(file.file.read())
+    json_str = file_content.read().decode('utf-8')  # Convert BytesIO content to string
+    df = json.loads(json_str)
+
+    entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    mon_year = df['fp']
+    formatedMonYear = datetime.strptime(mon_year[2:] + "-" + mon_year[:2] + "-01", "%Y-%m-%d").date()
+
+    condition ={"tax_period": formatedMonYear}
+
+    db_gst.delete_gstr2a(db, condition)
+
+    gstin = df['gstin']
+    b2bdata = df.get('b2b', [])
+    b2badata = df.get('b2ba', [])
+    cdnrdata = df.get('cdnr', [])
+    cdnadata = df.get('cdna', [])
+
+    for record in b2bdata:
+        record["type"] = "b2b"
+
+    for record in cdnrdata:
+        record["type"] = "cdn"
+
+    for record in cdnadata:
+        record["type"] = "cdna"
+
+    for record in b2badata:
+        record["type"] = "b2ba"
+    
+    mergedData = b2bdata + cdnrdata + cdnadata + b2badata
+
+    for row in mergedData:
+        cfs = row['cfs']
+        ctin = row['ctin']
+        type = row['type']
         
+        if type == "b2b":
+            inv = row['inv']
+        else:
+            inv = row['nt']
+
+        for invRow in inv:
+            dt = dateFormat(invRow['idt'])
+            oidt = dateFormat(invRow['idt'])
+            oinum = ntnum = document_type = inv_typ = rsn = ""
+            refund_date = "1900-01-01"
+            inum = ""
+            state = invRow['pos']
+            rchrg = invRow['rchrg']
+            itms = invRow['itms']
+
+            if type == "b2ba":
+                oidt = dateFormat(invRow['oidt'])
+                oinum = invRow['oinum']
+            elif type == "cdn":
+                oidt = dt
+                ntnum = invRow['nt_num']
+                refund_date  = dateFormat(invRow['nt_dt'])
+                document_type =invRow['ntty']
+                inv_typ = invRow['inv_typ']
+            elif type == "cdna":
+                oidt = dateFormat(invRow['oidt'])
+                oinum = invRow['oinum']
+            else:
+                oidt = dt
+                inum = invRow['inum']
+
+
+            for invItem in itms:   
+                    data = {
+                    "p_g_id" : 0,
+                    "cfs" : cfs,
+                    "type" : type,
+                    "gstin" : ctin,
+                    "invoice_date": dt,
+                    "invoice_number" : inum,
+                    "state" : state,
+                    "reverse_charge" : rchrg,
+                    "taxable_rate" : invItem['itm_det']['rt'],
+                    "taxable_value" : invItem['itm_det']['txval'],
+                    "iamt" : invItem['itm_det'].get('iamt', 0.00),
+                    "camt" : invItem['itm_det'].get('camt', 0.00),
+                    "samt" : invItem['itm_det'].get('samt', 0.00),
+                    "csamt" : invItem['itm_det'].get('csamt', 0.00),
+                    "elg" : "",
+                    "tx_i" : 0,
+                    "tx_c" : 0,
+                    "tx_s" : 0,
+                    "tx_cs" : 0,
+                    "refund_number" : ntnum,
+                    "refund_date": refund_date,
+                    "reason" : rsn,
+                    "document_type" : document_type,
+                    "p_gst" : "",
+                    "chksum" : "",
+                    "flag" : "",
+                    "cflag" : "",
+                    "inv_typ" : inv_typ,
+                    "new_entry" : 0,
+                    "gstr_description" : "",                
+                    "amd_invoice_number" : oinum,  
+                    "amd_invoice_date": oidt,
+                    "tax_period" : formatedMonYear,
+                    "entry_date" : entry_date
+                    }
+                
+                    data_dict = gst2aSchema(**data)
+                    db_gst.save_gstr2a(db,data_dict)
+    
+    return {"success": True, "message": "GSTR2A file uploaded successfully"}

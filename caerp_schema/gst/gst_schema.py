@@ -50,4 +50,40 @@ class gst2bSchema(BaseModel):
     amd_invoice_date: Optional[date]
     tax_period  : Optional[datetime] = None
     entry_date  : Optional[datetime] = None
-   
+
+
+class gst2aSchema(BaseModel):
+   p_g_id  : Optional[int]
+   cfs : Optional[str]
+   type : Optional[str]
+   gstin : Optional[str]
+   invoice_date : Optional[date]
+   invoice_number : Optional[str]
+   state  : Optional[int]
+   reverse_charge : Optional[str]
+   taxable_rate : Optional[float]
+   taxable_value : Optional[float]
+   iamt : Optional[float]
+   camt : Optional[float]
+   samt : Optional[float]
+   csamt : Optional[float]
+   elg : Optional[str]
+   tx_i : Optional[float]
+   tx_c : Optional[float]
+   tx_s : Optional[float]
+   tx_cs : Optional[float]
+   refund_number : Optional[str]
+   refund_date : Optional[date]
+   reason  : Optional[str]
+   document_type : Optional[str]
+   p_gst : Optional[str]
+   chksum  : Optional[str]
+   flag : Optional[str]
+   cflag : Optional[str]
+   inv_typ : Optional[str]
+   new_entry  : Optional[int]
+   gstr_description  : Optional[str]
+   amd_invoice_number : Optional[str]
+   amd_invoice_date : Optional[date]
+   tax_period  : Optional[datetime] = None
+   entry_date  : Optional[datetime] = None 
