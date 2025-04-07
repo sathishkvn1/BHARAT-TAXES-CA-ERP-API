@@ -308,3 +308,21 @@ async def save_gst2a_fileupload(
                     db_gst.save_gstr2a(db,data_dict)
     
     return {"success": True, "message": "GSTR2A file uploaded successfully"}
+
+@router.post("/save_sale_fileupload")
+async def save_sale_fileupload(
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...)):
+        file_content = BytesIO(file.file.read())
+        df = pd.read_csv(file_content, encoding='utf-8')
+
+
+        for _, row in df.iterrows():
+            data = {
+                "id": row[0],
+                "name": row[1],
+                "gst": row[2],  
+                "amount": row[3]
+            }
+
+            print(data)
