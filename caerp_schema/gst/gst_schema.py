@@ -88,6 +88,15 @@ class gst2aSchema(BaseModel):
    tax_period  : Optional[datetime] = None
    entry_date  : Optional[datetime] = None 
 
+class YesNoEnum(str, Enum):
+    yes = 'yes'
+    no = 'no'
+
+class paymentEnum(str, Enum):
+    CASH = 'CASH'
+    ONLINE = 'ONLINE'
+    CREDIT = 'CREDIT'
+
 class saleMasterSchema(BaseModel):
     id:Optional[int]
     voucher_id:Optional[int]
@@ -103,14 +112,14 @@ class saleMasterSchema(BaseModel):
     amended_invoice_date:Optional[date]
     amended_tax_period_year:Optional[datetime]
     amended_tax_period_month:Optional[int]
-    has_gst_filed:Optional[str]
+    has_gst_filed:Optional[YesNoEnum]
     gst_filed_date:Optional[datetime]
     transportation_mode:Optional[int]
     transported_date:Optional[datetime]
     vehicle_number:Optional[str]
     port_code:Optional[str]
     eway_bill_number:Optional[str]
-    payment_mode:Optional[str]
+    payment_mode:Optional[paymentEnum]
     transation_id:Optional[str]
     discount_amount:Optional[float]
     taxable_amount:Optional[float]
@@ -127,14 +136,15 @@ class saleMasterSchema(BaseModel):
     created_on:Optional[datetime]
     modified_by:Optional[int]
     modified_on:Optional[datetime]
-    is_verified:Optional[str]
+    is_verified:Optional[YesNoEnum]
     verified_by:Optional[int]
-    is_cancelled:Optional[str]
+    is_cancelled:Optional[YesNoEnum]
     cancelled_by:Optional[int]
     cancellation_reason:Optional[str]
-    is_deleted:Optional[str]
+    is_deleted:Optional[YesNoEnum]
     deleted_by:Optional[int]
     deleted_on:Optional[datetime]
+
 
 class saleDetailsSchema(BaseModel):
     id:Optional[int]

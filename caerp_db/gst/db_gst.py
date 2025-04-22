@@ -53,11 +53,11 @@ def delete_gstr2a(db: Session, request: dict):
     return
 
 
-def save_sale_master(db: Session, request: gstr2a):
-        data = request.model_dump()
-        data.pop("id", None)
-        sql_stmt = insert(gstr2a).values(**data)
-        result = db.execute(sql_stmt)
-        db.commit()
-        return_id = result.lastrowid
-        return return_id
+def save_sale_master(db: Session, request: saleMaster):
+    data = request.model_dump()
+    data.pop("id", None)
+    sql_stmt = insert(gstr2a).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return_id = result.lastrowid
+    return return_id

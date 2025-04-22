@@ -7,11 +7,14 @@ from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
-from caerp_schema.gst.gst_schema import gstTestSchema,gst2bSchema,gst2aSchema
+from caerp_schema.gst.gst_schema import gstTestSchema, gst2bSchema, gst2aSchema, saleMasterSchema
 from datetime import date,datetime
 from io import BytesIO
 import pandas as pd
+import os
 import json
+
+
 
 router  = APIRouter(
     tags=['Gst']
@@ -313,16 +316,91 @@ async def save_gst2a_fileupload(
 async def save_sale_fileupload(
     db: Session = Depends(get_db),
     file: UploadFile = File(...)):
-        file_content = BytesIO(file.file.read())
-        df = pd.read_csv(file_content, encoding='utf-8')
+    # try:
+        contents = await file.read()
+        file_ext = os.path.splitext(file.filename)[1].lower()
 
-
+        if file_ext == ".csv":
+            df = pd.read_csv(BytesIO(contents), encoding='utf-8')
+        elif file_ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(BytesIO(contents))
+        else:
+            return {"error": "Unsupported file type. Please upload a CSV or Excel file."}
+        
+        entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         for _, row in df.iterrows():
-            data = {
-                "id": row[0],
-                "name": row[1],
-                "gst": row[2],  
-                "amount": row[3]
-            }
+            
+                invoice_number = row[0]
+                invoice_date = dateFormat(row[1])
+                customer_name = row[2]
+                gstin = row[3]
+                ewaybill = row[4]
+                saletype = row[5]
+                invoice_type = row[6]
+                reverse_charge = row[7]
+                hsn = row[8]
+                rate = row[9]
+                qty = row[10]
+                tax = row[11]
+                discount = row[12]
+                cess = row[13]
+                paymode = row[14].upper()
+                tax_period = row[15]
 
-            print(data)
+                data = {
+                    "id":0,
+                    "voucher_id":1,
+                    "head_id":2,
+                    "sub_head_id":3,
+                    "invoice_number": invoice_number,
+                    "invoice_date": invoice_date,
+                    "financial_year_id":0,
+                    "payment_mode" : paymode,
+                    "transation_id": "",
+                    "tax_period_year" : entry_date,
+                    "tax_period_month" : 0,
+                    "is_amended_invoice" : 0,
+                    "amended_invoice_number" : "",
+                    "amended_invoice_date" : None,
+                    "amended_tax_period_year" : None,
+                    "amended_tax_period_month" : 0,
+                    "has_gst_filed" : "no",
+                    "gst_filed_date" : None,
+                    "transportation_mode" : 0,
+                    "transported_date" : None,
+                    "vehicle_number" : "",
+                    "port_code" : "",
+                    "eway_bill_number" : "",
+                    "discount_amount" : 0.00,
+                    "taxable_amount" : 0.00,
+                    "cgst_amount" : 0.00,
+                    "sgst_amount" : 0.00,
+                    "igst_amount" : 0.00,
+                    "cess_amount" : 0.00,
+                    "total_amount" : 0.00,
+                    "state_type" : 0,
+                    "b2c_state" : 0,
+                    "reverse_charge" : 0,
+                    "narration" : "",
+                    "created_by" : 0,
+                    "created_on" : entry_date,
+                    "modified_by" : 0,
+                    "modified_on" : None,
+                    "is_verified" : "no",
+                    "verified_by" : 0,
+                    "is_cancelled" : "no",
+                    "cancelled_by" : None,
+                    "cancellation_reason" : "",
+                    "is_deleted" : "no",
+                    "deleted_by" : 0,
+                    "deleted_on" : None
+                }
+
+                print(data)
+                data_dict = saleMasterSchema(**data)
+                db_gst.save_sale_master(db,data_dict)
+
+        return {"message": "File processed successfully" + file_ext}
+
+    # except Exception as e:
+    #     return {"error 2": str(e)}
