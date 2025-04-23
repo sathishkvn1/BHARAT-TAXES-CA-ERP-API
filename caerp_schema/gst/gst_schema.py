@@ -170,6 +170,6 @@ class saleDetailsSchema(BaseModel):
     total_amount:Optional[float]
     modified_by:Optional[int]
     modified_on:Optional[datetime]
-    is_deleted:Optional[str]
+    is_deleted:Optional[YesNoEnum]
     deleted_by:Optional[int]
     deleted_on:Optional[datetime]

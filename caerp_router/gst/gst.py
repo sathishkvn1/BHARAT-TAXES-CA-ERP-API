@@ -7,13 +7,12 @@ from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
-from caerp_schema.gst.gst_schema import gstTestSchema, gst2bSchema, gst2aSchema, saleMasterSchema
+from caerp_schema.gst.gst_schema import gstTestSchema, gst2bSchema, gst2aSchema, saleMasterSchema, saleDetailsSchema
 from datetime import date,datetime
 from io import BytesIO
 import pandas as pd
 import os
 import json
-
 
 
 router  = APIRouter(
@@ -316,7 +315,7 @@ async def save_gst2a_fileupload(
 async def save_sale_fileupload(
     db: Session = Depends(get_db),
     file: UploadFile = File(...)):
-    # try:
+    try:
         contents = await file.read()
         file_ext = os.path.splitext(file.filename)[1].lower()
 
@@ -328,9 +327,12 @@ async def save_sale_fileupload(
             return {"error": "Unsupported file type. Please upload a CSV or Excel file."}
         
         entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        oldinv="xxx"
+        total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
+
         for _, row in df.iterrows():
             
-                invoice_number = row[0]
+                invoice_number = str(row[0])
                 invoice_date = dateFormat(row[1])
                 customer_name = row[2]
                 gstin = row[3]
@@ -338,7 +340,7 @@ async def save_sale_fileupload(
                 saletype = row[5]
                 invoice_type = row[6]
                 reverse_charge = row[7]
-                hsn = row[8]
+                hsn = str(row[8])
                 rate = row[9]
                 qty = row[10]
                 tax = row[11]
@@ -347,60 +349,107 @@ async def save_sale_fileupload(
                 paymode = row[14].upper()
                 tax_period = row[15]
 
-                data = {
-                    "id":0,
-                    "voucher_id":1,
-                    "head_id":2,
-                    "sub_head_id":3,
-                    "invoice_number": invoice_number,
-                    "invoice_date": invoice_date,
-                    "financial_year_id":0,
-                    "payment_mode" : paymode,
-                    "transation_id": "",
-                    "tax_period_year" : entry_date,
-                    "tax_period_month" : 0,
-                    "is_amended_invoice" : 0,
-                    "amended_invoice_number" : "",
-                    "amended_invoice_date" : None,
-                    "amended_tax_period_year" : None,
-                    "amended_tax_period_month" : 0,
-                    "has_gst_filed" : "no",
-                    "gst_filed_date" : None,
-                    "transportation_mode" : 0,
-                    "transported_date" : None,
-                    "vehicle_number" : "",
-                    "port_code" : "",
-                    "eway_bill_number" : "",
-                    "discount_amount" : 0.00,
-                    "taxable_amount" : 0.00,
-                    "cgst_amount" : 0.00,
-                    "sgst_amount" : 0.00,
-                    "igst_amount" : 0.00,
-                    "cess_amount" : 0.00,
-                    "total_amount" : 0.00,
-                    "state_type" : 0,
-                    "b2c_state" : 0,
-                    "reverse_charge" : 0,
-                    "narration" : "",
-                    "created_by" : 0,
-                    "created_on" : entry_date,
-                    "modified_by" : 0,
-                    "modified_on" : None,
-                    "is_verified" : "no",
-                    "verified_by" : 0,
-                    "is_cancelled" : "no",
-                    "cancelled_by" : None,
-                    "cancellation_reason" : "",
-                    "is_deleted" : "no",
-                    "deleted_by" : 0,
-                    "deleted_on" : None
-                }
+                taxable_amount = float(rate) * float(qty)
+                sgst = cgst = taxable_amount * float(tax) / 200
+                igst = taxable_amount * float(tax) / 100
+                sgst_percentage = cgst_percentage = float(tax) / 2
+                 
+                if(invoice_number != oldinv):
+                    data = {
+                        "id":0,
+                        "voucher_id":1,
+                        "head_id":2,
+                        "sub_head_id":3,
+                        "invoice_number": invoice_number,
+                        "invoice_date": invoice_date,
+                        "financial_year_id":0,
+                        "payment_mode" : paymode,
+                        "transation_id": "",
+                        "tax_period_year" : entry_date,
+                        "tax_period_month" : 0,
+                        "is_amended_invoice" : 0,
+                        "amended_invoice_number" : "",
+                        "amended_invoice_date" : None,
+                        "amended_tax_period_year" : None,
+                        "amended_tax_period_month" : 0,
+                        "has_gst_filed" : "no",
+                        "gst_filed_date" : None,
+                        "transportation_mode" : 0,
+                        "transported_date" : None,
+                        "vehicle_number" : "",
+                        "port_code" : "",
+                        "eway_bill_number" : "",
+                        "discount_amount" : total_discount_amount,
+                        "taxable_amount" : total_taxable_amount,
+                        "cgst_amount" : total_cgst,
+                        "sgst_amount" : total_sgst,
+                        "igst_amount" : total_igst,
+                        "cess_amount" : total_cess_amount,
+                        "total_amount" : grand_total,
+                        "state_type" : 0,
+                        "b2c_state" : 0,
+                        "reverse_charge" : 0,
+                        "narration" : "",
+                        "created_by" : 0,
+                        "created_on" : entry_date,
+                        "modified_by" : 0,
+                        "modified_on" : None,
+                        "is_verified" : "no",
+                        "verified_by" : 0,
+                        "is_cancelled" : "no",
+                        "cancelled_by" : None,
+                        "cancellation_reason" : "",
+                        "is_deleted" : "no",
+                        "deleted_by" : 0,
+                        "deleted_on" : None
+                    }
 
-                print(data)
-                data_dict = saleMasterSchema(**data)
-                db_gst.save_sale_master(db,data_dict)
+                    
+                    data_dict = saleMasterSchema(**data)
+                    sale_master_id = db_gst.save_sale_master(db,data_dict)
+                    oldinv=invoice_number
+                    total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
+
+                detailData={
+                    "id":0,
+                    "sales_master_id":sale_master_id,
+                    "item_master_id":0,
+                    "hsn_sac_code":hsn,
+                    "gst_rate":float(tax),
+                    "quantity":qty,
+                    "sku_code":"",
+                    "unit_rate":float(rate),
+                    "gross_amount":0.00,
+                    "discount_percentage":discount,
+                    "discount_amount":0.00,
+                    "taxable_amount":taxable_amount,
+                    "cgst_percentage":cgst_percentage,
+                    "cgst_amount":cgst,
+                    "sgst_percentage":sgst_percentage,
+                    "sgst_amount":sgst,
+                    "igst_percentage":tax,
+                    "igst_amount":igst,
+                    "cess_percentage":0.00,
+                    "cess_amount":cess,
+                    "total_amount":0.00,
+                    "modified_by":0,
+                    "modified_on":None,
+                    "is_deleted":"no",
+                    "deleted_by":0,
+                    "deleted_on":None
+                }
+                total_cgst += cgst
+                total_sgst += sgst
+                total_igst += igst
+                total_taxable_amount += taxable_amount
+                total_discount_amount += discount
+                total_cess_amount += cess
+                grand_total += (total_taxable_amount + total_cgst + total_sgst + total_igst)
+
+                dataDetail_dict = saleDetailsSchema(**detailData)
+                sale_detail_id = db_gst.save_sale_detail(db,dataDetail_dict)
 
         return {"message": "File processed successfully" + file_ext}
 
-    # except Exception as e:
-    #     return {"error 2": str(e)}
+    except Exception as e:
+        return {"error": str(e)}
