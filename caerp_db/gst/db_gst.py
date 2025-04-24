@@ -62,6 +62,14 @@ def save_sale_master(db: Session, request: saleMaster):
     return_id = result.lastrowid
     return return_id
 
+def update_sale_master(db: Session, request: dict):
+    data = request.copy()
+    data.pop('id', None)
+    sql_stmt = update(saleMaster).where(saleMaster.id == request['id']).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return
+
 def save_sale_detail(db: Session, request: saleDetail):
     data = request.model_dump()
     data.pop("id", None)

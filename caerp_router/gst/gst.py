@@ -311,6 +311,14 @@ async def save_gst2a_fileupload(
     
     return {"success": True, "message": "GSTR2A file uploaded successfully"}
 
+
+
+def taxPeriodFormat(date_str):
+    date_str = date_str.title()
+    parsed_date = datetime.strptime(date_str, "%b-%Y")
+    formatted_date = parsed_date.strftime("%Y-%m-%d")
+    return formatted_date
+
 @router.post("/save_sale_fileupload")
 async def save_sale_fileupload(
     db: Session = Depends(get_db),
@@ -328,14 +336,15 @@ async def save_sale_fileupload(
         
         entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         oldinv="xxx"
-        total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
-
+        firmState="32"
+        i = total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
         for _, row in df.iterrows():
             
                 invoice_number = str(row[0])
                 invoice_date = dateFormat(row[1])
                 customer_name = row[2]
-                gstin = row[3]
+                gstin = str(row[3])
+                customerState = gstin[:2]
                 ewaybill = row[4]
                 saletype = row[5]
                 invoice_type = row[6]
@@ -347,14 +356,33 @@ async def save_sale_fileupload(
                 discount = row[12]
                 cess = row[13]
                 paymode = row[14].upper()
-                tax_period = row[15]
+                tax_period = taxPeriodFormat(row[15])
 
                 taxable_amount = float(rate) * float(qty)
-                sgst = cgst = taxable_amount * float(tax) / 200
-                igst = taxable_amount * float(tax) / 100
-                sgst_percentage = cgst_percentage = float(tax) / 2
-                 
+                if(firmState == customerState):
+                    sgst = cgst = taxable_amount * float(tax) / 200
+                    sgst_percentage = cgst_percentage = float(tax) / 2
+                    igst = igst_percentage = 0
+                else:
+                    igst = taxable_amount * float(tax) / 100
+                    igst_percentage = tax
+                    sgst = cgst = sgst_percentage = cgst_percentage = 0
+                
                 if(invoice_number != oldinv):
+                    if(i>0):
+                        updateData ={
+                            "id":sale_master_id,
+                            "discount_amount" : total_discount_amount,
+                            "taxable_amount" : total_taxable_amount,
+                            "cgst_amount" : total_cgst,
+                            "sgst_amount" : total_sgst,
+                            "igst_amount" : total_igst,
+                            "cess_amount" : total_cess_amount,
+                            "total_amount" : grand_total,
+                        }
+                        db_gst.update_sale_master(db,updateData)
+
+
                     data = {
                         "id":0,
                         "voucher_id":1,
@@ -365,7 +393,7 @@ async def save_sale_fileupload(
                         "financial_year_id":0,
                         "payment_mode" : paymode,
                         "transation_id": "",
-                        "tax_period_year" : entry_date,
+                        "tax_period_year" : tax_period,
                         "tax_period_month" : 0,
                         "is_amended_invoice" : 0,
                         "amended_invoice_number" : "",
@@ -379,13 +407,13 @@ async def save_sale_fileupload(
                         "vehicle_number" : "",
                         "port_code" : "",
                         "eway_bill_number" : "",
-                        "discount_amount" : total_discount_amount,
-                        "taxable_amount" : total_taxable_amount,
-                        "cgst_amount" : total_cgst,
-                        "sgst_amount" : total_sgst,
-                        "igst_amount" : total_igst,
-                        "cess_amount" : total_cess_amount,
-                        "total_amount" : grand_total,
+                        "discount_amount" : 0.00,
+                        "taxable_amount" : 0.00,
+                        "cgst_amount" : 0.00,
+                        "sgst_amount" : 0.00,
+                        "igst_amount" : 0.00,
+                        "cess_amount" : 0.00,
+                        "total_amount" : 0.00,
                         "state_type" : 0,
                         "b2c_state" : 0,
                         "reverse_charge" : 0,
@@ -409,6 +437,7 @@ async def save_sale_fileupload(
                     sale_master_id = db_gst.save_sale_master(db,data_dict)
                     oldinv=invoice_number
                     total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
+                    
 
                 detailData={
                     "id":0,
@@ -427,7 +456,7 @@ async def save_sale_fileupload(
                     "cgst_amount":cgst,
                     "sgst_percentage":sgst_percentage,
                     "sgst_amount":sgst,
-                    "igst_percentage":tax,
+                    "igst_percentage":igst_percentage,
                     "igst_amount":igst,
                     "cess_percentage":0.00,
                     "cess_amount":cess,
@@ -444,10 +473,24 @@ async def save_sale_fileupload(
                 total_taxable_amount += taxable_amount
                 total_discount_amount += discount
                 total_cess_amount += cess
-                grand_total += (total_taxable_amount + total_cgst + total_sgst + total_igst)
+                grand_total += (cgst + sgst + igst + taxable_amount +cess)
 
                 dataDetail_dict = saleDetailsSchema(**detailData)
                 sale_detail_id = db_gst.save_sale_detail(db,dataDetail_dict)
+                i+=1
+            
+        
+        updateData ={
+            "id":sale_master_id,
+            "discount_amount" : total_discount_amount,
+            "taxable_amount" : total_taxable_amount,
+            "cgst_amount" : total_cgst,
+            "sgst_amount" : total_sgst,
+            "igst_amount" : total_igst,
+            "cess_amount" : total_cess_amount,
+            "total_amount" : grand_total,
+        }
+        db_gst.update_sale_master(db,updateData)
 
         return {"message": "File processed successfully" + file_ext}
 
