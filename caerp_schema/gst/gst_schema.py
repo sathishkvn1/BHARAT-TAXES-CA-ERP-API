@@ -92,6 +92,10 @@ class YesNoEnum(str, Enum):
     yes = 'yes'
     no = 'no'
 
+class InvoiceTypeEnum(str, Enum):
+    B2B = 'B2B'
+    B2C = 'B2C'
+
 class paymentEnum(str, Enum):
     CASH = 'CASH'
     ONLINE = 'ONLINE'
@@ -105,13 +109,12 @@ class saleMasterSchema(BaseModel):
     invoice_number:Optional[str]
     invoice_date:Optional[date]
     financial_year_id:Optional[int]
-    tax_period_year:Optional[datetime]
-    tax_period_month:Optional[int]
+    tax_period:Optional[date]
+    invoice_type:Optional[InvoiceTypeEnum]
     is_amended_invoice:Optional[int]
     amended_invoice_number:Optional[str]
     amended_invoice_date:Optional[date]
-    amended_tax_period_year:Optional[datetime]
-    amended_tax_period_month:Optional[int]
+    amended_tax_period:Optional[date]
     has_gst_filed:Optional[YesNoEnum]
     gst_filed_date:Optional[datetime]
     transportation_mode:Optional[int]
@@ -130,7 +133,7 @@ class saleMasterSchema(BaseModel):
     total_amount:Optional[float]
     state_type:Optional[int]
     b2c_state:Optional[int]
-    reverse_charge:Optional[int]
+    reverse_charge:Optional[YesNoEnum]
     narration:Optional[str]
     created_by:Optional[int]
     created_on:Optional[datetime]
@@ -173,3 +176,32 @@ class saleDetailsSchema(BaseModel):
     is_deleted:Optional[YesNoEnum]
     deleted_by:Optional[int]
     deleted_on:Optional[datetime]
+
+class itemMasterSchema(BaseModel):
+    item_id:Optional[int]
+    item_name:Optional[str]
+    item_type:Optional[str]
+    item_hsn_sac:Optional[str]
+    item_gst_tax:Optional[float]
+    item_sku:Optional[str]
+    item_selling_price:Optional[float]
+    item_purchase_price:Optional[float]
+    item_discount_percent:Optional[int]
+    item_cess_percent:Optional[int]
+    item_note:Optional[str]
+    itc_enable:Optional[YesNoEnum]
+    opening_qty:Optional[float]
+    start_date:Optional[date]
+    end_date:Optional[date]
+    entry_date:Optional[datetime]
+
+class accountHeadSchema(BaseModel):
+    account_head_id:Optional[int]
+    account_group_id:Optional[int]
+    parent_head_id:Optional[int]
+    account_head_name:Optional[str]
+    account_head_alternate_name:Optional[str]
+    gstin:Optional[str]
+    is_default:Optional[int]
+    description:Optional[str]
+    is_deleted:Optional[int]

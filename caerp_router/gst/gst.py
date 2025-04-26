@@ -337,6 +337,10 @@ async def save_sale_fileupload(
         entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         oldinv="xxx"
         firmState="32"
+        firmId = 1
+        # for general customers
+        sub_head_id = 1
+        b2c_state = 0
         i = total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
         for _, row in df.iterrows():
             
@@ -345,10 +349,10 @@ async def save_sale_fileupload(
                 customer_name = row[2]
                 gstin = str(row[3])
                 customerState = gstin[:2]
-                ewaybill = row[4]
+                ewaybill = str(row[4])
                 saletype = row[5]
                 invoice_type = row[6]
-                reverse_charge = row[7]
+                reverse_charge = row[7].lower()
                 hsn = str(row[8])
                 rate = row[9]
                 qty = row[10]
@@ -382,31 +386,48 @@ async def save_sale_fileupload(
                         }
                         db_gst.update_sale_master(db,updateData)
 
+                    deleteSaleConditions ={
+                        "invoice_number": invoice_number,
+                        "tax_period": tax_period
+                    }
+                    db_gst.delete_sale(db,deleteSaleConditions)
 
-                    data = {
+                    if(invoice_type == "B2B"):
+                        customerData ={
+                            "account_group_id": 1,
+                            "parent_head_id": firmId,
+                            "account_head_name": customer_name,
+                            "account_head_alternate_name": customer_name,
+                            "gstin": gstin,
+                        }
+                        sub_head_id=db_gst.insertOrGetCustomerId(db,customerData)
+
+                    if(invoice_type == "B2C"):
+                        b2c_state = customerState
+
+                    masterData = {
                         "id":0,
                         "voucher_id":1,
-                        "head_id":2,
-                        "sub_head_id":3,
+                        "head_id":firmId,
+                        "sub_head_id":sub_head_id,
                         "invoice_number": invoice_number,
                         "invoice_date": invoice_date,
                         "financial_year_id":0,
                         "payment_mode" : paymode,
                         "transation_id": "",
-                        "tax_period_year" : tax_period,
-                        "tax_period_month" : 0,
+                        "tax_period" : tax_period,
+                        "invoice_type" : invoice_type,
                         "is_amended_invoice" : 0,
                         "amended_invoice_number" : "",
                         "amended_invoice_date" : None,
-                        "amended_tax_period_year" : None,
-                        "amended_tax_period_month" : 0,
+                        "amended_tax_period" : None,
                         "has_gst_filed" : "no",
                         "gst_filed_date" : None,
                         "transportation_mode" : 0,
                         "transported_date" : None,
                         "vehicle_number" : "",
                         "port_code" : "",
-                        "eway_bill_number" : "",
+                        "eway_bill_number" : ewaybill,
                         "discount_amount" : 0.00,
                         "taxable_amount" : 0.00,
                         "cgst_amount" : 0.00,
@@ -415,8 +436,8 @@ async def save_sale_fileupload(
                         "cess_amount" : 0.00,
                         "total_amount" : 0.00,
                         "state_type" : 0,
-                        "b2c_state" : 0,
-                        "reverse_charge" : 0,
+                        "b2c_state" : b2c_state,
+                        "reverse_charge" : reverse_charge,
                         "narration" : "",
                         "created_by" : 0,
                         "created_on" : entry_date,
@@ -433,16 +454,24 @@ async def save_sale_fileupload(
                     }
 
                     
-                    data_dict = saleMasterSchema(**data)
+                    data_dict = saleMasterSchema(**masterData)
                     sale_master_id = db_gst.save_sale_master(db,data_dict)
                     oldinv=invoice_number
                     total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
-                    
+
+                itemData ={
+                    "item_name":hsn,
+                    "item_type":"GOODS",
+                    "item_hsn_sac":hsn,
+                    "item_gst_tax":float(tax),
+                    "item_sku":"NOS",
+                }
+                item_id=db_gst.insertOrGetItemId(db,itemData)    
 
                 detailData={
                     "id":0,
                     "sales_master_id":sale_master_id,
-                    "item_master_id":0,
+                    "item_master_id":item_id,
                     "hsn_sac_code":hsn,
                     "gst_rate":float(tax),
                     "quantity":qty,

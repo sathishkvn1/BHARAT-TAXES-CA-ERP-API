@@ -70,6 +70,19 @@ def update_sale_master(db: Session, request: dict):
     db.commit()
     return
 
+def delete_sale(db: Session, request: dict):
+    # Step 1: Build dynamic filter conditions
+    conditions = [getattr(saleMaster, key) == value for key, value in request.items()]
+     # Step 2: Fetch rows that match the condition (to get their IDs)
+    rows_to_delete = db.query(saleMaster).filter(and_(*conditions)).all()
+    deleted_ids = [row.id for row in rows_to_delete]
+
+    if deleted_ids:
+        db.query(saleMaster).filter(saleMaster.id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.query(saleDetail).filter(saleDetail.sales_master_id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.commit()
+        return
+
 def save_sale_detail(db: Session, request: saleDetail):
     data = request.model_dump()
     data.pop("id", None)
@@ -78,3 +91,39 @@ def save_sale_detail(db: Session, request: saleDetail):
     db.commit()
     return_id = result.lastrowid
     return return_id
+
+def insertOrGetItemId(db: Session, request: dict):
+     # Step 1: Build dynamic filter
+    conditions = [getattr(itemMaster, key) == value for key, value in request.items()]
+    
+    # Step 2: Try to find an existing item
+    existing_item = db.query(itemMaster).filter(*conditions).first()
+
+    if existing_item:
+        # Step 3: If exists, return its id
+        return existing_item.item_id
+    else:
+        # Step 4: If not exists, insert new item
+        sql_stmt = insert(itemMaster).values(**request)
+        result = db.execute(sql_stmt)
+        db.commit()
+        return_id = result.lastrowid
+        return return_id
+    
+def insertOrGetCustomerId(db: Session, request: dict):
+     # Step 1: Build dynamic filter
+    conditions = [getattr(accountHead, key) == value for key, value in request.items()]
+    
+    # Step 2: Try to find an existing item
+    existing_item = db.query(accountHead).filter(*conditions).first()
+
+    if existing_item:
+        # Step 3: If exists, return its id
+        return existing_item.account_head_id
+    else:
+        # Step 4: If not exists, insert new item
+        sql_stmt = insert(accountHead).values(**request)
+        result = db.execute(sql_stmt)
+        db.commit()
+        return_id = result.lastrowid
+        return return_id
