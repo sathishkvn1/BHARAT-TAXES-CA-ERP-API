@@ -96,10 +96,17 @@ class InvoiceTypeEnum(str, Enum):
     B2B = 'B2B'
     B2C = 'B2C'
 
+class PurchaseInvoiceTypeEnum(str, Enum):
+    B2B = 'B2B'
+    B2BUR = 'B2BUR'
 class paymentEnum(str, Enum):
     CASH = 'CASH'
     ONLINE = 'ONLINE'
     CREDIT = 'CREDIT'
+
+class purchaseTypeEnum(str, Enum):
+    normal = 'normal'
+    expense = 'expense'
 
 class saleMasterSchema(BaseModel):
     id:Optional[int]
@@ -124,6 +131,7 @@ class saleMasterSchema(BaseModel):
     eway_bill_number:Optional[str]
     payment_mode:Optional[paymentEnum]
     transation_id:Optional[str]
+    gross_total:Optional[float]
     discount_amount:Optional[float]
     taxable_amount:Optional[float]
     cgst_amount:Optional[float]
@@ -205,3 +213,83 @@ class accountHeadSchema(BaseModel):
     is_default:Optional[int]
     description:Optional[str]
     is_deleted:Optional[int]
+
+class purchaseMasterSchema(BaseModel):
+    id:Optional[int]
+    voucher_id:Optional[int]
+    head_id:Optional[int]
+    sub_head_id:Optional[int]
+    invoice_number:Optional[str]
+    invoice_date:Optional[date]
+    financial_year_id:Optional[int]
+    tax_period:Optional[date]
+    invoice_type:Optional[PurchaseInvoiceTypeEnum]
+    is_amended_invoice:Optional[int]
+    amended_invoice_number:Optional[str]
+    amended_invoice_date:Optional[date]
+    amended_tax_period:Optional[date]
+    has_gst_filed:Optional[YesNoEnum]
+    gst_filed_date:Optional[datetime]
+    transportation_mode:Optional[int]
+    transported_date:Optional[datetime]
+    vehicle_number:Optional[str]
+    port_code:Optional[str]
+    eway_bill_number:Optional[str]
+    payment_mode:Optional[paymentEnum]
+    transation_id:Optional[str]
+    gross_total:Optional[float]
+    discount_amount:Optional[float]
+    taxable_amount:Optional[float]
+    cgst_amount:Optional[float]
+    sgst_amount:Optional[float]
+    igst_amount:Optional[float]
+    cess_amount:Optional[float]
+    round_off_amount:Optional[float]
+    total_amount:Optional[float]
+    state_type:Optional[int]
+    b2c_state:Optional[int]
+    reverse_charge:Optional[YesNoEnum]
+    is_composite:Optional[YesNoEnum]
+    narration:Optional[str]
+    created_by:Optional[int]
+    created_on:Optional[datetime]
+    modified_by:Optional[int]
+    modified_on:Optional[datetime]
+    is_verified:Optional[int]
+    verified_by:Optional[int]
+    is_cancelled:Optional[int]
+    cancelled_by:Optional[int]
+    cancellation_reason:Optional[str]
+    is_deleted:Optional[int]
+    deleted_by:Optional[int]
+    deleted_on:Optional[datetime]
+
+class purchaseDetailSchema(BaseModel):
+    id:Optional[int]
+    purchase_master_id:Optional[int]
+    item_master_id:Optional[int]
+    purchase_type:Optional[purchaseTypeEnum]
+    itc_type:Optional[YesNoEnum]
+    hsn_sac_code:Optional[str]
+    gst_rate:Optional[float]
+    quantity:Optional[float]
+    sku_code:Optional[str]
+    unit_rate:Optional[float]
+    gross_amount:Optional[float]
+    discount_percentage:Optional[float]
+    discount_amount:Optional[float]
+    taxable_amount:Optional[float]
+    cgst_percentage:Optional[float]
+    cgst_amount:Optional[float]
+    sgst_percentage:Optional[float]
+    sgst_amount:Optional[float]
+    igst_percentage:Optional[float]
+    igst_amount:Optional[float]
+    cess_percentage:Optional[float]
+    cess_amount:Optional[float]
+    total_amount:Optional[float]
+    modified_by:Optional[int]
+    modified_on:Optional[datetime]
+    is_deleted:Optional[int]
+    deleted_by:Optional[int]
+    deleted_on:Optional[datetime]

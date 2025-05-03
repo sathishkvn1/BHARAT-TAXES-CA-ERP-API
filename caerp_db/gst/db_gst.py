@@ -127,3 +127,43 @@ def insertOrGetCustomerId(db: Session, request: dict):
         db.commit()
         return_id = result.lastrowid
         return return_id
+    
+
+def save_purchase_master(db: Session, request: purchaseMaster):
+    data = request.model_dump()
+    data.pop("id", None)
+    sql_stmt = insert(purchaseMaster).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return_id = result.lastrowid
+    return return_id
+
+def update_purchase_master(db: Session, request: dict):
+    data = request.copy()
+    data.pop('id', None)
+    sql_stmt = update(purchaseMaster).where(purchaseMaster.id == request['id']).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return
+
+def delete_purchase(db: Session, request: dict):
+    # Step 1: Build dynamic filter conditions
+    conditions = [getattr(purchaseMaster, key) == value for key, value in request.items()]
+     # Step 2: Fetch rows that match the condition (to get their IDs)
+    rows_to_delete = db.query(purchaseMaster).filter(and_(*conditions)).all()
+    deleted_ids = [row.id for row in rows_to_delete]
+
+    if deleted_ids:
+        db.query(purchaseMaster).filter(purchaseMaster.id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.query(purchaseDetail).filter(purchaseDetail.sales_master_id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.commit()
+        return
+
+def save_purchase_detail(db: Session, request: purchaseDetail):
+    data = request.model_dump()
+    data.pop("id", None)
+    sql_stmt = insert(purchaseDetail).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return_id = result.lastrowid
+    return return_id
