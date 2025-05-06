@@ -167,3 +167,42 @@ def save_purchase_detail(db: Session, request: purchaseDetail):
     db.commit()
     return_id = result.lastrowid
     return return_id
+
+def save_credit_master(db: Session, request: creditMaster):
+    data = request.model_dump()
+    data.pop("id", None)
+    sql_stmt = insert(creditMaster).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return_id = result.lastrowid
+    return return_id
+
+def save_credit_detail(db: Session, request: creditDetail):
+    data = request.model_dump()
+    data.pop("id", None)
+    sql_stmt = insert(creditDetail).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return_id = result.lastrowid
+    return return_id
+
+def update_credit_master(db: Session, request: dict):
+    data = request.copy()
+    data.pop('id', None)
+    sql_stmt = update(creditMaster).where(creditMaster.id == request['id']).values(**data)
+    result = db.execute(sql_stmt)
+    db.commit()
+    return
+
+def delete_credit(db: Session, request: dict):
+    # Step 1: Build dynamic filter conditions
+    conditions = [getattr(creditMaster, key) == value for key, value in request.items()]
+     # Step 2: Fetch rows that match the condition (to get their IDs)
+    rows_to_delete = db.query(creditMaster).filter(and_(*conditions)).all()
+    deleted_ids = [row.id for row in rows_to_delete]
+
+    if deleted_ids:
+        db.query(creditMaster).filter(creditMaster.id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.query(creditDetail).filter(creditDetail.credit_debit_master_id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.commit()
+        return
