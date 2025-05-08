@@ -327,6 +327,7 @@ class creditMasterSchema(BaseModel):
     eway_bill_number:Optional[str]
     payment_mode:Optional[paymentEnum]
     transation_id:Optional[str]   
+    gross_total:Optional[float]
     discount_amount:Optional[float]
     taxable_amount:Optional[float]    
     cgst_amount:Optional[float]

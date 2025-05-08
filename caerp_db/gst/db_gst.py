@@ -203,6 +203,6 @@ def delete_credit(db: Session, request: dict):
 
     if deleted_ids:
         db.query(creditMaster).filter(creditMaster.id.in_(deleted_ids)).delete(synchronize_session=False)
-        db.query(creditDetail).filter(creditDetail.credit_debit_master_id.in_(deleted_ids)).delete(synchronize_session=False)
+        db.query(creditDetail).filter(creditDetail.credit_note_master_id.in_(deleted_ids)).delete(synchronize_session=False)
         db.commit()
         return

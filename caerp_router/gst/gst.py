@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from caerp_auth import oauth2
 from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
-from caerp_schema.gst.gst_schema import gstTestSchema, gst2bSchema, gst2aSchema, saleMasterSchema, saleDetailsSchema, purchaseMasterSchema, purchaseDetailSchema
+from caerp_schema.gst.gst_schema import *
 from datetime import date,datetime
 from io import BytesIO
 import pandas as pd
@@ -608,11 +608,11 @@ async def save_purchase_fileupload(
                         }
                         db_gst.update_purchase_master(db,updateData)
 
-                    deleteSaleConditions ={
+                    deletePurchaseConditions ={
                         "invoice_number": invoice_number,
                         "tax_period": tax_period
                     }
-                    db_gst.delete_purchase(db,deleteSaleConditions)
+                    db_gst.delete_purchase(db,deletePurchaseConditions)
 
                     if(invoice_type == "B2B"):
                         customerData ={
@@ -752,6 +752,231 @@ async def save_purchase_fileupload(
             "total_amount" : grand_total,
         }
         db_gst.update_purchase_master(db,updateData)
+
+        return {"message": "File processed successfully" + file_ext}
+
+    except Exception as e:
+        return {"error": str(e)}
+    
+
+
+@router.post("/save_credit_fileupload")
+async def save_credit_fileupload(
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        file_ext = os.path.splitext(file.filename)[1].lower()
+
+        if file_ext == ".csv":
+            df = pd.read_csv(BytesIO(contents), encoding='utf-8')
+        elif file_ext in [".xlsx", ".xls"]:
+            df = pd.read_excel(BytesIO(contents))
+        else:
+            return {"error": "Unsupported file type. Please upload a CSV or Excel file."}
+        
+        entry_date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        oldinv="xxx"
+        firmState="32"
+        firmId = 1
+        # for general customers
+        sub_head_id = 1
+        b2c_state = 0
+        unregistered_type = None
+        i = total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
+        for _, row in df.iterrows():
+            
+                invoice_number = str(row[0])
+                invoice_date = '2024-06-01'                
+                registered = str(row[2]).lower()
+                if(registered == 'no'):
+                    unregistered_type = str(row[3]).upper()
+                note_type = str(row[4]).upper()
+                customer_name = row[5]
+                gstin = str(row[6])
+                customerState = gstin[:2]
+                b2c_state = row[7]                
+                reason_for_issue = str(row[8])
+                hsn = str(row[9])
+                rate = row[10]
+                qty = row[11]
+                tax = row[12]
+                discount = row[13]
+                cess = row[14]
+                tax_period = '2024-06-01'
+
+                gross_amount = float(rate) * float(qty)
+                taxable_amount = gross_amount - float(discount)
+                discount_percentage = float(discount) / float(gross_amount) * 100
+                cess_percentage = float(cess) / float(taxable_amount) * 100
+                if(firmState == customerState):
+                    sgst = cgst = taxable_amount * float(tax) / 200
+                    sgst_percentage = cgst_percentage = float(tax) / 2
+                    igst = igst_percentage = 0
+                else:
+                    igst = taxable_amount * float(tax) / 100
+                    igst_percentage = tax
+                    sgst = cgst = sgst_percentage = cgst_percentage = 0
+                
+                if(invoice_number != oldinv):
+                    if(i>0):
+                        updateData ={
+                            "id":credit_note_master_id,
+                            "gross_total": total_gross_amount,
+                            "discount_amount" : total_discount_amount,
+                            "taxable_amount" : total_taxable_amount,
+                            "cgst_amount" : total_cgst,
+                            "sgst_amount" : total_sgst,
+                            "igst_amount" : total_igst,
+                            "cess_amount" : total_cess_amount,
+                            "total_amount" : grand_total,
+                        }
+                        db_gst.update_credit_master(db,updateData)
+
+                    deleteCreditConditions ={
+                        "note_number": invoice_number,
+                        "note_type": note_type,
+                        "tax_period": tax_period
+                    }
+                    db_gst.delete_credit(db,deleteCreditConditions)
+
+                    
+                    customerData ={
+                        "account_group_id": 2,
+                        "parent_head_id": firmId,
+                        "account_head_name": customer_name,
+                        "account_head_alternate_name": customer_name,
+                        "gstin": gstin,
+                    }
+                    sub_head_id=db_gst.insertOrGetCustomerId(db,customerData)
+
+                    if(note_type != "B2CL"):
+                        b2c_state = 0
+
+                    masterData = {
+                        "id":0,
+                        "voucher_id":1,
+                        "head_id":firmId,
+                        "sub_head_id":sub_head_id,
+                        "note_number":invoice_number,
+                        "note_date":invoice_date,
+                        "financial_year_id":1,
+                        "tax_period":tax_period,
+                        "note_type":note_type,
+                        "reason_for_issue":reason_for_issue,
+                        "is_amended_credit_note":0,
+                        "amended_note_number":"",
+                        "amended_note_date":None,
+                        "amended_tax_period":None,
+                        "has_gst_filed":"no",
+                        "gst_filed_date":None,
+                        "transportation_mode":None,
+                        "transported_date":None,
+                        "vehicle_number":None,
+                        "port_code":None,
+                        "eway_bill_number":None,
+                        "payment_mode":None,
+                        "transation_id":None,
+                        "gross_total":0.00,
+                        "discount_amount":0.00,
+                        "taxable_amount":0.00,
+                        "cgst_amount":0.00,
+                        "sgst_amount":0.00,
+                        "igst_amount":0.00,
+                        "cess_amount":0.00,
+                        "total_amount":0.00,
+                        "state_type":1,
+                        "b2c_state":b2c_state,
+                        "registered":registered,
+                        "unregistered_type":unregistered_type,
+                        "narration":"",
+                        "created_by":1,
+                        "created_on":entry_date,
+                        "modified_by":None,
+                        "modified_on":None,
+                        "is_verified":"no",
+                        "verified_by":None,
+                        "is_cancelled":"no",
+                        "cancelled_by":None,
+                        "cancellation_reason":None,
+                        "is_deleted":"no",
+                        "deleted_by":None,
+                        "deleted_on":None
+                    }
+
+                    
+                    data_dict = creditMasterSchema(**masterData)
+                    credit_note_master_id = db_gst.save_credit_master(db,data_dict)
+                    oldinv=invoice_number
+                    total_cgst = total_sgst = total_igst = total_taxable_amount = total_gross_amount = total_discount_amount = total_cess_amount = grand_total = 0
+
+                itemData ={
+                    "item_name":hsn,
+                    "item_type":"GOODS",
+                    "item_hsn_sac":hsn,
+                    "item_gst_tax":float(tax),
+                    "item_sku":"NOS",
+                }
+                item_id=db_gst.insertOrGetItemId(db,itemData)    
+                
+                total_amount = (cgst + sgst + igst + taxable_amount +cess)
+
+
+                detailData={
+                    "id":0,
+                    "credit_note_master_id":credit_note_master_id,
+                    "item_master_id":item_id,
+                    "hsn_sac_code":hsn,
+                    "gst_rate":float(tax),
+                    "quantity":qty,
+                    "sku_code":"NOS",   
+                    "unit_rate":rate,
+                    "gross_amount":gross_amount,
+                    "discount_percentage":discount_percentage,
+                    "discount_amount":discount,
+                    "taxable_amount":taxable_amount,
+                    "cgst_percentage":cgst_percentage,
+                    "cgst_amount":cgst,
+                    "sgst_percentage":sgst_percentage,
+                    "sgst_amount":sgst,
+                    "igst_percentage":igst_percentage,
+                    "igst_amount":igst,
+                    "cess_percentage":cess_percentage,
+                    "cess_amount":cess,
+                    "total_amount":total_amount,
+                    "modified_by":None,
+                    "modified_on":None,
+                    "is_deleted":"no",
+                    "deleted_by":None,
+                    "deleted_on":None
+                    
+                }
+                total_gross_amount += gross_amount
+                total_cgst += cgst
+                total_sgst += sgst
+                total_igst += igst
+                total_taxable_amount += taxable_amount
+                total_discount_amount += discount
+                total_cess_amount += cess
+                grand_total += total_amount
+
+                dataDetail_dict = creditDetailSchema(**detailData)
+                purchase_detail_id = db_gst.save_credit_detail(db,dataDetail_dict)
+                i+=1
+            
+        
+        updateData ={
+            "id":credit_note_master_id,
+            "gross_total": total_gross_amount,
+            "discount_amount" : total_discount_amount,
+            "taxable_amount" : total_taxable_amount,
+            "cgst_amount" : total_cgst,
+            "sgst_amount" : total_sgst,
+            "igst_amount" : total_igst,
+            "cess_amount" : total_cess_amount,
+            "total_amount" : grand_total,
+        }
+        db_gst.update_credit_master(db,updateData)
 
         return {"message": "File processed successfully" + file_ext}
 

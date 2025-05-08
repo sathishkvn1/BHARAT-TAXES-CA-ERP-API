@@ -313,7 +313,7 @@ class  creditMaster(caerp_base):
     eway_bill_number = Column(String(16), nullable=False)
     payment_mode = Column(Enum('CASH', 'ONLINE', 'CREDIT'), nullable=False, default='CASH')
     transation_id = Column(String(100), nullable=True)
-    pre_gst_amount = Column(String(3), nullable=False)
+    gross_total = Column(DECIMAL(15, 2), nullable=False, default=0.00)
     discount_amount = Column(DECIMAL(15, 2), nullable=False, default=0.00)
     taxable_amount = Column(DECIMAL(15, 2), nullable=False, default=0.00)    
     cgst_amount = Column(DECIMAL(15, 2), nullable=False, default=0.00)
@@ -343,7 +343,7 @@ class  creditMaster(caerp_base):
 class  creditDetail(caerp_base):
     __tablename__ = 'credit_debit_detail'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    credit_debit_master_id = Column(Integer, nullable=False)
+    credit_note_master_id = Column(Integer, nullable=False)
     item_master_id = Column(Integer, nullable=False)
     hsn_sac_code = Column(String(20), nullable=False)
     gst_rate = Column(Float, nullable=False, default=0.0)
