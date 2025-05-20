@@ -9,6 +9,7 @@ from typing import Any, List, Optional, Type, Union
 from fastapi import APIRouter, Body ,Depends,Request,HTTPException,status,Response, Query, File, UploadFile
 from caerp_schema.gst.gst_schema import *
 from datetime import date,datetime
+from dateutil import parser
 from io import BytesIO
 import pandas as pd
 import os
@@ -72,8 +73,15 @@ async def save_gst_fileupload(
 
 
 def dateFormat(date):
-    date_obj = datetime.strptime(date, "%d-%m-%Y")
-    return date_obj.strftime("%Y-%m-%d")
+    if pd.isnull(date):
+        return ""
+    
+    try:
+        date_obj = parser.parse(str(date), dayfirst=True)
+        return date_obj.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"Invalid date: {date} → {e}")
+        return ""
 
 @router.post("/save_gst2b_fileupload")
 async def save_gst2b_fileupload(
@@ -312,12 +320,17 @@ async def save_gst2a_fileupload(
     return {"success": True, "message": "GSTR2A file uploaded successfully"}
 
 
-
 def taxPeriodFormat(date_str):
-    date_str = date_str.title()
-    parsed_date = datetime.strptime(date_str, "%b-%Y")
-    formatted_date = parsed_date.strftime("%Y-%m-%d")
-    return formatted_date
+    if pd.isnull(date_str) or str(date_str).strip() == "":
+        return ""
+    
+    try:
+        # Parse with dateutil (supports strings, datetimes, etc.)
+        parsed_date = parser.parse(str(date_str), dayfirst=True)
+        return parsed_date.strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"Invalid date: {date_str} → {e}")
+        return ""
 
 @router.post("/save_sale_fileupload")
 async def save_sale_fileupload(
@@ -527,10 +540,10 @@ async def save_sale_fileupload(
         }
         db_gst.update_sale_master(db,updateData)
 
-        return {"message": "File processed successfully" + file_ext}
+        return {"success": True, "message": "File processed successfully" + file_ext}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "error": str(e)}
     
 
 
@@ -753,10 +766,10 @@ async def save_purchase_fileupload(
         }
         db_gst.update_purchase_master(db,updateData)
 
-        return {"message": "File processed successfully" + file_ext}
+        return {"success": True, "message": "File processed successfully" + file_ext}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "error": str(e)}
     
 
 
@@ -787,7 +800,7 @@ async def save_credit_fileupload(
         for _, row in df.iterrows():
             
                 invoice_number = str(row[0])
-                invoice_date = '2024-06-01'                
+                invoice_date = dateFormat(row[1])                            
                 registered = str(row[2]).lower()
                 if(registered == 'no'):
                     unregistered_type = str(row[3]).upper()
@@ -803,7 +816,7 @@ async def save_credit_fileupload(
                 tax = row[12]
                 discount = row[13]
                 cess = row[14]
-                tax_period = '2024-06-01'
+                tax_period = taxPeriodFormat(row[15])
 
                 gross_amount = float(rate) * float(qty)
                 taxable_amount = gross_amount - float(discount)
@@ -978,7 +991,7 @@ async def save_credit_fileupload(
         }
         db_gst.update_credit_master(db,updateData)
 
-        return {"message": "File processed successfully" + file_ext}
+        return {"success": True, "message": "File processed successfully" + file_ext}
 
     except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "error": str(e)}
